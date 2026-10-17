@@ -12,17 +12,25 @@ from collections.abc import AsyncIterator, Iterator
 from datetime import UTC, datetime
 
 import pytest
+from fastapi.testclient import TestClient
+
 from app.core.clock import FrozenClock
 from app.core.config import Environment, Settings, get_settings
 from app.main import create_app
-from fastapi.testclient import TestClient
+from tests.helpers import Api, stack_available, stack_settings
 
 TEST_HOST = "testserver"
 
 
 def make_settings(**overrides: object) -> Settings:
-    """Settings for tests: test environment, test host allowed, everything else default."""
-    base: dict[str, object] = {"DEVSYNC_ENV": Environment.TEST, "ALLOWED_HOSTS": TEST_HOST}
+    """Test environment, test host, test keys; everything else default."""
+    base: dict[str, object] = {
+        "DEVSYNC_ENV": Environment.TEST,
+        "ALLOWED_HOSTS": TEST_HOST,
+        "PUBLIC_ORIGIN": "https://testserver",
+        "SECRET_KEY": "test-secret-key-" * 4,
+        "CAPTCHA_HMAC_KEY": "test-captcha-key-" * 2,
+    }
     base.update(overrides)
     return Settings(**base)  # type: ignore[arg-type]
 
@@ -81,10 +89,17 @@ async def app_session(migrated: str, app_db_url: str) -> AsyncIterator[object]:
     """AsyncSession as `devsync_app`, rolled back after the test."""
     from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine  # noqa: PLC0415
 
+    from app.db.context import RlsSession  # noqa: PLC0415
+
     engine = create_async_engine(app_db_url)
     async with engine.connect() as conn:
         tx = await conn.begin()
-        session = AsyncSession(bind=conn, expire_on_commit=False)
+        session = AsyncSession(
+            bind=conn,
+            expire_on_commit=False,
+            sync_session_class=RlsSession,
+            join_transaction_mode="create_savepoint",
+        )
         try:
             yield session
         finally:
@@ -94,7 +109,56 @@ async def app_session(migrated: str, app_db_url: str) -> AsyncIterator[object]:
 
 
 @pytest.fixture(autouse=True)
-def _clear_settings_cache() -> Iterator[None]:
-    get_settings.cache_clear()
+def _clear_process_caches() -> Iterator[None]:
+    """Each test gets fresh settings, Redis client, engines and settings cache
+    (async clients are bound to the event loop that created them)."""
+    from app.core import settings_cache  # noqa: PLC0415
+    from app.core.redis import forget_clients  # noqa: PLC0415
+    from app.db import session as db_session  # noqa: PLC0415
+
+    def clear() -> None:
+        get_settings.cache_clear()
+        forget_clients()
+        settings_cache.clear()
+        for fn in (
+            db_session.get_engine,
+            db_session.get_job_engine,
+            db_session.get_sessionmaker,
+            db_session.get_job_sessionmaker,
+        ):
+            fn.cache_clear()
+
+    clear()
     yield
-    get_settings.cache_clear()
+    clear()
+
+
+def _flush_redis() -> None:
+    """Rate-limit counters, sessions and CAPTCHA markers must not leak between tests
+    (every TestClient request comes from the same address)."""
+    import redis  # noqa: PLC0415
+
+    client = redis.Redis.from_url(os.environ["REDIS_URL"])
+    try:
+        client.flushdb()
+    finally:
+        client.close()
+
+
+@pytest.fixture
+def api(migrated: str) -> Iterator[Api]:
+    """HTTPS client against an in-process app using the stack's Postgres and Redis."""
+    if not stack_available():
+        pytest.skip("needs the test compose stack")
+    _flush_redis()
+    with TestClient(create_app(stack_settings()), base_url="https://testserver") as c:
+        yield Api(c)
+
+
+@pytest.fixture
+def api2(migrated: str) -> Iterator[Api]:
+    """A second, independent browser (separate cookies)."""
+    if not stack_available():
+        pytest.skip("needs the test compose stack")
+    with TestClient(create_app(stack_settings()), base_url="https://testserver") as c:
+        yield Api(c)

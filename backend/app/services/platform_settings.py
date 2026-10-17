@@ -10,7 +10,7 @@ import uuid
 from typing import Any
 
 from pydantic import ValidationError
-from sqlalchemy import func, select
+from sqlalchemy import column, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import write_audit
@@ -34,15 +34,13 @@ def validate_settings(values: dict[str, Any]) -> PlatformSettingsValues:
 
 
 async def get_active(session: AsyncSession) -> tuple[int, PlatformSettingsValues]:
-    """Return (version, values) of the latest settings row."""
-    row = (
-        await session.execute(
-            select(PlatformSettings).order_by(PlatformSettings.version.desc()).limit(1)
-        )
-    ).scalar_one_or_none()
+    """Return (version, values) of the latest settings (via `active_settings()`, which works
+    in every request context although the table itself is admin-only under RLS)."""
+    stmt: Any = select(column("version"), column("values")).select_from(func.active_settings())
+    row = (await session.execute(stmt)).mappings().first()
     if row is None:
         raise SettingsValidationError("No platform settings have been seeded.")
-    return row.version, validate_settings(row.values)
+    return int(row["version"]), validate_settings(row["values"])
 
 
 async def create_version(

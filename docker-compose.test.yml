@@ -41,7 +41,11 @@ services:
     environment:
       DEVSYNC_ENV: test
       ALLOWED_HOSTS: testserver,localhost,api
+      SMS_PROVIDER: noop
       DATABASE_URL: postgresql+asyncpg://devsync_app:${DEVSYNC_APP_PASSWORD}@postgres:5432/devsync
+      WORKER_DATABASE_URL: postgresql+asyncpg://devsync_worker:${DEVSYNC_WORKER_PASSWORD}@postgres:5432/devsync
+      CAPTCHA_HMAC_KEY: ${CAPTCHA_HMAC_KEY}
+      PUBLIC_ORIGIN: https://testserver
       MIGRATION_DATABASE_URL: postgresql+psycopg://devsync_migrator:${DEVSYNC_MIGRATOR_PASSWORD}@postgres:5432/devsync
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
       SECRET_KEY: ${SECRET_KEY}

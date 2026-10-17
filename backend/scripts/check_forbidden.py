@@ -171,7 +171,20 @@ class _PyVisitor(ast.NodeVisitor):
                     self.hits.append((node.lineno, f"logging of secret-named variable '{arg.id}'"))
         self.generic_visit(node)
 
+    @staticmethod
+    def _is_sql_column(node: ast.AST) -> bool:
+        """`Model.column` (class attribute) builds a SQL expression, not a Python comparison."""
+        return (
+            isinstance(node, ast.Attribute)
+            and isinstance(node.value, ast.Name)
+            and node.value.id[:1].isupper()
+        )
+
     def visit_Compare(self, node: ast.Compare) -> None:
+        sides = [node.left, *node.comparators]
+        if any(self._is_sql_column(side) for side in sides):
+            self.generic_visit(node)
+            return
         if any(isinstance(op, ast.Eq | ast.NotEq) for op in node.ops):
             for side in [node.left, *node.comparators]:
                 name = self._name(side).split(".")[-1]

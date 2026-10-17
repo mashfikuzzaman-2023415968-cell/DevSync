@@ -6,6 +6,7 @@ import base64
 import secrets
 
 import pytest
+
 from app.core.config import (
     Environment,
     InsecureConfigurationError,

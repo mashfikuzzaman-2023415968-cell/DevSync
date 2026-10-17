@@ -14,3 +14,10 @@ apscheduler<4
 structlog
 prometheus-client
 httpx
+# Phase 1: accounts and security core
+argon2-cffi
+pyotp
+zxcvbn
+altcha
+cryptography
+email-validator

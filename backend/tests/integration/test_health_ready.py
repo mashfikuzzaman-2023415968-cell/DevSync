@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+
 from app.services.health import check_dependencies
 
 pytestmark = pytest.mark.integration

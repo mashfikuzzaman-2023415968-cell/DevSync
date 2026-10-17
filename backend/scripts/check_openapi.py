@@ -26,9 +26,18 @@ if str(BACKEND_ROOT) not in sys.path:
 # OPENAPI_PATH lets the containerized gate point at the mounted docs folder.
 COMMITTED = Path(os.environ.get("OPENAPI_PATH", REPO_ROOT / "docs" / "api" / "openapi.json"))
 
+# Operations reachable without a session (spec §10.2 "Public endpoints").
 PUBLIC_OPERATIONS: set[tuple[str, str]] = {
     ("get", "/api/v1/health"),
     ("get", "/api/v1/health/ready"),
+    ("get", "/api/v1/captcha/challenge"),
+    ("get", "/api/v1/auth/csrf"),
+    ("post", "/api/v1/auth/register"),
+    ("post", "/api/v1/auth/login"),
+    ("post", "/api/v1/auth/login/totp"),
+    ("post", "/api/v1/auth/email/verify"),
+    ("post", "/api/v1/auth/password/forgot"),
+    ("post", "/api/v1/auth/password/reset"),
 }
 HTTP_METHODS = {"get", "post", "put", "patch", "delete"}
 

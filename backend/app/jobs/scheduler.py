@@ -14,11 +14,13 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
-from app.jobs import tasks
+from app.jobs import email_jobs, tasks
 from app.jobs.queues import get_queue
 
 log = get_logger(__name__)
 PING_INTERVAL_MINUTES = 5
+EMAIL_INTERVAL_SECONDS = 30
+EXPIRE_INTERVAL_MINUTES = 5
 
 
 def enqueue_ping() -> None:
@@ -26,11 +28,37 @@ def enqueue_ping() -> None:
     get_queue("low").enqueue(tasks.ping, job_timeout=30, result_ttl=86400)
 
 
+def enqueue_email_send() -> None:
+    """Outbox delivery on the high queue (auth emails are urgent, §15.2)."""
+    get_queue("high").enqueue(email_jobs.email_send, job_timeout=30, result_ttl=3600)
+
+
+def enqueue_lifecycle_expire() -> None:
+    """Cleanup of expired sessions, tokens, OTPs and idempotency keys."""
+    get_queue("low").enqueue(email_jobs.lifecycle_expire, job_timeout=60, result_ttl=3600)
+
+
 def build_scheduler() -> BlockingScheduler:
     """Create the scheduler with every periodic job registered (timezone Asia/Dhaka)."""
     scheduler = BlockingScheduler(timezone="Asia/Dhaka")
     scheduler.add_job(
         enqueue_ping, "interval", minutes=PING_INTERVAL_MINUTES, id="ping", coalesce=True
+    )
+    scheduler.add_job(
+        enqueue_email_send,
+        "interval",
+        seconds=EMAIL_INTERVAL_SECONDS,
+        id="email.send",
+        coalesce=True,
+        max_instances=1,
+    )
+    scheduler.add_job(
+        enqueue_lifecycle_expire,
+        "interval",
+        minutes=EXPIRE_INTERVAL_MINUTES,
+        id="lifecycle.expire",
+        coalesce=True,
+        max_instances=1,
     )
     return scheduler
 

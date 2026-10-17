@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import pytest
+from fastapi.testclient import TestClient
+
 from app.core.config import Environment
 from app.core.middleware import API_SECURITY_HEADERS, MAX_JSON_BODY_BYTES
 from app.main import create_app
 from app.services import health as health_service
-from fastapi.testclient import TestClient
-
 from tests.conftest import make_settings
 
 pytestmark = pytest.mark.api
@@ -58,6 +58,7 @@ def test_oversize_streamed_body_is_413(client: TestClient) -> None:
             yield b"x" * (MAX_JSON_BODY_BYTES // 4)
 
     r = client.post("/api/v1/health", content=chunks())
+    # /health has no POST operation: the router answers 405 without reading the body.
     assert r.status_code in {405, 413}
 
 
@@ -110,3 +111,32 @@ def test_production_app_refuses_insecure_settings() -> None:
 
     with pytest.raises(InsecureConfigurationError):
         create_app(make_settings(DEVSYNC_ENV=Environment.PRODUCTION))
+
+
+def test_production_app_has_no_test_router_or_docs() -> None:
+    """Spec §14.18: in production the test seed router and API docs do not exist."""
+    import base64  # noqa: PLC0415
+    import secrets  # noqa: PLC0415
+
+    prod = make_settings(
+        DEVSYNC_ENV=Environment.PRODUCTION,
+        SECRET_KEY=base64.b64encode(secrets.token_bytes(64)).decode(),
+        SMS_PROVIDER="provider",
+        REDIS_URL="redis://:pw@redis:6379/0",
+        ALLOWED_HOSTS="testserver",
+        PUBLIC_ORIGIN="https://testserver",
+    )
+    app = create_app(prod)
+    paths = {getattr(r, "path", "") for r in app.router.routes}
+    assert not any("__test__" in p for p in paths)
+    with TestClient(app, base_url="https://testserver") as c:
+        for path in ("/api/v1/openapi.json", "/api/v1/docs", "/api/v1/__test__/sms?phone=x"):
+            assert c.get(path).status_code == 404, path
+
+
+def test_test_router_exists_only_in_test_environment(settings: object) -> None:
+    from app.core.config import Settings  # noqa: PLC0415
+
+    assert isinstance(settings, Settings)
+    with TestClient(create_app(make_settings(DEVSYNC_ENV=Environment.DEVELOPMENT))) as c:
+        assert c.get("/api/v1/__test__/sms?phone=x").status_code == 404

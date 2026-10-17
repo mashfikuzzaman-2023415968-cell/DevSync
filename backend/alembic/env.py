@@ -7,10 +7,11 @@ from __future__ import annotations
 
 import os
 
-import app.models  # noqa: F401  (registers every table on Base.metadata)
 from alembic import context
-from app.db.base import Base
 from sqlalchemy import create_engine, pool
+
+import app.models  # noqa: F401  (registers every table on Base.metadata)
+from app.db.base import Base
 
 target_metadata = Base.metadata
 

@@ -1,6 +1,6 @@
 """Phase 0 tables: platform settings, audit log, jobs, idempotency keys (spec §7.1, §7.8).
 
-Foreign keys to `users` are added in Phase 1 when that table exists.
+Foreign keys to `users` were added in migration 0002 (Phase 1).
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     Enum,
+    ForeignKey,
     Identity,
     Index,
     Integer,
@@ -52,10 +53,16 @@ class AuditLog(UUIDPrimaryKey, Base):
     """
 
     __tablename__ = "audit_log"
-    __table_args__ = (Index("ix_audit_log_entity", "entity_type", "entity_id", "at"),)
+    # No implicit RETURNING: callers may append rows they are not allowed to read (RLS).
+    __table_args__ = (
+        Index("ix_audit_log_entity", "entity_type", "entity_id", "at"),
+        {"implicit_returning": False},
+    )
 
     seq: Mapped[int] = mapped_column(BigInteger, Identity(always=True), unique=True, nullable=False)
-    actor_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    actor_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     actor_role: Mapped[str | None] = mapped_column(Text, nullable=True)
     action: Mapped[str] = mapped_column(Text, nullable=False)
     entity_type: Mapped[str] = mapped_column(Text, nullable=False)
@@ -94,7 +101,9 @@ class Job(UUIDPrimaryKey, Timestamps, Base):
         server_default=JobStatus.QUEUED.value,
     )
     progress: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default="0")
-    requested_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    requested_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     result_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
     error_code: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -107,7 +116,9 @@ class IdempotencyKey(UUIDPrimaryKey, Timestamps, Base):
     __tablename__ = "idempotency_keys"
     __table_args__ = (UniqueConstraint("user_id", "key", name="uq_idempotency_keys_user_key"),)
 
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     key: Mapped[str] = mapped_column(Text, nullable=False)
     request_hash: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     response: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)

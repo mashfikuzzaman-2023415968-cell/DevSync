@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from pydantic import BaseModel
+
 from app.core.errors import (
     STATUS_BY_CODE,
     DomainError,
@@ -12,9 +16,6 @@ from app.core.errors import (
     install_exception_handlers,
 )
 from app.core.middleware import RequestIdMiddleware, UnhandledExceptionMiddleware
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
-from pydantic import BaseModel
 
 pytestmark = pytest.mark.unit
 

@@ -8,11 +8,12 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import DBAPIError, ProgrammingError
+
 from app.core.audit import verify_chain, write_audit
 from app.schemas.platform_settings import default_settings_document
 from app.services import platform_settings
-from sqlalchemy import create_engine, text
-from sqlalchemy.exc import DBAPIError, ProgrammingError
 
 pytestmark = pytest.mark.integration
 
@@ -26,17 +27,27 @@ def test_migration_downgrade_and_upgrade_round_trip(migrated: str) -> None:
     command.upgrade(cfg, "head")
     engine = create_engine(migrated)
     with engine.connect() as conn:
-        assert conn.execute(text("SELECT max(version) FROM platform_settings")).scalar_one() == 1
+        assert conn.execute(text("SELECT max(version) FROM platform_settings")).scalar_one() == 2
     engine.dispose()
 
 
 async def test_seeded_settings_are_active(app_session: Any) -> None:
     version, values = await platform_settings.get_active(app_session)
-    assert version >= 1
+    assert version >= 2
     assert values.model_dump(mode="json") == default_settings_document()
 
 
+async def _as_admin(session: Any) -> None:
+    """Settings versions may be added only in an admin (or SYSTEM) context under RLS."""
+    import uuid  # noqa: PLC0415
+
+    from app.db.context import DbContext, set_context  # noqa: PLC0415
+
+    await set_context(session, DbContext(user_id=uuid.uuid4(), role="ADMIN"))
+
+
 async def test_create_version_writes_row_and_audit(app_session: Any) -> None:
+    await _as_admin(app_session)
     doc = default_settings_document()
     doc["pay"]["auto_approve_days"] = 5  # type: ignore[index]
     new = await platform_settings.create_version(
@@ -57,6 +68,7 @@ async def test_create_version_writes_row_and_audit(app_session: Any) -> None:
 async def test_create_version_rejects_invalid_and_short_reason(app_session: Any) -> None:
     from app.core.errors import SettingsValidationError  # noqa: PLC0415
 
+    await _as_admin(app_session)
     doc = default_settings_document()
     doc["rep"]["kappa_ext"] = "0.4"  # type: ignore[index]
     with pytest.raises(SettingsValidationError):
@@ -70,6 +82,7 @@ async def test_create_version_rejects_invalid_and_short_reason(app_session: Any)
 
 
 async def test_audit_rows_are_hash_chained(app_session: Any) -> None:
+    await _as_admin(app_session)  # admins may read the log
     for i in range(3):
         await write_audit(
             app_session, action="test.event", entity_type="thing", entity_id=str(i), after={"i": i}
@@ -85,6 +98,7 @@ async def test_audit_rows_are_hash_chained(app_session: Any) -> None:
 
 
 async def test_audit_redacts_secrets_in_before_after(app_session: Any) -> None:
+    await _as_admin(app_session)
     await write_audit(
         app_session, action="t.x", entity_type="t", entity_id=None, after={"password": "p", "ok": 1}
     )

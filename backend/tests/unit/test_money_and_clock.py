@@ -6,6 +6,9 @@ from datetime import UTC, datetime
 from decimal import ROUND_FLOOR, ROUND_HALF_EVEN, ROUND_HALF_UP, Decimal
 
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
+
 from app.core.clock import Clock, FrozenClock, get_clock, to_display
 from app.core.money import (
     apply_basis_points,
@@ -13,8 +16,6 @@ from app.core.money import (
     to_decimal,
     to_paisa,
 )
-from hypothesis import given
-from hypothesis import strategies as st
 
 pytestmark = pytest.mark.unit
 

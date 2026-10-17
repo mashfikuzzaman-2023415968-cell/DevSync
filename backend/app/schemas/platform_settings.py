@@ -194,6 +194,53 @@ class BiddingSettings(_Group):
     max_extensions: int = Field(2, ge=0, le=5)
 
 
+class RateRule(_Group):
+    """At most `limit` requests per `window_seconds` (sliding window)."""
+
+    limit: int = Field(ge=1, le=100_000)
+    window_seconds: int = Field(ge=1, le=7 * 86_400)
+
+
+def _rules(*pairs: tuple[int, int]) -> tuple[RateRule, ...]:
+    return tuple(RateRule(limit=limit, window_seconds=window) for limit, window in pairs)
+
+
+MINUTE, HOUR, DAY = 60, 3600, 86_400
+
+
+class RateLimitSettings(_Group):
+    """Application rate limits (spec §14.8). Each scope may combine several windows."""
+
+    api_authenticated: tuple[RateRule, ...] = _rules((120, MINUTE))
+    api_anonymous: tuple[RateRule, ...] = _rules((60, MINUTE))
+    login: tuple[RateRule, ...] = _rules((5, MINUTE), (20, HOUR))
+    registration: tuple[RateRule, ...] = _rules((5, HOUR))
+    otp_send: tuple[RateRule, ...] = _rules((1, MINUTE), (5, HOUR))
+    otp_verify: tuple[RateRule, ...] = _rules((10, HOUR))
+    password_reset: tuple[RateRule, ...] = _rules((3, HOUR))
+    email_resend: tuple[RateRule, ...] = _rules((3, HOUR))
+    totp: tuple[RateRule, ...] = _rules((5, 5 * MINUTE))
+    captcha_challenge: tuple[RateRule, ...] = _rules((30, MINUTE))
+    bid: tuple[RateRule, ...] = _rules((20, HOUR))
+    project_create: tuple[RateRule, ...] = _rules((10, DAY))
+    formation_run: tuple[RateRule, ...] = _rules((10, HOUR))
+    test_start: tuple[RateRule, ...] = _rules((10, HOUR))
+    coding_submit: tuple[RateRule, ...] = _rules((10, HOUR))
+    coding_practice: tuple[RateRule, ...] = _rules((30, HOUR))
+    comment: tuple[RateRule, ...] = _rules((60, HOUR))
+    review: tuple[RateRule, ...] = _rules((30, HOUR))
+    dispute: tuple[RateRule, ...] = _rules((5, DAY))
+    upload: tuple[RateRule, ...] = _rules((20, HOUR))
+    github_sync: tuple[RateRule, ...] = _rules((1, 10 * MINUTE))
+    data_export: tuple[RateRule, ...] = _rules((2, DAY))
+    admin: tuple[RateRule, ...] = _rules((300, MINUTE))
+    sse_concurrent: int = Field(3, ge=1, le=20)
+    login_captcha_after_failures: int = Field(3, ge=1, le=20)
+    login_progressive_after_failures: int = Field(5, ge=1, le=50)
+    login_lock_after_failures: int = Field(10, ge=2, le=100)
+    login_lock_minutes: int = Field(15, ge=1, le=1440)
+
+
 class AlgorithmSettings(_Group):
     """`devsync` (product) or `pcs_replication` (paper only, §9.0)."""
 
@@ -219,6 +266,7 @@ class PlatformSettingsValues(_Group):
     alerts: AlertSettings = AlertSettings()
     bidding: BiddingSettings = BiddingSettings()
     algorithm: AlgorithmSettings = AlgorithmSettings()
+    ratelimit: RateLimitSettings = RateLimitSettings()
 
 
 def default_settings_document() -> dict[str, object]:

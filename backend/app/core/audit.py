@@ -14,6 +14,7 @@ from sqlalchemy import func, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import redact, request_id_var
+from app.core.netutil import valid_ip
 from app.models.foundation import AuditLog
 
 
@@ -29,7 +30,11 @@ async def write_audit(
     after: dict[str, Any] | None = None,
     ip: str | None = None,
 ) -> None:
-    """Insert one audit row in the caller's transaction (before/after are redacted)."""
+    """Insert one audit row in the caller's transaction (before/after are redacted).
+
+    A Core insert on the table (no RETURNING): ordinary users may append to the log
+    but not read it back under row-level security.
+    """
     await session.execute(
         insert(AuditLog).values(
             actor_id=actor_id,
@@ -39,7 +44,7 @@ async def write_audit(
             entity_id=str(entity_id) if entity_id is not None else None,
             before=redact(before) if before is not None else None,
             after=redact(after) if after is not None else None,
-            ip=ip,
+            ip=valid_ip(ip),
             request_id=request_id_var.get(),
         )
     )

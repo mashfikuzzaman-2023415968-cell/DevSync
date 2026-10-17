@@ -21,11 +21,15 @@ ignore = [
     "PLR0913",  # explicit keyword-heavy constructors are clearer than parameter objects here
 ]
 
+[tool.ruff.lint.isort]
+known-first-party = ["app", "scripts", "tests"]
+
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "PLR2004", "S105", "S106", "S311"]
 "tests/edge/**" = ["S101", "PLR2004", "S501"]  # self-signed dev cert on the internal test network
 "scripts/**" = ["T201", "S603", "S607", "PLR0912", "PLR0915", "PLR2004"]
 "alembic/**" = ["E501"]
+"app/core/errors.py" = ["S105"]  # error-code names, not credentials
 
 [tool.ruff.format]
 quote-style = "double"
@@ -45,7 +49,7 @@ module = ["app.core.*", "app.algorithms.*", "app.services.money", "app.services.
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["rq.*", "apscheduler.*"]
+module = ["rq.*", "apscheduler.*", "zxcvbn.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

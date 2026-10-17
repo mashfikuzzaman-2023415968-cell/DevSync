@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
 from scripts.check_layers import check_file
 from scripts.check_openapi import lint
 from scripts.check_rls import find_unprotected, load_exempt

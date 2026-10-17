@@ -1,7 +1,7 @@
 """Backend layer checker (spec §5.2): AST scan of `app/` imports.
 
 Rules (a layer may import only the layers listed):
-- api          → services, schemas, core
+- api          → services, schemas, core, db (only to open the request's DB session)
 - services     → repositories, models, schemas, algorithms, integrations, db, core, services
 - repositories → models, db, core
 - models       → db, core
@@ -22,7 +22,7 @@ import sys
 from pathlib import Path
 
 ALLOWED: dict[str, set[str]] = {
-    "api": {"api", "services", "schemas", "core"},
+    "api": {"api", "services", "schemas", "core", "db"},
     "services": {
         "services",
         "repositories",

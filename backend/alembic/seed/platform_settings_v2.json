@@ -1,0 +1,261 @@
+{
+  "alerts": {
+    "inactive_days": 7,
+    "repair_days": 10,
+    "stalled_days": 5
+  },
+  "algorithm": {
+    "mode": "devsync"
+  },
+  "bidding": {
+    "extend_days": 3,
+    "max_extensions": 2,
+    "min_bids_factor": "1.0"
+  },
+  "consistency": {
+    "threshold": "0.4"
+  },
+  "exact": {
+    "max_candidates": 18,
+    "max_combinations": 2000000
+  },
+  "fairness": {
+    "default_min_newcomers": 1
+  },
+  "filter": {
+    "C0": "0.40",
+    "P0": "0.45",
+    "newcomer_competency_check": false,
+    "relax_max_steps": 3,
+    "relax_step": "0.05",
+    "shortlist_factor": 3,
+    "shortlist_min": 6
+  },
+  "fitness": {
+    "include_performance": false,
+    "use_skill_competency": false
+  },
+  "invite": {
+    "expiry_hours": 48
+  },
+  "newcomer": {
+    "pass_mark": "0.60",
+    "threshold": 3
+  },
+  "pay": {
+    "auto_approve_days": 7,
+    "bonus_pool_bp": 1000,
+    "platform_fee_bp": 500,
+    "q_max": "0.25",
+    "theta1": "4",
+    "theta2": "4"
+  },
+  "pso": {
+    "bounds": [
+      "-1",
+      "1"
+    ],
+    "early_stop_iters": 40,
+    "inertia": "1.0",
+    "max_iter": 200,
+    "particles": 30,
+    "timeout_seconds": 10,
+    "v_max": "4.0",
+    "z1": "1.5",
+    "z2": "1.5"
+  },
+  "ratelimit": {
+    "admin": [
+      {
+        "limit": 300,
+        "window_seconds": 60
+      }
+    ],
+    "api_anonymous": [
+      {
+        "limit": 60,
+        "window_seconds": 60
+      }
+    ],
+    "api_authenticated": [
+      {
+        "limit": 120,
+        "window_seconds": 60
+      }
+    ],
+    "bid": [
+      {
+        "limit": 20,
+        "window_seconds": 3600
+      }
+    ],
+    "captcha_challenge": [
+      {
+        "limit": 30,
+        "window_seconds": 60
+      }
+    ],
+    "coding_practice": [
+      {
+        "limit": 30,
+        "window_seconds": 3600
+      }
+    ],
+    "coding_submit": [
+      {
+        "limit": 10,
+        "window_seconds": 3600
+      }
+    ],
+    "comment": [
+      {
+        "limit": 60,
+        "window_seconds": 3600
+      }
+    ],
+    "data_export": [
+      {
+        "limit": 2,
+        "window_seconds": 86400
+      }
+    ],
+    "dispute": [
+      {
+        "limit": 5,
+        "window_seconds": 86400
+      }
+    ],
+    "email_resend": [
+      {
+        "limit": 3,
+        "window_seconds": 3600
+      }
+    ],
+    "formation_run": [
+      {
+        "limit": 10,
+        "window_seconds": 3600
+      }
+    ],
+    "github_sync": [
+      {
+        "limit": 1,
+        "window_seconds": 600
+      }
+    ],
+    "login": [
+      {
+        "limit": 5,
+        "window_seconds": 60
+      },
+      {
+        "limit": 20,
+        "window_seconds": 3600
+      }
+    ],
+    "login_captcha_after_failures": 3,
+    "login_lock_after_failures": 10,
+    "login_lock_minutes": 15,
+    "login_progressive_after_failures": 5,
+    "otp_send": [
+      {
+        "limit": 1,
+        "window_seconds": 60
+      },
+      {
+        "limit": 5,
+        "window_seconds": 3600
+      }
+    ],
+    "otp_verify": [
+      {
+        "limit": 10,
+        "window_seconds": 3600
+      }
+    ],
+    "password_reset": [
+      {
+        "limit": 3,
+        "window_seconds": 3600
+      }
+    ],
+    "project_create": [
+      {
+        "limit": 10,
+        "window_seconds": 86400
+      }
+    ],
+    "registration": [
+      {
+        "limit": 5,
+        "window_seconds": 3600
+      }
+    ],
+    "review": [
+      {
+        "limit": 30,
+        "window_seconds": 3600
+      }
+    ],
+    "sse_concurrent": 3,
+    "test_start": [
+      {
+        "limit": 10,
+        "window_seconds": 3600
+      }
+    ],
+    "totp": [
+      {
+        "limit": 5,
+        "window_seconds": 300
+      }
+    ],
+    "upload": [
+      {
+        "limit": 20,
+        "window_seconds": 3600
+      }
+    ]
+  },
+  "rep": {
+    "alpha_comm": "0.7",
+    "alpha_e": "0.3",
+    "alpha_team": "0.7",
+    "alpha_x": "0.3",
+    "f_default": "0.7",
+    "g": [
+      "0.5",
+      "0.25",
+      "0.25"
+    ],
+    "gamma0_base": "0.40",
+    "gamma0_max": "0.60",
+    "gamma0_per_verification": "0.05",
+    "kappa_ext": "0.7",
+    "kappa_int": "0.7",
+    "max_change_per_project": "0.15",
+    "neutral": "0.5",
+    "newcomer_review": null,
+    "newcomer_review_fallback": "0.6",
+    "w_external": "0.2",
+    "w_internal": "0.8"
+  },
+  "review": {
+    "contest_days": 14,
+    "window_days": 7
+  },
+  "split": {
+    "objection_hours": 72
+  },
+  "trust": {
+    "age_full_days": 90,
+    "age_weight": "0.25",
+    "bayes_m": 3,
+    "completed_full": 5,
+    "completed_weight": "0.25",
+    "consistency_weight": "0.35",
+    "min_trust": "0.1",
+    "open_flag_factor": "0.5",
+    "verified_weight": "0.15"
+  }
+}

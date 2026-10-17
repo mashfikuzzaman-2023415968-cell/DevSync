@@ -75,5 +75,8 @@ security: ## Static security scans + security tests
 gate: ## Run the phase gate: make gate PHASE=N
 	python3 backend/scripts/phase_gate.py --phase $(PHASE)
 
-seed-demo create-admin visual visual-update fuzz zap load chaos demo-check demo-up demo-reset demo-preflight erd experiments backup restore-drill docs deps-update ledger-report: ## Arrive in later phases
+create-admin: ## Create an administrator (prints TOTP setup and recovery codes once)
+	$(COMPOSE) run --rm worker python scripts/create_admin.py
+
+seed-demo visual visual-update fuzz zap load chaos demo-check demo-up demo-reset demo-preflight erd experiments backup restore-drill docs deps-update ledger-report: ## Arrive in later phases
 	@echo "make $@: available from the phase that builds it (see DEVSYNC_BUILD_SPEC.md §16.6 / §17)"

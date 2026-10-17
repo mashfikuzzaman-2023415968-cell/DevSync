@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+
 from scripts.check_forbidden import scan, scan_python, scan_ts
 
 pytestmark = pytest.mark.unit
@@ -34,6 +35,11 @@ pytestmark = pytest.mark.unit
 def test_python_rules(source: str, rule: str) -> None:
     hits = scan_python("backend/app/services/x.py", source)
     assert rule in [r for _, r in hits]
+
+
+def test_sql_column_comparisons_are_not_flagged() -> None:
+    src = "stmt = select(T).where(Session.token_hash == token_hash)"
+    assert scan_python("backend/app/repositories/x.py", src) == []
 
 
 def test_money_files_reject_float_and_math() -> None:

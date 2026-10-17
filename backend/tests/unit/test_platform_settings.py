@@ -8,13 +8,16 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
 from app.core.errors import SettingsValidationError
 from app.schemas.platform_settings import PlatformSettingsValues, default_settings_document
 from app.services.platform_settings import validate_settings
 
 pytestmark = pytest.mark.unit
 
-SEED = Path(__file__).resolve().parents[2] / "alembic" / "seed" / "platform_settings_v1.json"
+SEED_DIR = Path(__file__).resolve().parents[2] / "alembic" / "seed"
+SEED_V1 = SEED_DIR / "platform_settings_v1.json"
+SEED = SEED_DIR / "platform_settings_v2.json"
 
 
 def doc_with(path: str, value: Any) -> dict[str, Any]:
@@ -38,6 +41,12 @@ def test_defaults_match_spec_table() -> None:
     assert (s.pay.platform_fee_bp, s.pay.bonus_pool_bp, str(s.pay.q_max)) == (500, 1000, "0.25")
     assert s.pay.auto_approve_days == 7
     assert s.algorithm.mode == "devsync"
+
+
+def test_v1_snapshot_still_validates_with_new_defaults_filled_in() -> None:
+    v1 = json.loads(SEED_V1.read_text(encoding="utf-8"))
+    assert "ratelimit" not in v1
+    assert validate_settings(v1).ratelimit.login[0].limit == 5
 
 
 def test_seed_snapshot_equals_schema_defaults_and_validates() -> None:
@@ -72,6 +81,8 @@ def test_defaults_serialize_decimals_as_strings() -> None:
         ("pay.q_max", "0"),
         ("trust.age_weight", "0.5"),  # trust weights sum to 1
         ("algorithm.mode", "matlab"),
+        ("ratelimit.login", [{"limit": 0, "window_seconds": 60}]),
+        ("ratelimit.sse_concurrent", 0),
     ],
 )
 def test_invalid_settings_are_rejected(path: str, value: Any) -> None:
