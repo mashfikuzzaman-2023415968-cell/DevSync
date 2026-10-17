@@ -116,6 +116,9 @@ class NotApplicable(Exception):  # noqa: N818
     """Raised by a step that does not apply to this phase yet."""
 
 
+ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+
+
 def run(
     cmd: list[str],
     *,
@@ -126,7 +129,14 @@ def run(
     check: bool = True,
 ) -> subprocess.CompletedProcess[str]:
     """Run a command; on failure raise StepFailed with the tail of its output."""
-    merged = {**os.environ, "HOST_UID_GID": f"{os.getuid()}:{os.getgid()}", **(env or {})}
+    # Plain output: the gate parses test counts, and colour codes would break that.
+    merged = {
+        **os.environ,
+        "HOST_UID_GID": f"{os.getuid()}:{os.getgid()}",
+        "NO_COLOR": "1",
+        "FORCE_COLOR": "0",
+        **(env or {}),
+    }
     proc = subprocess.run(
         cmd,
         cwd=cwd,
@@ -137,6 +147,8 @@ def run(
         stderr=subprocess.STDOUT if capture else None,
         check=False,
     )
+    if proc.stdout:
+        proc.stdout = ANSI_ESCAPE.sub("", proc.stdout)
     if check and proc.returncode != 0:
         tail = "\n".join((proc.stdout or "").strip().splitlines()[-25:])
         raise StepFailed(f"`{' '.join(cmd[:6])}…` exited {proc.returncode}\n{tail}")
@@ -368,21 +380,27 @@ def step_structure(g: Gate) -> str:
 def step_dependency_audit(g: Gate) -> str:
     if g.offline:
         raise NotApplicable("--offline: dependency databases need network (recorded)")
-    in_tests(
-        [
-            "pip-audit",
-            "--strict",
-            "--progress-spinner",
-            "off",
-            "-r",
-            "requirements.lock",
-            "-r",
-            "requirements-dev.lock",
-            "--require-hashes",
-            "--disable-pip",
-        ],
-        no_deps=True,
-    )
+    pip_audit = [
+        "pip-audit",
+        "--strict",
+        "--progress-spinner",
+        "off",
+        "-r",
+        "requirements.lock",
+        "-r",
+        "requirements-dev.lock",
+        "--require-hashes",
+        "--disable-pip",
+    ]
+    try:
+        in_tests(pip_audit, no_deps=True)
+    except StepFailed as exc:
+        # A timeout reaching the advisory database is not a finding: try once more. A real
+        # vulnerability fails both attempts.
+        if "Timeout" not in str(exc) and "timed out" not in str(exc):
+            raise
+        time.sleep(10)
+        in_tests(pip_audit, no_deps=True)
     run(["npm", "audit", "--audit-level=high"], cwd=FRONTEND)
     for image in ("devsync/backend:local", "devsync/nginx:local"):
         run(
