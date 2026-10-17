@@ -34,7 +34,8 @@ No high-confidence (≥ 8/10) vulnerabilities were found.
 | 1 | Medium | Zod 4's `new Function` probe caused `script-src` CSP violations on every form page (blocked, but noisy and a sign of eval use). | **Fixed:** `z.config({ jitless: true })`; test asserts it. |
 | 2 | Low | Radix scroll lock injected `<style>` elements that the strict CSP blocked (dialogs and sheets lost scroll lock). | **Fixed:** per-response style nonce (D23). |
 | 3 | Low | A global-limit exemption for the test router would have been unsafe if enabled in every environment (unlimited requests to a non-existent path). | **Fixed by design:** exemption is configured only in the test environment; tested. |
-| 4 | Info | Client error reports could include query strings (reset tokens) or secret-like strings in messages. | **Fixed:** browser sends only the path; server strips queries, fragments and long opaque strings again. |
+| 4 | Low | The Nginx image was built from the repository root without a `.dockerignore`, so `.env` (secrets), `.git` and `node_modules` were sent to the Docker daemon as build context (not copied into the image, which takes only `frontend/` and `infra/nginx/`). | **Fixed:** root `.dockerignore` allowlist. |
+| 5 | Info | Client error reports could include query strings (reset tokens) or secret-like strings in messages. | **Fixed:** browser sends only the path; server strips queries, fragments and long opaque strings again. |
 
 ## Accepted / carried forward
 

@@ -1,0 +1,15 @@
+# Build context for images built from the repository root (infra/nginx/Dockerfile).
+# Allowlist: only what the image needs. Never send .git, .env (secrets), node_modules,
+# test output or documents to the Docker daemon.
+*
+!frontend/
+!infra/nginx/
+frontend/node_modules
+frontend/dist
+frontend/dist-kit
+frontend/coverage
+frontend/test-results
+frontend/playwright-report
+frontend/.probes
+frontend/e2e/__screenshots__
+frontend/.env*
