@@ -3,3 +3,6 @@ coverage
 playwright-report
 test-results
 package-lock.json
+dist-kit
+.probes
+src/assets/stills/stills-manifest.json

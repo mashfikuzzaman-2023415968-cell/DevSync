@@ -1,5 +1,5 @@
 /** Phase 1 end-to-end flows (spec §17 Phase 1 tests). */
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./test";
 import {
   lastLink,
   lastSms,
@@ -15,7 +15,7 @@ test.describe.configure({ mode: "serial" });
 
 test("homepage links into registration with the role preselected @e2e", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: "Hire a team" }).click();
+  await page.getByRole("link", { name: "Hire a team" }).first().click();
   await expect(page).toHaveURL(/\/register\?role=client/);
   await expect(page.getByRole("heading", { name: "Your details" })).toBeVisible();
   await expect(page.getByText("You’re signing up to hire a team.")).toBeVisible();
@@ -51,7 +51,7 @@ test("register, verify phone and email, land on the role home @e2e", async ({
   await expect(page.getByText("Your email is verified.")).toBeVisible();
   await page.getByRole("link", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/dev$/);
-  await expect(page.getByRole("heading", { name: "Hello, Nadia Rahman" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /, Nadia$/ })).toBeVisible();
   expect(baseURL).toBeTruthy();
 });
 
@@ -96,6 +96,7 @@ test("signing out of every device ends the other browser's session @e2e", async 
   await expect(b).toHaveURL(/\/dev$/);
   await a.goto("/settings");
   await a.getByRole("button", { name: "Sign out of every device" }).click();
+  await a.getByRole("alertdialog").getByRole("button", { name: "Sign out everywhere" }).click();
   await expect(a).toHaveURL(/\/$/);
   await b.goto("/settings");
   await expect(b).toHaveURL(/\/login\?return_to=%2Fsettings$/);

@@ -11,8 +11,9 @@ from __future__ import annotations
 from typing import Annotated, Literal
 
 import pyotp
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel, EmailStr, Field
+from redis.asyncio import Redis
 
 from app.api.deps import app_settings, redis_client
 from app.core.config import Settings
@@ -80,3 +81,14 @@ async def last_email_link(
 async def totp_now(secret: Annotated[str, Query(max_length=64)]) -> dict[str, str]:
     """Current TOTP code for a seeded admin secret."""
     return {"code": pyotp.TOTP(secret).now()}
+
+
+@router.get("/ratelimits/reset", status_code=204)
+async def reset_rate_limits(redis: Annotated[Redis, Depends(redis_client)]) -> Response:
+    """Clear rate-limit counters so independent E2E tests from one IP don't throttle each other.
+
+    A GET so it works even while CSRF cookies are rate limited; test environment only."""
+    for pattern in ("rl:*", "auth:delay:*"):
+        async for key in redis.scan_iter(pattern):
+            await redis.delete(key)
+    return Response(status_code=204)

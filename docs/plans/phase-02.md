@@ -53,3 +53,13 @@ Save this plan as `docs/plans/phase-02.md`; DECISIONS D21–D24; `docs/BACKLOG.m
 - Largest frontend phase; 3D frame-rate and Lighthouse measurements inside headless Docker (software WebGL) may be noisy — measured as specified; if a measurement is impossible in the container rather than failing, I'll stop and report instead of weakening a threshold.
 - CSP + Radix scroll-lock (handled by the D23 nonce path, decided in the spike).
 - Visual baselines must be generated in the same pinned image to stay stable.
+
+## As built (notes added during the phase)
+- Skills loaded: `frontend-design`, `threejs-geometry` (instancing, budgets), `skill-creator`
+  (to write `.claude/skills/devsync-ui/SKILL.md` + `references/components.md`), then
+  `devsync-ui` for all later frontend work.
+- Extra decisions recorded while building: D25 (slim `three` entry keeps the 3D chunk at
+  186 KB gzip), D26 (headline stays the LCP element; poster on a 2D canvas; 3D loads after the
+  reveal; navbar ignores scroll jumps), D27 (E2E rate-limit reset through the test-only router).
+- Public stats return only `developers` for now; projects planned, newcomers hired and the
+  on-time rate join with the phases that produce them (the strip never shows zeros).

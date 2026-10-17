@@ -47,7 +47,11 @@ export function CardHeader({
     <div className={cn("flex items-start justify-between gap-4 px-5 pt-5", className)}>
       <div className="min-w-0">
         <h2 className="text-body font-semibold text-text">{title}</h2>
-        {description ? <p className="mt-0.5 text-body-sm text-text-muted">{description}</p> : null}
+        {description ? (
+          <p className="mt-0.5 text-body-sm text-text-muted [overflow-wrap:anywhere]">
+            {description}
+          </p>
+        ) : null}
       </div>
       {action}
     </div>

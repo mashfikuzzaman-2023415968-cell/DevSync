@@ -19,4 +19,12 @@ Accounts and authentication (spec §10.2 Auth, Me): `GET /captcha/challenge`, `G
 Every state-changing request needs `X-CSRF-Token` (from `GET /auth/csrf`) and a same-origin
 `Origin`. Public forms carry `captcha`, `website` (honeypot) and `started_at_ms`.
 
+## Phase 2 endpoints
+- `GET /public/stats` (public, cached 5 min, `Cache-Control: public, max-age=300`): live
+  homepage numbers; a field is present only when it exists and is non-zero
+  (`{"developers": 42}`). Aggregates come from the SECURITY DEFINER function `public_stats()`.
+- `POST /client-errors` (public, CSRF + Origin, ≤ 8 KB, 10/min + 50/h per IP): frontend error
+  summary `{message, stack?, path, kind: render|chunk|unhandled, request_id?}` → 204. Sanitized
+  (control characters, query strings, secret-like strings) and logged; nothing is stored.
+
 Error envelope: `{"error": {"code", "message", "fields"?, "request_id"}}`.

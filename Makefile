@@ -9,7 +9,7 @@ PHASE ?= $(shell p=$$(cat .phase 2>/dev/null); [ "$$p" = "none" -o -z "$$p" ] &&
 
 .DEFAULT_GOAL := help
 .PHONY: help env certs up down logs migrate build lock openapi seed-demo create-admin \
-	test test-unit test-backend test-frontend e2e a11y visual visual-update security fuzz zap \
+	test test-unit test-backend test-frontend e2e a11y visual visual-update stills security fuzz zap \
 	load chaos gate demo-check demo-up demo-reset demo-preflight erd experiments backup \
 	restore-drill docs test-stack-up test-stack-down deps-update ledger-report
 
@@ -75,8 +75,22 @@ security: ## Static security scans + security tests
 gate: ## Run the phase gate: make gate PHASE=N
 	python3 backend/scripts/phase_gate.py --phase $(PHASE)
 
+PW_IMAGE := mcr.microsoft.com/playwright:v1.63.0-noble
+PW_RUN = docker run --rm -v $(CURDIR)/frontend:/web -w /web -e HOME=/tmp --user $$(id -u):$$(id -g) --ipc=host
+
+stills: ## Re-render the 3D stills and social preview (spec §13.13)
+	$(PW_RUN) $(PW_IMAGE) node scripts/render-stills.mjs
+
+visual: ## Visual regression against committed baselines (gate step 15)
+	python3 backend/scripts/phase_gate.py --phase $$(cat .phase) --only build,visual
+
+visual-update: ## Re-create visual baselines in the pinned image (review the diff before committing)
+	cd frontend && VITE_DEV_TOOLS=1 npx vite build --outDir dist-kit --emptyOutDir
+	$(PW_RUN) --network container:$$($(COMPOSE_TEST) ps -q nginx) -e E2E_BASE_URL=https://localhost:8443 -e KIT_URL=http://127.0.0.1:4173 $(PW_IMAGE) \
+	  sh -c "npx vite preview --outDir dist-kit --port 4173 --host 127.0.0.1 >/tmp/kit.log 2>&1 & sleep 3; npx playwright test --grep @visual --project chromium --update-snapshots"
+
 create-admin: ## Create an administrator (prints TOTP setup and recovery codes once)
 	$(COMPOSE) run --rm worker python scripts/create_admin.py
 
-seed-demo visual visual-update fuzz zap load chaos demo-check demo-up demo-reset demo-preflight erd experiments backup restore-drill docs deps-update ledger-report: ## Arrive in later phases
+seed-demo fuzz zap load chaos demo-check demo-up demo-reset demo-preflight erd experiments backup restore-drill docs deps-update ledger-report: ## Arrive in later phases
 	@echo "make $@: available from the phase that builds it (see DEVSYNC_BUILD_SPEC.md §16.6 / §17)"

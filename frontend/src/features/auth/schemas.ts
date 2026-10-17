@@ -1,6 +1,10 @@
 /** Form validation mirroring backend/app/schemas/auth.py (server stays the authority). */
 import { z } from "zod";
 
+// Zod 4 compiles fast validators with `new Function`, which the strict CSP (no
+// 'unsafe-eval', spec §14.3) blocks and reports; the interpreter is fast enough for forms.
+z.config({ jitless: true });
+
 export const email = z.email("Enter a valid email address.").max(254);
 export const password = z
   .string()

@@ -47,7 +47,10 @@ function ProfileCard() {
   });
   return (
     <Card>
-      <CardHeader title="Your account" description={me.data?.email} />
+      <CardHeader
+        title="Your account"
+        description={<span data-volatile="">{me.data?.email}</span>}
+      />
       <form noValidate onSubmit={(e) => void submit(e)} className="space-y-4 p-5">
         <Field
           label="Full name"
@@ -144,7 +147,7 @@ function DevicesCard() {
             requestId={null}
           />
         ) : null}
-        <ul className="divide-y divide-border">
+        <ul className="divide-y divide-border" data-volatile="">
           {sessions.data?.items.map((s) => (
             <li key={s.id} className="flex items-center justify-between gap-4 py-3">
               <div className="flex min-w-0 items-start gap-3">
@@ -259,7 +262,7 @@ export default function SettingsPage() {
   return (
     <>
       <PageHeader title="Settings" description="Your account, appearance and security." />
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-2">
         <div className="space-y-6">
           <ProfileCard />
           <AppearanceCard />

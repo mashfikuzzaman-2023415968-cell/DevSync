@@ -54,7 +54,7 @@ function Row({
       <div className={cn("relative", flip && "lg:order-1")}>
         <div
           aria-hidden="true"
-          className="absolute -inset-6 -z-10 rounded-[28px] bg-gradient-to-br from-primary-soft to-transparent"
+          className="absolute -inset-3 -z-10 rounded-[28px] bg-gradient-to-br from-primary-soft to-transparent sm:-inset-6"
         />
         {visual(active)}
         <p className="mt-3 text-caption text-text-muted">Example from a sample project</p>

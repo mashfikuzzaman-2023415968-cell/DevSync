@@ -2,7 +2,7 @@
  * 4 → 0), subheading after it, two calls to action, a slowly drifting gradient mesh and the
  * 3D talent constellation on the right (below the text on phones). */
 import { motion } from "framer-motion";
-import { Fragment, useRef } from "react";
+import { Fragment, useRef, useState } from "react";
 import { Link } from "react-router";
 import { Button } from "@/components/ui/Button";
 import { duration, ease, stagger } from "@/design/motion";
@@ -14,11 +14,13 @@ export const HEADLINE = "Plan the project. Hire a fair team. Watch the work. Lea
 /** One sentence per line: the four steps read as a list, never with a lone word. */
 const SENTENCES = HEADLINE.split(/(?<=\.)\s/).map((sentence) => sentence.split(" "));
 const WORD_COUNT = SENTENCES.flat().length;
+const HEADLINE_CLASS = "text-hero font-semibold tracking-[-0.025em] text-text";
 
 export function Hero() {
   const m = useMotion();
   const ref = useRef<HTMLElement>(null);
   const active = useActiveWhenVisible(ref);
+  const [revealed, setRevealed] = useState(m.reduced);
   const afterWords = m.reduced ? 0 : WORD_COUNT * stagger.words + duration.slow * 0.6;
   return (
     <section
@@ -34,31 +36,47 @@ export function Hero() {
       </div>
       <div className="mx-auto grid max-w-content items-center gap-12 px-4 sm:px-6 lg:grid-cols-[minmax(0,11fr)_minmax(0,10fr)]">
         <div>
-          <motion.h1
-            id="hero-title"
-            className="text-hero font-semibold tracking-[-0.025em] text-text"
-            variants={m.words}
-            initial="hidden"
-            animate="show"
-            aria-label={HEADLINE}
-          >
-            {SENTENCES.map((words, line) => (
-              <Fragment key={words.join(" ")}>
-                {words.map((w, i) => (
-                  <motion.span
-                    key={`${String(line)}-${w}-${String(i)}`}
-                    variants={m.word}
-                    aria-hidden="true"
-                    className="whitespace-pre"
-                  >
-                    {w}
-                    {i < words.length - 1 ? " " : ""}
-                  </motion.span>
-                ))}
-                {line < SENTENCES.length - 1 ? <br /> : null}
-              </Fragment>
-            ))}
-          </motion.h1>
+          {revealed ? (
+            // After the reveal the heading is plain text again: one text block, so it is the
+            // Largest Contentful Paint element (spec §13.12), and nothing stays animated.
+            <h1 id="hero-title" className={HEADLINE_CLASS}>
+              {SENTENCES.map((words, line) => (
+                <Fragment key={words.join(" ")}>
+                  {words.join(" ")}
+                  {line < SENTENCES.length - 1 ? <br /> : null}
+                </Fragment>
+              ))}
+            </h1>
+          ) : (
+            <motion.h1
+              id="hero-title"
+              className={HEADLINE_CLASS}
+              variants={m.words}
+              initial="hidden"
+              animate="show"
+              aria-label={HEADLINE}
+              onAnimationComplete={() => {
+                setRevealed(true);
+              }}
+            >
+              {SENTENCES.map((words, line) => (
+                <Fragment key={words.join(" ")}>
+                  {words.map((w, i) => (
+                    <motion.span
+                      key={`${String(line)}-${w}-${String(i)}`}
+                      variants={m.word}
+                      aria-hidden="true"
+                      className="whitespace-pre"
+                    >
+                      {w}
+                      {i < words.length - 1 ? " " : ""}
+                    </motion.span>
+                  ))}
+                  {line < SENTENCES.length - 1 ? <br /> : null}
+                </Fragment>
+              ))}
+            </motion.h1>
+          )}
           <motion.p
             className="mt-6 max-w-[52ch] text-lead text-text-muted"
             initial={{ opacity: 0 }}
@@ -86,7 +104,7 @@ export function Hero() {
             </Button>
           </motion.div>
         </div>
-        <HeroVisual active={active} />
+        <HeroVisual active={active} start={revealed} />
       </div>
     </section>
   );

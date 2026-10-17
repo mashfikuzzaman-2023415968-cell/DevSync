@@ -25,7 +25,11 @@ function StandalonePage({
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
       <header className="mx-auto flex w-full max-w-content items-center px-4 py-5 sm:px-6">
-        <Link to="/" className="rounded-md" aria-label="DevSync home">
+        <Link
+          to="/"
+          className="inline-flex min-h-11 items-center rounded-md"
+          aria-label="DevSync home"
+        >
           <Wordmark />
         </Link>
       </header>

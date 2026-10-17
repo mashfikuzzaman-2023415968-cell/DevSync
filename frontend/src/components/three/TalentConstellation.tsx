@@ -311,6 +311,7 @@ function Constellation({
         <div
           ref={chipRef}
           aria-hidden="true"
+          data-hero-chip=""
           className="whitespace-nowrap rounded-full border border-border bg-surface/90 px-3 py-1.5 text-caption font-semibold text-text shadow-md backdrop-blur"
           style={{ opacity: fixedSnap ?? 0 }}
         >

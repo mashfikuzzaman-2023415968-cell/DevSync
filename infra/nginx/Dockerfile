@@ -28,7 +28,7 @@ WORKDIR /web
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY frontend/ ./
-RUN npm run build && find dist -name '*.map' -delete
+RUN npm run build && find dist -name '*.map' -delete && rm -rf dist/.vite
 
 # 3) Runtime: unprivileged Nginx (uid 101), read-only root friendly.
 FROM nginxinc/nginx-unprivileged:${NGINX_VERSION}-trixie AS runtime

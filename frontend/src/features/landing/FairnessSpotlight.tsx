@@ -43,6 +43,7 @@ function TeamPreview({ newcomers }: { newcomers: number }) {
               cy={y}
               r={isNewcomer(slot) ? 30 : 24}
               className={cn(isNewcomer(slot) ? "fill-newcomer/15" : "fill-primary/10")}
+              initial={false}
               animate={{ r: isNewcomer(slot) ? 30 : 24 }}
               transition={reduced ? instant : spring.drag}
             />

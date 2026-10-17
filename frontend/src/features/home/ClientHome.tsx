@@ -26,7 +26,7 @@ export default function ClientHome() {
           </Button>
         }
       />
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]">
         <Card>
           <EmptyState
             art={<NodeArt />}

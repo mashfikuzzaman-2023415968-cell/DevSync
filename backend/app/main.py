@@ -116,7 +116,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # Added innermost → outermost.
     app.add_middleware(UnhandledExceptionMiddleware)  # 10 (safety net for unknown errors)
     app.add_middleware(TimeoutMiddleware)  # 8
-    app.add_middleware(GlobalRateLimitMiddleware)  # 7
+    # The test-only router (DEVSYNC_ENV=test) is outside the per-IP limit so E2E helpers keep
+    # working; it does not exist in any other environment.
+    test_prefix = (f"{API_PREFIX}/__test__",) if settings.DEVSYNC_ENV is Environment.TEST else ()
+    app.add_middleware(GlobalRateLimitMiddleware, extra_exempt=test_prefix)  # 7
     app.add_middleware(CsrfMiddleware, settings=settings)  # 6
     app.add_middleware(SessionMiddleware, settings=settings)  # 5
     app.add_middleware(SecurityHeadersMiddleware)  # 4

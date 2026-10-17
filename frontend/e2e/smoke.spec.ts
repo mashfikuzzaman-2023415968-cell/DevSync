@@ -3,7 +3,7 @@
  * CSP, no console errors, no CSP violations and no requests to other origins.
  */
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./test";
 
 test("home page loads securely through the edge @e2e", async ({ page, baseURL }) => {
   const origin = new URL(baseURL ?? "https://localhost").origin;

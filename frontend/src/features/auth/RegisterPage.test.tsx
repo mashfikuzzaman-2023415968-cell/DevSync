@@ -57,6 +57,8 @@ describe("RegisterPage", () => {
     await user.type(screen.getByLabelText("Password"), "password1234");
     await user.click(screen.getByLabelText(/I agree to the terms/));
     await user.click(screen.getByRole("button", { name: "Create account" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("This password appears in lists of leaked passwords.");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "This password appears in lists of leaked passwords.",
+    );
   });
 });

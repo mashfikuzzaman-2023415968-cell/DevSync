@@ -9,7 +9,17 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", "coverage", "playwright-report", "test-results", "node_modules"] },
+  {
+    ignores: [
+      "dist",
+      "dist-kit",
+      ".probes",
+      "coverage",
+      "playwright-report",
+      "test-results",
+      "node_modules",
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   {

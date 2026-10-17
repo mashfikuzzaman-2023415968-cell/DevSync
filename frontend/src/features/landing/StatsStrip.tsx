@@ -22,7 +22,11 @@ function Figure({ stat, value }: { stat: Stat; value: number }) {
   const [ref, shown] = useCountUp<HTMLParagraphElement>(value);
   return (
     <div>
-      <p ref={ref} className="text-h2 font-semibold tabular tracking-tight text-text">
+      <p
+        ref={ref}
+        data-volatile=""
+        className="text-h2 font-semibold tabular tracking-tight text-text"
+      >
         <span aria-hidden="true">{stat.format(shown)}</span>
         <span className="sr-only">{stat.format(value)}</span>
       </p>

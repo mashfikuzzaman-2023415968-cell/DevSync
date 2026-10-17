@@ -59,14 +59,14 @@ export function SiteFooter() {
                     {l.to.startsWith("/#") ? (
                       <a
                         href={l.to}
-                        className="inline-flex min-h-9 items-center text-body-sm text-text-muted hover:text-text"
+                        className="inline-flex min-h-11 min-w-11 items-center text-body-sm text-text-muted hover:text-text"
                       >
                         {l.label}
                       </a>
                     ) : (
                       <Link
                         to={l.to}
-                        className="inline-flex min-h-9 items-center text-body-sm text-text-muted hover:text-text"
+                        className="inline-flex min-h-11 min-w-11 items-center text-body-sm text-text-muted hover:text-text"
                       >
                         {l.label}
                       </Link>

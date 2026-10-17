@@ -129,6 +129,8 @@ def test_production_app_has_no_test_router_or_docs() -> None:
     app = create_app(prod)
     paths = {getattr(r, "path", "") for r in app.router.routes}
     assert not any("__test__" in p for p in paths)
+    # …and nothing is exempt from the per-IP limit except health checks.
+    assert _global_limit_exemptions(app) == ()
     with TestClient(app, base_url="https://testserver") as c:
         for path in ("/api/v1/openapi.json", "/api/v1/docs", "/api/v1/__test__/sms?phone=x"):
             assert c.get(path).status_code == 404, path
@@ -140,3 +142,20 @@ def test_test_router_exists_only_in_test_environment(settings: object) -> None:
     assert isinstance(settings, Settings)
     with TestClient(create_app(make_settings(DEVSYNC_ENV=Environment.DEVELOPMENT))) as c:
         assert c.get("/api/v1/__test__/sms?phone=x").status_code == 404
+
+
+def _global_limit_exemptions(app: object) -> tuple[str, ...]:
+    from app.core.auth_middleware import GlobalRateLimitMiddleware  # noqa: PLC0415
+
+    for m in app.user_middleware:  # type: ignore[attr-defined]
+        if m.cls is GlobalRateLimitMiddleware:
+            return tuple(m.kwargs.get("extra_exempt", ()))
+    raise AssertionError("GlobalRateLimitMiddleware missing")
+
+
+def test_only_the_test_environment_exempts_its_router_from_the_global_limit() -> None:
+    assert _global_limit_exemptions(create_app(make_settings(DEVSYNC_ENV=Environment.TEST))) == (
+        "/api/v1/__test__",
+    )
+    dev = create_app(make_settings(DEVSYNC_ENV=Environment.DEVELOPMENT))
+    assert _global_limit_exemptions(dev) == ()

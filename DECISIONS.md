@@ -155,3 +155,61 @@ open-redirect (backslash in `<Link>`/`useNavigate`) and SSR-hydration advisories
 fix; 7.18.4 supports React 18 and keeps the data-router API. `security/detect-object-injection`
 is off: it only flags typed `Record` lookups with union keys (false positives in TypeScript);
 real sinks stay covered by other ESLint rules and `check_forbidden.py`.
+
+## 2026-10-17 — Phase 2
+
+**D21 · No algorithm figures on the homepage until Phase 7 (decided with the student).**
+Rule 0.2.6 says every homepage number comes from a real run of DevSync's filtering and PSO on
+the sample project; those algorithms arrive in Phases 5–7. Until then the hero chip reads
+"✓ Balanced team" and the fairness dial shows how many places are kept for newcomers (an
+illustration of the rule, no named team, no cost-of-fairness %). Phase 7 adds
+`scripts/build_homepage_example.py`, `src/content/homepage-example.json`, the % chip and the gate
+freshness check. Other homepage values come only from the seed in spec §18.2/§18.4
+(`src/content/sample.ts`, with a test that recomputes the CPM and C/P) or from `/public/stats`.
+
+**D22 · Phase 2 dependencies and limits.** Spec-named: `framer-motion` 12.43 (mature line; 13
+and 14 were 15 days old), shadcn-style components on `@radix-ui/react-*`,
+`class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react`, `cmdk`, `three` 0.186,
+`@react-three/fiber` 8.18 + `@react-three/drei` 9.122 (the React 18 line); `get-nonce` (already
+used by Radix, imported directly for D23); dev: `lighthouse` 13.5. No postprocessing package
+(glow from emissive materials). New rate-limit scopes in settings v3: `public_stats` 60/min,
+`client_errors` 10/min + 50/hour (the spec's §14.8 table has no rows for these endpoints).
+
+**D23 · CSP: per-response style nonce for runtime `<style>` elements.** Radix's scroll lock
+(`react-remove-scroll` → `react-style-singleton`) adds a `<style>` element when a dialog or
+sheet opens, which `style-src 'self'` blocks. Following the spec's fallback (§14.3), Nginx puts
+`$request_id` (128 random bits) into `style-src 'self' 'nonce-…'` and into `index.html` via
+`sub_filter`; `index.html` is `no-store`; the app passes it to `get-nonce` and Framer's
+`MotionConfig`. `script-src` stays `'self'` only; `'unsafe-inline'` is never used. Framer's
+`popLayout` mode (which also injects styles) is not used. Zod 4 runs `jitless`, because its
+`new Function` probe would otherwise trigger `script-src` violations.
+
+**D24 · Still renders without image dependencies.** `/__stills` (development builds only) draws
+the scene at fixed moments; `npm run render:stills` (`make stills`, pinned Playwright image)
+saves `canvas.toDataURL("image/webp")` at 1x/2x in light and dark plus a 1200×630 social
+preview PNG, and writes `stills-manifest.json` with a SHA-256 of the scene files and tokens,
+which the gate recomputes.
+
+**D25 · Slim `three` entry for the production bundle.** R3F v8 imports the whole THREE
+namespace, which made the 3D chunk 242 KB gzip (budget 220). Vite aliases the bare `three`
+import to `src/components/three/three-slim.ts`, which re-exports only what R3F, drei's `Html`
+and `PerformanceMonitor` and our scene use (186 KB gzip). `three-slim.test.ts` scans those
+libraries for every THREE member they reference, so a library update cannot silently break
+production. drei's `Environment` is not used (it pulls HDR/EXR loaders); the two light panels
+are rendered locally with `PMREMGenerator`.
+
+**D26 · Homepage LCP and hero details.** The headline's words animate as inline spans (fade +
+blur, 40 ms stagger) while the heading rises 8 px as one block (a per-word rise needs
+inline-block spans, which Chrome would then report one by one as LCP candidates). When the
+reveal finishes the heading becomes plain text, so the whole headline is the LCP element; the
+poster is drawn on a 2D canvas (never an LCP candidate) and the 3D chunk is fetched only after
+the reveal. The sticky navbar ignores restored scroll positions and anchor jumps when deciding
+to hide.
+
+**D27 · E2E rate limits.** All E2E traffic comes from one container IP, so the real per-IP
+limits (§14.8) would make independent tests throttle each other. The test-only router
+(`DEVSYNC_ENV=test` only) gains `GET /__test__/ratelimits/reset` (a GET so it works while the
+CSRF endpoint is throttled), the test environment alone exempts `/api/v1/__test__` from the
+global limit (asserted by a test), Playwright resets before every test and between screens in
+long loops, and runs one worker. Tests that check limits still build up their counts within
+the test. Production limits are unchanged.

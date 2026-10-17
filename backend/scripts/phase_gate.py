@@ -18,6 +18,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -29,6 +30,7 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 FRONTEND = ROOT / "frontend"
@@ -76,6 +78,11 @@ CRITICAL_MODULES = (
     "app/algorithms/",
 )
 INITIAL_JS_BUDGET_GZIP = 250 * 1024
+ROUTE_CHUNK_BUDGET_GZIP = 150 * 1024  # spec §13.7
+SCENE_CHUNK_BUDGET_GZIP = 220 * 1024  # spec §13.12 (lazy 3D chunk)
+SCENE_MODULE = "src/components/three/TalentConstellation.tsx"
+LANDING_MODULE = "src/features/landing/LandingPage.tsx"
+DEV_TOOL_MARKERS = ("UiKitPage", "StillsPage", "__stillReady")
 
 
 @dataclass
@@ -173,21 +180,83 @@ def step_build(g: Gate) -> str:
     run([*COMPOSE, "--profile", "tools", "build"], timeout=3600)
     run(["npm", "ci", "--no-audit", "--no-fund"], cwd=FRONTEND, timeout=1800)
     run(["npm", "run", "build"], cwd=FRONTEND, timeout=900)
-    return check_bundle_budget()
+    notes = check_bundle_budget()
+    if g.phase >= 2:
+        notes += "; " + check_no_dev_tools()
+        # Development-tools build (UI kit, stills) for the visual step; never deployed.
+        run(
+            ["npx", "vite", "build", "--outDir", "dist-kit", "--emptyOutDir"],
+            cwd=FRONTEND,
+            env={"VITE_DEV_TOOLS": "1"},
+            timeout=900,
+        )
+    return notes
+
+
+def _gzip_size(path: Path) -> int:
+    import gzip  # noqa: PLC0415
+
+    return len(gzip.compress(path.read_bytes()))
+
+
+def _chunk_closure(manifest: dict[str, Any], key: str) -> set[str]:
+    """Files a manifest entry needs at load time (itself + static imports, recursively)."""
+    files: set[str] = set()
+    stack = [key]
+    seen: set[str] = set()
+    while stack:
+        k = stack.pop()
+        if k in seen or k not in manifest:
+            continue
+        seen.add(k)
+        files.add(manifest[k]["file"])
+        stack.extend(manifest[k].get("imports", []))
+    return files
 
 
 def check_bundle_budget() -> str:
-    import gzip  # noqa: PLC0415
+    """Initial JS ≤ 250 KB, homepage initial ≤ 250 KB, route chunks ≤ 150 KB, 3D chunk ≤ 220 KB
+    (all gzip, spec §13.7 and §13.12)."""
+    dist = FRONTEND / "dist"
+    manifest = json.loads((dist / ".vite" / "manifest.json").read_text(encoding="utf-8"))
+    entry = next(k for k, v in manifest.items() if v.get("isEntry"))
+    initial_files = _chunk_closure(manifest, entry)
+    initial = sum(_gzip_size(dist / f) for f in initial_files)
+    if initial > INITIAL_JS_BUDGET_GZIP:
+        raise StepFailed(f"initial JS {initial / 1024:.1f} KB gzip > 250 KB budget")
+    notes = [f"initial JS {initial / 1024:.1f} KB"]
+    if LANDING_MODULE in manifest:
+        home_files = initial_files | _chunk_closure(manifest, LANDING_MODULE)
+        home = sum(_gzip_size(dist / f) for f in home_files)
+        if home > INITIAL_JS_BUDGET_GZIP:
+            raise StepFailed(f"homepage initial JS {home / 1024:.1f} KB gzip > 250 KB budget")
+        notes.append(f"homepage {home / 1024:.1f} KB")
+    too_big = []
+    for key, chunk in manifest.items():
+        if not chunk["file"].endswith(".js") or chunk["file"] in initial_files:
+            continue
+        size = _gzip_size(dist / chunk["file"])
+        limit = SCENE_CHUNK_BUDGET_GZIP if key == SCENE_MODULE else ROUTE_CHUNK_BUDGET_GZIP
+        if size > limit:
+            too_big.append(f"{key} {size / 1024:.1f} KB > {limit // 1024} KB")
+        if key == SCENE_MODULE:
+            notes.append(f"3D chunk {size / 1024:.1f} KB")
+    if too_big:
+        raise StepFailed(f"chunk budgets exceeded: {too_big}")
+    return ", ".join(notes) + " gzip (budgets 250/150/220 KB)"
 
-    index = (FRONTEND / "dist/index.html").read_text(encoding="utf-8")
-    entry = re.findall(r'<script[^>]+src="/(assets/[^"]+\.js)"', index)
-    preloads = re.findall(r'<link[^>]+rel="modulepreload"[^>]+href="/(assets/[^"]+\.js)"', index)
-    total = sum(
-        len(gzip.compress((FRONTEND / "dist" / f).read_bytes())) for f in {*entry, *preloads}
-    )
-    if total > INITIAL_JS_BUDGET_GZIP:
-        raise StepFailed(f"initial JS {total / 1024:.1f} KB gzip > 250 KB budget")
-    return f"initial JS {total / 1024:.1f} KB gzip (budget 250 KB)"
+
+def check_no_dev_tools() -> str:
+    """The UI kit and stills renderer never ship (spec §17 Phase 2 #8–9)."""
+    hits = [
+        f.name
+        for f in (FRONTEND / "dist" / "assets").glob("*.js")
+        for marker in DEV_TOOL_MARKERS
+        if marker in f.read_text(encoding="utf-8")
+    ]
+    if hits:
+        raise StepFailed(f"development tools found in the production build: {sorted(set(hits))}")
+    return "no dev tools in dist"
 
 
 def step_lint(g: Gate) -> str:
@@ -433,13 +502,28 @@ def step_frontend_tests(g: Gate) -> str:
     return f"{g.counts['frontend_tests']} passed; coverage {lines}% lines (min {frontend_min}%)"
 
 
-def _playwright(g: Gate, grep: str, projects: list[str]) -> str:
+def _playwright(
+    g: Gate,
+    grep: str,
+    projects: list[str],
+    *,
+    env: dict[str, str] | None = None,
+    before: str = "",
+    command: str | None = None,
+) -> str:
+    """Run Playwright (or `command`) in the pinned image on the nginx container's network."""
     nginx = run([*COMPOSE, "ps", "-q", "nginx"]).stdout.strip()
     if not nginx:
         raise StepFailed("nginx container is not running")
     args = ["npx", "playwright", "test", "--grep", grep, "--reporter=list"]
     for p in projects:
         args += ["--project", p]
+    script = f"{before}{command or ' '.join(args)}"
+    env_args: list[str] = []
+    # HOME inside the throwaway Playwright container (not a host temp file).
+    container_env = {"E2E_BASE_URL": "https://localhost:8443", "HOME": "/tmp", **(env or {})}  # noqa: S108
+    for key, value in container_env.items():
+        env_args += ["-e", f"{key}={value}"]
     proc = run(
         [
             "docker",
@@ -449,21 +533,26 @@ def _playwright(g: Gate, grep: str, projects: list[str]) -> str:
             f"container:{nginx}",
             "-v",
             f"{FRONTEND}:/web",
+            "-v",
+            f"{RUNS}:/runs",
             "-w",
             "/web",
-            "-e",
-            "E2E_BASE_URL=https://localhost:8443",
-            "-e",
-            "HOME=/tmp",
+            *env_args,
             "--user",
             f"{os.getuid()}:{os.getgid()}",
             "--ipc=host",
             PLAYWRIGHT_IMAGE,
-            *args,
+            "sh",
+            "-c",
+            script,
         ],
-        timeout=1800,
+        timeout=3600,
     )
-    last = [ln for ln in proc.stdout.splitlines() if "passed" in ln or "failed" in ln]
+    last = [
+        ln
+        for ln in proc.stdout.splitlines()
+        if "passed" in ln or "failed" in ln or "LIGHTHOUSE" in ln or "fps" in ln
+    ]
     return last[-1].strip() if last else "ok"
 
 
@@ -497,17 +586,49 @@ def step_a11y(g: Gate) -> str:
     return _playwright(g, "@a11y", ["chromium"])
 
 
+KIT_SERVER = (
+    "npx vite preview --outDir dist-kit --port 4173 --strictPort --host 127.0.0.1 "
+    ">/tmp/kit.log 2>&1 & sleep 3; "
+)
+
+
 def step_visual(g: Gate) -> str:
     if g.phase < 2:
         raise NotApplicable("visual regression starts in phase 2")
-    raise StepFailed("visual regression step not implemented yet")
+    baselines = FRONTEND / "e2e" / "__screenshots__"
+    if not baselines.exists() or not any(baselines.rglob("*.png")):
+        raise StepFailed("no visual baselines committed (run `make visual-update`)")
+    note = _playwright(
+        g, "@visual", ["chromium"], env={"KIT_URL": "http://127.0.0.1:4173"}, before=KIT_SERVER
+    )
+    count = len(list(baselines.rglob("*.png")))
+    return f"{note}; {count} baselines"
 
 
 def step_performance(g: Gate) -> str:
-    if g.phase < 4:
-        raise NotApplicable("performance budgets start in phase 4")
-    in_tests(["pytest", "-q", "-p", "no:cacheprovider", "-m", "perf"])
-    return "algorithm budgets met"
+    if g.phase < 2:
+        raise NotApplicable("performance budgets start in phase 2")
+    notes = []
+    lighthouse = _playwright(
+        g,
+        "",
+        [],
+        env={"LH_URL": "https://localhost:8443/", "LH_OUT": "/runs/lighthouse.json"},
+        command="node scripts/lighthouse.mjs",
+    )
+    notes.append(lighthouse)
+    fps = _playwright(g, "@perf", ["chromium"])
+    notes.append(f"frame rate: {fps}")
+    if g.phase >= 4:
+        in_tests(["pytest", "-q", "-p", "no:cacheprovider", "-m", "perf"])
+        notes.append("algorithm budgets met")
+    summary = json.loads((RUNS / "lighthouse.json").read_text(encoding="utf-8"))
+    scores = "; ".join(
+        f"{r['profile']} {r['scores']['performance']}/{r['scores']['accessibility']}/"
+        f"{r['scores']['best-practices']}/{r['scores']['seo']} LCP {r['lcpMs']}ms"
+        for r in summary["results"]
+    )
+    return f"Lighthouse {scores}; " + "; ".join(notes[1:])
 
 
 def step_dast(g: Gate) -> str:
@@ -517,7 +638,11 @@ def step_dast(g: Gate) -> str:
 
 
 def step_phase_checks(g: Gate) -> str:
-    checks: dict[int, Callable[[Gate], str]] = {0: phase0_checks, 1: phase1_checks}
+    checks: dict[int, Callable[[Gate], str]] = {
+        0: phase0_checks,
+        1: phase1_checks,
+        2: phase2_checks,
+    }
     if g.phase not in checks:
         raise StepFailed(f"no PHASE_CHECKS defined for phase {g.phase}")
     return checks[g.phase](g)
@@ -562,6 +687,39 @@ def phase1_checks(g: Gate) -> str:
     )  # fmt: skip
     audit = in_tests(["python", "-c", AUDIT_CHAIN_CHECK]).stdout.strip().splitlines()[-1]
     return f"register+verify+login, admin TOTP, login 429 observed; audit chain intact ({audit})"
+
+
+STILLS = FRONTEND / "src" / "assets" / "stills"
+
+
+def stills_hash(files: list[str]) -> str:
+    """Same hash as scripts/render-stills.mjs: sha256 over the scene files and tokens."""
+    digest = hashlib.sha256()
+    for name in files:
+        digest.update((FRONTEND / name).read_bytes())
+    return digest.hexdigest()
+
+
+def phase2_checks(g: Gate) -> str:
+    """Spec §17 Phase 2 gate checks."""
+    p1 = phase1_checks(g)
+    manifest = json.loads((STILLS / "stills-manifest.json").read_text(encoding="utf-8"))
+    if stills_hash(manifest["hashed"]) != manifest["hash"]:
+        raise StepFailed("stills are out of date with the scene or tokens (run `make stills`)")
+    missing = [f for f in manifest["files"] if not (STILLS / f).exists()]
+    if missing or not (FRONTEND / "public" / "social-preview.png").exists():
+        raise StepFailed(f"missing stills: {missing or ['public/social-preview.png']}")
+    skill = ROOT / ".claude" / "skills" / "devsync-ui" / "SKILL.md"
+    if not skill.exists():
+        raise StepFailed("devsync-ui skill missing (.claude/skills/devsync-ui/SKILL.md)")
+    plan = (ROOT / "docs" / "plans" / "phase-02.md").read_text(encoding="utf-8")
+    if "devsync-ui" not in plan:
+        raise StepFailed("devsync-ui skill not listed in docs/plans/phase-02.md")
+    check_no_dev_tools()
+    return (
+        f"{p1}; stills current ({len(manifest['files'])} files, "
+        f"hash {manifest['hash'][:12]}); devsync-ui skill present and listed; no dev tools in dist"
+    )
 
 
 def step_regression_guard(g: Gate) -> str:

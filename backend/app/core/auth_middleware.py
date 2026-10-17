@@ -204,15 +204,17 @@ class CsrfMiddleware:
 class GlobalRateLimitMiddleware:
     """Step 7: 120 requests/min per user, 60/min per anonymous IP (§14.8)."""
 
-    def __init__(self, app: ASGIApp) -> None:
+    def __init__(self, app: ASGIApp, extra_exempt: tuple[str, ...] = ()) -> None:
         self.app = app
+        # Only the test environment passes its test-only router here (app.main).
+        self.exempt = EXEMPT_FROM_GLOBAL_LIMIT + extra_exempt
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         path = scope.get("path", "")
         if (
             scope["type"] != "http"
             or not path.startswith(API_PREFIX)
-            or path.startswith(EXEMPT_FROM_GLOBAL_LIMIT)
+            or path.startswith(self.exempt)
         ):
             await self.app(scope, receive, send)
             return

@@ -37,7 +37,11 @@ export function AuthLayout({
       </a>
       <div className="flex min-h-dvh flex-col px-4 pb-[max(env(safe-area-inset-bottom),24px)] pt-[max(env(safe-area-inset-top),20px)] sm:px-10">
         <header className="flex items-center justify-between">
-          <Link to="/" className="rounded-md" aria-label="DevSync home">
+          <Link
+            to="/"
+            className="inline-flex min-h-11 items-center rounded-md"
+            aria-label="DevSync home"
+          >
             <Wordmark />
           </Link>
           <Link

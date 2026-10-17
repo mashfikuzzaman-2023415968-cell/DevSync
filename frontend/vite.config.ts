@@ -17,13 +17,22 @@ export default defineConfig(({ mode }) => ({
       { find: "@", replacement: fileURLToPath(new URL("./src", import.meta.url)) },
       // Tree-shakeable three for the 3D chunk (DECISIONS D25); only the bare specifier.
       ...(mode === "production"
-        ? [{ find: /^three$/, replacement: fileURLToPath(new URL("./src/components/three/three-slim.ts", import.meta.url)) }]
+        ? [
+            {
+              find: /^three$/,
+              replacement: fileURLToPath(
+                new URL("./src/components/three/three-slim.ts", import.meta.url),
+              ),
+            },
+          ]
         : []),
     ],
   },
   build: {
     target: "es2022",
     sourcemap: "hidden",
+    // dist/.vite/manifest.json lets the gate check per-chunk budgets; removed from the image.
+    manifest: true,
     assetsInlineLimit: 0,
     cssCodeSplit: true,
     modulePreload: { polyfill: false },

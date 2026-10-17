@@ -36,3 +36,8 @@ data/
 .DS_Store
 .idea/
 .vscode/
+
+# Development-tools build for the UI kit visual tests (never deployed)
+frontend/dist-kit/
+frontend/node_modules/.cache/
+frontend/.probes/

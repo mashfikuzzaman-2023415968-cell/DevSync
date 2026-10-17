@@ -142,10 +142,10 @@ export function TeamIllustration() {
         return (
           <motion.circle
             key={`t${String(slot)}`}
-            r="10"
             className={slot === 3 ? "fill-newcomer" : "fill-primary"}
-            initial={{ cx: fx, cy: fy }}
-            animate={{ cx: tx, cy: ty }}
+            // Framer Motion owns every animated circle attribute, the radius included.
+            initial={{ cx: fx, cy: fy, r: 10 }}
+            animate={{ cx: tx, cy: ty, r: 10 }}
             transition={t(0.1 + slot * 0.06, 0.6)}
           />
         );

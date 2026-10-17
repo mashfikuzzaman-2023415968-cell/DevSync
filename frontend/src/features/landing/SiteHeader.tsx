@@ -34,7 +34,11 @@ export function SiteHeader({ overlay = false }: { overlay?: boolean }) {
       )}
     >
       <div className="mx-auto flex h-16 max-w-content items-center gap-6 px-4 sm:px-6">
-        <Link to="/" className="rounded-md" aria-label="DevSync home">
+        <Link
+          to="/"
+          className="inline-flex min-h-11 items-center rounded-md"
+          aria-label="DevSync home"
+        >
           <Wordmark />
         </Link>
         <nav aria-label="Main" className="hidden flex-1 items-center gap-1 lg:flex">

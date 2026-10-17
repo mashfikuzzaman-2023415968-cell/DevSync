@@ -129,7 +129,7 @@ function AccountMenu({ profilePath }: { profilePath: string }) {
         <button
           type="button"
           aria-label="Account menu"
-          className="rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex size-11 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           <Avatar name={name} size="sm" />
         </button>
@@ -193,13 +193,17 @@ export function AppShell({ nav, children }: { nav: ShellNav; children?: ReactNod
       </a>
       <header className="sticky top-0 z-40 border-b border-border bg-surface/90 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-surface/80">
         <div className="flex h-16 items-center gap-2 px-3 sm:px-4">
-          <Link to={nav.home} className="rounded-md px-1 py-1" aria-label="DevSync home">
+          <Link
+            to={nav.home}
+            className="inline-flex min-h-11 items-center rounded-md px-1"
+            aria-label="DevSync home"
+          >
             <Wordmark />
           </Link>
           <button
             type="button"
             onClick={openPalette}
-            className="ml-4 hidden min-h-10 w-full max-w-md items-center gap-2 rounded-md border border-border bg-bg px-3 text-body-sm text-text-muted transition-colors duration-fast hover:border-text-subtle md:flex"
+            className="ml-4 hidden min-h-11 w-full max-w-md items-center gap-2 rounded-md border border-border bg-bg px-3 text-body-sm text-text-muted transition-colors duration-fast hover:border-text-subtle md:flex"
           >
             <Search className="size-4" aria-hidden="true" />
             <span>Search or jump to…</span>

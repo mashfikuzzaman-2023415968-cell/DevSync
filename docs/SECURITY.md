@@ -36,6 +36,18 @@ See spec §14.2. Full table to be completed in Phase 14.
 | Contract fuzzing (no 5xx, schema-conformant) | — | `tests/api/test_schemathesis.py` |
 | Production: no test router, no docs | `app/main.py` | `tests/api/test_app.py` |
 
+## Controls implemented (Phase 2)
+| Control | Where | Tests |
+|---|---|---|
+| Strict CSP for every screen; per-response style nonce for runtime `<style>` (D23); no inline scripts/styles in the build; Zod without eval | `infra/nginx/*.conf`, `frontend/src/lib/nonce.ts`, `frontend/src/features/auth/schemas.ts` | `backend/tests/edge/test_edge.py` (exact CSP, nonce matches the page and changes per response), `frontend/e2e/csp.spec.ts` (all screens, dialogs and menus open), `frontend/tests/build/no-inline.test.ts` |
+| Nothing loaded from other origins (fonts, 3D environment, stills all local) | `frontend/src/components/three/*`, `frontend/src/assets/stills` | `frontend/e2e/csp.spec.ts`, `frontend/e2e/home.spec.ts` |
+| Dev-only tools (UI kit, stills renderer) never shipped | `frontend/src/app/router.tsx` (`DEV_TOOLS`) | gate step 2 + phase checks (`check_no_dev_tools`) |
+| Fetch wrapper: CSRF, 401 → guards, 403/429 toasts with wait time, offline banner | `frontend/src/api/client.ts`, `frontend/src/app/queryClient.ts` | `frontend/src/api/client.test.ts`, `frontend/src/app/app.test.ts` |
+| Route guards and role shells; admin navigation only in the admin chunk | `frontend/src/app/guards.tsx`, `RoleShell.tsx`, `features/admin/*` | `frontend/e2e/shell.spec.ts`, `auth.spec.ts` |
+| Public stats expose aggregates only (definer function) | `alembic/versions/0003_public_stats.py` | `tests/integration/test_rls.py`, `tests/api/test_public.py` |
+| Client error reports: size, rate limit, CSRF, sanitizing (no query strings or secrets in logs) | `app/api/v1/public.py`, `app/services/client_errors.py` | `tests/unit/test_client_errors.py`, `tests/api/test_public.py` |
+| No dangerous DOM sinks; accessibility checks on every screen | ESLint, `scripts/check_forbidden.py` | gate steps 3, 6, 14 |
+
 ## Dependency update policy (§14.21)
 Dependabot weekly (pip, npm, Docker, GitHub Actions). Critical vulnerabilities fixed within
 48 hours, high within 7 days. `make lock` re-resolves Python locks; the gate fails on unfixed

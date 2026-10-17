@@ -44,3 +44,11 @@ describe("auth form schemas mirror the backend limits", () => {
     ).toBe(false);
   });
 });
+
+describe("zod runs without eval (strict CSP, spec §14.3)", () => {
+  it("is configured jitless once the schemas load", async () => {
+    const { z } = await import("zod");
+    await import("./schemas");
+    expect(z.config().jitless).toBe(true);
+  });
+});

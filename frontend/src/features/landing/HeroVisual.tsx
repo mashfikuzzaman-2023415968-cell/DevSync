@@ -16,7 +16,7 @@ const TalentConstellation = lazy(() => import("@/components/three/TalentConstell
 export const HERO_DESCRIPTION =
   "Illustration: many developers drawn as glowing points. As you scroll, four of them move together into a balanced team, one of them a newcomer.";
 
-export function HeroVisual({ active }: { active: boolean }) {
+export function HeroVisual({ active, start = true }: { active: boolean; start?: boolean }) {
   const { resolvedTheme, reducedMotion } = usePreferences();
   const compact = !useMediaQuery("(min-width: 1024px)");
   const [reason] = useState(() => heroFallbackReason(reducedMotion));
@@ -26,11 +26,12 @@ export function HeroVisual({ active }: { active: boolean }) {
   const live = !reducedMotion && reason === null && !lost;
 
   useEffect(() => {
-    if (!live || load || !active) return undefined;
+    // Wait for the headline reveal (it is the LCP element) before fetching the 3D chunk.
+    if (!live || load || !active || !start) return undefined;
     return whenIdle(() => {
       setLoad(true);
     });
-  }, [live, load, active]);
+  }, [live, load, active, start]);
 
   return (
     <div
