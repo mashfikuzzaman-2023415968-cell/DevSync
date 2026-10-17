@@ -10,6 +10,8 @@ export default defineConfig({
     environmentOptions: { jsdom: { url: "https://testserver/" } }, // forbidden-ok: jsdom test origin, never fetched
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
+    // Coverage instrumentation in the gate slows rendering-heavy tests well past the 5 s default.
+    testTimeout: 20_000,
     include: ["src/**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"],
     coverage: {
       provider: "v8",

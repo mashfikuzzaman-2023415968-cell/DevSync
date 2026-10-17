@@ -30,8 +30,8 @@ def test_stats_count_only_active_developers_and_never_show_zero(api: Api) -> Non
     before = api.get("/api/v1/public/stats")
     assert before.status_code == 200
     assert before.headers["cache-control"] == "public, max-age=300"
+    assert before.json().get("developers") != 0  # absent rather than zero
     start = before.json().get("developers", 0)
-    assert start != 0  # absent rather than zero
     _clear_stats_cache()
     api.seed("DEVELOPER", verified=True)
     api.seed("DEVELOPER", verified=False)  # pending: not counted

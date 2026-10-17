@@ -94,6 +94,7 @@ test("poster shows first, the headline is the LCP element and the live scene fol
   await page.goto("/");
   await expect(page.locator("canvas[data-hero-poster]")).toHaveAttribute("data-drawn", "true");
   // The heading becomes one plain text block once its words have appeared.
+  await expect(page.locator("#hero-title")).toBeVisible();
   await expect(page.locator("#hero-title span")).toHaveCount(0);
   await expect.poll(() => heroMode(page), { timeout: 20_000 }).toBe("live");
   // Interacting finalizes LCP.

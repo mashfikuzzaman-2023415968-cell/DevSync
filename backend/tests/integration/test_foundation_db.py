@@ -5,6 +5,7 @@ Runs inside the test compose stack (needs MIGRATION_DATABASE_URL and DATABASE_UR
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -27,7 +28,12 @@ def test_migration_downgrade_and_upgrade_round_trip(migrated: str) -> None:
     command.upgrade(cfg, "head")
     engine = create_engine(migrated)
     with engine.connect() as conn:
-        assert conn.execute(text("SELECT max(version) FROM platform_settings")).scalar_one() == 2
+        latest: int = conn.execute(text("SELECT max(version) FROM platform_settings")).scalar_one()
+    # The newest settings version is the newest frozen seed snapshot.
+    seeds = Path(__file__).resolve().parents[2] / "alembic" / "seed"
+    assert latest == max(
+        int(p.stem.rsplit("_v", 1)[1]) for p in seeds.glob("platform_settings_v*.json")
+    )
     engine.dispose()
 
 
