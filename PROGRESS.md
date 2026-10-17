@@ -4,7 +4,7 @@
 - **Current owner:** Mashfikuzzaman Taeen (team leader)
 - **Current phase:** 0 — Foundations, tooling, infrastructure
 - **Last gate result:** `PHASE 0 GATE: PASS` (2026-10-17; backend 182 tests, 95.1% coverage; frontend 52 tests)
-- **In progress:** nothing; Phase 0 complete and tagged `phase-0` (local only, not pushed)
+- **In progress:** nothing; Phase 0 complete, tagged `phase-0` and pushed to GitHub (`main`, `phase-0`)
 - **Very next step:** Phase 1 (accounts, authentication, sessions, security core) in Plan Mode
 
 ## Phase table
