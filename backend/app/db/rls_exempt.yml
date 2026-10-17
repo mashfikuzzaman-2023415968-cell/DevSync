@@ -3,4 +3,7 @@
 # Phase 0 tables (platform_settings, audit_log, jobs, idempotency_keys) get
 # their RLS policies in Phase 1 together with the RLS foundation; they are not
 # exempt. The check is enforced by the gate from Phase 1.
-tables: {}
+tables:
+  skills: "Public skill taxonomy (name, domain, active). Read-only for devsync_app and devsync_worker (writes revoked in migration 0004); admins manage it through the console in Phase 12."
+  skill_tests: "Public test catalogue (title, question count, time limit). Read-only for devsync_app and devsync_worker (writes revoked in migration 0004); the questions themselves are in question_bank, which is RLS-protected."
+

@@ -11,10 +11,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PATH=/opt/venv/bin:$PATH \
     PYTHONPATH=/app
+# libmagic1: file signature checks for uploads (python-magic, spec §14.9). /data/uploads is
+# owned by the app user, mode 0750; a new `uploads` volume takes this ownership on first mount.
 RUN apt-get update && apt-get upgrade -y --no-install-recommends \
+ && apt-get install -y --no-install-recommends libmagic1 \
  && apt-get clean && rm -rf /var/lib/apt/lists/* \
  && groupadd --system --gid 10001 devsync \
  && useradd --system --uid 10001 --gid devsync --home-dir /app --shell /usr/sbin/nologin devsync \
+ && install -d -o 10001 -g 10001 -m 0750 /data/uploads \
  && python -m venv /opt/venv
 WORKDIR /app
 

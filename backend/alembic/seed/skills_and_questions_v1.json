@@ -1,0 +1,1461 @@
+{
+ "version": 1,
+ "skills": [
+  {
+   "name": "React",
+   "domain": "FRONTEND",
+   "questions": [
+    {
+     "text": "In React 18, what does automatic batching do?",
+     "options": [
+      "Merges components",
+      "Combines several state updates into one re-render, even inside timeouts and promises",
+      "Delays effects by one second",
+      "Sends network requests together"
+     ],
+     "answer": 1,
+     "difficulty": 3
+    },
+    {
+     "text": "Why is mutating state directly (e.g. pushing into an array held in state) a problem?",
+     "options": [
+      "React may not detect the change because the reference is the same",
+      "It is a syntax error",
+      "It is slower",
+      "It deletes the state"
+     ],
+     "answer": 0,
+     "difficulty": 2
+    },
+    {
+     "text": "What does React.lazy combined with Suspense provide?",
+     "options": [
+      "Server-side rendering",
+      "Code-splitting: loading a component's code only when it is first rendered",
+      "Global state",
+      "Automatic memoization"
+     ],
+     "answer": 1,
+     "difficulty": 2
+    },
+    {
+     "text": "When does an effect with an empty dependency array (`useEffect(fn, [])`) run?",
+     "options": [
+      "Only when props change",
+      "On every render",
+      "Only after the first render (and cleanup on unmount)",
+      "Never"
+     ],
+     "answer": 2,
+     "difficulty": 1
+    },
+    {
+     "text": "What does calling a state setter from useState do?",
+     "options": [
+      "Schedules a re-render with the new state",
+      "Mutates the state variable immediately",
+      "Reloads the page",
+      "Resets every other piece of state"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "What is the purpose of React Context?",
+     "options": [
+      "To pass values through the tree without passing props at every level",
+      "To replace all component state",
+      "To call APIs",
+      "To speed up rendering"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "What does a component's return value of `null` mean?",
+     "options": [
+      "Throw an error",
+      "Unmount the parent",
+      "Render the previous output",
+      "Render nothing"
+     ],
+     "answer": 3,
+     "difficulty": 1
+    },
+    {
+     "text": "Changing the `.current` value of a ref created with useRef will…",
+     "options": [
+      "Throw an error",
+      "Reset the component",
+      "Not trigger a re-render",
+      "Trigger a re-render"
+     ],
+     "answer": 2,
+     "difficulty": 1
+    },
+    {
+     "text": "What is the main purpose of useCallback?",
+     "options": [
+      "To run code after paint",
+      "To keep the same function identity between renders unless its dependencies change",
+      "To create a ref",
+      "To fetch data"
+     ],
+     "answer": 1,
+     "difficulty": 2
+    },
+    {
+     "text": "Why does React need a `key` prop on list items?",
+     "options": [
+      "To sort the list alphabetically",
+      "To identify items between renders so it can match and reorder them",
+      "To style each item",
+      "To make items focusable"
+     ],
+     "answer": 1,
+     "difficulty": 1
+    },
+    {
+     "text": "What is 'lifting state up'?",
+     "options": [
+      "Putting state in a ref",
+      "Storing state in localStorage",
+      "Using a global variable",
+      "Moving state to the closest common parent of components that need it"
+     ],
+     "answer": 3,
+     "difficulty": 1
+    },
+    {
+     "text": "Which hook memoizes a computed value between renders?",
+     "options": [
+      "useMemo",
+      "useRef",
+      "useId",
+      "useState"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "What is a 'controlled' input in React?",
+     "options": [
+      "An input inside a form tag",
+      "An input with validation",
+      "An input rendered by a server",
+      "An input whose value is driven by React state"
+     ],
+     "answer": 3,
+     "difficulty": 1
+    },
+    {
+     "text": "Which statement about the Rules of Hooks is correct?",
+     "options": [
+      "Hooks can be called from class components",
+      "Hooks must be called inside conditions",
+      "Hooks must be called in the same order on every render, at the top level of components or custom hooks",
+      "Hooks may be called inside loops"
+     ],
+     "answer": 2,
+     "difficulty": 2
+    },
+    {
+     "text": "Which is the safest way to render user-supplied text in React?",
+     "options": [
+      "dangerouslySetInnerHTML",
+      "Building an HTML string",
+      "Rendering it as a child expression like {text}",
+      "Using eval"
+     ],
+     "answer": 2,
+     "difficulty": 1
+    },
+    {
+     "text": "What should a useEffect cleanup function typically do?",
+     "options": [
+      "Set state for the next render",
+      "Call the effect again",
+      "Return JSX",
+      "Undo subscriptions, timers or listeners the effect created"
+     ],
+     "answer": 3,
+     "difficulty": 2
+    }
+   ]
+  },
+  {
+   "name": "Node.js",
+   "domain": "BACKEND",
+   "questions": [
+    {
+     "text": "What does middleware mean in Express?",
+     "options": [
+      "A database layer",
+      "A template engine",
+      "A load balancer",
+      "Functions that run in order on a request and can modify it or end the response"
+     ],
+     "answer": 3,
+     "difficulty": 1
+    },
+    {
+     "text": "What is an unhandled promise rejection in recent Node versions by default?",
+     "options": [
+      "It crashes the process",
+      "Retried automatically",
+      "Logged only in debug mode",
+      "Ignored silently"
+     ],
+     "answer": 0,
+     "difficulty": 3
+    },
+    {
+     "text": "Why use streams for large files?",
+     "options": [
+      "They are required for HTTP",
+      "They encrypt data",
+      "They compress automatically",
+      "They process data in chunks instead of loading it all into memory"
+     ],
+     "answer": 3,
+     "difficulty": 2
+    },
+    {
+     "text": "What does `npm ci` do differently from `npm install`?",
+     "options": [
+      "Only installs dev dependencies",
+      "Installs exactly from the lock file and fails if it doesn't match package.json",
+      "Publishes the package",
+      "Updates every dependency"
+     ],
+     "answer": 1,
+     "difficulty": 2
+    },
+    {
+     "text": "Which format do ES modules use for imports?",
+     "options": [
+      "using",
+      "require()",
+      "import / export",
+      "include"
+     ],
+     "answer": 2,
+     "difficulty": 1
+    },
+    {
+     "text": "Which runs first after the current operation completes?",
+     "options": [
+      "An I/O callback",
+      "setImmediate",
+      "A resolved promise's .then callback (microtask)",
+      "setTimeout(fn, 0)"
+     ],
+     "answer": 2,
+     "difficulty": 3
+    },
+    {
+     "text": "Which module is built in for working with file paths in a cross-platform way?",
+     "options": [
+      "url",
+      "os",
+      "path",
+      "fs"
+     ],
+     "answer": 2,
+     "difficulty": 1
+    },
+    {
+     "text": "What does `process.env` contain?",
+     "options": [
+      "Command history",
+      "The process's environment variables",
+      "Open files",
+      "The installed packages"
+     ],
+     "answer": 1,
+     "difficulty": 1
+    },
+    {
+     "text": "What is the purpose of package-lock.json?",
+     "options": [
+      "To list scripts",
+      "To record exact dependency versions so installs are reproducible",
+      "To store environment variables",
+      "To lock the source code"
+     ],
+     "answer": 1,
+     "difficulty": 1
+    },
+    {
+     "text": "What is the `worker_threads` module for?",
+     "options": [
+      "Running CPU-heavy JavaScript in parallel threads",
+      "Scheduling cron jobs",
+      "Managing HTTP workers",
+      "Connecting to databases"
+     ],
+     "answer": 0,
+     "difficulty": 2
+    },
+    {
+     "text": "What makes Node.js well suited to I/O-heavy servers?",
+     "options": [
+      "Its non-blocking, event-driven I/O model",
+      "It runs only on Linux",
+      "It compiles to native code",
+      "It is multi-threaded for JavaScript code"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "How should errors from an awaited promise be handled?",
+     "options": [
+      "With try/catch around the await",
+      "Only with .finally",
+      "With process.exit",
+      "They can't be caught"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "What does `await` do inside an async function?",
+     "options": [
+      "Blocks the whole process",
+      "Converts a callback to sync code",
+      "Creates a new thread",
+      "Pauses that function until the promise settles, without blocking the event loop"
+     ],
+     "answer": 3,
+     "difficulty": 1
+    },
+    {
+     "text": "What happens if you run a long CPU-bound loop on Node's main thread?",
+     "options": [
+      "Node moves it to a GPU",
+      "The event loop is blocked and other requests wait",
+      "It runs in parallel automatically",
+      "Other requests keep being served normally"
+     ],
+     "answer": 1,
+     "difficulty": 2
+    },
+    {
+     "text": "Which is the safest way to build a SQL query with user input?",
+     "options": [
+      "String concatenation",
+      "Escaping quotes manually",
+      "Parameterized queries / placeholders",
+      "Template literals"
+     ],
+     "answer": 2,
+     "difficulty": 1
+    },
+    {
+     "text": "What is the main risk of storing secrets directly in source code?",
+     "options": [
+      "Slower startup",
+      "Syntax errors",
+      "They expire",
+      "They leak to anyone who can read the repository or its history"
+     ],
+     "answer": 3,
+     "difficulty": 1
+    }
+   ]
+  },
+  {
+   "name": "FastAPI",
+   "domain": "BACKEND",
+   "questions": [
+    {
+     "text": "What is TestClient (from fastapi.testclient) for?",
+     "options": [
+      "Deploying",
+      "Calling the app in tests without running a server",
+      "Load testing",
+      "Generating clients"
+     ],
+     "answer": 1,
+     "difficulty": 1
+    },
+    {
+     "text": "What does `response_model` on a route do?",
+     "options": [
+      "Sets the HTTP method",
+      "Caches the response",
+      "Adds authentication",
+      "Validates and filters the response to the declared schema"
+     ],
+     "answer": 3,
+     "difficulty": 2
+    },
+    {
+     "text": "How do you declare a path parameter?",
+     "options": [
+      "@app.get('/items/{item_id}') with an item_id argument",
+      "Using a global variable",
+      "Using Body()",
+      "Using Query()"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "What is a common use of FastAPI middleware?",
+     "options": [
+      "Defining models",
+      "Writing migrations",
+      "Rendering React",
+      "Adding headers, timing or request ids to every request"
+     ],
+     "answer": 3,
+     "difficulty": 1
+    },
+    {
+     "text": "What does a dependency with `yield` let you do?",
+     "options": [
+      "Retry requests",
+      "Return multiple values",
+      "Run cleanup code after the response (e.g. close a DB session)",
+      "Stream files"
+     ],
+     "answer": 2,
+     "difficulty": 2
+    },
+    {
+     "text": "Which is the right way to read an optional query parameter `q`?",
+     "options": [
+      "def f(q: str | None = None)",
+      "It's not possible",
+      "request.json()['q'] only",
+      "def f(*, body)"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "Where does FastAPI run a plain `def` (non-async) endpoint?",
+     "options": [
+      "It refuses to run it",
+      "On the event loop",
+      "In a thread pool",
+      "In a new process"
+     ],
+     "answer": 2,
+     "difficulty": 3
+    },
+    {
+     "text": "How do you raise a 404 from inside an endpoint?",
+     "options": [
+      "raise HTTPException(status_code=404)",
+      "return 404",
+      "print(404)",
+      "sys.exit(404)"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "Why should passwords never be returned in a response model?",
+     "options": [
+      "FastAPI hashes them",
+      "They are too long",
+      "JSON can't encode them",
+      "Response models define exactly what leaves the API; secrets must never be exposed"
+     ],
+     "answer": 3,
+     "difficulty": 1
+    },
+    {
+     "text": "Which ASGI server is commonly used to run FastAPI?",
+     "options": [
+      "Tomcat",
+      "Uvicorn",
+      "Gunicorn sync workers only",
+      "Apache mod_php"
+     ],
+     "answer": 1,
+     "difficulty": 1
+    },
+    {
+     "text": "What does FastAPI use Pydantic models for?",
+     "options": [
+      "Validating and serializing request and response data",
+      "Scheduling jobs",
+      "Templating HTML",
+      "Database migrations"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "What does `model_config = ConfigDict(extra='forbid')` do on a Pydantic v2 model?",
+     "options": [
+      "Makes all fields optional",
+      "Ignores type errors",
+      "Rejects input that contains fields not declared on the model",
+      "Allows any extra fields"
+     ],
+     "answer": 2,
+     "difficulty": 2
+    },
+    {
+     "text": "What status code does FastAPI return by default for a request body that fails validation?",
+     "options": [
+      "404",
+      "400",
+      "500",
+      "422"
+     ],
+     "answer": 3,
+     "difficulty": 2
+    },
+    {
+     "text": "What is FastAPI's Depends() used for?",
+     "options": [
+      "Defining database columns",
+      "Running background tasks",
+      "Declaring dependencies (e.g. DB sessions, auth) that are resolved per request",
+      "Importing modules"
+     ],
+     "answer": 2,
+     "difficulty": 1
+    },
+    {
+     "text": "How does FastAPI generate interactive API documentation?",
+     "options": [
+      "From docstrings only",
+      "From the OpenAPI schema it builds from routes and type hints",
+      "It cannot",
+      "From a YAML file you write"
+     ],
+     "answer": 1,
+     "difficulty": 1
+    },
+    {
+     "text": "What is the effect of declaring a route with `async def`?",
+     "options": [
+      "It is cached",
+      "It runs on the event loop, so it should not call blocking code directly",
+      "It becomes a background task",
+      "It runs in a new process"
+     ],
+     "answer": 1,
+     "difficulty": 2
+    }
+   ]
+  },
+  {
+   "name": "PostgreSQL",
+   "domain": "DATABASE",
+   "questions": [
+    {
+     "text": "Which isolation level is PostgreSQL's default?",
+     "options": [
+      "Repeatable read",
+      "Serializable",
+      "Read committed",
+      "Read uncommitted"
+     ],
+     "answer": 2,
+     "difficulty": 2
+    },
+    {
+     "text": "What is VACUUM used for?",
+     "options": [
+      "Creating indexes",
+      "Backing up",
+      "Deleting tables",
+      "Reclaiming space from dead row versions and updating visibility information"
+     ],
+     "answer": 3,
+     "difficulty": 2
+    },
+    {
+     "text": "What does row-level security (RLS) do?",
+     "options": [
+      "Restricts which rows a role can see or change using policies",
+      "Encrypts rows",
+      "Compresses tables",
+      "Logs every query"
+     ],
+     "answer": 0,
+     "difficulty": 2
+    },
+    {
+     "text": "What kind of index is the default in PostgreSQL?",
+     "options": [
+      "B-tree",
+      "BRIN",
+      "Hash",
+      "GIN"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "What does EXPLAIN ANALYZE show?",
+     "options": [
+      "The table's data",
+      "Permissions",
+      "Index definitions only",
+      "The executed query plan with actual timings and row counts"
+     ],
+     "answer": 3,
+     "difficulty": 2
+    },
+    {
+     "text": "What does a transaction's ROLLBACK do?",
+     "options": [
+      "Restarts the server",
+      "Vacuums the table",
+      "Undoes all changes made in the transaction",
+      "Commits changes"
+     ],
+     "answer": 2,
+     "difficulty": 1
+    },
+    {
+     "text": "What does `timestamptz` store?",
+     "options": [
+      "A string",
+      "A timestamp with an absolute point in time (converted to UTC internally)",
+      "Local time without zone",
+      "Only the date"
+     ],
+     "answer": 1,
+     "difficulty": 2
+    },
+    {
+     "text": "What is a CTE (WITH query)?",
+     "options": [
+      "A table index",
+      "A trigger",
+      "A stored procedure",
+      "A temporary named result set used within a single query"
+     ],
+     "answer": 3,
+     "difficulty": 2
+    },
+    {
+     "text": "What does a PRIMARY KEY guarantee?",
+     "options": [
+      "Values are unique and not null",
+      "The column is indexed for full-text search",
+      "Values are sorted",
+      "Values are encrypted"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "What does SELECT … FOR UPDATE do?",
+     "options": [
+      "Updates the rows",
+      "Disables triggers",
+      "Locks the selected rows until the transaction ends",
+      "Creates a backup"
+     ],
+     "answer": 2,
+     "difficulty": 2
+    },
+    {
+     "text": "What is the difference between INNER JOIN and LEFT JOIN?",
+     "options": [
+      "INNER JOIN is faster always",
+      "LEFT JOIN removes duplicates",
+      "None",
+      "LEFT JOIN keeps rows from the left table even without a match"
+     ],
+     "answer": 3,
+     "difficulty": 1
+    },
+    {
+     "text": "Which type should store money exactly in PostgreSQL?",
+     "options": [
+      "numeric or integer minor units (e.g. paisa)",
+      "text",
+      "double precision",
+      "real"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "What does a CHECK constraint do?",
+     "options": [
+      "Adds an index",
+      "Encrypts the column",
+      "Validates that column values satisfy a condition",
+      "Creates a foreign key"
+     ],
+     "answer": 2,
+     "difficulty": 1
+    },
+    {
+     "text": "What is the safest way to pass user input into a query?",
+     "options": [
+      "String formatting",
+      "Bound parameters",
+      "Using LIKE",
+      "Escaping by hand"
+     ],
+     "answer": 1,
+     "difficulty": 1
+    },
+    {
+     "text": "Which index type is typically used for full-text search vectors (tsvector)?",
+     "options": [
+      "None is possible",
+      "GIN",
+      "B-tree",
+      "Hash"
+     ],
+     "answer": 1,
+     "difficulty": 2
+    },
+    {
+     "text": "What does a FOREIGN KEY constraint enforce?",
+     "options": [
+      "Unique values",
+      "That a value exists in the referenced table",
+      "A default value",
+      "Faster queries"
+     ],
+     "answer": 1,
+     "difficulty": 1
+    }
+   ]
+  },
+  {
+   "name": "UI/UX",
+   "domain": "DESIGN",
+   "questions": [
+    {
+     "text": "What is information architecture?",
+     "options": [
+      "Server layout",
+      "How content is organised, labelled and navigated",
+      "Database design",
+      "Typography"
+     ],
+     "answer": 1,
+     "difficulty": 2
+    },
+    {
+     "text": "Which is an example of Hick's law in practice?",
+     "options": [
+      "Users read in an F pattern",
+      "More choices increase the time to decide",
+      "Dark mode saves battery",
+      "Bigger buttons are easier to hit"
+     ],
+     "answer": 1,
+     "difficulty": 3
+    },
+    {
+     "text": "What does progressive disclosure mean?",
+     "options": [
+      "Showing all options at once",
+      "Showing advanced options only when they are needed",
+      "Loading images progressively",
+      "Revealing passwords"
+     ],
+     "answer": 1,
+     "difficulty": 2
+    },
+    {
+     "text": "What is the purpose of usability testing?",
+     "options": [
+      "To check spelling",
+      "To measure colour contrast",
+      "To test server load",
+      "To watch real users attempt tasks and find problems in the design"
+     ],
+     "answer": 3,
+     "difficulty": 1
+    },
+    {
+     "text": "What is a primary benefit of a design system?",
+     "options": [
+      "Consistent, reusable components and patterns across the product",
+      "Faster servers",
+      "Fewer users",
+      "Better SEO only"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "What is the recommended minimum touch target size on mobile (WCAG and platform guidance)?",
+     "options": [
+      "About 24×24 px",
+      "About 44×44 px",
+      "There is no guidance",
+      "About 12×12 px"
+     ],
+     "answer": 1,
+     "difficulty": 2
+    },
+    {
+     "text": "What is the purpose of a visible focus indicator?",
+     "options": [
+      "Decoration",
+      "Indicating errors",
+      "Showing keyboard users where they are on the page",
+      "Loading feedback"
+     ],
+     "answer": 2,
+     "difficulty": 1
+    },
+    {
+     "text": "What is a skeleton screen?",
+     "options": [
+      "A placeholder layout shown while content loads",
+      "A print stylesheet",
+      "A wireframe",
+      "An error page"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "Why respect the 'prefers-reduced-motion' setting?",
+     "options": [
+      "It improves SEO",
+      "It is required by browsers",
+      "It saves bandwidth",
+      "Some users get dizzy or distracted by motion"
+     ],
+     "answer": 3,
+     "difficulty": 1
+    },
+    {
+     "text": "What is the main goal of a primary button style?",
+     "options": [
+      "To show the single most important action on the screen",
+      "To link to help",
+      "To show errors",
+      "To decorate"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "Why use sentence case and clear verbs on buttons (e.g. 'Save changes')?",
+     "options": [
+      "They load faster",
+      "Shorter code",
+      "They say exactly what will happen when pressed",
+      "Browsers require it"
+     ],
+     "answer": 2,
+     "difficulty": 1
+    },
+    {
+     "text": "Why should status never be shown by colour alone?",
+     "options": [
+      "It is a performance issue",
+      "Colours are slow to render",
+      "Colours are not allowed in forms",
+      "People with colour-vision deficiencies may not perceive it; add text or icons"
+     ],
+     "answer": 3,
+     "difficulty": 1
+    },
+    {
+     "text": "What minimum contrast ratio does WCAG 2.1 AA require for normal body text?",
+     "options": [
+      "4.5:1",
+      "2:1",
+      "7:1",
+      "3:1"
+     ],
+     "answer": 0,
+     "difficulty": 2
+    },
+    {
+     "text": "A good error message should…",
+     "options": [
+      "Only show an error code",
+      "Blame the user",
+      "Say what went wrong and how to fix it",
+      "Disappear after one second"
+     ],
+     "answer": 2,
+     "difficulty": 1
+    },
+    {
+     "text": "What should an empty state include?",
+     "options": [
+      "An error code",
+      "Nothing",
+      "A random image only",
+      "A short explanation and the next action to take"
+     ],
+     "answer": 3,
+     "difficulty": 1
+    },
+    {
+     "text": "What does Fitts's law describe?",
+     "options": [
+      "Colour perception",
+      "Memory limits",
+      "Time to reach a target depends on its distance and size",
+      "Reading speed"
+     ],
+     "answer": 2,
+     "difficulty": 2
+    }
+   ]
+  },
+  {
+   "name": "Testing",
+   "domain": "TESTING",
+   "questions": [
+    {
+     "text": "In test-driven development (TDD), what comes first?",
+     "options": [
+      "Deployment",
+      "Refactoring",
+      "Writing the implementation",
+      "Writing a failing test"
+     ],
+     "answer": 3,
+     "difficulty": 2
+    },
+    {
+     "text": "Which statement about 100% code coverage is true?",
+     "options": [
+      "It is impossible",
+      "It proves the code has no bugs",
+      "It makes tests faster",
+      "It shows every line ran, but not that behaviour is correct"
+     ],
+     "answer": 3,
+     "difficulty": 2
+    },
+    {
+     "text": "What does code coverage measure?",
+     "options": [
+      "Number of test files",
+      "How many bugs exist",
+      "How much code is executed by the tests",
+      "Test speed"
+     ],
+     "answer": 2,
+     "difficulty": 1
+    },
+    {
+     "text": "What is a test double such as a mock or stub used for?",
+     "options": [
+      "Doubling coverage",
+      "Load testing",
+      "Replacing a real dependency to isolate the code under test",
+      "Running tests twice"
+     ],
+     "answer": 2,
+     "difficulty": 1
+    },
+    {
+     "text": "What is the testing pyramid's main idea?",
+     "options": [
+      "Avoid unit tests",
+      "Have many fast unit tests, fewer integration tests and few end-to-end tests",
+      "Test only in production",
+      "Write mostly end-to-end tests"
+     ],
+     "answer": 1,
+     "difficulty": 1
+    },
+    {
+     "text": "What is an end-to-end (E2E) test?",
+     "options": [
+      "A database test",
+      "A test that drives the full system the way a user would",
+      "A test of one function",
+      "A lint check"
+     ],
+     "answer": 1,
+     "difficulty": 1
+    },
+    {
+     "text": "What should a good bug report include?",
+     "options": [
+      "Only 'it doesn't work'",
+      "The tester's opinion",
+      "Steps to reproduce, expected result and actual result",
+      "A fix"
+     ],
+     "answer": 2,
+     "difficulty": 1
+    },
+    {
+     "text": "What is a flaky test?",
+     "options": [
+      "A skipped test",
+      "A test that sometimes passes and sometimes fails without code changes",
+      "A test that is slow",
+      "A test with no assertions"
+     ],
+     "answer": 1,
+     "difficulty": 1
+    },
+    {
+     "text": "What does a unit test check?",
+     "options": [
+      "A small unit of code in isolation",
+      "Server load",
+      "The whole system end to end",
+      "Visual layout"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "What is a security test for IDOR checking?",
+     "options": [
+      "Page speed",
+      "Spelling",
+      "Password strength",
+      "That one user cannot access another user's resource by changing an id"
+     ],
+     "answer": 3,
+     "difficulty": 2
+    },
+    {
+     "text": "What is the purpose of a test fixture?",
+     "options": [
+      "Formatting code",
+      "Deploying",
+      "Setting up a known state or data for tests",
+      "Fixing bugs"
+     ],
+     "answer": 2,
+     "difficulty": 1
+    },
+    {
+     "text": "What is fuzz testing?",
+     "options": [
+      "Testing documentation",
+      "Feeding unexpected or random inputs to find crashes and errors",
+      "Testing fonts",
+      "Testing animations"
+     ],
+     "answer": 1,
+     "difficulty": 2
+    },
+    {
+     "text": "What does boundary value analysis focus on?",
+     "options": [
+      "Values at and just around the edges of valid ranges",
+      "UI colours",
+      "Random values",
+      "Only valid values"
+     ],
+     "answer": 0,
+     "difficulty": 2
+    },
+    {
+     "text": "What is regression testing?",
+     "options": [
+      "Testing new features only",
+      "Testing performance",
+      "Testing security",
+      "Re-running tests to make sure existing behaviour still works after changes"
+     ],
+     "answer": 3,
+     "difficulty": 1
+    },
+    {
+     "text": "What is equivalence partitioning?",
+     "options": [
+      "Splitting inputs into groups expected to behave the same and testing one from each",
+      "Parallel testing",
+      "Splitting servers",
+      "Comparing outputs"
+     ],
+     "answer": 0,
+     "difficulty": 2
+    },
+    {
+     "text": "What is property-based testing?",
+     "options": [
+      "Generating many inputs to check that a stated property always holds",
+      "Testing CSS properties",
+      "Testing object properties only",
+      "Manual testing"
+     ],
+     "answer": 0,
+     "difficulty": 3
+    }
+   ]
+  },
+  {
+   "name": "Flutter",
+   "domain": "MOBILE",
+   "questions": [
+    {
+     "text": "Which widget is best for a long, scrollable list built lazily?",
+     "options": [
+      "Stack",
+      "Column",
+      "Row",
+      "ListView.builder"
+     ],
+     "answer": 3,
+     "difficulty": 1
+    },
+    {
+     "text": "What is a Stream in Dart?",
+     "options": [
+      "A single future value",
+      "A file",
+      "A sequence of asynchronous events",
+      "A layout widget"
+     ],
+     "answer": 2,
+     "difficulty": 2
+    },
+    {
+     "text": "Which widget rebuilds when a Future completes?",
+     "options": [
+      "Padding",
+      "Container",
+      "ListView",
+      "FutureBuilder"
+     ],
+     "answer": 3,
+     "difficulty": 1
+    },
+    {
+     "text": "What is BuildContext?",
+     "options": [
+      "A test runner",
+      "A handle to the widget's location in the tree",
+      "A database connection",
+      "A theme file"
+     ],
+     "answer": 1,
+     "difficulty": 2
+    },
+    {
+     "text": "How do you wait for a Future inside an async function?",
+     "options": [
+      "join",
+      "await",
+      "yield",
+      "sleep"
+     ],
+     "answer": 1,
+     "difficulty": 1
+    },
+    {
+     "text": "What does calling setState() do?",
+     "options": [
+      "Saves to disk",
+      "Navigates to a new page",
+      "Marks the widget as dirty so it rebuilds with the new state",
+      "Restarts the app"
+     ],
+     "answer": 2,
+     "difficulty": 1
+    },
+    {
+     "text": "Which widget arranges children vertically?",
+     "options": [
+      "Column",
+      "Row",
+      "Wrap only",
+      "Stack"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "What is the difference between a StatelessWidget and a StatefulWidget?",
+     "options": [
+      "StatelessWidgets are faster to type",
+      "A StatefulWidget has mutable state that can change over time",
+      "None",
+      "StatefulWidgets can't have children"
+     ],
+     "answer": 1,
+     "difficulty": 1
+    },
+    {
+     "text": "What does `const` before a widget constructor help with?",
+     "options": [
+      "Lets Flutter reuse the instance and skip unnecessary rebuilds",
+      "Adds animation",
+      "Makes it mutable",
+      "Makes it async"
+     ],
+     "answer": 0,
+     "difficulty": 2
+    },
+    {
+     "text": "What is a Future in Dart?",
+     "options": [
+      "A value or error that will be available later",
+      "A database",
+      "A route",
+      "A UI widget"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "What is the purpose of a Key in Flutter?",
+     "options": [
+      "Database ids",
+      "Encryption",
+      "Preserving widget identity and state when widgets move in the tree",
+      "Keyboard shortcuts"
+     ],
+     "answer": 2,
+     "difficulty": 2
+    },
+    {
+     "text": "What does 'hot reload' do?",
+     "options": [
+      "Builds a release APK",
+      "Clears the cache",
+      "Restarts the device",
+      "Injects updated code into the running app, keeping state where possible"
+     ],
+     "answer": 3,
+     "difficulty": 1
+    },
+    {
+     "text": "Which widget lets children overlap one another?",
+     "options": [
+      "Row",
+      "Stack",
+      "Column",
+      "ListView"
+     ],
+     "answer": 1,
+     "difficulty": 1
+    },
+    {
+     "text": "What does the pubspec.yaml file declare?",
+     "options": [
+      "Database schema",
+      "Server routes",
+      "Only the app icon",
+      "Package metadata, dependencies and assets"
+     ],
+     "answer": 3,
+     "difficulty": 1
+    },
+    {
+     "text": "How do you navigate to a new screen with the basic Navigator?",
+     "options": [
+      "setState(newPage)",
+      "runApp(newPage)",
+      "Navigator.push(...)",
+      "window.location"
+     ],
+     "answer": 2,
+     "difficulty": 1
+    },
+    {
+     "text": "Which language is used to write Flutter apps?",
+     "options": [
+      "Dart",
+      "Kotlin",
+      "Swift",
+      "JavaScript"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    }
+   ]
+  },
+  {
+   "name": "DevOps",
+   "domain": "DEVOPS",
+   "questions": [
+    {
+     "text": "What is the role of a Dockerfile?",
+     "options": [
+      "Monitoring",
+      "Describing step by step how to build an image",
+      "Running containers",
+      "Storing logs"
+     ],
+     "answer": 1,
+     "difficulty": 1
+    },
+    {
+     "text": "What is the purpose of a staging environment?",
+     "options": [
+      "Production traffic",
+      "Storing backups",
+      "Local development only",
+      "Testing a release in a production-like setting before it goes live"
+     ],
+     "answer": 3,
+     "difficulty": 1
+    },
+    {
+     "text": "Where should secrets such as database passwords live?",
+     "options": [
+      "In environment variables or a secrets manager, never in code",
+      "In a public bucket",
+      "In the Docker image",
+      "In the Git repository"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "What does a lock file (e.g. requirements.lock) help with?",
+     "options": [
+      "Security only",
+      "Reproducible builds with exact dependency versions",
+      "Encryption",
+      "Faster networking"
+     ],
+     "answer": 1,
+     "difficulty": 1
+    },
+    {
+     "text": "What is the main benefit of containerising an application with Docker?",
+     "options": [
+      "It packages the app with its dependencies so it runs the same everywhere",
+      "It makes code faster",
+      "It removes the need for tests",
+      "It replaces version control"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "What is continuous integration (CI)?",
+     "options": [
+      "Deploying once a year",
+      "Manual testing",
+      "Automatically building and testing every change merged into the shared branch",
+      "Writing documentation"
+     ],
+     "answer": 2,
+     "difficulty": 1
+    },
+    {
+     "text": "What does a health check in a container orchestrator do?",
+     "options": [
+      "Reports whether the service is working so it can be restarted or taken out of rotation",
+      "Backs up data",
+      "Updates the image",
+      "Monitors CPU only"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "What is a rollback?",
+     "options": [
+      "Reverting to the previous working version after a bad release",
+      "Clearing caches",
+      "Scaling up",
+      "Rotating logs"
+     ],
+     "answer": 0,
+     "difficulty": 1
+    },
+    {
+     "text": "What is the difference between a Docker image and a container?",
+     "options": [
+      "Images run processes",
+      "An image is a template; a container is a running instance of it",
+      "None",
+      "Containers are stored on Docker Hub"
+     ],
+     "answer": 1,
+     "difficulty": 1
+    },
+    {
+     "text": "What is a blue-green deployment?",
+     "options": [
+      "Deploying only on weekdays",
+      "Using two colour themes",
+      "A rollback tool for databases",
+      "Running two environments and switching traffic to the new one when it is ready"
+     ],
+     "answer": 3,
+     "difficulty": 3
+    },
+    {
+     "text": "What does horizontal scaling mean?",
+     "options": [
+      "Upgrading one machine's CPU",
+      "Reducing traffic",
+      "Adding more machines or instances",
+      "Rotating the screen"
+     ],
+     "answer": 2,
+     "difficulty": 2
+    },
+    {
+     "text": "What does 'least privilege' mean?",
+     "options": [
+      "Running fewer services",
+      "Giving everyone admin rights",
+      "Using the cheapest server",
+      "Giving each user or service only the permissions it needs"
+     ],
+     "answer": 3,
+     "difficulty": 1
+    },
+    {
+     "text": "Why run containers as a non-root user?",
+     "options": [
+      "Docker requires it",
+      "It is faster",
+      "It saves disk",
+      "It limits the damage if the container is compromised"
+     ],
+     "answer": 3,
+     "difficulty": 2
+    },
+    {
+     "text": "What is a reverse proxy such as Nginx commonly used for?",
+     "options": [
+      "Writing logs only",
+      "Running databases",
+      "Terminating TLS, routing and load-balancing requests to backends",
+      "Compiling code"
+     ],
+     "answer": 2,
+     "difficulty": 1
+    },
+    {
+     "text": "What is the purpose of log aggregation?",
+     "options": [
+      "Testing",
+      "Compressing code",
+      "Collecting logs from many services in one place to search and alert",
+      "Deleting logs"
+     ],
+     "answer": 2,
+     "difficulty": 2
+    },
+    {
+     "text": "What is infrastructure as code?",
+     "options": [
+      "Hard-coding IP addresses",
+      "Managing infrastructure through versioned configuration files",
+      "A programming language",
+      "Writing code on servers"
+     ],
+     "answer": 1,
+     "difficulty": 2
+    }
+   ]
+  }
+ ]
+}

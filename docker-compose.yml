@@ -41,6 +41,8 @@ services:
     ports:
       - "${HTTP_PORT:-80}:8080"
       - "${HTTPS_PORT:-443}:8443"
+    # Reads stored files (mode 0640, group devsync) for X-Accel-Redirect downloads (spec §14.9).
+    group_add: ["10001"]
     volumes:
       - ./infra/nginx/certs:/etc/nginx/certs:ro
       - uploads:/data/uploads:ro
@@ -71,6 +73,8 @@ services:
     image: devsync/backend:local
     command: ["python", "-m", "app.jobs.worker"]
     environment: *backend-env
+    volumes:
+      - uploads:/data/uploads  # orphan-upload cleanup
     stop_grace_period: 30s
     healthcheck:
       test: ["CMD", "python", "-c", "import redis,os; redis.Redis.from_url(os.environ['REDIS_URL'], socket_timeout=2).ping()"]

@@ -20,13 +20,14 @@ from fastapi.openapi.utils import get_openapi
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.routing import Route
 
-from app.api.v1 import admin, auth, captcha, health, me, public
+from app.api.v1 import admin, auth, captcha, files, health, me, profiles, public, skill_tests
 from app.core.auth_middleware import CsrfMiddleware, GlobalRateLimitMiddleware, SessionMiddleware
 from app.core.config import Environment, Settings, get_settings, validate_production
 from app.core.errors import install_exception_handlers
 from app.core.logging import configure_logging
 from app.core.metrics import MetricsMiddleware, metrics_endpoint
 from app.core.middleware import (
+    MULTIPART_OVERHEAD_BYTES,
     BodySizeLimitMiddleware,
     RequestIdMiddleware,
     SecurityHeadersMiddleware,
@@ -101,7 +102,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     app.state.settings = settings
-    for module in (health, captcha, public, auth, me, admin):
+    for module in (health, captcha, public, auth, me, admin, profiles, files, skill_tests):
         app.include_router(module.router, prefix=API_PREFIX)
     if settings.DEVSYNC_ENV is Environment.TEST:
         from app.api.v1 import test_seed  # noqa: PLC0415 - imported only in the test environment
@@ -123,7 +124,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(CsrfMiddleware, settings=settings)  # 6
     app.add_middleware(SessionMiddleware, settings=settings)  # 5
     app.add_middleware(SecurityHeadersMiddleware)  # 4
-    app.add_middleware(BodySizeLimitMiddleware)  # 3
+    app.add_middleware(
+        BodySizeLimitMiddleware,
+        upload_max_bytes=settings.MAX_UPLOAD_MB * 1024 * 1024 + MULTIPART_OVERHEAD_BYTES,
+    )  # 3
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)  # 2
     app.add_middleware(RequestIdMiddleware)  # 1
     app.add_middleware(MetricsMiddleware)  # observes the whole chain

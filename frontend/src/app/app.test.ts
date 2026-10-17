@@ -108,7 +108,7 @@ describe("navigation (spec §13.4)", () => {
   it("gives every not-yet-built page a phase, once", () => {
     const paths = UPCOMING.map((i) => i.to);
     expect(new Set(paths).size).toBe(paths.length);
-    expect(UPCOMING.every((i) => (i.phase ?? 0) >= 3)).toBe(true);
+    expect(UPCOMING.every((i) => (i.phase ?? 0) >= 4)).toBe(true);
     expect(paths).not.toContain("/settings");
   });
 

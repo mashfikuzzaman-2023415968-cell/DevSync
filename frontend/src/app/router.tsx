@@ -82,6 +82,13 @@ const publicPages: RouteObject[] = [
     }),
   },
   {
+    path: "d/:id",
+    handle: { title: "Developer profile" },
+    lazy: async () => ({
+      Component: (await import("@/features/profile/PublicProfilePage")).default,
+    }),
+  },
+  {
     path: "privacy",
     handle: { title: "Privacy" },
     lazy: async () => ({ Component: (await import("@/features/legal/LegalPage")).PrivacyPage }),
@@ -136,6 +143,27 @@ export const routes: RouteObject[] = [
             handle: { title: "Dashboard" },
             lazy: async () => ({
               Component: (await import("@/features/home/DeveloperHome")).default,
+            }),
+          },
+          {
+            path: "dev/profile",
+            handle: { title: "Profile & portfolio" },
+            lazy: async () => ({
+              Component: (await import("@/features/profile/ProfilePage")).default,
+            }),
+          },
+          {
+            path: "dev/challenges",
+            handle: { title: "Skill challenges" },
+            lazy: async () => ({
+              Component: (await import("@/features/challenges/ChallengesPage")).default,
+            }),
+          },
+          {
+            path: "dev/challenges/test/:attemptId",
+            handle: { title: "Skill test" },
+            lazy: async () => ({
+              Component: (await import("@/features/challenges/TestPage")).default,
             }),
           },
           ...upcoming("/dev/"),

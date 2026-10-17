@@ -142,3 +142,39 @@ def _totp_manage(p: Principal, _r: Any) -> None:
 @policy("admin.access")
 def _admin_access(p: Principal, _r: Any) -> None:
     _require_admin(p)
+
+
+# --------------------------------------------------------------------------- Phase 3 policies
+
+
+def _require_role(p: Principal, role: str) -> None:
+    _require_active(p)
+    if p.role != role:
+        raise ForbiddenError(code=ErrorCode.ROLE_NOT_ALLOWED)
+
+
+@policy("profile.developer")
+def _profile_developer(p: Principal, _r: Any) -> None:
+    """Developers manage their own profile, portfolio and evidence."""
+    _require_role(p, "DEVELOPER")
+
+
+@policy("profile.client")
+def _profile_client(p: Principal, _r: Any) -> None:
+    """Clients manage their own organisation profile."""
+    _require_role(p, "CLIENT")
+
+
+@policy("catalog.read")
+def _catalog_read(p: Principal, _r: Any) -> None:
+    """Skills, tests and other developers' profiles: any verified account."""
+    _require_active(p)
+
+
+@policy("test.take")
+def _test_take(p: Principal, resource: Any) -> None:
+    """Developers take tests; an attempt belongs to its developer (others: not found)."""
+    _require_role(p, "DEVELOPER")
+    owner = getattr(resource, "user_id", None)
+    if resource is not None and owner != p.user_id:
+        raise NotFoundError

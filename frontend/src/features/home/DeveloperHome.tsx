@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, NewcomerBadge } from "@/components/ui/Display";
 import { EmptyState, PageHeader } from "@/components/ui/Feedback";
 import { useMe } from "@/features/auth/api";
+import { usePortfolio, useSkillTests } from "@/features/profile/api";
 import { Checklist } from "./Checklist";
 import { firstName, greeting } from "./greeting";
 
@@ -13,6 +14,10 @@ import { firstName, greeting } from "./greeting";
 export default function DeveloperHome() {
   const me = useMe();
   const user = me.data;
+  const portfolio = usePortfolio();
+  const tests = useSkillTests();
+  const hasPortfolio = (portfolio.data?.length ?? 0) > 0;
+  const passedTest = tests.data?.some((t) => t.last_score !== null) === true;
   return (
     <>
       <PageHeader
@@ -63,13 +68,13 @@ export default function DeveloperHome() {
                 },
                 {
                   label: "Add a portfolio item",
-                  done: false,
-                  hint: "Show one piece of real work (profiles arrive in Phase 3).",
+                  done: hasPortfolio,
+                  hint: "Show one piece of real work, with a screenshot if you can.",
                   to: "/dev/profile",
                 },
                 {
-                  label: "Pass a skill test",
-                  done: false,
+                  label: "Take a skill test",
+                  done: passedTest,
                   hint: "A good score lets you be considered before you have reviews.",
                   to: "/dev/challenges",
                 },

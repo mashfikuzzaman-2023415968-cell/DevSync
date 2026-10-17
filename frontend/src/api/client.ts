@@ -129,3 +129,54 @@ async function send<T>(path: string, method: string, options: RequestOptions): P
   }
   return parsed as T;
 }
+
+/** Multipart upload with progress (0–1). XMLHttpRequest because fetch can't report upload
+ * progress; same CSRF, credentials and error envelope as `api`. */
+export async function upload<T>(
+  path: string,
+  form: FormData,
+  onProgress?: (fraction: number) => void,
+  signal?: AbortSignal,
+): Promise<T> {
+  const token = await ensureCsrf();
+  return new Promise<T>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${API_BASE}${path}`);
+    xhr.withCredentials = true;
+    xhr.setRequestHeader("Accept", "application/json");
+    xhr.setRequestHeader("X-CSRF-Token", token);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total);
+    };
+    xhr.onerror = () => {
+      window.dispatchEvent(new CustomEvent(NETWORK_EVENT, { detail: { online: false } }));
+      reject(new ApiError(0, null, null));
+    };
+    xhr.onabort = () => {
+      reject(new ApiError(0, null, null));
+    };
+    xhr.onload = () => {
+      let parsed: unknown = null;
+      try {
+        parsed = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+      } catch {
+        parsed = null;
+      }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(parsed as T);
+        return;
+      }
+      const retry = Number(xhr.getResponseHeader("Retry-After"));
+      reject(new ApiError(xhr.status, parsed as ErrorBody | null, retry > 0 ? retry : null));
+    };
+    signal?.addEventListener("abort", () => {
+      xhr.abort();
+    });
+    xhr.send(form);
+  });
+}
+
+/** Where an image or document is fetched from (the API redirects to a short-lived link). */
+export function fileUrl(fileId: string): string {
+  return `${API_BASE}/files/${fileId}/download`;
+}

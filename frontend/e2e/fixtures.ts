@@ -22,6 +22,7 @@ async function csrfHeaders(
 }
 
 export interface Seeded {
+  userId: string;
   email: string;
   password: string;
   totpSecret: string | null;
@@ -48,8 +49,8 @@ export async function seedUser(
   });
   if (!response.ok())
     throw new Error(`seed failed: ${String(response.status())} ${await response.text()}`);
-  const body = (await response.json()) as { totp_secret: string | null };
-  return { email, password: PASSWORD, totpSecret: body.totp_secret };
+  const body = (await response.json()) as { user_id: string; totp_secret: string | null };
+  return { userId: body.user_id, email, password: PASSWORD, totpSecret: body.totp_secret };
 }
 
 export async function lastSms(request: APIRequestContext, phone: string): Promise<string> {

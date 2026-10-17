@@ -706,6 +706,7 @@ def step_phase_checks(g: Gate) -> str:
         0: phase0_checks,
         1: phase1_checks,
         2: phase2_checks,
+        3: phase3_checks,
     }
     if g.phase not in checks:
         raise StepFailed(f"no PHASE_CHECKS defined for phase {g.phase}")
@@ -783,6 +784,32 @@ def phase2_checks(g: Gate) -> str:
     return (
         f"{p1}; stills current ({len(manifest['files'])} files, "
         f"hash {manifest['hash'][:12]}); devsync-ui skill present and listed; no dev tools in dist"
+    )
+
+
+def phase3_checks(g: Gate) -> str:
+    """Spec §17 Phase 3 gate checks: a crafted polyglot upload is rejected, a signed URL
+    expires (and a tampered one is refused), and test answers are absent from API responses."""
+    p2 = phase2_checks(g)
+    in_tests(
+        [
+            "pytest", "-q", "-p", "no:cacheprovider",
+            "tests/security/test_profiles_files.py::test_dangerous_uploads_are_rejected",
+            "tests/unit/test_uploads.py::test_appended_archive_is_rejected",
+            "tests/unit/test_uploads.py::test_jpeg_polyglot_ending_in_an_end_marker_is_still_rejected",
+            "tests/security/test_profiles_files.py::test_signed_url_expires_and_tampering_is_refused",
+            "tests/unit/test_uploads.py::test_signed_url_expires",
+            "tests/security/test_skill_tests.py::test_response_schemas_have_no_answer_fields",
+            "tests/security/test_skill_tests.py::test_full_lifecycle_scores_and_adds_evidence",
+            "tests/unit/test_question_bank_seed.py",
+        ]
+    )  # fmt: skip
+    plan = (ROOT / "docs" / "plans" / "phase-03.md").read_text(encoding="utf-8")
+    if "devsync-ui" not in plan:
+        raise StepFailed("devsync-ui skill not listed in docs/plans/phase-03.md")
+    return (
+        f"{p2}; polyglot uploads rejected; signed URL expiry and tamper refused; "
+        "answers absent from test responses; question bank seed valid"
     )
 
 

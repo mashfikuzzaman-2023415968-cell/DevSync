@@ -12,6 +12,7 @@ For each role the test asserts the exact gate outcome:
 
 from __future__ import annotations
 
+import re
 import uuid
 from typing import Any
 
@@ -58,6 +59,36 @@ MATRIX: dict[tuple[str, str], tuple[set[str], str, bool]] = {
     ("GET", "/api/v1/me"): (SIGNED_IN, "auth", False),
     ("PATCH", "/api/v1/me"): (ACTIVE, "auth", False),
     ("GET", "/api/v1/admin/session"): ({ADMIN}, HIDDEN, False),
+    # Phase 3: profiles, evidence, files, skill tests
+    ("GET", "/api/v1/skills"): (ACTIVE, "auth", False),
+    ("PUT", "/api/v1/me/skills"): ({DEV}, "auth", False),
+    ("GET", "/api/v1/me/developer-profile"): ({DEV}, "auth", False),
+    ("PATCH", "/api/v1/me/developer-profile"): ({DEV}, "auth", False),
+    ("GET", "/api/v1/me/client-profile"): ({CLIENT}, "auth", False),
+    ("PATCH", "/api/v1/me/client-profile"): ({CLIENT}, "auth", False),
+    ("GET", "/api/v1/me/portfolio"): ({DEV}, "auth", False),
+    ("POST", "/api/v1/me/portfolio"): ({DEV}, "auth", False),
+    ("PUT", "/api/v1/me/portfolio-order"): ({DEV}, "auth", False),
+    ("PATCH", "/api/v1/me/portfolio/{item_id}"): ({DEV}, "auth", True),
+    ("DELETE", "/api/v1/me/portfolio/{item_id}"): ({DEV}, "auth", True),
+    ("POST", "/api/v1/me/portfolio/{item_id}/images"): ({DEV}, "auth", True),
+    ("DELETE", "/api/v1/me/portfolio/{item_id}/images/{image_id}"): ({DEV}, "auth", True),
+    ("GET", "/api/v1/me/certificates"): ({DEV}, "auth", False),
+    ("POST", "/api/v1/me/certificates"): ({DEV}, "auth", False),
+    ("PATCH", "/api/v1/me/certificates/{cert_id}"): ({DEV}, "auth", True),
+    ("DELETE", "/api/v1/me/certificates/{cert_id}"): ({DEV}, "auth", True),
+    ("GET", "/api/v1/me/external-reviews"): ({DEV}, "auth", False),
+    ("POST", "/api/v1/me/external-reviews"): ({DEV}, "auth", False),
+    ("DELETE", "/api/v1/me/external-reviews/{review_id}"): ({DEV}, "auth", True),
+    ("GET", "/api/v1/developers/{developer_id}"): (ACTIVE, "auth", True),
+    ("GET", "/api/v1/public/developers/{developer_id}"): (EVERYONE, "", True),
+    ("GET", "/api/v1/files/{file_id}/download"): (EVERYONE, "", True),
+    ("GET", "/api/v1/files/blob/{storage_key}"): (EVERYONE, "", True),
+    ("GET", "/api/v1/skill-tests"): ({DEV}, "auth", False),
+    ("POST", "/api/v1/skill-tests/{test_id}/attempts"): ({DEV}, "auth", True),
+    ("GET", "/api/v1/attempts/{attempt_id}"): ({DEV}, "auth", True),
+    ("POST", "/api/v1/attempts/{attempt_id}/answer"): ({DEV}, "auth", True),
+    ("POST", "/api/v1/attempts/{attempt_id}/submit"): ({DEV}, "auth", True),
 }
 
 BODIES: dict[tuple[str, str], dict[str, Any]] = {
@@ -69,7 +100,19 @@ BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "new_password": "another strong phrase 31!",
     },
     ("PATCH", "/api/v1/me"): {"display_name": "Matrix"},
+    ("PUT", "/api/v1/me/skills"): {"skills": []},
+    ("PATCH", "/api/v1/me/developer-profile"): {"headline": "Matrix"},
+    ("PATCH", "/api/v1/me/client-profile"): {"organization": "Matrix"},
+    ("POST", "/api/v1/me/portfolio"): {"title": "Matrix"},
+    ("PUT", "/api/v1/me/portfolio-order"): {"ids": [str(uuid.uuid4())]},
+    ("PATCH", "/api/v1/me/portfolio/{item_id}"): {"title": "Matrix"},
+    ("PATCH", "/api/v1/me/certificates/{cert_id}"): {"title": "Matrix"},
+    ("POST", "/api/v1/attempts/{attempt_id}/answer"): {
+        "question_id": str(uuid.uuid4()),
+        "choice": 0,
+    },
 }
+PATH_PARAM = re.compile(r"\{[a-z_]+\}")
 
 
 def _openapi_routes() -> set[tuple[str, str]]:
@@ -123,11 +166,13 @@ def _code(r: Any) -> str | None:
 def test_matrix(api: Api, role: str) -> None:
     _become(api, role)
     failures = []
-    for (method, path), (allowed, refusal, object_scoped) in PROTECTED:
+    for i, ((method, path), (allowed, refusal, object_scoped)) in enumerate(PROTECTED):
+        if i % 20 == 0:  # one address sends every request: keep under the per-IP limits
+            api.get("/api/v1/__test__/ratelimits/reset")
         if (method, path) in _LAST:
             api.client.cookies.clear()
             _become(api, role)  # each sign-out route gets a fresh session
-        url = path.replace("{session_id}", str(uuid.uuid4()))
+        url = PATH_PARAM.sub(lambda _m: str(uuid.uuid4()), path)
         body = BODIES.get((method, path))
         r = api.request(method, url, json=body) if body is not None else api.request(method, url)
         status = r.status_code

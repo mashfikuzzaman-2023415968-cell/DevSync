@@ -29,6 +29,8 @@ known-first-party = ["app", "scripts", "tests"]
 "tests/edge/**" = ["S101", "PLR2004", "S501"]  # self-signed dev cert on the internal test network
 "scripts/**" = ["T201", "S603", "S607", "PLR0912", "PLR0915", "PLR2004"]
 "alembic/**" = ["E501"]
+# Question-bank content: long question text, reproducible (non-crypto) shuffling, build-time checks.
+"scripts/build_question_bank.py" = ["E501", "S311", "S101", "PT018"]
 "app/core/errors.py" = ["S105"]  # error-code names, not credentials
 
 [tool.ruff.format]
@@ -74,6 +76,9 @@ markers = [
 [tool.coverage.run]
 branch = true
 source = ["app"]
+# SQLAlchemy's async layer runs code in greenlets; without this, lines after an await in the
+# services go uncounted.
+concurrency = ["greenlet", "thread"]
 omit = ["app/jobs/worker.py", "app/jobs/scheduler.py"]
 
 [tool.coverage.report]

@@ -88,21 +88,42 @@ class RequestIdMiddleware:
             request_id_var.reset(token)
 
 
+# Multipart upload endpoints (POST only) accept files up to MAX_UPLOAD_MB (spec §14.9); the
+# same paths get a larger `client_max_body_size` in Nginx.
+UPLOAD_PATHS = re.compile(
+    r"^/api/v1/(?:me/portfolio/[^/]+/images|me/certificates|me/external-reviews)$"
+)
+MULTIPART_OVERHEAD_BYTES = 64 * 1024
+
+
 class BodySizeLimitMiddleware:
     """Step 3: reject bodies over the limit (by Content-Length and while streaming) → 413."""
 
-    def __init__(self, app: ASGIApp, max_bytes: int = MAX_JSON_BODY_BYTES) -> None:
+    def __init__(
+        self,
+        app: ASGIApp,
+        max_bytes: int = MAX_JSON_BODY_BYTES,
+        upload_max_bytes: int | None = None,
+    ) -> None:
         self.app = app
-        self.max_bytes = max_bytes
+        self.default_max = max_bytes
+        self.upload_max = upload_max_bytes or max_bytes
+
+    def limit_for(self, scope: Scope) -> int:
+        """The body limit for this request: larger only for POSTs to an upload endpoint."""
+        if scope.get("method") == "POST" and UPLOAD_PATHS.match(scope.get("path", "")):
+            return self.upload_max
+        return self.default_max
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
+        max_bytes = self.limit_for(scope)
         declared = dict(scope["headers"]).get(b"content-length")
         if declared is not None:
             try:
-                too_big = int(declared) > self.max_bytes
+                too_big = int(declared) > max_bytes
             except ValueError:
                 too_big = True
             if too_big:
@@ -118,7 +139,7 @@ class BodySizeLimitMiddleware:
             message = await receive()
             if message["type"] == "http.request":
                 received += len(message.get("body", b""))
-                if received > self.max_bytes:
+                if received > max_bytes:
                     raise _BodyTooLargeError
             return message
 

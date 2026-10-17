@@ -39,6 +39,8 @@ export const timing = {
   loopStepMs: 1400,
   loopRestMs: 2800,
   shakeX: 4,
+  /** Press-and-hold before a touch drag starts, so scrolling still works. */
+  dragHoldMs: 150,
 } as const;
 
 /** No animation (reduced motion or a fixed final state). */

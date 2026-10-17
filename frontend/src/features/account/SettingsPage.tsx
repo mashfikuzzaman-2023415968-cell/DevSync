@@ -1,4 +1,4 @@
-/** Settings (spec §13.5 #19): account name, appearance (theme, reduced motion), signed-in
+/** Settings (spec §13.5 #19): account name, a client's organisation, appearance (theme, reduced motion), signed-in
  * devices, change password. Data export and account deletion arrive with Phase 12. */
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LaptopMinimal, LogOut, Monitor, Moon, Sun } from "lucide-react";
@@ -27,6 +27,7 @@ import {
 import { applyFieldErrors, messageFor } from "@/features/auth/errors";
 import { PASSWORD_RULES } from "@/features/auth/PasswordRules";
 import { changePasswordSchema, profileSchema } from "@/features/auth/schemas";
+import { ClientProfileCard } from "@/features/profile/ClientProfileCard";
 import { formatDateTime, formatRelative } from "@/lib/format";
 
 function ProfileCard() {
@@ -259,12 +260,14 @@ function PasswordCard() {
 }
 
 export default function SettingsPage() {
+  const me = useMe();
   return (
     <>
       <PageHeader title="Settings" description="Your account, appearance and security." />
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-2">
         <div className="space-y-6">
           <ProfileCard />
+          {me.data?.role === "CLIENT" ? <ClientProfileCard /> : null}
           <AppearanceCard />
         </div>
         <div className="space-y-6">

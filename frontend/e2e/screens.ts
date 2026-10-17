@@ -1,5 +1,6 @@
 /** Every screen built so far (spec §13.14 "every built screen"), used by the CSP, axe and
- * responsive-matrix checks. `role` screens need a signed-in user of that role. */
+ * responsive-matrix checks. Screens that need an object id (a test attempt, a public profile)
+ * are checked in phase3.spec.ts. `role` screens need a signed-in user of that role. */
 export interface Screen {
   name: string;
   path: string;
@@ -25,6 +26,9 @@ export const SIGNED_IN_SCREENS: Screen[] = [
   { name: "developer-home", path: "/dev", role: "DEVELOPER" },
   { name: "developer-coming-soon", path: "/dev/find", role: "DEVELOPER" },
   { name: "settings", path: "/settings", role: "DEVELOPER" },
+  { name: "developer-profile", path: "/dev/profile", role: "DEVELOPER" },
+  { name: "skill-challenges", path: "/dev/challenges", role: "DEVELOPER" },
   { name: "client-home", path: "/client", role: "CLIENT" },
+  { name: "client-settings", path: "/settings", role: "CLIENT" },
   { name: "admin-home", path: "/admin", role: "ADMIN" },
 ];

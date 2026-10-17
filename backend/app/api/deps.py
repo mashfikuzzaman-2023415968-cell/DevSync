@@ -24,6 +24,7 @@ from app.core.sessions import SessionData
 from app.core.settings_cache import active_settings
 from app.db.context import DbContext
 from app.db.session import open_session
+from app.services.context import Ctx
 
 
 def app_settings(request: Request) -> Settings:
@@ -92,5 +93,18 @@ def rate_limit(scope: str, *key_parts: str) -> Callable[[Request, AsyncSession],
         if p is not None:
             parts.append(str(p.user_id))
         await RateLimiter(get_redis()).hit(scope, hash_key(*parts), rules)
+
+    return dependency
+
+
+def acting(action: str) -> Callable[[Request, AsyncSession], Ctx]:
+    """Dependency: authorize `action` and return the service context (session, clock, caller)."""
+
+    def dependency(request: Request, db: DbSession) -> Ctx:
+        p = principal_of(request)
+        authorize(p, action)
+        if p is None:  # authorize() already raised; this narrows the type
+            raise RuntimeError("unreachable")
+        return Ctx(db=db, settings=app_settings(request), principal=p, now=now())
 
     return dependency

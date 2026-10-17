@@ -2,13 +2,13 @@
 
 Rules (a layer may import only the layers listed):
 - api          → services, schemas, core, db (only to open the request's DB session)
-- services     → repositories, models, schemas, algorithms, integrations, db, core, services
+- services     → repositories, models, schemas, algorithms, integrations, uploads, db, core, services
 - repositories → models, db, core
 - models       → db, core
 - schemas      → core, schemas
 - algorithms   → algorithms only (PURE: also no sqlalchemy/fastapi/httpx/redis/time/datetime.now)
 - integrations → core
-- jobs         → services, repositories, models, db, core, algorithms, integrations, jobs
+- jobs         → services, repositories, models, db, core, algorithms, integrations, uploads, jobs
 - core         → core, db, models (audit writer), schemas
 - db           → core, db
 
@@ -30,6 +30,7 @@ ALLOWED: dict[str, set[str]] = {
         "schemas",
         "algorithms",
         "integrations",
+        "uploads",
         "db",
         "core",
     },
@@ -47,6 +48,7 @@ ALLOWED: dict[str, set[str]] = {
         "core",
         "algorithms",
         "integrations",
+        "uploads",
     },
     "core": {"core", "db", "models", "schemas"},
     "db": {"db", "core"},

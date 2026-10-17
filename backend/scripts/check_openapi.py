@@ -40,6 +40,11 @@ PUBLIC_OPERATIONS: set[tuple[str, str]] = {
     ("post", "/api/v1/auth/email/verify"),
     ("post", "/api/v1/auth/password/forgot"),
     ("post", "/api/v1/auth/password/reset"),
+    # Phase 3: public profiles, and downloads that anonymous visitors of a public profile follow
+    # (authorization happens inside: visibility, ownership, signature).
+    ("get", "/api/v1/public/developers/{developer_id}"),
+    ("get", "/api/v1/files/{file_id}/download"),
+    ("get", "/api/v1/files/blob/{storage_key}"),
 }
 HTTP_METHODS = {"get", "post", "put", "patch", "delete"}
 
@@ -82,7 +87,8 @@ def lint(spec: dict[str, Any]) -> list[str]:
             if not op.get("summary"):
                 problems.append(f"{where}: missing summary")
             responses = op.get("responses", {})
-            success = [c for c in responses if str(c).startswith("2")]
+            # A redirect (the signed download link) is that operation's success response.
+            success = [c for c in responses if str(c)[0] in "23"]
             if not success:
                 problems.append(f"{where}: no success response")
             for code in success:

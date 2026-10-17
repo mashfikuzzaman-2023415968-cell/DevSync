@@ -1,5 +1,6 @@
 /**
- * Visual baselines (spec §13.14 #2, §16.5 step 15): homepage, auth screens and the app shell,
+ * Visual baselines (spec §13.14 #2, §16.5 step 15): homepage, auth screens, the app shell and
+ * the Phase 3 profile and challenge screens,
  * light and dark, at 390, 768 and 1440 px. Rendered with reduced motion (final states, poster
  * instead of the live scene) and a fixed clock so they are stable.
  * Update with `make visual-update` (runs in the pinned Playwright image).
@@ -86,6 +87,12 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto("/settings");
       // The email and the device list change on every run.
       await snap(page, `settings-${scheme}-${String(width)}`, ["[data-volatile]"]);
+      await page.goto("/dev/profile");
+      await page.getByLabel("Headline").waitFor();
+      await snap(page, `developer-profile-${scheme}-${String(width)}`);
+      await page.goto("/dev/challenges");
+      await page.getByRole("heading", { name: "React fundamentals" }).waitFor();
+      await snap(page, `skill-challenges-${scheme}-${String(width)}`);
     });
   }
 }

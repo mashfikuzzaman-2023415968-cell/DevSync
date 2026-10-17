@@ -60,6 +60,7 @@ services:
       RUFF_CACHE_DIR: /tmp/ruff-cache
       MYPY_CACHE_DIR: /tmp/mypy-cache
       HYPOTHESIS_STORAGE_DIRECTORY: /tmp/hypothesis
+      UPLOAD_DIR: /tmp/uploads
     volumes:
       - ./runs:/runs
       - ./docs:/docs:ro

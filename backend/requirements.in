@@ -21,3 +21,7 @@ zxcvbn
 altcha
 cryptography
 email-validator
+# Phase 3: uploads (spec §14.9: signature checks, image re-encoding)
+python-magic
+pillow
+python-multipart  # multipart form parsing for upload endpoints (FastAPI File/Form)

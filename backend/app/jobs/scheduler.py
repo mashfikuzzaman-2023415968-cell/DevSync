@@ -14,13 +14,15 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
-from app.jobs import email_jobs, tasks
+from app.jobs import email_jobs, profile_jobs, tasks
 from app.jobs.queues import get_queue
 
 log = get_logger(__name__)
 PING_INTERVAL_MINUTES = 5
 EMAIL_INTERVAL_SECONDS = 30
 EXPIRE_INTERVAL_MINUTES = 5
+UPLOADS_CLEANUP_HOURS = 1
+ATTEMPTS_EXPIRE_MINUTES = 1
 
 
 def enqueue_ping() -> None:
@@ -36,6 +38,16 @@ def enqueue_email_send() -> None:
 def enqueue_lifecycle_expire() -> None:
     """Cleanup of expired sessions, tokens, OTPs and idempotency keys."""
     get_queue("low").enqueue(email_jobs.lifecycle_expire, job_timeout=60, result_ttl=3600)
+
+
+def enqueue_uploads_cleanup() -> None:
+    """Orphan and deleted uploads (§14.9)."""
+    get_queue("low").enqueue(profile_jobs.uploads_cleanup, job_timeout=300, result_ttl=3600)
+
+
+def enqueue_attempts_expire() -> None:
+    """Score skill-test attempts whose deadline passed without a submit."""
+    get_queue("default").enqueue(profile_jobs.attempts_expire, job_timeout=60, result_ttl=3600)
 
 
 def build_scheduler() -> BlockingScheduler:
@@ -57,6 +69,22 @@ def build_scheduler() -> BlockingScheduler:
         "interval",
         minutes=EXPIRE_INTERVAL_MINUTES,
         id="lifecycle.expire",
+        coalesce=True,
+        max_instances=1,
+    )
+    scheduler.add_job(
+        enqueue_uploads_cleanup,
+        "interval",
+        hours=UPLOADS_CLEANUP_HOURS,
+        id="uploads.cleanup",
+        coalesce=True,
+        max_instances=1,
+    )
+    scheduler.add_job(
+        enqueue_attempts_expire,
+        "interval",
+        minutes=ATTEMPTS_EXPIRE_MINUTES,
+        id="attempts.expire",
         coalesce=True,
         max_instances=1,
     )
