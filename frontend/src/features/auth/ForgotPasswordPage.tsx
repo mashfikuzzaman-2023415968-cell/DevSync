@@ -31,7 +31,7 @@ export default function ForgotPasswordPage() {
   });
 
   return (
-    <AuthLayout title="Reset your password" subtitle="We'll email you a link to choose a new one.">
+    <AuthLayout title="Reset your password" subtitle="We’ll email you a link to choose a new one.">
       {done ? (
         <Alert tone="success">{done}</Alert>
       ) : (

@@ -287,6 +287,21 @@ class SessionStore:
         await self.redis.srem(USER_INDEX_PREFIX + str(user_id), bytes(token_hash).hex())
         return True
 
+    async def refresh_status(self, user_id: uuid.UUID, status: str) -> int:
+        """Update the cached account status in every live session of a user (e.g. after
+        verification activates the account, or a suspension). Returns sessions updated."""
+        updated = 0
+        for raw_hash in await self.redis.smembers(USER_INDEX_PREFIX + str(user_id)):
+            key = REDIS_PREFIX + (raw_hash.decode() if isinstance(raw_hash, bytes) else raw_hash)
+            raw = await self.redis.get(key)
+            if raw is None:
+                continue
+            ttl = await self.redis.ttl(key)
+            data = replace(SessionData.from_json(raw), status=status)
+            await self.redis.set(key, data.to_json(), ex=max(1, ttl))
+            updated += 1
+        return updated
+
     async def revoke_all(
         self,
         db: AsyncSession,

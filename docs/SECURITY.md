@@ -19,6 +19,23 @@ See spec §14.2. Full table to be completed in Phase 14.
 | Forbidden patterns, layer rules, gitleaks, Bandit, Semgrep, pip-audit, npm audit, Trivy | `backend/scripts/`, `infra/semgrep/` | gate steps 5–7 |
 | Dependency update policy | `.github/dependabot.yml` | — |
 
+## Controls implemented (Phase 1)
+| Control | Where | Tests |
+|---|---|---|
+| Row-level security on every table (ENABLE + FORCE), fail-closed context, SECURITY DEFINER pre-auth functions | `alembic/versions/0002_identity_rls.py`, `app/db/context.py` | `tests/integration/test_rls.py`, `scripts/check_rls.py` |
+| Argon2id passwords with rehash, zxcvbn ≥ 3, breached list, uniform timing | `app/core/security.py` | `tests/unit/test_security.py`, `tests/security/test_login_sessions.py` |
+| Registration (uniform), phone OTP (hashed, 5 min, 5 attempts, 60 s resend), email links (hashed, single use) | `app/services/auth/registration.py` | `tests/security/test_registration_verification.py` |
+| Opaque rotating sessions (15 min rotate + 30 s grace, 30/15 min idle, 7 days absolute), revoke/logout-all, Redis + DB | `app/core/sessions.py`, `app/core/auth_middleware.py` | `tests/security/test_login_sessions.py`, `tests/integration/test_sessions_ratelimit.py` |
+| CSRF double-submit + Origin | `app/core/csrf.py` | `tests/unit/test_csrf_redirects.py`, `tests/security/test_login_sessions.py` |
+| Rate limits (§14.8), progressive delay, lockout + email | `app/core/ratelimit.py`, `app/services/auth/login.py` | security + integration tests |
+| ALTCHA CAPTCHA (single use), honeypot, minimum fill time, adaptive on login, always for admins | `app/core/captcha.py`, `frontend/src/lib/captcha.ts` | `tests/unit/test_captcha_email_totp.py`, security tests |
+| Admin TOTP (AES-GCM secret, ±1 window, replay-proof), recovery codes, step-up | `app/services/auth/credentials.py`, `login.py` | `tests/security/test_admin_totp.py` |
+| Admin area hidden (404) + separate frontend bundle | `app/core/authz.py`, `frontend/src/app/guards.tsx` | matrix test, `frontend/e2e/auth.spec.ts` |
+| Central authorization + route × role matrix | `app/core/authz.py` | `tests/security/test_authz_matrix.py` |
+| Open-redirect validator (server + client) | `app/core/redirects.py`, `frontend/src/lib/redirects.ts` | unit + property tests |
+| Contract fuzzing (no 5xx, schema-conformant) | — | `tests/api/test_schemathesis.py` |
+| Production: no test router, no docs | `app/main.py` | `tests/api/test_app.py` |
+
 ## Dependency update policy (§14.21)
 Dependabot weekly (pip, npm, Docker, GitHub Actions). Critical vulnerabilities fixed within
 48 hours, high within 7 days. `make lock` re-resolves Python locks; the gate fails on unfixed

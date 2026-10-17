@@ -14,7 +14,7 @@ export function NotFoundPage() {
 export function ForbiddenPage() {
   return (
     <AuthLayout
-      title="This area isn't for your account"
+      title="This area isn’t for your account"
       subtitle="Sign in with a different account or go back to your home page."
     >
       <Link to="/" className="font-medium text-primary">

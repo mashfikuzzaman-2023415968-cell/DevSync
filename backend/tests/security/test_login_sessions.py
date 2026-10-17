@@ -46,7 +46,8 @@ def test_uniform_error_for_wrong_password_and_unknown_email(api: Api) -> None:
 
 
 def test_password_check_timing_does_not_reveal_accounts() -> None:
-    """Unknown accounts still cost one Argon2 verify (mean difference < 50 ms over 50 samples)."""
+    """Unknown accounts still cost one Argon2 verify (median difference < 50 ms over 50
+    interleaved samples each, so background load affects both series equally)."""
     stored = hash_password("some real password 123!")
 
     def sample(stored_hash: str | None) -> float:
@@ -54,9 +55,12 @@ def test_password_check_timing_does_not_reveal_accounts() -> None:
         verify_password(stored_hash, "attempted password 456!")
         return time.perf_counter() - start
 
-    existing = [sample(stored) for _ in range(50)]
-    missing = [sample(None) for _ in range(50)]
-    assert abs(statistics.mean(existing) - statistics.mean(missing)) < 0.05
+    existing: list[float] = []
+    missing: list[float] = []
+    for _ in range(50):
+        existing.append(sample(stored))
+        missing.append(sample(None))
+    assert abs(statistics.median(existing) - statistics.median(missing)) < 0.05
 
 
 def test_login_success_sets_hardened_cookies(api: Api) -> None:

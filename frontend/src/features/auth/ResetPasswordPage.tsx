@@ -34,7 +34,7 @@ export default function ResetPasswordPage() {
   });
 
   return (
-    <AuthLayout title="Choose a new password" subtitle="You'll be signed out of every device.">
+    <AuthLayout title="Choose a new password" subtitle="You’ll be signed out of every device.">
       {done ? (
         <>
           <Alert tone="success">Your password is changed. Sign in with the new one.</Alert>

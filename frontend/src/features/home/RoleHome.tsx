@@ -4,7 +4,7 @@ import { useMe } from "@/features/auth/api";
 const COPY = {
   CLIENT: {
     title: "Your projects",
-    body: "Project planning arrives soon: you'll break work into milestones, see the critical path and invite a fair team.",
+    body: "Project planning arrives soon: you’ll break work into milestones, see the critical path and invite a fair team.",
   },
   DEVELOPER: {
     title: "Your work",

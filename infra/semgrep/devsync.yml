@@ -16,15 +16,22 @@ rules:
   - id: devsync-no-raw-request-role
     languages: [python]
     severity: ERROR
-    message: Never take a role or user id from the request body (spec §14.20).
+    message: >-
+      Never take user or owner ids from a request body (spec §14.20); use the server-side
+      principal. (Choosing CLIENT/DEVELOPER at registration is a validated user choice.)
     paths:
       include: ["backend/app/api/"]
-    pattern-either:
-      - pattern: $BODY.role
-      - pattern: $BODY.user_id
-    pattern-inside: |
-      def $F(..., $BODY: $SCHEMA, ...):
-        ...
+    patterns:
+      - pattern-inside: |
+          def $F(..., $BODY: $SCHEMA, ...):
+            ...
+      - metavariable-regex:
+          metavariable: $SCHEMA
+          regex: ^(?!Request$)\w+Request$
+      - pattern: $BODY.$FIELD
+      - metavariable-regex:
+          metavariable: $FIELD
+          regex: ^(user_id|owner_id|actor_id|client_id|developer_id|changed_by)$
   - id: devsync-no-compare-secrets
     languages: [python]
     severity: ERROR

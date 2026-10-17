@@ -10,7 +10,9 @@ test("home page loads securely through the edge @e2e", async ({ page, baseURL })
   const consoleErrors: string[] = [];
   const foreignRequests: string[] = [];
   page.on("console", (msg) => {
-    if (msg.type() === "error") consoleErrors.push(msg.text());
+    // Visitors are signed out, so the session check answers 401 by design.
+    const expected = msg.location().url.endsWith("/api/v1/me") && msg.text().includes("401");
+    if (msg.type() === "error" && !expected) consoleErrors.push(msg.text());
   });
   page.on("request", (req) => {
     const url = new URL(req.url());

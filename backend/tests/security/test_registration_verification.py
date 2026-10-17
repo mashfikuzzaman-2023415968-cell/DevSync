@@ -66,6 +66,8 @@ def test_full_registration_and_verification(api: Api) -> None:
     )
     me = api.get("/api/v1/me").json()
     assert me["status"] == "ACTIVE"
+    # The same session can now use active-only actions without signing in again.
+    assert api.patch("/api/v1/me", json={"display_name": "Nadia R."}).status_code == 200
     assert me["email_verified"]
     assert me["phone_verified"]
     assert "password_hash" not in me

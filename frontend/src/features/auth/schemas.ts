@@ -34,7 +34,7 @@ export const resetSchema = z
   .object({ new_password: password, confirm: z.string() })
   .refine((v) => v.new_password === v.confirm, {
     path: ["confirm"],
-    message: "The passwords don't match.",
+    message: "The passwords don’t match.",
   });
 export const changePasswordSchema = z.object({
   current_password: z.string().min(1, "Enter your current password."),

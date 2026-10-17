@@ -23,6 +23,7 @@ from app.core.security import (
     password_problems,
     token_digest,
 )
+from app.core.sessions import SessionPolicy, SessionStore
 from app.integrations.sms import sms_sender
 from app.models.identity import EmailTokenPurpose, OtpPurpose, User, UserStatus
 from app.repositories import users as repo
@@ -145,6 +146,10 @@ async def _activate_if_complete(deps: AuthDeps, user: User, now: datetime) -> No
         and user.phone_verified_at is not None
     ):
         user.status = UserStatus.ACTIVE
+        # Live sessions cached "PENDING"; update them so the user needn't sign in again.
+        await SessionStore(deps.redis, SessionPolicy(deps.settings)).refresh_status(
+            user.id, UserStatus.ACTIVE.value
+        )
         await write_audit(
             deps.db,
             action="user.activate",

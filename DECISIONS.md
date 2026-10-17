@@ -126,3 +126,32 @@ HIGH/CRITICAL Debian CVEs (OpenSSL, GnuTLS, Perl, expat…) and bookworm tags ar
 rebuilt. Now `1.30.4-trixie` (brotli compiled against 1.30.4 on `debian:trixie-slim`), and
 both runtime images run `apt-get upgrade` during the build. Rebuild with `--pull` before
 each demo so the upgrade layer is refreshed (`make deps-update`, Phase 14).
+
+## 2026-10-17 — Phase 1
+
+**D19 · Phase 1 dependencies and design choices.**
+- Backend: `argon2-cffi`, `pyotp`, `zxcvbn`, `altcha` (spec-named) plus `cryptography`
+  (AES-GCM + HKDF for TOTP secrets) and `email-validator` (pydantic `EmailStr`).
+- Breached-password list: SecLists "100k most used passwords (NCSC)" (MIT) bundled as a
+  gzipped plain list (272 KB) — the spec allows either the plain list or SHA-1 prefixes, and
+  hashes don't compress (2.3 MB).
+- CAPTCHA widget: an in-house ALTCHA v1 solver (`frontend/src/lib/captcha.ts`, Web Crypto)
+  instead of the npm widget, whose injected styles and blob workers conflict with the strict
+  CSP. The server uses the spec's `altcha` library; a unit test proves both agree.
+- Pre-authentication lookups (login, session restore, consuming email tokens, registration)
+  run through narrow SECURITY DEFINER functions owned by `devsync_migrator`; a
+  `TO devsync_migrator USING (true)` policy lets them (and migrations) see rows under FORCE
+  RLS. `is_system()` requires the `devsync_worker` role so web requests can't act as SYSTEM.
+- Registration answers 202 uniformly and the browser then signs in with the same
+  credentials (a session is never created for an existing account by registration).
+- Password strength meter in the browser is a lightweight heuristic; zxcvbn (~400 KB gzip)
+  would break the §13.7 route budget. The server's zxcvbn + breached-list check is the
+  authority.
+- Rate limits (§14.8) live in `platform_settings.ratelimit` (settings v2). The API layer may
+  import `app.db` only to open the request's DB session (layer checker updated).
+
+**D20 · React Router 7.18.4 instead of 6.x; one ESLint rule relaxed.** React Router 6 has
+open-redirect (backslash in `<Link>`/`useNavigate`) and SSR-hydration advisories with no 6.x
+fix; 7.18.4 supports React 18 and keeps the data-router API. `security/detect-object-injection`
+is off: it only flags typed `Record` lookups with union keys (false positives in TypeScript);
+real sinks stay covered by other ESLint rules and `check_forbidden.py`.

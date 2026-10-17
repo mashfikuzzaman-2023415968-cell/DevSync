@@ -124,7 +124,7 @@ export default function RegisterPage() {
     <AuthLayout
       title="Your details"
       subtitle={
-        role === "CLIENT" ? "You're signing up to hire a team." : "You're signing up to find work."
+        role === "CLIENT" ? "You’re signing up to hire a team." : "You’re signing up to find work."
       }
     >
       <form noValidate onSubmit={(e) => void submit(e)} className="space-y-5">
@@ -150,7 +150,7 @@ export default function RegisterPage() {
           type="tel"
           inputMode="tel"
           autoComplete="tel"
-          hint="We'll text you a 6-digit code. One account per number."
+          hint="We’ll text you a 6-digit code. One account per number."
           enterKeyHint="next"
           error={form.formState.errors.phone?.message}
           {...form.register("phone")}
