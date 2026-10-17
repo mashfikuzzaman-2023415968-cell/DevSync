@@ -43,7 +43,8 @@ export function StatsStrip() {
   });
   return (
     <section aria-label="DevSync in numbers" className="border-y border-border bg-surface">
-      <div className="mx-auto flex max-w-content flex-col gap-8 px-4 py-10 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+      {/* The row keeps the height of the numbers so they never push the page down (CLS). */}
+      <div className="mx-auto flex max-w-content flex-col gap-8 px-4 py-10 sm:px-6 lg:min-h-[9rem] lg:flex-row lg:items-center lg:justify-between">
         {shown.length ? (
           <div className="grid grid-cols-2 gap-8 sm:flex sm:gap-14">
             {shown.map(({ stat, value }) => (

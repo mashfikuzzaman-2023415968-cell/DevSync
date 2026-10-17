@@ -148,3 +148,37 @@ export function snapTarget(scrollY: number, idleElapsedMs: number, hasScrolled: 
 
 /** One rotation in about 60 s (spec §13.12); slowed to a stop as the team forms. */
 export const ROTATION_PERIOD_S = 60;
+
+/**
+ * Allocation-free per-frame version of `positionAt` for every node: writes x, y, z of node i to
+ * out[3i..3i+2]. Same maths; used by the render loop so frames never trigger garbage collection.
+ */
+export function writePositions(
+  c: Constellation,
+  angle: number,
+  snap: number,
+  out: Float32Array,
+): void {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const k = smooth(snap);
+  const spread = 1 + 0.12 * k;
+  for (let i = 0; i < c.nodes.length; i += 1) {
+    const n = c.nodes[i];
+    if (!n) continue;
+    const bx = n.x * cos + n.z * sin;
+    const bz = -n.x * sin + n.z * cos;
+    const slot = c.team.indexOf(i);
+    const o = i * 3;
+    if (slot >= 0) {
+      const t = TEAM_TARGETS[slot] ?? { x: bx, y: n.y, z: bz };
+      out[o] = bx + (t.x - bx) * k;
+      out[o + 1] = n.y + (t.y - n.y) * k;
+      out[o + 2] = bz + (t.z - bz) * k;
+    } else {
+      out[o] = bx * spread;
+      out[o + 1] = n.y * spread;
+      out[o + 2] = bz * spread - 0.4 * k;
+    }
+  }
+}

@@ -2,6 +2,9 @@
 import { BookOpen, ExternalLink } from "lucide-react";
 import { Reveal, RevealItem } from "./Reveal";
 
+// A link to the cited paper (spec §13.11 #8); nothing is loaded from it.
+const PCS_DOI = "https://doi.org/10.1016/j.jksuci.2023.101710"; // forbidden-ok: outbound citation link
+
 export function ResearchCredit() {
   return (
     <section
@@ -37,10 +40,10 @@ export function ResearchCredit() {
               </cite>{" "}
               Journal of King Saud University – Computer and Information Sciences, 35(8), 101710.{" "}
               <a
-                href="https://doi.org/10.1016/j.jksuci.2023.101710"
+                href={PCS_DOI}
                 className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
                 rel="noopener noreferrer nofollow"
-                target="_blank"
+                target="_blank" // forbidden-ok: rel="noopener noreferrer nofollow" is set above
               >
                 Read the paper
                 <ExternalLink className="size-3.5" aria-hidden="true" />

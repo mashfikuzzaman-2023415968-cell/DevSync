@@ -4,8 +4,19 @@
  */
 import { expect, test } from "./test";
 
+// Trace recording captures screenshots while the test runs, which itself costs frames.
+test.use({ trace: "off", screenshot: "off" });
+
 test("homepage holds 60 fps with the 3D scene running @perf", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
+  const renderer = await page.evaluate(() => {
+    const gl = document.createElement("canvas").getContext("webgl2");
+    const ext = gl?.getExtension("WEBGL_debug_renderer_info");
+    return ext ? String(gl?.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : "unknown";
+  });
+  console.log(`renderer ${renderer}`);
+  // The target is for real hardware (the demo laptop), not software rendering.
+  expect(renderer).not.toMatch(/SwiftShader|llvmpipe|unknown/);
   await page.goto("/");
   await expect
     .poll(() => page.locator("[data-hero-mode]").getAttribute("data-hero-mode"), {

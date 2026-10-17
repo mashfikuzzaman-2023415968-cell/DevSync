@@ -204,7 +204,14 @@ inline-block spans, which Chrome would then report one by one as LCP candidates)
 reveal finishes the heading becomes plain text, so the whole headline is the LCP element; the
 poster is drawn on a 2D canvas (never an LCP candidate) and the 3D chunk is fetched only after
 the reveal. The sticky navbar ignores restored scroll positions and anchor jumps when deciding
-to hide.
+to hide. Measured with Lighthouse, the scene's start-up was the main cost, so it now builds a
+32 px lighting environment and compiles its shaders asynchronously (with a 1.5 s fallback
+for drivers that never report completion) before the first frame, and the per-frame loop
+allocates nothing. On phone-sized screens the scene loads on the first scroll or touch (it
+sits below the calls to action, and scrolling drives it); the poster shows until then. The
+stats strip reserves its height, the first-screen Inter files are preloaded, and inactive
+"How it works" steps use colour instead of opacity (AA contrast). Result: desktop 96–97,
+mobile 94, CLS ≤ 0.008.
 
 **D27 · E2E rate limits.** All E2E traffic comes from one container IP, so the real per-IP
 limits (§14.8) would make independent tests throttle each other. The test-only router
@@ -213,3 +220,13 @@ CSRF endpoint is throttled), the test environment alone exempts `/api/v1/__test_
 global limit (asserted by a test), Playwright resets before every test and between screens in
 long loops, and runs one worker. Tests that check limits still build up their counts within
 the test. Production limits are unchanged.
+
+**D28 · The 60 fps check runs on the laptop's GPU.** Spec §13.12 asks for a steady 60 fps
+"on the demo laptop, measured with the Playwright performance trace". The stock Playwright image
+renders WebGL in software (SwiftShader, ~41 fps here), which measures the container, not the
+laptop. Gate step 16 therefore builds `infra/playwright-gpu` (the pinned Playwright image plus
+Mesa drivers) and passes one GPU in through `/dev/dri`, preferring Intel/AMD: NVIDIA's open NVK
+driver stalled the GPU process intermittently. The test asserts the renderer is real hardware
+(not SwiftShader/llvmpipe) and runs without trace recording, whose screenshots cost frames.
+Measured: 60.0 fps, p95 frame 16.7 ms on the Intel UHD (Raptor Lake). A machine without a GPU
+cannot pass this step.

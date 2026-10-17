@@ -510,6 +510,8 @@ def _playwright(
     env: dict[str, str] | None = None,
     before: str = "",
     command: str | None = None,
+    image: str = PLAYWRIGHT_IMAGE,
+    docker_args: tuple[str, ...] = (),
 ) -> str:
     """Run Playwright (or `command`) in the pinned image on the nginx container's network."""
     nginx = run([*COMPOSE, "ps", "-q", "nginx"]).stdout.strip()
@@ -541,7 +543,8 @@ def _playwright(
             "--user",
             f"{os.getuid()}:{os.getgid()}",
             "--ipc=host",
-            PLAYWRIGHT_IMAGE,
+            *docker_args,
+            image,
             "sh",
             "-c",
             script,
@@ -586,6 +589,47 @@ def step_a11y(g: Gate) -> str:
     return _playwright(g, "@a11y", ["chromium"])
 
 
+GPU_IMAGE = "devsync-playwright-gpu:1.63.0"
+
+
+# Mesa drivers by vendor: Intel (ANV) and AMD (RADV) are mature; NVIDIA's open NVK driver
+# stalls the GPU process intermittently, so it is used only when nothing else exists.
+PREFERRED_GPU_VENDORS = ("0x8086", "0x1002")
+
+
+def _gpu_device_args() -> tuple[str, ...]:
+    """Pass one GPU into the container (spec §13.12 measures 60 fps on real hardware)."""
+    nodes = sorted(Path("/sys/class/drm").glob("renderD*"))
+    if not nodes:
+        raise StepFailed("the 3D frame-rate check needs a GPU (/dev/dri); run the gate on a laptop")
+
+    def vendor(node: Path) -> str:
+        try:
+            return (node / "device" / "vendor").read_text(encoding="utf-8").strip()
+        except OSError:
+            return ""
+
+    chosen = next((n for n in nodes if vendor(n) in PREFERRED_GPU_VENDORS), nodes[0])
+    render = Path("/dev/dri") / chosen.name
+    cards = [
+        Path("/dev/dri") / c.name
+        for c in (chosen / "device" / "drm").iterdir()
+        if c.name.startswith("card")
+    ]
+    args: list[str] = []
+    for dev in [render, *cards]:
+        args += ["--device", str(dev), "--group-add", str(dev.stat().st_gid)]
+    return tuple(args)
+
+
+def _gpu_image() -> str:
+    run(
+        ["docker", "build", "-q", "-t", GPU_IMAGE, str(ROOT / "infra" / "playwright-gpu")],
+        timeout=1800,
+    )
+    return GPU_IMAGE
+
+
 KIT_SERVER = (
     "npx vite preview --outDir dist-kit --port 4173 --strictPort --host 127.0.0.1 "
     ">/tmp/kit.log 2>&1 & sleep 3; "
@@ -617,8 +661,10 @@ def step_performance(g: Gate) -> str:
         command="node scripts/lighthouse.mjs",
     )
     notes.append(lighthouse)
-    fps = _playwright(g, "@perf", ["chromium"])
-    notes.append(f"frame rate: {fps}")
+    fps = _playwright(
+        g, "@perf", ["chromium-gpu"], image=_gpu_image(), docker_args=_gpu_device_args()
+    )
+    notes.append(f"frame rate on the GPU: {fps}")
     if g.phase >= 4:
         in_tests(["pytest", "-q", "-p", "no:cacheprovider", "-m", "perf"])
         notes.append("algorithm budgets met")

@@ -45,6 +45,8 @@ test("home page loads securely through the edge @e2e", async ({ page, baseURL })
 
 test("home page has no serious accessibility violations @a11y", async ({ page }) => {
   await page.goto("/");
+  // Check the settled page: mid-reveal, the headline's words are still fading in.
+  await expect(page.locator("#hero-title span")).toHaveCount(0);
   const results = await new AxeBuilder({ page }).analyze();
   const serious = results.violations.filter(
     (v) => v.impact === "serious" || v.impact === "critical",

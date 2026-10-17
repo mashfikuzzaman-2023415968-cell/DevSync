@@ -11,7 +11,7 @@ import json
 
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
-from sqlalchemy import text
+from sqlalchemy import Integer, Select, column, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
@@ -24,8 +24,8 @@ CACHE_SECONDS = 300
 
 
 async def compute_stats(db: AsyncSession) -> PublicStats:
-    row = (await db.execute(text("SELECT developers FROM public_stats()"))).one()
-    developers = int(row.developers)
+    query: Select[int] = select(column("developers", Integer)).select_from(func.public_stats())
+    developers = int((await db.execute(query)).scalar_one())
     return PublicStats(developers=developers or None)
 
 

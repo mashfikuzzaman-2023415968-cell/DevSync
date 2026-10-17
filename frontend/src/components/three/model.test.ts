@@ -48,3 +48,24 @@ describe("constellation model", () => {
     expect(snapTarget(0, IDLE_SNAP_MS, true)).toBe(0);
   });
 });
+
+describe("writePositions", () => {
+  it("matches positionAt for every node at any angle and snap", async () => {
+    const { writePositions } = await import("./model");
+    const c = buildConstellation(48);
+    const out = new Float32Array(48 * 3);
+    for (const [angle, snap] of [
+      [0, 0],
+      [1.1, 0.4],
+      [4.2, 1],
+    ] as const) {
+      writePositions(c, angle, snap, out);
+      c.nodes.forEach((_, i) => {
+        const p = positionAt(c, i, angle, snap);
+        expect(out[i * 3]).toBeCloseTo(p.x, 4);
+        expect(out[i * 3 + 1]).toBeCloseTo(p.y, 4);
+        expect(out[i * 3 + 2]).toBeCloseTo(p.z, 4);
+      });
+    }
+  });
+});

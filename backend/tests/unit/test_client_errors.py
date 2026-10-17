@@ -12,7 +12,8 @@ from app.services.client_errors import clean_path, clean_text, record_client_err
 
 pytestmark = pytest.mark.unit
 
-TOKEN = "AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-tok"
+# Any 32+ character opaque run is masked; a plain repeated value keeps secret scanners quiet.
+TOKEN = "tok_" + "a" * 36
 
 
 def report(**over: object) -> ClientErrorReport:

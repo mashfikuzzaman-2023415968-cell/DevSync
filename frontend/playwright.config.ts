@@ -7,6 +7,13 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const baseURL = process.env.E2E_BASE_URL ?? "https://localhost";
+// Real GPU through Vulkan (Mesa) for the frame-rate check; gate step 16 passes /dev/dri.
+const gpu = [
+  "--use-angle=vulkan",
+  "--enable-gpu",
+  "--ignore-gpu-blocklist",
+  "--enable-features=Vulkan",
+];
 const webgl = [
   "--use-gl=angle",
   "--use-angle=swiftshader",
@@ -34,6 +41,7 @@ export default defineConfig({
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"], launchOptions: { args: webgl } } },
+    { name: "chromium-gpu", use: { ...devices["Desktop Chrome"], launchOptions: { args: gpu } } },
     { name: "firefox", use: { ...devices["Desktop Firefox"] } },
     { name: "webkit", use: { ...devices["Desktop Safari"] } },
     { name: "mobile", use: { ...devices["iPhone 14"] } },

@@ -8,10 +8,37 @@
 import { fileURLToPath, URL } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
+
+/**
+ * Preload the Inter files the first screen uses (spec §13.11: fonts preloaded with
+ * font-display: swap), so text doesn't shift when they arrive. Hashed names come from the
+ * bundle, so the links are added at build time.
+ */
+function preloadFonts(): Plugin {
+  const wanted = /^assets\/inter-latin-(400|500|600)-normal-[\w-]+\.woff2$/;
+  return {
+    name: "devsync-preload-fonts",
+    apply: "build",
+    transformIndexHtml(_html, ctx) {
+      const files = Object.keys(ctx.bundle ?? {}).filter((f) => wanted.test(f));
+      return files.map((file) => ({
+        tag: "link",
+        attrs: {
+          rel: "preload",
+          as: "font",
+          type: "font/woff2",
+          href: `/${file}`,
+          crossorigin: "",
+        },
+        injectTo: "head" as const,
+      }));
+    },
+  };
+}
 
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), preloadFonts()],
   resolve: {
     alias: [
       { find: "@", replacement: fileURLToPath(new URL("./src", import.meta.url)) },

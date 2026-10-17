@@ -9,7 +9,7 @@
 | E2E + a11y | `make e2e`, `make a11y` (or gate steps 13–14) | `frontend/e2e` |
 | Responsive matrix (5 viewports × light/dark) | part of `@e2e` | `frontend/e2e/responsive.spec.ts`, `layout-checks.ts` |
 | Visual baselines (light/dark × 390/768/1440, UI kit) | `make visual`; update with `make visual-update` | `frontend/e2e/visual.spec.ts`, `kit.spec.ts`, `e2e/__screenshots__` |
-| Lighthouse + 3D frame rate | gate step 16 | `frontend/scripts/lighthouse.mjs`, `frontend/e2e/perf.spec.ts` |
+| Lighthouse + 3D frame rate | gate step 16 (frame rate on the GPU via `infra/playwright-gpu`, D28) | `frontend/scripts/lighthouse.mjs`, `frontend/e2e/perf.spec.ts` |
 | Stills | `make stills` (gate checks the manifest hash) | `frontend/scripts/render-stills.mjs` |
 | Full gate | `make gate PHASE=N` | `backend/scripts/phase_gate.py` |
 

@@ -33,7 +33,8 @@ function namedImports(src: string): string[] {
 
 /** R3F JSX intrinsics (<instancedMesh>, <bufferAttribute>…) resolve to PascalCase THREE classes. */
 function jsxElements(src: string): string[] {
-  return [...src.matchAll(/<([a-z][A-Za-z0-9]*)[\s>/]/g)]
+  // A JSX tag never directly follows an identifier (that would be a generic like Promise<void>).
+  return [...src.matchAll(/(?<![\w.])<([a-z][A-Za-z0-9]*)[\s>/]/g)]
     .map((m) => m[1] ?? "")
     .filter((tag) => !["div", "span", "p", "main", "h1", "a", "button"].includes(tag))
     .map((tag) => tag.charAt(0).toUpperCase() + tag.slice(1));

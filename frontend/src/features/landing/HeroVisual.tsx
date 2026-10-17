@@ -24,14 +24,28 @@ export function HeroVisual({ active, start = true }: { active: boolean; start?: 
   const [ready, setReady] = useState(false);
   const [lost, setLost] = useState(false);
   const live = !reducedMotion && reason === null && !lost;
+  // Phones: the scene sits below the calls to action and the scroll drives it, so it loads on
+  // the first scroll or touch (saves data and battery; the poster shows until then).
+  const [interacted, setInteracted] = useState(false);
+  useEffect(() => {
+    if (!compact || interacted) return undefined;
+    const go = () => {
+      setInteracted(true);
+    };
+    const events = ["scroll", "touchstart", "pointerdown", "keydown"] as const;
+    for (const e of events) window.addEventListener(e, go, { once: true, passive: true });
+    return () => {
+      for (const e of events) window.removeEventListener(e, go);
+    };
+  }, [compact, interacted]);
 
   useEffect(() => {
     // Wait for the headline reveal (it is the LCP element) before fetching the 3D chunk.
-    if (!live || load || !active || !start) return undefined;
+    if (!live || load || !active || !start || (compact && !interacted)) return undefined;
     return whenIdle(() => {
       setLoad(true);
     });
-  }, [live, load, active, start]);
+  }, [live, load, active, start, compact, interacted]);
 
   return (
     <div

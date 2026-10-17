@@ -16,13 +16,14 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei/web/Html";
 import { PerformanceMonitor } from "@react-three/drei/core/PerformanceMonitor";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { colors, type ThemeName } from "@/design/tokens";
 import {
   buildConstellation,
   positionAt,
   ROTATION_PERIOD_S,
+  writePositions,
   snapTarget,
   TEAM_LINKS,
   TEAM_TARGETS,
@@ -53,6 +54,7 @@ declare global {
 }
 
 const DEG6 = (6 * Math.PI) / 180;
+const COMPILE_TIMEOUT_MS = 1500;
 
 /** Each node glows in its own instance colour (teal, indigo or the newcomer's amber) instead
  * of one shared emissive colour. */
@@ -68,9 +70,17 @@ function glowInOwnColour(shader: { fragmentShader: string }) {
   );
 }
 
-function LocalEnvironment() {
-  const { gl, scene } = useThree();
+/**
+ * Builds the small local environment, then compiles every shader asynchronously before the
+ * first frame (KHR_parallel_shader_compile where available), so starting the scene never
+ * blocks the main thread in one long task.
+ */
+function LocalEnvironment({ onWarm }: { onWarm: () => void }) {
+  const { gl, scene, camera } = useThree();
+  const warm = useRef(onWarm);
+  warm.current = onWarm;
   useEffect(() => {
+    let cancelled = false;
     const pmrem = new THREE.PMREMGenerator(gl);
     const room = new THREE.Scene();
     const panel = new THREE.PlaneGeometry(1, 1);
@@ -91,9 +101,17 @@ function LocalEnvironment() {
     rim.scale.set(4, 6, 1);
     rim.lookAt(0, 0, 0);
     room.add(key, rim);
-    const env = pmrem.fromScene(room, 0.04).texture;
+    // Soft studio light only needs a tiny map (32 px faces instead of the default 256).
+    const env = pmrem.fromScene(room, 0, 0.1, 100, { size: 32 }).texture;
     scene.environment = env;
+    // Some drivers never report parallel compilation as finished; start anyway after a moment
+    // (shaders then compile on first use, as without compileAsync).
+    const giveUp = new Promise<void>((resolve) => setTimeout(resolve, COMPILE_TIMEOUT_MS));
+    void Promise.race([gl.compileAsync(scene, camera).catch(() => undefined), giveUp]).then(() => {
+      if (!cancelled) warm.current();
+    });
     return () => {
+      cancelled = true;
       scene.environment = null;
       env.dispose();
       pmrem.dispose();
@@ -101,7 +119,7 @@ function LocalEnvironment() {
       bright.dispose();
       soft.dispose();
     };
-  }, [gl, scene]);
+  }, [gl, scene, camera]);
   return null;
 }
 
@@ -140,7 +158,11 @@ function Constellation({
     pulseLink: 0,
     pulseT: 0,
     first: true,
+    colourSnap: -1,
+    chipOpacity: -1,
   });
+  const positions = useMemo(() => new Float32Array(model.nodes.length * 3), [model]);
+  const teamSet = useMemo(() => new Set<number>(model.team), [model]);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
   const linkPositions = useMemo(() => new Float32Array(model.links.length * 6), [model]);
@@ -157,6 +179,23 @@ function Constellation({
   }, [model, palette, theme]);
   const dim = useMemo(() => new THREE.Color(palette.bg), [palette.bg]);
   const scratch = useMemo(() => new THREE.Color(), []);
+
+  // Instance colours and positions exist before the shaders are compiled, so the material is
+  // compiled once, with per-instance colour, instead of again on the first frame.
+  useLayoutEffect(() => {
+    const m = mesh.current;
+    if (!m) return;
+    for (let i = 0; i < count; i += 1) {
+      const p = positionAt(model, i, state.current.angle, state.current.snap);
+      dummy.position.set(p.x, p.y, p.z);
+      dummy.scale.setScalar(0.07);
+      dummy.updateMatrix();
+      m.setMatrixAt(i, dummy.matrix);
+      m.setColorAt(i, baseColors[i] ?? scratch);
+    }
+    m.instanceMatrix.needsUpdate = true;
+    if (m.instanceColor) m.instanceColor.needsUpdate = true;
+  }, [model, count, baseColors, dummy, scratch]);
 
   useEffect(() => {
     const onScroll = () => {
@@ -191,47 +230,58 @@ function Constellation({
       g.rotation.y += (s.pointer.x * DEG6 - g.rotation.y) * Math.min(1, dt * 2);
     }
 
+    // One allocation-free pass computes every node position; links and the pulse read it.
+    writePositions(model, s.angle, s.snap, positions);
+    const colourChanged = Math.abs(s.snap - s.colourSnap) > 0.002 || s.first;
     const m = mesh.current;
     if (m) {
       for (let i = 0; i < count; i += 1) {
-        const p = positionAt(model, i, s.angle, s.snap);
-        const inTeam = model.team.includes(i);
-        dummy.position.set(p.x, p.y, p.z);
-        const scale = inTeam ? 0.085 * (1 + 0.65 * s.snap) : 0.07 * (1 - 0.25 * s.snap);
-        dummy.scale.setScalar(scale);
+        const o = i * 3;
+        const inTeam = teamSet.has(i);
+        dummy.position.set(positions[o] ?? 0, positions[o + 1] ?? 0, positions[o + 2] ?? 0);
+        dummy.scale.setScalar(inTeam ? 0.085 * (1 + 0.65 * s.snap) : 0.07 * (1 - 0.25 * s.snap));
         dummy.updateMatrix();
         m.setMatrixAt(i, dummy.matrix);
-        const base = baseColors[i] ?? scratch;
-        scratch.copy(base);
-        if (!inTeam) scratch.lerp(dim, 0.45 * s.snap);
-        m.setColorAt(i, scratch);
+        if (colourChanged) {
+          scratch.copy(baseColors[i] ?? scratch);
+          if (!inTeam) scratch.lerp(dim, 0.45 * s.snap);
+          m.setColorAt(i, scratch);
+        }
       }
       m.instanceMatrix.needsUpdate = true;
-      if (m.instanceColor) m.instanceColor.needsUpdate = true;
+      if (colourChanged && m.instanceColor) {
+        m.instanceColor.needsUpdate = true;
+        s.colourSnap = s.snap;
+      }
     }
+
+    const copyLink = (target: Float32Array, k: number, a: number, b: number) => {
+      const o = k * 6;
+      target[o] = positions[a * 3] ?? 0;
+      target[o + 1] = positions[a * 3 + 1] ?? 0;
+      target[o + 2] = positions[a * 3 + 2] ?? 0;
+      target[o + 3] = positions[b * 3] ?? 0;
+      target[o + 4] = positions[b * 3 + 1] ?? 0;
+      target[o + 5] = positions[b * 3 + 2] ?? 0;
+    };
 
     const lines = linksRef.current;
     if (lines) {
-      model.links.forEach(([a, b], k) => {
-        const pa = positionAt(model, a, s.angle, s.snap);
-        const pb = positionAt(model, b, s.angle, s.snap);
-        linkPositions.set([pa.x, pa.y, pa.z, pb.x, pb.y, pb.z], k * 6);
-      });
-      const attr = lines.geometry.getAttribute("position") as THREE.BufferAttribute;
-      attr.needsUpdate = true;
+      for (let k = 0; k < model.links.length; k += 1) {
+        const link = model.links[k];
+        if (link) copyLink(linkPositions, k, link[0], link[1]);
+      }
+      (lines.geometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
       (lines.material as THREE.LineBasicMaterial).opacity =
         (theme === "dark" ? 0.34 : 0.26) * (1 - 0.6 * s.snap);
     }
 
     const teamLines = teamLinksRef.current;
     if (teamLines) {
-      TEAM_LINKS.forEach(([a, b], k) => {
-        const ia = model.team[a] ?? 0;
-        const ib = model.team[b] ?? 0;
-        const pa = positionAt(model, ia, s.angle, s.snap);
-        const pb = positionAt(model, ib, s.angle, s.snap);
-        teamPositions.set([pa.x, pa.y, pa.z, pb.x, pb.y, pb.z], k * 6);
-      });
+      for (let k = 0; k < TEAM_LINKS.length; k += 1) {
+        const pair = TEAM_LINKS[k];
+        if (pair) copyLink(teamPositions, k, model.team[pair[0]] ?? 0, model.team[pair[1]] ?? 0);
+      }
       (teamLines.geometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
       (teamLines.material as THREE.LineBasicMaterial).opacity =
         Math.max(0, (s.snap - 0.35) / 0.65) * 0.9;
@@ -249,19 +299,26 @@ function Constellation({
         const link = model.links[s.pulseLink];
         const t = Math.min(1, s.pulseT);
         if (link) {
-          const pa = positionAt(model, link[0], s.angle, s.snap);
-          const pb = positionAt(model, link[1], s.angle, s.snap);
+          const a = link[0] * 3;
+          const b = link[1] * 3;
+          const ax = positions[a] ?? 0;
+          const ay = positions[a + 1] ?? 0;
+          const az = positions[a + 2] ?? 0;
           dot.position.set(
-            pa.x + (pb.x - pa.x) * t,
-            pa.y + (pb.y - pa.y) * t,
-            pa.z + (pb.z - pa.z) * t,
+            ax + ((positions[b] ?? 0) - ax) * t,
+            ay + ((positions[b + 1] ?? 0) - ay) * t,
+            az + ((positions[b + 2] ?? 0) - az) * t,
           );
           dot.scale.setScalar(s.pulseT <= 1 ? 0.05 : 0);
         }
       }
     }
 
-    if (chipRef.current) chipRef.current.style.opacity = String(Math.max(0, (s.snap - 0.6) / 0.4));
+    const chipOpacity = Math.round(Math.max(0, (s.snap - 0.6) / 0.4) * 100) / 100;
+    if (chipRef.current && chipOpacity !== s.chipOpacity) {
+      chipRef.current.style.opacity = String(chipOpacity);
+      s.chipOpacity = chipOpacity;
+    }
 
     window.__dsHeroFrames = (window.__dsHeroFrames ?? 0) + 1;
     if (s.first) {
@@ -354,8 +411,9 @@ export default function TalentConstellation({
   onContextLost,
 }: SceneProps) {
   const [quality, setQuality] = useState<"high" | "low" | "frozen">("high");
+  const [warm, setWarm] = useState(false);
   const maxDpr = compact ? 1 : 1.5;
-  const running = active && quality !== "frozen";
+  const running = warm && active && quality !== "frozen";
   return (
     <Canvas
       dpr={fixedDpr ?? (quality === "high" ? [1, maxDpr] : 1)}
@@ -373,7 +431,11 @@ export default function TalentConstellation({
     >
       <ambientLight intensity={theme === "dark" ? 0.35 : 0.55} />
       <directionalLight position={[-4, 5, 6]} intensity={theme === "dark" ? 1.1 : 1.35} />
-      <LocalEnvironment />
+      <LocalEnvironment
+        onWarm={() => {
+          setWarm(true);
+        }}
+      />
       <PerformanceMonitor
         bounds={() => [30, 50]}
         flipflops={2}

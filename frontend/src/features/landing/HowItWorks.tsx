@@ -83,15 +83,21 @@ function DesktopSteps() {
               aria-current={i === active ? "step" : undefined}
               className={cn(
                 "rounded-lg border p-5 transition-[background-color,border-color,opacity] duration-base",
-                i === active
-                  ? "border-border bg-surface shadow-sm"
-                  : "border-transparent opacity-60",
+                i === active ? "border-border bg-surface shadow-sm" : "border-transparent",
               )}
             >
               <div className="flex items-start gap-4">
                 <StepNumber n={i + 1} active={i === active} />
                 <div>
-                  <h3 className="text-h4 font-semibold text-text">{s.title}</h3>
+                  {/* Inactive steps are quieter through colour, not opacity, so text keeps AA contrast. */}
+                  <h3
+                    className={cn(
+                      "text-h4 font-semibold",
+                      i === active ? "text-text" : "text-text-muted",
+                    )}
+                  >
+                    {s.title}
+                  </h3>
                   <p
                     className={cn("mt-1 text-body text-text-muted", i !== active && "line-clamp-1")}
                   >
