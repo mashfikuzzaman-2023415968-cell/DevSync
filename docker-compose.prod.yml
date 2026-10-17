@@ -1,0 +1,37 @@
+# Production overlay (spec §15.2, §15.4, §20.2): replicas, memory limits, no dev tooling.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --scale api=3 --scale worker=2
+services:
+  nginx:
+    deploy:
+      resources:
+        limits: { memory: 128m }
+  api:
+    environment:
+      DEVSYNC_ENV: production
+    deploy:
+      replicas: 3
+      resources:
+        limits: { memory: 512m }
+  worker:
+    environment:
+      DEVSYNC_ENV: production
+    deploy:
+      replicas: 2
+      resources:
+        limits: { memory: 768m }
+  scheduler:
+    environment:
+      DEVSYNC_ENV: production
+    deploy:
+      resources:
+        limits: { memory: 128m }
+  redis:
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--appendonly", "yes", "--maxmemory", "200mb", "--maxmemory-policy", "noeviction"]
+    deploy:
+      resources:
+        limits: { memory: 256m }
+  postgres:
+    command: ["postgres", "-c", "idle_in_transaction_session_timeout=10s", "-c", "log_min_duration_statement=500"]
+    deploy:
+      resources:
+        limits: { memory: 1g }

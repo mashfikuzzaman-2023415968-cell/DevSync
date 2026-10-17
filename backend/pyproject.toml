@@ -1,0 +1,80 @@
+[project]
+name = "devsync-backend"
+version = "0.0.0"
+description = "DevSync API, workers and pure algorithms (CSE 3102, University of Dhaka)."
+requires-python = ">=3.12,<3.13"
+
+# Dependencies are pinned with hashes in requirements.lock / requirements-dev.lock
+# (generated from requirements*.in by `make lock`). This file only configures tools.
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["app", "scripts", "tests"]
+extend-exclude = ["alembic/versions/__pycache__"]
+
+[tool.ruff.lint]
+# Paper notation (Greek letters, ×, –) is intentional in docstrings and comments.
+allowed-confusables = ["α", "β", "γ", "ε", "θ", "κ", "λ", "μ", "ω", "Γ", "Π", "×", "–", "−", "σ", "φ"]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "C4", "RUF", "ASYNC", "PL", "PT", "N"]
+ignore = [
+    "PLR0913",  # explicit keyword-heavy constructors are clearer than parameter objects here
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "PLR2004", "S105", "S106", "S311"]
+"tests/edge/**" = ["S101", "PLR2004", "S501"]  # self-signed dev cert on the internal test network
+"scripts/**" = ["T201", "S603", "S607", "PLR0912", "PLR0915", "PLR2004"]
+"alembic/**" = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["pydantic.mypy"]
+disallow_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+check_untyped_defs = true
+files = ["app", "scripts"]
+
+[[tool.mypy.overrides]]
+module = ["app.core.*", "app.algorithms.*", "app.services.money", "app.services.ledger", "app.services.auth"]
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["rq.*", "apscheduler.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers -ra"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+markers = [
+    "unit: isolated unit tests (supervisor requirement)",
+    "property: hypothesis property tests",
+    "integration: tests against real Postgres/Redis",
+    "api: HTTP API tests",
+    "fuzz: schemathesis contract fuzzing",
+    "security: security controls (§14, §16.4)",
+    "jobs: background job tests",
+    "perf: performance budgets",
+    "chaos: resilience tests",
+    "edge: tests against the running Nginx edge",
+    "a11y: accessibility",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
+omit = ["app/jobs/worker.py", "app/jobs/scheduler.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.bandit]
+exclude_dirs = ["tests", "alembic"]

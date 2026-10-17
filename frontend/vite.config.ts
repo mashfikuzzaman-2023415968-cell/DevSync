@@ -1,0 +1,26 @@
+/**
+ * Vite build for a strict-CSP SPA (spec §14.3, §14.18):
+ * - no inline scripts/styles in index.html; CSS is emitted as files;
+ * - assets are never inlined as data: URIs (fonts must come from 'self');
+ * - source maps are generated "hidden" and never served (deleted in the image);
+ * - console.* calls are stripped from production bundles.
+ */
+import { fileURLToPath, URL } from "node:url";
+import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
+
+export default defineConfig(({ mode }) => ({
+  plugins: [react(), tailwindcss()],
+  resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
+  build: {
+    target: "es2022",
+    sourcemap: "hidden",
+    assetsInlineLimit: 0,
+    cssCodeSplit: true,
+    modulePreload: { polyfill: false },
+    reportCompressedSize: true,
+  },
+  esbuild: mode === "production" ? { drop: ["console", "debugger"] } : {},
+  server: { port: 5173, strictPort: true },
+}));

@@ -1,0 +1,19 @@
+# gitleaks configuration (spec §14.12): default rules + allowlisted build/vendor paths.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Generated, vendored and local-only paths"
+paths = [
+  '''node_modules/''',
+  '''\.venv/''',
+  '''frontend/dist/''',
+  '''frontend/coverage/''',
+  '''runs/''',
+  '''infra/nginx/certs/''',
+  '''\.env$''',
+  '''requirements(-dev)?\.lock$''',
+  '''package-lock\.json$''',
+  '''backend/scripts/check_forbidden\.py$''',
+  '''backend/tests/unit/test_check_forbidden\.py$''',
+]

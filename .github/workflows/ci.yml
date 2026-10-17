@@ -1,0 +1,61 @@
+# CI (spec §16.9): every push/PR runs the phase gate for the last completed phase.
+name: ci
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "30 20 * * *" # nightly 02:30 Asia/Dhaka: full gate (all browsers at demo phases)
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Secrets for the ephemeral test stack
+        run: python3 backend/scripts/gen_env.py && sh infra/nginx/make-certs.sh
+      - name: Phase gate
+        run: |
+          PHASE=$(cat .phase)
+          if [ "$PHASE" = "none" ]; then PHASE=0; fi
+          python3 backend/scripts/phase_gate.py --phase "$PHASE" --keep-going
+      - name: Upload gate artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-report
+          path: |
+            runs/gates/
+            frontend/playwright-report/
+            frontend/coverage/
+          if-no-files-found: ignore
+      - name: Tear down
+        if: always()
+        run: docker compose -p devsync-test -f docker-compose.yml -f docker-compose.test.yml down -v
+
+  production-boot:
+    # Proves the app refuses to start with insecure production settings (spec §14.18).
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend image
+        run: docker build -t devsync/backend:ci --target runtime backend
+      - name: Insecure production config must fail
+        run: |
+          if docker run --rm -e DEVSYNC_ENV=production -e SMS_PROVIDER=console devsync/backend:ci \
+               python -c "from app.main import create_app; create_app()"; then
+            echo "app started with insecure production settings"; exit 1
+          fi

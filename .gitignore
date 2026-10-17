@@ -1,0 +1,38 @@
+# Secrets and local config
+.env
+.env.*
+!.env.example
+infra/nginx/certs/*
+!infra/nginx/certs/.gitkeep
+*.pem
+*.key
+
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
+
+# Runtime outputs (spec §4): keep only the README and the regression baseline
+runs/*
+!runs/README.md
+!runs/gates/
+runs/gates/*
+!runs/gates/baseline.json
+
+# Uploads and editor files
+data/
+.DS_Store
+.idea/
+.vscode/

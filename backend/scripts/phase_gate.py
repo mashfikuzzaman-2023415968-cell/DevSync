@@ -1,0 +1,672 @@
+"""The phase gate (spec §16.5): `make gate PHASE=N`.
+
+Runs the 20 gate steps in order, stops at the first failure unless
+`--keep-going`, prints a summary table, writes `runs/gates/phase-N.json`,
+appends the result to PROGRESS.md and writes `.phase` on PASS.
+
+Steps for parts of the system that don't exist yet report `N/A (from phase K)`
+with the reason, so the same gate grows with the project. Never weaken a step
+to pass (spec §16.10).
+
+Runs on the host with the standard library only; every Python tool runs in the
+`tests` container (python:3.12) and scanners run from pinned images.
+
+Usage:
+  python3 backend/scripts/phase_gate.py --phase 0 [--keep-going] [--offline] [--only a,b]
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from collections.abc import Callable
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+FRONTEND = ROOT / "frontend"
+RUNS = ROOT / "runs" / "gates"
+PROJECT = "devsync-test"
+COMPOSE = [
+    "docker",
+    "compose",
+    "-p",
+    PROJECT,
+    "-f",
+    "docker-compose.yml",
+    "-f",
+    "docker-compose.test.yml",
+]
+
+# Pinned scanner images (update deliberately, spec §14.21).
+SEMGREP_IMAGE = "semgrep/semgrep:1.95.0"
+GITLEAKS_IMAGE = "zricethezav/gitleaks:v8.21.2"
+TRIVY_IMAGE = "aquasec/trivy:0.57.1"
+PLAYWRIGHT_IMAGE = "mcr.microsoft.com/playwright:v1.63.0-noble"
+
+
+# Coverage thresholds by phase (spec §16.5): (backend, frontend).
+def coverage_thresholds(phase: int) -> tuple[int, int]:
+    """Backend/frontend line+branch coverage minimums for a phase."""
+    if phase <= 3:
+        return 75, 60
+    if phase <= 9:
+        return 85, 70
+    return 90, 75
+
+
+# Modules that need ≥ 95% from the phase they appear in (spec §16.5 step 9).
+CRITICAL_MODULES = (
+    "app/core/security.py",
+    "app/core/sessions.py",
+    "app/core/csrf.py",
+    "app/core/authz.py",
+    "app/core/ratelimit.py",
+    "app/core/redirects.py",
+    "app/core/money.py",
+    "app/services/ledger",
+    "app/uploads/",
+    "app/algorithms/",
+)
+INITIAL_JS_BUDGET_GZIP = 250 * 1024
+
+
+@dataclass
+class StepResult:
+    """One row of the gate table."""
+
+    number: int
+    name: str
+    status: str  # PASS | FAIL | N/A | SKIP
+    seconds: float
+    notes: str = ""
+
+
+@dataclass
+class Gate:
+    """Gate run state."""
+
+    phase: int
+    offline: bool
+    keep_going: bool
+    only: set[str] = field(default_factory=set)
+    results: list[StepResult] = field(default_factory=list)
+    counts: dict[str, int] = field(default_factory=dict)
+
+
+class StepFailed(Exception):  # noqa: N818 - reads as a verdict in step code
+    """Raised by a step with a short reason."""
+
+
+class NotApplicable(Exception):  # noqa: N818
+    """Raised by a step that does not apply to this phase yet."""
+
+
+def run(
+    cmd: list[str],
+    *,
+    cwd: Path = ROOT,
+    env: dict[str, str] | None = None,
+    timeout: int = 1800,
+    capture: bool = True,
+    check: bool = True,
+) -> subprocess.CompletedProcess[str]:
+    """Run a command; on failure raise StepFailed with the tail of its output."""
+    merged = {**os.environ, "HOST_UID_GID": f"{os.getuid()}:{os.getgid()}", **(env or {})}
+    proc = subprocess.run(
+        cmd,
+        cwd=cwd,
+        env=merged,
+        timeout=timeout,
+        text=True,
+        stdout=subprocess.PIPE if capture else None,
+        stderr=subprocess.STDOUT if capture else None,
+        check=False,
+    )
+    if check and proc.returncode != 0:
+        tail = "\n".join((proc.stdout or "").strip().splitlines()[-25:])
+        raise StepFailed(f"`{' '.join(cmd[:6])}…` exited {proc.returncode}\n{tail}")
+    return proc
+
+
+def in_tests(
+    args: list[str], *, timeout: int = 1800, no_deps: bool = False
+) -> subprocess.CompletedProcess[str]:
+    """Run a command inside the `tests` container (python 3.12 + dev tooling)."""
+    base = [*COMPOSE, "run", "--rm", "-T"]
+    if no_deps:
+        base.append("--no-deps")
+    return run([*base, "tests", *args], timeout=timeout)
+
+
+# --------------------------------------------------------------------------- steps
+
+
+def step_environment(g: Gate) -> str:
+    notes = []
+    for tool, args in (("docker", ["--version"]), ("node", ["--version"]), ("npm", ["--version"])):
+        if not shutil.which(tool):
+            raise StepFailed(f"{tool} not installed")
+        notes.append(run([tool, *args]).stdout.strip().split("\n")[0])
+    run(["docker", "info", "--format", "{{.ServerVersion}}"])
+    untracked = run(["git", "ls-files", "--others", "--exclude-standard"]).stdout.split()
+    suspicious = [f for f in untracked if re.search(r"(\.env$|\.pem$|\.key$|id_rsa|\.p12$)", f)]
+    if suspicious:
+        raise StepFailed(f"untracked secret-like files: {suspicious}")
+    if not (ROOT / ".env").exists():
+        run([sys.executable, "backend/scripts/gen_env.py"])
+        notes.append("generated .env")
+    if not (ROOT / "infra/nginx/certs/dev.crt").exists():
+        run(["sh", "infra/nginx/make-certs.sh"])
+        notes.append("generated dev cert")
+    return "; ".join(notes)
+
+
+def step_build(g: Gate) -> str:
+    run([*COMPOSE, "--profile", "tools", "build"], timeout=3600)
+    run(["npm", "ci", "--no-audit", "--no-fund"], cwd=FRONTEND, timeout=1800)
+    run(["npm", "run", "build"], cwd=FRONTEND, timeout=900)
+    return check_bundle_budget()
+
+
+def check_bundle_budget() -> str:
+    import gzip  # noqa: PLC0415
+
+    index = (FRONTEND / "dist/index.html").read_text(encoding="utf-8")
+    entry = re.findall(r'<script[^>]+src="/(assets/[^"]+\.js)"', index)
+    preloads = re.findall(r'<link[^>]+rel="modulepreload"[^>]+href="/(assets/[^"]+\.js)"', index)
+    total = sum(
+        len(gzip.compress((FRONTEND / "dist" / f).read_bytes())) for f in {*entry, *preloads}
+    )
+    if total > INITIAL_JS_BUDGET_GZIP:
+        raise StepFailed(f"initial JS {total / 1024:.1f} KB gzip > 250 KB budget")
+    return f"initial JS {total / 1024:.1f} KB gzip (budget 250 KB)"
+
+
+def step_lint(g: Gate) -> str:
+    in_tests(["ruff", "format", "--check", "."], no_deps=True)
+    in_tests(["ruff", "check", "."], no_deps=True)
+    run(["npx", "eslint", ".", "--max-warnings", "0"], cwd=FRONTEND)
+    run(["npx", "prettier", "--check", "."], cwd=FRONTEND)
+    return "ruff, eslint, prettier clean"
+
+
+def step_types(g: Gate) -> str:
+    in_tests(["mypy"], no_deps=True)
+    run(["npx", "tsc", "-b", "--noEmit"], cwd=FRONTEND)
+    return "mypy (strict core) + tsc strict clean"
+
+
+def step_static_security(g: Gate) -> str:
+    in_tests(["bandit", "-q", "-c", "pyproject.toml", "-r", "app", "-ll"], no_deps=True)
+    notes = ["bandit"]
+    run(
+        [
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{ROOT}:/repo:ro",
+            "-w",
+            "/repo",
+            GITLEAKS_IMAGE,
+            "detect",
+            "--no-git",
+            "--source",
+            "/repo",
+            "--config",
+            "/repo/.gitleaks.toml",
+            "--no-banner",
+            "--redact",
+        ],
+        timeout=600,
+    )
+    notes.append("gitleaks")
+    if g.offline:
+        notes.append("semgrep skipped (--offline: registry rules need network)")
+    else:
+        run(
+            [
+                "docker",
+                "run",
+                "--rm",
+                "-v",
+                f"{ROOT}:/src",
+                "-w",
+                "/src",
+                SEMGREP_IMAGE,
+                "semgrep",
+                "scan",
+                "--error",
+                "--metrics=off",
+                "--quiet",
+                "--config",
+                "p/owasp-top-ten",
+                "--config",
+                "p/python",
+                "--config",
+                "p/react",
+                "--config",
+                "p/secrets",
+                "--config",
+                "infra/semgrep/devsync.yml",
+                "--exclude",
+                "node_modules",
+                "--exclude",
+                ".venv",
+                "--exclude",
+                "dist",
+                "--exclude",
+                "tests",
+                "--exclude",
+                "e2e",
+            ],
+            timeout=1800,
+        )
+        notes.append("semgrep")
+    return ", ".join(notes) + " clean"
+
+
+def step_structure(g: Gate) -> str:
+    run([sys.executable, "backend/scripts/check_forbidden.py", str(ROOT)])
+    in_tests(["python", "scripts/check_layers.py"], no_deps=True)
+    notes = ["forbidden patterns", "layers"]
+    if g.phase >= 1:
+        in_tests(["python", "scripts/check_rls.py"])
+        notes.append("RLS coverage")
+    else:
+        notes.append("RLS coverage N/A (enforced from phase 1)")
+    review = ROOT / "docs" / "security-reviews" / f"phase-{g.phase:02d}.md"
+    if not review.exists():
+        raise StepFailed(f"missing security review {review.relative_to(ROOT)} (spec §14.22)")
+    text = review.read_text(encoding="utf-8")
+    match = re.search(r"Unresolved high findings:\s*(\d+)", text)
+    if not match:
+        raise StepFailed("security review lacks an 'Unresolved high findings: N' line")
+    if int(match.group(1)) != 0:
+        raise StepFailed(f"security review lists {match.group(1)} unresolved high finding(s)")
+    notes.append("security review present, 0 unresolved high")
+    return ", ".join(notes)
+
+
+def step_dependency_audit(g: Gate) -> str:
+    if g.offline:
+        raise NotApplicable("--offline: dependency databases need network (recorded)")
+    in_tests(
+        [
+            "pip-audit",
+            "--strict",
+            "--progress-spinner",
+            "off",
+            "-r",
+            "requirements.lock",
+            "-r",
+            "requirements-dev.lock",
+            "--require-hashes",
+            "--disable-pip",
+        ],
+        no_deps=True,
+    )
+    run(["npm", "audit", "--audit-level=high"], cwd=FRONTEND)
+    for image in ("devsync/backend:local", "devsync/nginx:local"):
+        run(
+            [
+                "docker",
+                "run",
+                "--rm",
+                "-v",
+                "/var/run/docker.sock:/var/run/docker.sock:ro",
+                TRIVY_IMAGE,
+                "image",
+                "--quiet",
+                "--exit-code",
+                "1",
+                "--ignore-unfixed",
+                "--severity",
+                "HIGH,CRITICAL",
+                image,
+            ],
+            timeout=1800,
+        )
+    return "pip-audit, npm audit, trivy (backend, nginx) clean"
+
+
+def step_migrations(g: Gate) -> str:
+    run([*COMPOSE, "down", "-v", "--remove-orphans"], timeout=300)
+    run([*COMPOSE, "up", "-d", "--wait", "postgres", "redis"], timeout=600)
+    in_tests(["alembic", "upgrade", "head"])
+    in_tests(["alembic", "downgrade", "-1"])
+    in_tests(["alembic", "upgrade", "head"])
+    in_tests(["alembic", "check"])
+    return "upgrade → downgrade -1 → upgrade on empty DB; no model drift"
+
+
+def step_backend_tests(g: Gate) -> str:
+    backend_min, _ = coverage_thresholds(g.phase)
+    run([*COMPOSE, "up", "-d", "--wait", "postgres", "redis", "api", "nginx"], timeout=900)
+    report = "/runs/gates/coverage-backend.json"
+    in_tests(
+        [
+            "pytest",
+            "-q",
+            "-p",
+            "no:cacheprovider",
+            "-m",
+            "not perf and not chaos",
+            "--cov=app",
+            "--cov-branch",
+            f"--cov-report=json:{report}",
+            f"--cov-fail-under={backend_min}",
+            "--junitxml=/runs/gates/junit-backend.xml",
+        ],
+        timeout=3600,
+    )
+    data = json.loads((RUNS / "coverage-backend.json").read_text(encoding="utf-8"))
+    low = []
+    for path, info in data["files"].items():
+        if path.startswith(CRITICAL_MODULES) and info["summary"]["percent_covered"] < 95:
+            low.append(f"{path} {info['summary']['percent_covered']:.1f}%")
+    if low:
+        raise StepFailed(f"security-critical modules below 95%: {low}")
+    junit = (RUNS / "junit-backend.xml").read_text(encoding="utf-8")
+    tests = int(re.search(r'tests="(\d+)"', junit).group(1))  # type: ignore[union-attr]
+    skipped = int(re.search(r'skipped="(\d+)"', junit).group(1))  # type: ignore[union-attr]
+    g.counts["backend_tests"] = tests - skipped
+    total = data["totals"]["percent_covered"]
+    return (
+        f"{tests - skipped} passed, {skipped} skipped; coverage {total:.1f}% (min {backend_min}%)"
+    )
+
+
+def step_security_suite(g: Gate) -> str:
+    if g.phase < 1:
+        raise NotApplicable("security suite must be non-empty from phase 1")
+    proc = in_tests(["pytest", "-q", "-p", "no:cacheprovider", "-m", "security"])
+    if "no tests ran" in proc.stdout or " passed" not in proc.stdout:
+        raise StepFailed("security suite is empty")
+    return proc.stdout.strip().splitlines()[-1]
+
+
+def step_api_contract(g: Gate) -> str:
+    in_tests(["python", "scripts/check_openapi.py"], no_deps=True)
+    if g.phase < 1:
+        return "contract lint + committed openapi.json match; fuzzing from phase 1"
+    in_tests(["pytest", "-q", "-p", "no:cacheprovider", "-m", "fuzz"])
+    return "contract lint, openapi.json match, schemathesis clean"
+
+
+def step_frontend_tests(g: Gate) -> str:
+    _, frontend_min = coverage_thresholds(g.phase)
+    out = run(
+        [
+            "npx",
+            "vitest",
+            "run",
+            "--coverage",
+            "--coverage.reporter=json-summary",
+            "--coverage.reporter=text-summary",
+            f"--coverage.thresholds.lines={frontend_min}",
+            f"--coverage.thresholds.branches={frontend_min}",
+            f"--coverage.thresholds.functions={frontend_min}",
+            f"--coverage.thresholds.statements={frontend_min}",
+        ],
+        cwd=FRONTEND,
+    ).stdout
+    passed = re.search(r"Tests\s+(\d+) passed", out)
+    g.counts["frontend_tests"] = int(passed.group(1)) if passed else 0
+    summary = json.loads((FRONTEND / "coverage/coverage-summary.json").read_text(encoding="utf-8"))
+    lines = summary["total"]["lines"]["pct"]
+    return f"{g.counts['frontend_tests']} passed; coverage {lines}% lines (min {frontend_min}%)"
+
+
+def _playwright(g: Gate, grep: str, projects: list[str]) -> str:
+    nginx = run([*COMPOSE, "ps", "-q", "nginx"]).stdout.strip()
+    if not nginx:
+        raise StepFailed("nginx container is not running")
+    args = ["npx", "playwright", "test", "--grep", grep, "--reporter=list"]
+    for p in projects:
+        args += ["--project", p]
+    proc = run(
+        [
+            "docker",
+            "run",
+            "--rm",
+            "--network",
+            f"container:{nginx}",
+            "-v",
+            f"{FRONTEND}:/web",
+            "-w",
+            "/web",
+            "-e",
+            "E2E_BASE_URL=https://localhost:8443",
+            "-e",
+            "HOME=/tmp",
+            "--user",
+            f"{os.getuid()}:{os.getgid()}",
+            "--ipc=host",
+            PLAYWRIGHT_IMAGE,
+            *args,
+        ],
+        timeout=1800,
+    )
+    last = [ln for ln in proc.stdout.splitlines() if "passed" in ln or "failed" in ln]
+    return last[-1].strip() if last else "ok"
+
+
+DEMO_PHASES = {5, 12, 15}
+
+# Runs inside the test network; the dev certificate is self-signed.
+HEALTH_PROBE = (
+    "import httpx\n"
+    "r = httpx.get('https://nginx:8443/api/v1/health',\n"
+    "    verify=False,\n"  # forbidden-ok: self-signed dev cert, internal test network
+    "    headers={'Host': 'localhost'})\n"
+    "print(r.status_code, r.headers.get('content-security-policy'))"
+)
+
+
+def step_e2e(g: Gate) -> str:
+    projects = (
+        ["chromium", "firefox", "webkit", "mobile"] if g.phase in DEMO_PHASES else ["chromium"]
+    )
+    repeats = 3 if g.phase in DEMO_PHASES else 1
+    notes = []
+    for _ in range(repeats):
+        notes.append(_playwright(g, "@e2e", projects))
+    # Edge behaviour (HTTPS redirect, headers, limits) is checked from inside the network.
+    edge = in_tests(["pytest", "-q", "-p", "no:cacheprovider", "-m", "edge"])
+    notes.append("edge: " + edge.stdout.strip().splitlines()[-1])
+    return "; ".join(notes)
+
+
+def step_a11y(g: Gate) -> str:
+    return _playwright(g, "@a11y", ["chromium"])
+
+
+def step_visual(g: Gate) -> str:
+    if g.phase < 2:
+        raise NotApplicable("visual regression starts in phase 2")
+    raise StepFailed("visual regression step not implemented yet")
+
+
+def step_performance(g: Gate) -> str:
+    if g.phase < 4:
+        raise NotApplicable("performance budgets start in phase 4")
+    in_tests(["pytest", "-q", "-p", "no:cacheprovider", "-m", "perf"])
+    return "algorithm budgets met"
+
+
+def step_dast(g: Gate) -> str:
+    if g.phase < 9:
+        raise NotApplicable("ZAP baseline starts in phase 9")
+    raise StepFailed("DAST step not implemented yet")
+
+
+def step_phase_checks(g: Gate) -> str:
+    checks: dict[int, Callable[[Gate], str]] = {0: phase0_checks}
+    if g.phase not in checks:
+        raise StepFailed(f"no PHASE_CHECKS defined for phase {g.phase}")
+    return checks[g.phase](g)
+
+
+def phase0_checks(g: Gate) -> str:
+    ps = run([*COMPOSE, "ps", "--format", "json"]).stdout.strip()
+    services = [json.loads(line) for line in ps.splitlines() if line.strip()]
+    unhealthy = [s["Service"] for s in services if s.get("Health") not in ("healthy", "")]
+    if unhealthy:
+        raise StepFailed(f"unhealthy services: {unhealthy}")
+    probe = in_tests(["python", "-c", HEALTH_PROBE])
+    if not probe.stdout.strip().endswith("form-action 'none'") or not probe.stdout.startswith(
+        "200"
+    ):
+        raise StepFailed(f"health via nginx: {probe.stdout.strip()}")
+    return f"{len(services)} services healthy; https health 200 with headers"
+
+
+def step_regression_guard(g: Gate) -> str:
+    baseline_file = RUNS / "baseline.json"
+    current = dict(g.counts)
+    if not baseline_file.exists():
+        return f"baseline created on PASS: {current}"
+    baseline = json.loads(baseline_file.read_text(encoding="utf-8"))
+    dropped = {
+        k: (baseline[k], current.get(k, 0)) for k in baseline if current.get(k, 0) < baseline[k]
+    }
+    if dropped:
+        raise StepFailed(
+            f"test counts dropped (baseline → now): {dropped}; needs a DECISIONS.md entry"
+        )
+    return f"no tests removed: {current} (baseline {baseline})"
+
+
+STEPS: list[tuple[str, str, Callable[[Gate], str]]] = [
+    ("environment", "Environment", step_environment),
+    ("build", "Build", step_build),
+    ("lint", "Format & lint", step_lint),
+    ("types", "Types", step_types),
+    ("static-security", "Static security", step_static_security),
+    ("forbidden", "Forbidden patterns / layers / RLS / review", step_structure),
+    ("deps", "Dependency audit", step_dependency_audit),
+    ("migrations", "Migrations", step_migrations),
+    ("backend-tests", "Backend tests", step_backend_tests),
+    ("security-suite", "Security suite", step_security_suite),
+    ("api-contract", "API contract", step_api_contract),
+    ("frontend-tests", "Frontend tests", step_frontend_tests),
+    ("e2e", "E2E", step_e2e),
+    ("a11y", "Accessibility", step_a11y),
+    ("visual", "Visual regression", step_visual),
+    ("perf", "Performance", step_performance),
+    ("dast", "DAST", step_dast),
+    ("phase-checks", "Phase-specific checks", step_phase_checks),
+    ("regression", "Regression guard", step_regression_guard),
+]
+
+
+def print_table(results: list[StepResult]) -> None:
+    print("\n step | status | time    | name                                       | notes")
+    print("------+--------+---------+--------------------------------------------+------")
+    for r in results:
+        note = r.notes.splitlines()[0] if r.notes else ""
+        print(f" {r.number:>4} | {r.status:<6} | {r.seconds:>6.1f}s | {r.name:<42} | {note}")
+
+
+def write_report(g: Gate, passed: bool, failed_step: int | None) -> None:
+    RUNS.mkdir(parents=True, exist_ok=True)
+    report = {
+        "phase": g.phase,
+        "result": "PASS" if passed else "FAIL",
+        "failed_step": failed_step,
+        "finished_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "offline": g.offline,
+        "counts": g.counts,
+        "steps": [asdict(r) for r in g.results],
+    }
+    (RUNS / f"phase-{g.phase}.json").write_text(
+        json.dumps(report, indent=2) + "\n", encoding="utf-8"
+    )
+    progress = ROOT / "PROGRESS.md"
+    if progress.exists() and not g.only:
+        line = (
+            f"| {report['finished_at']} | phase {g.phase} | {report['result']}"
+            f"{f' (step {failed_step})' if failed_step else ''} | "
+            f"backend {g.counts.get('backend_tests', '-')} / "
+            f"frontend {g.counts.get('frontend_tests', '-')} tests |\n"
+        )
+        text = progress.read_text(encoding="utf-8")
+        marker = "<!-- gate-log -->\n"
+        if marker in text:
+            text = text.replace(marker, marker + line, 1)
+            progress.write_text(text, encoding="utf-8")
+    if passed and not g.only:
+        (ROOT / ".phase").write_text(f"{g.phase}\n", encoding="utf-8")
+        baseline = RUNS / "baseline.json"
+        old = json.loads(baseline.read_text(encoding="utf-8")) if baseline.exists() else {}
+        merged = {k: max(old.get(k, 0), v) for k, v in {**old, **g.counts}.items()}
+        baseline.write_text(json.dumps(merged, indent=2) + "\n", encoding="utf-8")
+
+
+def main(argv: list[str]) -> int:
+    """CLI entry point."""
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("--phase", type=int, required=True)
+    parser.add_argument("--keep-going", action="store_true")
+    parser.add_argument("--offline", action="store_true")
+    parser.add_argument("--only", default="", help="comma-separated step keys")
+    args = parser.parse_args(argv[1:])
+    g = Gate(
+        phase=args.phase,
+        offline=args.offline,
+        keep_going=args.keep_going,
+        only={s for s in args.only.split(",") if s},
+    )
+    RUNS.mkdir(parents=True, exist_ok=True)
+    failed_step: int | None = None
+    for number, (key, name, fn) in enumerate(STEPS, start=1):
+        if g.only and key not in g.only:
+            continue
+        start = time.monotonic()
+        print(f"\n=== step {number}: {name} ===", flush=True)
+        try:
+            notes = fn(g)
+            result = StepResult(number, name, "PASS", time.monotonic() - start, notes)
+        except NotApplicable as exc:
+            result = StepResult(number, name, "N/A", time.monotonic() - start, str(exc))
+        except (StepFailed, subprocess.TimeoutExpired, OSError, KeyError, ValueError) as exc:
+            result = StepResult(number, name, "FAIL", time.monotonic() - start, str(exc))
+            print(str(exc))
+            failed_step = failed_step or number
+        g.results.append(result)
+        first_note = result.notes.splitlines()[0] if result.notes else ""
+        print(f"--> {result.status} ({result.seconds:.1f}s) {first_note}")
+        if result.status == "FAIL" and not g.keep_going:
+            break
+    passed = failed_step is None
+    g.results.append(
+        StepResult(
+            20, "Report", "PASS" if passed else "FAIL", 0.0, f"runs/gates/phase-{g.phase}.json"
+        )
+    )
+    write_report(g, passed, failed_step)
+    print_table(g.results)
+    verdict = (
+        f"PHASE {g.phase} GATE: PASS"
+        if passed
+        else f"PHASE {g.phase} GATE: FAIL (step {failed_step})"
+    )
+    if g.only:
+        verdict += f"  [partial run: {','.join(sorted(g.only))}]"
+    print(f"\n{verdict}")
+    return 0 if passed else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

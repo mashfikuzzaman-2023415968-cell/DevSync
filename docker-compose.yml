@@ -1,0 +1,164 @@
+# DevSync base services (spec §5.1). Only Nginx publishes ports.
+# Overlays: docker-compose.dev.yml (hot reload, Mailpit), docker-compose.test.yml (CI / gate),
+# docker-compose.prod.yml (replicas, resource limits).
+name: devsync
+
+x-hardening: &hardening
+  read_only: true
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: ["ALL"]
+  tmpfs: ["/tmp:size=64m,mode=1777"]
+  restart: unless-stopped
+
+x-backend-env: &backend-env
+  DEVSYNC_ENV: ${DEVSYNC_ENV:-development}
+  SECRET_KEY: ${SECRET_KEY:?run make env}
+  CAPTCHA_HMAC_KEY: ${CAPTCHA_HMAC_KEY:?run make env}
+  DATABASE_URL: postgresql+asyncpg://devsync_app:${DEVSYNC_APP_PASSWORD:?run make env}@postgres:5432/devsync
+  WORKER_DATABASE_URL: postgresql+asyncpg://devsync_worker:${DEVSYNC_WORKER_PASSWORD:?run make env}@postgres:5432/devsync
+  REDIS_URL: redis://:${REDIS_PASSWORD:?run make env}@redis:6379/0
+  PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-https://localhost}
+  ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,api}
+  TRUSTED_PROXY_IPS: ${TRUSTED_PROXY_IPS:-172.16.0.0/12}
+  SMS_PROVIDER: ${SMS_PROVIDER:-console}
+  SMTP_HOST: ${SMTP_HOST:-mailpit}
+  SMTP_PORT: ${SMTP_PORT:-1025}
+  EMAIL_FROM: ${EMAIL_FROM:-DevSync <no-reply@devsync.local>}
+  GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+  JUDGE0_URL: ${JUDGE0_URL:-http://judge0:2358}
+  UPLOAD_DIR: /data/uploads
+  MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-20}
+  GUNICORN_WORKERS: ${GUNICORN_WORKERS:-0}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+services:
+  nginx:
+    <<: *hardening
+    build:
+      context: .
+      dockerfile: infra/nginx/Dockerfile
+    image: devsync/nginx:local
+    ports:
+      - "${HTTP_PORT:-80}:8080"
+      - "${HTTPS_PORT:-443}:8443"
+    volumes:
+      - ./infra/nginx/certs:/etc/nginx/certs:ro
+      - uploads:/data/uploads:ro
+    tmpfs: ["/tmp:size=64m,mode=1777", "/var/cache/nginx:size=32m"]
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [edge, app]
+
+  api:
+    <<: *hardening
+    build:
+      context: ./backend
+      target: runtime
+    image: devsync/backend:local
+    environment: *backend-env
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [app]
+
+  worker:
+    <<: *hardening
+    image: devsync/backend:local
+    command: ["python", "-m", "app.jobs.worker"]
+    environment: *backend-env
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "python", "-c", "import redis,os; redis.Redis.from_url(os.environ['REDIS_URL'], socket_timeout=2).ping()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [app, sandbox]
+
+  scheduler:
+    <<: *hardening
+    image: devsync/backend:local
+    command: ["python", "-m", "app.jobs.scheduler"]
+    environment: *backend-env
+    stop_grace_period: 15s
+    healthcheck:
+      test: ["CMD", "python", "-c", "import redis,os; redis.Redis.from_url(os.environ['REDIS_URL'], socket_timeout=2).ping()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [app]
+
+  # One-off: `docker compose run --rm migrate` (role devsync_migrator, DDL only here).
+  migrate:
+    image: devsync/backend:local
+    profiles: ["tools"]
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      MIGRATION_DATABASE_URL: postgresql+psycopg://devsync_migrator:${DEVSYNC_MIGRATOR_PASSWORD:?run make env}@postgres:5432/devsync
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [app]
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: devsync
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run make env}
+      DEVSYNC_MIGRATOR_PASSWORD: ${DEVSYNC_MIGRATOR_PASSWORD}
+      DEVSYNC_APP_PASSWORD: ${DEVSYNC_APP_PASSWORD}
+      DEVSYNC_WORKER_PASSWORD: ${DEVSYNC_WORKER_PASSWORD}
+      DEVSYNC_READONLY_PASSWORD: ${DEVSYNC_READONLY_PASSWORD:?run make env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d devsync"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    networks: [app]
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redisdata:/data
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" --no-auth-warning ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    restart: unless-stopped
+    networks: [app]
+
+networks:
+  edge: {}
+  app: {}
+  # Judge0 (Phase 13) lives here with no route to `app` or the internet.
+  sandbox:
+    internal: true
+
+volumes:
+  pgdata: {}
+  redisdata: {}
+  uploads: {}

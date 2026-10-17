@@ -1,0 +1,112 @@
+"""App factory, middleware chain and health endpoints (spec §14.10, §15.6)."""
+
+from __future__ import annotations
+
+import pytest
+from app.core.config import Environment
+from app.core.middleware import API_SECURITY_HEADERS, MAX_JSON_BODY_BYTES
+from app.main import create_app
+from app.services import health as health_service
+from fastapi.testclient import TestClient
+
+from tests.conftest import make_settings
+
+pytestmark = pytest.mark.api
+
+
+def test_liveness(client: TestClient) -> None:
+    r = client.get("/api/v1/health")
+    assert r.status_code == 200
+    assert r.json() == {"status": "ok"}
+
+
+def test_security_headers_on_api_responses(client: TestClient) -> None:
+    r = client.get("/api/v1/health")
+    for name, value in API_SECURITY_HEADERS:
+        assert r.headers[name.decode()] == value.decode()
+    assert r.headers["cache-control"] == "no-store"
+    assert "server" not in r.headers
+
+
+def test_request_id_is_generated_and_echoed(client: TestClient) -> None:
+    r = client.get("/api/v1/health")
+    assert r.headers["x-request-id"].startswith("req_")
+    r2 = client.get("/api/v1/health", headers={"X-Request-ID": "nginx-abcdef123456"})
+    assert r2.headers["x-request-id"] == "nginx-abcdef123456"
+
+
+def test_malformed_request_id_is_replaced(client: TestClient) -> None:
+    r = client.get("/api/v1/health", headers={"X-Request-ID": "bad id\twith spaces"})
+    assert r.headers["x-request-id"].startswith("req_")
+
+
+def test_unknown_host_is_rejected() -> None:
+    with TestClient(create_app(make_settings()), base_url="http://evil.example") as c:
+        r = c.get("/api/v1/health")
+    assert r.status_code == 400
+
+
+def test_oversize_body_by_content_length_is_413(client: TestClient) -> None:
+    r = client.post("/api/v1/health", content=b"x" * (MAX_JSON_BODY_BYTES + 1))
+    assert r.status_code == 413
+    assert r.json()["error"]["code"] == "PAYLOAD_TOO_LARGE"
+
+
+def test_oversize_streamed_body_is_413(client: TestClient) -> None:
+    def chunks():  # type: ignore[no-untyped-def]
+        for _ in range(5):
+            yield b"x" * (MAX_JSON_BODY_BYTES // 4)
+
+    r = client.post("/api/v1/health", content=chunks())
+    assert r.status_code in {405, 413}
+
+
+def test_invalid_content_length_is_413(client: TestClient) -> None:
+    r = client.post("/api/v1/health", content=b"{}", headers={"content-length": "abc"})
+    assert r.status_code in {400, 413}
+
+
+def test_docs_only_in_development() -> None:
+    with TestClient(create_app(make_settings())) as c:
+        assert c.get("/api/v1/openapi.json").status_code == 404
+        assert c.get("/api/v1/docs").status_code == 404
+    dev = make_settings(DEVSYNC_ENV=Environment.DEVELOPMENT)
+    with TestClient(create_app(dev)) as c:
+        assert c.get("/api/v1/openapi.json").status_code == 200
+
+
+def test_metrics_endpoint_exposes_prometheus_text(client: TestClient) -> None:
+    client.get("/api/v1/health")
+    r = client.get("/metrics")
+    assert r.status_code == 200
+    assert "devsync_http_request_duration_seconds" in r.text
+    assert 'route="/api/v1/health"' in r.text
+
+
+def test_readiness_ok(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def all_ok() -> dict[str, str]:
+        return {"database": "ok", "redis": "ok", "queue": "ok"}
+
+    monkeypatch.setattr(health_service, "check_dependencies", all_ok)
+    r = client.get("/api/v1/health/ready")
+    assert r.status_code == 200
+    assert r.json()["status"] == "ok"
+
+
+def test_readiness_503_when_a_dependency_is_down(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def redis_down() -> dict[str, str]:
+        return {"database": "ok", "redis": "unavailable", "queue": "unavailable"}
+
+    monkeypatch.setattr(health_service, "check_dependencies", redis_down)
+    r = client.get("/api/v1/health/ready")
+    assert r.status_code == 503
+    assert r.json()["checks"]["redis"] == "unavailable"
+
+
+def test_production_app_refuses_insecure_settings() -> None:
+    from app.core.config import InsecureConfigurationError  # noqa: PLC0415
+
+    with pytest.raises(InsecureConfigurationError):
+        create_app(make_settings(DEVSYNC_ENV=Environment.PRODUCTION))

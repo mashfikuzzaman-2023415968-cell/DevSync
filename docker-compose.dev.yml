@@ -1,0 +1,26 @@
+# Development overlay: hot reload, Mailpit, small worker count for laptops (DECISIONS D5).
+services:
+  api:
+    command: ["uvicorn", "app.main:app_factory", "--factory", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/app"]
+    volumes:
+      - ./backend/app:/app/app:ro
+      - uploads:/data/uploads
+    environment:
+      GUNICORN_WORKERS: "2"
+
+  worker:
+    volumes:
+      - ./backend/app:/app/app:ro
+
+  scheduler:
+    volumes:
+      - ./backend/app:/app/app:ro
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "127.0.0.1:8025:8025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    networks: [app]

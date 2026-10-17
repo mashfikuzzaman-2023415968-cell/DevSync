@@ -1,0 +1,105 @@
+/*
+ * Global styles: self-hosted fonts (no external requests, spec §14.3), colour tokens and
+ * the Tailwind 4 theme (spec §13.1). Colours are CSS variables from tokens.css so they
+ * follow the active theme; the @theme block maps them to utilities (bg-surface, text-muted…).
+ */
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "tailwindcss";
+@import "./design/tokens.css";
+
+/* Explicit theme switch via data-theme; the OS preference is handled in tokens.css. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-on-primary: var(--on-primary);
+  --color-accent: var(--accent);
+  --color-newcomer: var(--newcomer);
+  --color-newcomer-bg: var(--newcomer-bg);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Type scale (px/line-height): spec §13.1. */
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 20px;
+  --text-body: 16px;
+  --text-body--line-height: 24px;
+  --text-lead: 18px;
+  --text-lead--line-height: 28px;
+  --text-h4: 20px;
+  --text-h4--line-height: 28px;
+  --text-h3: 24px;
+  --text-h3--line-height: 32px;
+  --text-h2: 30px;
+  --text-h2--line-height: 38px;
+  --text-h1: 36px;
+  --text-h1--line-height: 44px;
+  --text-hero: 48px;
+  --text-hero--line-height: 56px;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --shadow-xs: 0 1px 2px rgb(15 23 42 / 0.05);
+  --shadow-sm: 0 1px 3px rgb(15 23 42 / 0.08);
+  --shadow-md: 0 4px 12px rgb(15 23 42 / 0.08);
+  --shadow-lg: 0 12px 32px rgb(15 23 42 / 0.12);
+
+  --container-content: 1280px;
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    min-height: 100dvh;
+    margin: 0;
+  }
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+}

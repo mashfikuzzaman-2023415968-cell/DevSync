@@ -1,0 +1,6 @@
+# Tables exempt from row-level security (spec §14.15), each with a reason.
+# scripts/check_rls.py fails if a table is neither RLS-protected nor listed here.
+# Phase 0 tables (platform_settings, audit_log, jobs, idempotency_keys) get
+# their RLS policies in Phase 1 together with the RLS foundation; they are not
+# exempt. The check is enforced by the gate from Phase 1.
+tables: {}

@@ -1,0 +1,210 @@
+{
+  "components": {
+    "schemas": {
+      "ErrorCode": {
+        "description": "Every domain error code the API can return (extended by later phases).",
+        "enum": [
+          "BAD_REQUEST",
+          "UNAUTHENTICATED",
+          "ROLE_NOT_ALLOWED",
+          "NOT_FOUND",
+          "METHOD_NOT_ALLOWED",
+          "INVALID_STATE",
+          "VERSION_CONFLICT",
+          "IDEMPOTENCY_CONFLICT",
+          "PAYLOAD_TOO_LARGE",
+          "UNSUPPORTED_MEDIA_TYPE",
+          "VALIDATION_ERROR",
+          "ACCOUNT_LOCKED",
+          "RATE_LIMITED",
+          "DEPENDENCY_UNAVAILABLE",
+          "TIMEOUT",
+          "INTERNAL_ERROR",
+          "INVALID_SETTINGS"
+        ],
+        "title": "ErrorCode",
+        "type": "string"
+      },
+      "ErrorDetail": {
+        "description": "Body of the uniform error envelope.",
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "fields": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fields"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorDetail",
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "description": "`{\"error\": {code, message, fields?, request_id}}` for every 4xx/5xx response.",
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorDetail"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "description": "Liveness result.",
+        "properties": {
+          "status": {
+            "const": "ok",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "ReadinessResponse": {
+        "description": "Readiness result per dependency.",
+        "properties": {
+          "checks": {
+            "additionalProperties": {
+              "enum": [
+                "ok",
+                "unavailable"
+              ],
+              "type": "string"
+            },
+            "title": "Checks",
+            "type": "object"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "checks"
+        ],
+        "title": "ReadinessResponse",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "DevSync API",
+    "version": "0.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "description": "Return ok while the process is serving requests.",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "ok"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Liveness check",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/v1/health/ready": {
+      "get": {
+        "description": "Report whether every dependency answers; 503 if any does not.",
+        "operationId": "ready_api_v1_health_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "checks": {
+                    "database": "ok",
+                    "queue": "ok",
+                    "redis": "ok"
+                  },
+                  "status": "ok"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "DEPENDENCY_UNAVAILABLE",
+                    "message": "A service we depend on is unavailable.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "A service we depend on is unavailable."
+          }
+        },
+        "summary": "Readiness check (internal network only)",
+        "tags": [
+          "health"
+        ]
+      }
+    }
+  }
+}

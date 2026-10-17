@@ -1,0 +1,1 @@
+"""DevSync backend application package."""

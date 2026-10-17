@@ -1,0 +1,14 @@
+# Development / test / quality tooling. Constrained by the runtime lock.
+-c requirements.lock
+pytest
+pytest-asyncio
+pytest-cov
+hypothesis
+factory-boy
+freezegun
+ruff
+mypy
+bandit[toml]
+pip-audit
+schemathesis
+types-PyYAML

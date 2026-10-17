@@ -1,0 +1,45 @@
+# DevSync custom Semgrep rules (spec §16.5 step 5). Complements check_forbidden.py.
+rules:
+  - id: devsync-no-float-money
+    languages: [python]
+    severity: ERROR
+    message: Money must use int paisa or Decimal, never float (spec §0.2 rule 10).
+    paths:
+      include: ["backend/app/"]
+    pattern-either:
+      - pattern: float($X_paisa)
+      - pattern: "$X_paisa: float"
+  - id: devsync-no-raw-request-role
+    languages: [python]
+    severity: ERROR
+    message: Never take a role or user id from the request body (spec §14.20).
+    paths:
+      include: ["backend/app/api/"]
+    pattern-either:
+      - pattern: $BODY.role
+      - pattern: $BODY.user_id
+    pattern-inside: |
+      def $F(..., $BODY: $SCHEMA, ...):
+        ...
+  - id: devsync-no-compare-secrets
+    languages: [python]
+    severity: ERROR
+    message: Compare secrets with hmac.compare_digest (constant time).
+    paths:
+      include: ["backend/app/"]
+    patterns:
+      - pattern-either:
+          - pattern: $A == $TOKEN
+          - pattern: $TOKEN == $A
+      - metavariable-regex:
+          metavariable: $TOKEN
+          regex: (?i).*(token|secret|otp|signature|digest)$
+  - id: devsync-no-dangerous-html
+    languages: [typescript]
+    severity: ERROR
+    message: Never render HTML from strings (spec §13.7).
+    paths:
+      include: ["frontend/src/"]
+    pattern-either:
+      - pattern: $EL.innerHTML = $X
+      - pattern: <$T dangerouslySetInnerHTML={...} />

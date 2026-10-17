@@ -1,0 +1,16 @@
+# Runtime dependencies (Phase 0). Pin via `make lock` -> requirements.lock (hashed).
+fastapi
+pydantic>=2
+pydantic-settings
+uvicorn[standard]
+gunicorn
+sqlalchemy[asyncio]>=2
+asyncpg
+alembic
+psycopg[binary]>=3
+redis
+rq
+apscheduler<4
+structlog
+prometheus-client
+httpx
