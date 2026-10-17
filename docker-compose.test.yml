@@ -19,6 +19,9 @@ services:
     environment:
       DEVSYNC_ENV: test
       GUNICORN_WORKERS: "2"
+      # Browsers in the E2E run reach Nginx at https://localhost:8443 (CSRF Origin check).
+      PUBLIC_ORIGIN: https://localhost:8443
+      SMS_PROVIDER: noop
 
   worker:
     environment:

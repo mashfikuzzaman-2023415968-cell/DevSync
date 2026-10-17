@@ -517,7 +517,7 @@ def step_dast(g: Gate) -> str:
 
 
 def step_phase_checks(g: Gate) -> str:
-    checks: dict[int, Callable[[Gate], str]] = {0: phase0_checks}
+    checks: dict[int, Callable[[Gate], str]] = {0: phase0_checks, 1: phase1_checks}
     if g.phase not in checks:
         raise StepFailed(f"no PHASE_CHECKS defined for phase {g.phase}")
     return checks[g.phase](g)
@@ -535,6 +535,33 @@ def phase0_checks(g: Gate) -> str:
     if not answer.startswith("200") or not answer.endswith("form-action 'none'"):
         raise StepFailed(f"health via nginx: {answer}")
     return f"{len(services)} services healthy; https health 200 with headers"
+
+
+AUDIT_CHAIN_CHECK = (
+    "import os\n"
+    "from sqlalchemy import create_engine, text\n"
+    "e = create_engine(os.environ['MIGRATION_DATABASE_URL'])\n"
+    "with e.connect() as c:\n"
+    "    broken = c.execute(text('SELECT audit_verify_chain()')).scalar()\n"
+    "    rows = c.execute(text('SELECT count(*) FROM audit_log')).scalar()\n"
+    "print(f'rows={rows} broken={broken}')\n"
+    "raise SystemExit(0 if broken is None and rows > 0 else 1)\n"
+)
+
+
+def phase1_checks(g: Gate) -> str:
+    """Spec §17 Phase 1 gate checks."""
+    phase0_checks(g)
+    in_tests(
+        [
+            "pytest", "-q", "-p", "no:cacheprovider",
+            "tests/security/test_registration_verification.py::test_full_registration_and_verification",
+            "tests/security/test_admin_totp.py::test_admin_totp_success_and_wrong_code",
+            "tests/security/test_login_sessions.py::test_login_rate_limit",
+        ]
+    )  # fmt: skip
+    audit = in_tests(["python", "-c", AUDIT_CHAIN_CHECK]).stdout.strip().splitlines()[-1]
+    return f"register+verify+login, admin TOTP, login 429 observed; audit chain intact ({audit})"
 
 
 def step_regression_guard(g: Gate) -> str:

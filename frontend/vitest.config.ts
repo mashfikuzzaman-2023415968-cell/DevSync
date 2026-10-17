@@ -7,6 +7,7 @@ export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   test: {
     environment: "jsdom",
+    environmentOptions: { jsdom: { url: "https://testserver/" } }, // forbidden-ok: jsdom test origin, never fetched
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"],

@@ -27,6 +27,12 @@ export default tseslint.config(
       ...jsxA11y.configs.strict.rules,
       ...security.configs.recommended.rules,
       "react/no-danger": "error",
+      // False positives on typed Record lookups with union keys (DECISIONS D20); real
+      // injection sinks (innerHTML, eval, dynamic RegExp…) stay covered by other rules
+      // and scripts/check_forbidden.py.
+      "security/detect-object-injection": "off",
+      // Card-style labels wrap their text a few elements deep.
+      "jsx-a11y/label-has-associated-control": ["error", { depth: 4 }],
       "no-eval": "error",
       "no-implied-eval": "error",
       "no-new-func": "error",
@@ -39,6 +45,8 @@ export default tseslint.config(
     files: ["**/*.test.{ts,tsx}", "tests/**", "e2e/**"],
     rules: {
       "security/detect-object-injection": "off",
+      // Card-style labels wrap their text a few elements deep.
+      "jsx-a11y/label-has-associated-control": ["error", { depth: 4 }],
       "security/detect-non-literal-fs-filename": "off",
     },
   },
