@@ -14,23 +14,26 @@ export function strength(password: string): 0 | 1 | 2 | 3 | 4 {
   return Math.min(score, 4) as 0 | 1 | 2 | 3 | 4;
 }
 
-const LABELS = ["Too short", "Weak", "Fair", "Good", "Strong"] as const;
+const LABELS = ["Too short", "Weak", "Fair", "Looks good", "Looks strong"] as const;
 const COLORS = ["bg-border", "bg-danger", "bg-warning", "bg-primary", "bg-success"] as const;
 
-export function PasswordMeter({ password }: { password: string }) {
-  const s = strength(password);
+export function PasswordMeter({ password }: { password: string | undefined }) {
+  const s = strength(password ?? "");
   return (
     <div className="space-y-1" aria-live="polite">
       <div className="flex gap-1" aria-hidden="true">
         {[1, 2, 3, 4].map((step) => (
           <span
             key={step}
-            className={`h-1.5 flex-1 rounded-full ${s >= step ? COLORS[s] : "bg-surface-2"}`}
+            className={`h-1.5 flex-1 rounded-full transition-colors duration-base ${s >= step ? COLORS[s] : "bg-surface-2"}`}
           />
         ))}
       </div>
       <p className="text-caption text-text-muted">
-        Strength: {LABELS[s]}. A few unrelated words make a strong, memorable password.
+        <span className="font-medium text-text">{LABELS[s]}.</span>
+        {s >= 3
+          ? " This is an estimate; we check it against leaked and common passwords when you continue."
+          : " A few unrelated words make a strong, memorable password."}
       </p>
     </div>
   );

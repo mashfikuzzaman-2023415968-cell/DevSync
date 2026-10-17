@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { AuthLayout } from "@/components/AuthLayout";
-import { Alert } from "@/components/ui/Alert";
+import { Alert } from "@/components/ui/Feedback";
 import { Button } from "@/components/ui/Button";
 import { OtpInput } from "@/components/ui/OtpInput";
 import { useMe, useTotpConfirm, useTotpSetup } from "@/features/auth/api";

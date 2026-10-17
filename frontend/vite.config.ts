@@ -12,7 +12,15 @@ import { defineConfig } from "vite";
 
 export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss()],
-  resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
+  resolve: {
+    alias: [
+      { find: "@", replacement: fileURLToPath(new URL("./src", import.meta.url)) },
+      // Tree-shakeable three for the 3D chunk (DECISIONS D25); only the bare specifier.
+      ...(mode === "production"
+        ? [{ find: /^three$/, replacement: fileURLToPath(new URL("./src/components/three/three-slim.ts", import.meta.url)) }]
+        : []),
+    ],
+  },
   build: {
     target: "es2022",
     sourcemap: "hidden",

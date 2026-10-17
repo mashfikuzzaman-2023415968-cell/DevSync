@@ -6,7 +6,9 @@
  * - 15-second timeout; GET requests retry twice on network errors with backoff;
  * - errors become `ApiError` with the server's code, message, field errors and
  *   `Retry-After` (callers decide how to show them; 401 redirects are handled by
- *   the route guards so auth screens can show their own messages).
+ *   the route guards so auth screens can show their own messages; 403/429 toasts come
+ *   from the query client in app/queryClient.ts);
+ * - network failures raise a `ds:network` event so the offline banner can appear.
  */
 import { readCookie } from "@/lib/cookies";
 
@@ -14,6 +16,8 @@ export const API_BASE = "/api/v1";
 const CSRF_COOKIE = "__Host-ds_csrf";
 const TIMEOUT_MS = 15_000;
 const UNSAFE = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+/** Fired on window after every request: detail.online is false when the network failed. */
+export const NETWORK_EVENT = "ds:network";
 
 export interface ErrorBody {
   error?: {
@@ -108,12 +112,14 @@ async function send<T>(path: string, method: string, options: RequestOptions): P
       signal: controller.signal,
     });
   } catch {
+    window.dispatchEvent(new CustomEvent(NETWORK_EVENT, { detail: { online: false } }));
     throw new ApiError(0, null, null);
   } finally {
     clearTimeout(timer);
     options.signal?.removeEventListener("abort", abortFromCaller);
   }
 
+  window.dispatchEvent(new CustomEvent(NETWORK_EVENT, { detail: { online: true } }));
   if (response.status === 204) return undefined as T;
   const text = await response.text();
   const parsed: unknown = text ? JSON.parse(text) : null;

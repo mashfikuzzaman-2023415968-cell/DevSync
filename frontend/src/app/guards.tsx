@@ -3,15 +3,10 @@ import { Navigate, useLocation } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { useMe } from "@/features/auth/api";
+import { PageSkeleton } from "@/components/shell/PageSkeleton";
 import { roleHome } from "@/lib/redirects";
 
-function Loading() {
-  return (
-    <div className="flex min-h-dvh items-center justify-center bg-bg" role="status">
-      <span className="text-body text-text-muted">Loading…</span>
-    </div>
-  );
-}
+const Loading = PageSkeleton;
 
 /** Route guard (spec §13.4): signed out → login with return_to; PENDING → /verify;
  * wrong role → /403; admins without TOTP → /admin/setup-2fa. The server re-checks
@@ -44,7 +39,7 @@ export function RequireAuth({
   return <>{children}</>;
 }
 
-const AdminHome = lazy(() => import("@/features/admin/AdminHome"));
+const AdminApp = lazy(() => import("@/features/admin/AdminApp"));
 
 /** The admin bundle is requested only after the server confirms an admin session
  * with TOTP (`/admin/session` answers 404 to everyone else), spec §14.17. */
@@ -63,7 +58,7 @@ export function AdminArea() {
   if (!check.data) return <Navigate to="/403" replace />;
   return (
     <Suspense fallback={<Loading />}>
-      <AdminHome />
+      <AdminApp />
     </Suspense>
   );
 }

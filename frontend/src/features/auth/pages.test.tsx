@@ -4,8 +4,8 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import SettingsPage from "@/features/account/SettingsPage";
 import SetupTwoFactorPage from "@/features/admin/SetupTwoFactorPage";
-import HomePage from "@/features/home/HomePage";
-import RoleHome from "@/features/home/RoleHome";
+import DeveloperHome from "@/features/home/DeveloperHome";
+import LandingPage from "@/features/landing/LandingPage";
 import { server } from "@/test/server";
 import { Probe, renderRoutes } from "@/test/render";
 import ForgotPasswordPage from "./ForgotPasswordPage";
@@ -178,39 +178,43 @@ describe("VerifyEmailPage", () => {
 });
 
 describe("Signed-in pages", () => {
-  it("home redirects signed-in users and shows calls to action to guests", async () => {
+  it("homepage shows calls to action to guests and redirects signed-in users", async () => {
     server.use(
       http.get("*/api/v1/me", () =>
         HttpResponse.json({ error: { code: "UNAUTHENTICATED" } }, { status: 401 }),
       ),
+      http.get("*/api/v1/public/stats", () => HttpResponse.json({})),
     );
-    renderRoutes([{ path: "/", element: <HomePage /> }], "/");
-    expect(await screen.findByRole("link", { name: "Hire a team" })).toHaveAttribute(
-      "href",
-      "/register?role=client",
-    );
-    expect(screen.getByRole("link", { name: "Find work" })).toHaveAttribute(
+    renderRoutes([{ path: "/", element: <LandingPage /> }], "/");
+    const hire = await screen.findAllByRole("link", { name: "Hire a team" });
+    expect(hire[0]).toHaveAttribute("href", "/register?role=client");
+    expect(screen.getAllByRole("link", { name: "Find work" })[0]).toHaveAttribute(
       "href",
       "/register?role=developer",
     );
   });
 
-  it("role home greets the user and signs out to the homepage", async () => {
+  it("redirects a signed-in user from the homepage to their role home", async () => {
     server.use(
-      csrf(),
       me({ status: "ACTIVE" }),
-      http.post("*/api/v1/auth/logout", () => new HttpResponse(null, { status: 204 })),
+      http.get("*/api/v1/public/stats", () => HttpResponse.json({})),
     );
     renderRoutes(
       [
-        { path: "/dev", element: <RoleHome kind="DEVELOPER" /> },
-        { path: "/", element: <Probe label="homepage" /> },
+        { path: "/", element: <LandingPage /> },
+        { path: "/dev", element: <Probe label="developer home" /> },
       ],
-      "/dev",
+      "/",
     );
-    expect(await screen.findByRole("heading", { name: "Hello, Nadia" })).toBeInTheDocument();
-    await userEvent.setup().click(screen.getByRole("button", { name: "Sign out" }));
-    expect(await screen.findByText("homepage")).toBeInTheDocument();
+    expect(await screen.findByText("developer home")).toBeInTheDocument();
+  });
+
+  it("developer home greets the user and lists what is left to do", async () => {
+    server.use(me({ status: "ACTIVE", phone_verified: true }));
+    renderRoutes([{ path: "/dev", element: <DeveloperHome /> }], "/dev");
+    expect(await screen.findByRole("heading", { level: 1, name: /Nadia$/ })).toBeInTheDocument();
+    expect(screen.getByText(/Verify your phone/).closest("li")?.textContent).toContain("(done)");
+    expect(screen.getByText(/Verify your email/).closest("li")?.textContent).toContain("(to do)");
   });
 
   it("settings lists devices, revokes one and changes the password", async () => {

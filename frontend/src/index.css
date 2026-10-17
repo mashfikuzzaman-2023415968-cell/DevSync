@@ -14,7 +14,22 @@
 /* Explicit theme switch via data-theme; the OS preference is handled in tokens.css. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
+/* Transform-based effects (hover lifts, scale on press) only when motion is allowed:
+   neither the OS nor the in-app setting asks for reduced motion (spec §13.2). */
+@custom-variant motion-ok {
+  @media (prefers-reduced-motion: no-preference) {
+    html:not([data-motion="reduce"]) & {
+      @slot;
+    }
+  }
+}
+
 @theme inline {
+  /* Elevation follows the theme (dark uses borders more than shadows, spec §13.1). */
+  --shadow-xs: var(--elev-xs);
+  --shadow-sm: var(--elev-sm);
+  --shadow-md: var(--elev-md);
+  --shadow-lg: var(--elev-lg);
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
@@ -35,6 +50,7 @@
   --color-warning-bg: var(--warning-bg);
   --color-danger: var(--danger);
   --color-danger-bg: var(--danger-bg);
+  --color-on-danger: var(--on-danger);
   --color-info: var(--info);
   --color-info-bg: var(--info-bg);
   --color-chart-1: var(--chart-1);
@@ -62,22 +78,24 @@
   --text-h4--line-height: 28px;
   --text-h3: 24px;
   --text-h3--line-height: 32px;
-  --text-h2: 30px;
-  --text-h2--line-height: 38px;
-  --text-h1: 36px;
-  --text-h1--line-height: 44px;
-  --text-hero: 48px;
-  --text-hero--line-height: 56px;
+  /* Headings are fluid between the mobile and desktop sizes (spec §13.14). */
+  --text-h2: clamp(1.5rem, 1.15rem + 1.4vw, 1.875rem);
+  --text-h2--line-height: 1.27;
+  --text-h1: clamp(1.75rem, 1.2rem + 2vw, 2.25rem);
+  --text-h1--line-height: 1.22;
+  --text-hero: clamp(2.25rem, 1.35rem + 3.4vw, 3rem);
+  --text-hero--line-height: 1.17;
 
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
 
-  --shadow-xs: 0 1px 2px rgb(15 23 42 / 0.05);
-  --shadow-sm: 0 1px 3px rgb(15 23 42 / 0.08);
-  --shadow-md: 0 4px 12px rgb(15 23 42 / 0.08);
-  --shadow-lg: 0 12px 32px rgb(15 23 42 / 0.12);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.3, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  --breakpoint-2xl: 1536px;
 
   --container-content: 1280px;
 }
@@ -86,7 +104,271 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Durations from the motion system (spec §13.2; design/motion.ts holds the same values).
+   Numeric duration-* classes are rejected by ESLint so motion stays consistent. */
+@utility duration-fast {
+  transition-duration: var(--dur-fast);
+}
+@utility duration-base {
+  transition-duration: var(--dur-base);
+}
+@utility duration-slow {
+  transition-duration: var(--dur-slow);
+}
+@utility duration-page {
+  transition-duration: var(--dur-page);
+}
+@utility duration-crossfade {
+  transition-duration: var(--dur-crossfade);
+}
+@utility duration-press {
+  transition-duration: var(--dur-press);
+}
+
+/* Skeleton shimmer: 1.4 s loop, static under reduced motion. */
+@utility skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 37%, var(--surface-2) 63%);
+  background-size: 400% 100%;
+  animation: ds-shimmer 1.4s ease infinite;
+}
+
+@keyframes ds-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+@keyframes ds-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-4%, 3%, 0) scale(1.06);
+  }
+}
+
+@keyframes ds-sheen {
+  0%,
+  80% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(220%);
+  }
+}
+
+/* Overlay animations keyed on Radix data-state (catalogue §13.2). */
+@keyframes ds-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes ds-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes ds-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+@keyframes ds-scale-out {
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+@keyframes ds-slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes ds-slide-out-right {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes ds-slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+}
+@keyframes ds-slide-out-left {
+  to {
+    transform: translateX(-100%);
+  }
+}
+@keyframes ds-slide-in-bottom {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes ds-slide-out-bottom {
+  to {
+    transform: translateY(100%);
+  }
+}
+@keyframes ds-toast-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+  }
+}
+@keyframes ds-progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+@keyframes ds-pop {
+  0% {
+    transform: scale(0.6);
+  }
+  60% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@utility anim-overlay {
+  &[data-state="open"] {
+    animation: ds-fade-in var(--dur-base) var(--ease-standard);
+  }
+  &[data-state="closed"] {
+    animation: ds-fade-out var(--dur-fast) var(--ease-exit);
+  }
+}
+@utility anim-pop {
+  &[data-state="open"],
+  &[data-state="delayed-open"],
+  &[data-state="instant-open"] {
+    animation: ds-scale-in var(--dur-base) var(--ease-standard);
+  }
+  &[data-state="closed"] {
+    animation: ds-scale-out var(--dur-fast) var(--ease-exit);
+  }
+}
+@utility anim-sheet-right {
+  &[data-state="open"] {
+    animation: ds-slide-in-right var(--dur-slow) var(--ease-emphasized);
+  }
+  &[data-state="closed"] {
+    animation: ds-slide-out-right var(--dur-base) var(--ease-exit);
+  }
+}
+@utility anim-sheet-left {
+  &[data-state="open"] {
+    animation: ds-slide-in-left var(--dur-slow) var(--ease-emphasized);
+  }
+  &[data-state="closed"] {
+    animation: ds-slide-out-left var(--dur-base) var(--ease-exit);
+  }
+}
+@utility anim-sheet-bottom {
+  &[data-state="open"] {
+    animation: ds-slide-in-bottom var(--dur-slow) var(--ease-emphasized);
+  }
+  &[data-state="closed"] {
+    animation: ds-slide-out-bottom var(--dur-base) var(--ease-exit);
+  }
+}
+@utility anim-toast {
+  &[data-state="open"] {
+    animation: ds-toast-in var(--dur-slow) var(--ease-emphasized);
+  }
+  &[data-state="closed"] {
+    animation: ds-fade-out var(--dur-fast) var(--ease-exit);
+  }
+  &[data-swipe="move"] {
+    transform: translateX(var(--radix-toast-swipe-move-x));
+  }
+  &[data-swipe="end"] {
+    animation: ds-slide-out-right var(--dur-base) var(--ease-exit);
+  }
+}
+
+/* Accordion height animation uses the size Radix measures. */
+@keyframes ds-accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+@keyframes ds-accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+@utility accordion-content {
+  &[data-state="open"] {
+    animation: ds-accordion-down var(--dur-slow) var(--ease-emphasized);
+  }
+  &[data-state="closed"] {
+    animation: ds-accordion-up var(--dur-base) var(--ease-exit);
+  }
+}
+
+/* Homepage hero mesh: drifts slowly (20 s), paused off screen, still under reduced motion. */
+@utility mesh {
+  animation: ds-drift 20s ease-in-out infinite;
+  will-change: transform;
+  [data-paused] & {
+    animation-play-state: paused;
+  }
+}
+@utility mesh-b {
+  animation-direction: reverse;
+  animation-duration: 26s;
+}
+/* Primary call to action glow (homepage) and the shimmer that crosses it every 6 s. */
+@utility glow {
+  box-shadow: 0 10px 30px -10px color-mix(in srgb, var(--primary) 60%, transparent);
+}
+@utility sheen {
+  position: relative;
+  overflow: hidden;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 40%;
+    background: linear-gradient(100deg, transparent, rgb(255 255 255 / 0.35), transparent);
+    animation: ds-sheen 6s ease-in-out infinite;
+    pointer-events: none;
+  }
+}
+
+@keyframes ds-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @layer base {
+  /* Motion durations (mirror of design/motion.ts, spec §13.2). */
+  :root {
+    --dur-fast: 120ms;
+    --dur-base: 180ms;
+    --dur-slow: 280ms;
+    --dur-page: 220ms;
+    --dur-press: 80ms;
+    --dur-crossfade: 400ms;
+  }
   html {
     font-family: var(--font-sans);
     background: var(--bg);
@@ -102,4 +384,39 @@
     outline: 2px solid var(--primary);
     outline-offset: 2px;
   }
+  /* Inputs use 16 px on phones so iOS does not zoom on focus (spec §13.14). */
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+  /* Anchors land below the sticky homepage navbar. */
+  [id] {
+    scroll-margin-top: 88px;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html:not([data-motion="reduce"]) {
+      scroll-behavior: smooth;
+    }
+  }
+}
+
+/* Reduced motion (OS or in-app): no transforms, loops or shimmer; short fades only. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: var(--dur-fast) !important;
+    transition-property: opacity, color, background-color, border-color !important;
+  }
+}
+html[data-motion="reduce"] *,
+html[data-motion="reduce"] *::before,
+html[data-motion="reduce"] *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: var(--dur-fast) !important;
+  transition-property: opacity, color, background-color, border-color !important;
 }

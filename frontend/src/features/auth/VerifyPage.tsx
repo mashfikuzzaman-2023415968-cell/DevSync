@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router";
 import { AuthLayout } from "@/components/AuthLayout";
-import { Alert } from "@/components/ui/Alert";
+import { Alert } from "@/components/ui/Feedback";
 import { Button } from "@/components/ui/Button";
 import { OtpInput } from "@/components/ui/OtpInput";
 import { roleHome } from "@/lib/redirects";

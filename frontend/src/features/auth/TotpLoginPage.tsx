@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router";
 import { AuthLayout } from "@/components/AuthLayout";
-import { Alert } from "@/components/ui/Alert";
+import { Alert } from "@/components/ui/Feedback";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { OtpInput } from "@/components/ui/OtpInput";

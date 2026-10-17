@@ -1,22 +1,19 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { RouterProvider } from "react-router";
+import { PreferencesProvider } from "@/design/preferences";
+import { createQueryClient } from "./queryClient";
 import { router } from "./router";
 
-/** Providers + router. Server state lives in TanStack Query (spec §13.7). */
-export function App() {
-  const [client] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: { staleTime: 30_000, refetchOnWindowFocus: true },
-          mutations: { retry: false },
-        },
-      }),
-  );
+/** Providers + router. Server state lives in TanStack Query (spec §13.7); theme and motion
+ * preferences wrap everything (§13.1–13.2). */
+export function App({ nonce }: { nonce?: string | undefined }) {
+  const [client] = useState(createQueryClient);
   return (
     <QueryClientProvider client={client}>
-      <RouterProvider router={router} />
+      <PreferencesProvider nonce={nonce}>
+        <RouterProvider router={router} />
+      </PreferencesProvider>
     </QueryClientProvider>
   );
 }

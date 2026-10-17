@@ -1,15 +1,26 @@
-import { AppFrame } from "@/components/AppFrame";
+import { ShieldCheck } from "lucide-react";
+import { Card, CardHeader } from "@/components/ui/Display";
+import { PageHeader } from "@/components/ui/Feedback";
 
-/** Admin area placeholder. This module is a separate chunk, downloaded only after
- * `/me` confirms an admin with a TOTP-verified session (spec §14.17). */
+/** Admin dashboard placeholder until the console arrives (Phase 12). */
 export default function AdminHome() {
   return (
-    <AppFrame title="Administration" description="The admin console arrives in a later phase.">
-      <section className="max-w-2xl rounded-lg border border-border bg-surface p-6 shadow-xs">
-        <p className="text-body text-text-muted">
-          Your session is verified with two-step authentication.
+    <>
+      <PageHeader
+        title="Administration"
+        description="Platform health, disputes and integrity flags will appear here."
+      />
+      <Card className="max-w-2xl">
+        <CardHeader
+          title="Your session is protected"
+          description="You signed in with two-step authentication. Sensitive actions ask for a fresh code."
+          action={<ShieldCheck className="size-6 text-success" aria-hidden="true" />}
+        />
+        <p className="px-5 pb-5 pt-3 text-body-sm text-text-muted">
+          The admin console (users, disputes, flags, settings and the audit log) is built in Phase
+          12. The menu already lists every section.
         </p>
-      </section>
-    </AppFrame>
+      </Card>
+    </>
   );
 }

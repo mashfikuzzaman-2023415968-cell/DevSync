@@ -38,11 +38,38 @@ export default tseslint.config(
       "no-new-func": "error",
       "react/jsx-no-target-blank": "error",
       "@typescript-eslint/restrict-template-expressions": ["error", { allowNumber: true }],
+      // Motion consistency (spec §13.13): durations and delays come from design/motion.ts.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "Property[key.name=/^(duration|delay|staggerChildren|delayChildren)$/] > Literal[raw=/^[0-9.]+$/]",
+          message: "Use a duration from design/motion.ts instead of a number (spec §13.13).",
+        },
+        {
+          selector: "Literal[value=/(^|\\s|:)(duration|delay)-(\\d|\\[)/]",
+          message: "Use duration-fast/base/slow/page instead of numeric Tailwind durations.",
+        },
+        {
+          selector: "TemplateElement[value.raw=/(^|\\s|:)(duration|delay)-(\\d|\\[)/]",
+          message: "Use duration-fast/base/slow/page instead of numeric Tailwind durations.",
+        },
+      ],
     },
   },
   {
+    // The motion system itself defines the numbers.
+    files: ["src/design/motion.ts"],
+    rules: { "no-restricted-syntax": "off" },
+  },
+  {
+    // React Three Fiber elements take Three.js props (position, intensity…).
+    files: ["src/components/three/**"],
+    rules: { "react/no-unknown-property": "off" },
+  },
+  {
     // Tests index fixed token tables and read build output from known paths.
-    files: ["**/*.test.{ts,tsx}", "tests/**", "e2e/**"],
+    files: ["**/*.test.{ts,tsx}", "tests/**", "e2e/**", "scripts/**"],
     rules: {
       "security/detect-object-injection": "off",
       // Card-style labels wrap their text a few elements deep.
@@ -51,7 +78,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["**/*.js", "*.config.{js,ts}"],
+    files: ["**/*.js", "**/*.mjs", "*.config.{js,ts}"],
     ...tseslint.configs.disableTypeChecked,
   },
 );

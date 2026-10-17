@@ -4,7 +4,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { Link, useSearchParams } from "react-router";
 import type { z } from "zod";
 import { AuthLayout } from "@/components/AuthLayout";
-import { Alert } from "@/components/ui/Alert";
+import { Alert } from "@/components/ui/Feedback";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { PasswordMeter } from "@/components/ui/PasswordMeter";

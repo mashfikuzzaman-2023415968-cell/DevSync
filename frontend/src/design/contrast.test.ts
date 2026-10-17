@@ -40,6 +40,12 @@ const TEXT_PAIRS: Array<[Key, Key]> = [
   ["info", "infoBg"],
   ["danger", "surface"],
   ["success", "surface"],
+  ["onDanger", "danger"],
+  ["warning", "surface"],
+  ["info", "surface"],
+  ["newcomer", "surface"],
+  ["primary", "surface2"],
+  ["textMuted", "primarySoft"],
 ];
 
 describe.each<ThemeName>(["light", "dark"])("%s theme", (theme) => {

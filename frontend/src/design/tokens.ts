@@ -28,6 +28,7 @@ export interface ColorTokens {
   warningBg: string;
   danger: string;
   dangerBg: string;
+  onDanger: string;
   info: string;
   infoBg: string;
   chart: readonly [string, string, string, string, string, string];
@@ -55,6 +56,7 @@ export const colors: Record<ThemeName, ColorTokens> = {
     warningBg: "#FFFBEB",
     danger: "#BE123C",
     dangerBg: "#FFF1F2",
+    onDanger: "#FFFFFF",
     info: "#0369A1",
     infoBg: "#F0F9FF",
     chart: ["#0F766E", "#4F46E5", "#D97706", "#BE123C", "#0369A1", "#64748B"],
@@ -80,6 +82,7 @@ export const colors: Record<ThemeName, ColorTokens> = {
     warningBg: "#33240A",
     danger: "#FB7185",
     dangerBg: "#3B0A16",
+    onDanger: "#2A0611",
     info: "#38BDF8",
     infoBg: "#082236",
     chart: ["#2DD4BF", "#818CF8", "#FBBF24", "#FB7185", "#38BDF8", "#94A3B8"],

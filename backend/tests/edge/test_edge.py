@@ -7,6 +7,7 @@ The dev certificate is self-signed, so TLS verification is off here only.
 from __future__ import annotations
 
 import os
+import re
 import ssl
 
 import httpx
@@ -18,10 +19,11 @@ BASE = os.environ.get("EDGE_BASE_URL", "")
 HTTP = os.environ.get("EDGE_HTTP_URL", "")
 HOST = {"Host": "localhost"}
 
-EXPECTED_CSP = (
-    "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; "
-    "font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; "
-    "form-action 'self'; object-src 'none'; upgrade-insecure-requests"
+# style-src carries a per-response nonce (DECISIONS D23); everything else is fixed.
+EXPECTED_CSP = re.compile(
+    r"default-src 'self'; script-src 'self'; style-src 'self' 'nonce-(?P<nonce>[0-9a-f]{32})'; "
+    r"img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; "
+    r"base-uri 'none'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
 )
 
 if not BASE:
@@ -42,7 +44,8 @@ def test_http_redirects_to_https() -> None:
 def test_spa_has_exact_csp_and_security_headers(edge: httpx.Client) -> None:
     r = edge.get("/")
     assert r.status_code == 200
-    assert r.headers["content-security-policy"] == EXPECTED_CSP
+    assert EXPECTED_CSP.fullmatch(r.headers["content-security-policy"])
+    assert "unsafe-inline" not in r.headers["content-security-policy"]
     assert r.headers["strict-transport-security"] == "max-age=31536000; includeSubDomains"
     assert r.headers["x-content-type-options"] == "nosniff"
     assert r.headers["referrer-policy"] == "strict-origin-when-cross-origin"
@@ -50,7 +53,20 @@ def test_spa_has_exact_csp_and_security_headers(edge: httpx.Client) -> None:
     assert r.headers["cross-origin-opener-policy"] == "same-origin"
     assert r.headers["cross-origin-resource-policy"] == "same-origin"
     assert r.headers["x-frame-options"] == "DENY"
-    assert r.headers["cache-control"] == "no-cache"
+    assert r.headers["cache-control"] == "no-store"
+
+
+def test_style_nonce_matches_the_page_and_changes_per_response(edge: httpx.Client) -> None:
+    nonces = []
+    for path in ("/", "/login", "/some/unknown/page"):
+        r = edge.get(path)
+        match = EXPECTED_CSP.fullmatch(r.headers["content-security-policy"])
+        assert match
+        nonce = match.group("nonce")
+        assert f'<meta name="csp-nonce" content="{nonce}"' in r.text
+        assert "__CSP_NONCE__" not in r.text
+        nonces.append(nonce)
+    assert len(set(nonces)) == len(nonces)
 
 
 def test_server_version_is_hidden(edge: httpx.Client) -> None:

@@ -58,6 +58,7 @@ export interface BotFields {
 export function useLogin() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { inlineErrors: true },
     mutationFn: (
       body: { email: string; password: string; return_to?: string | null } & Partial<BotFields>,
     ) => api<LoginResult>("/auth/login", { method: "POST", body }),
@@ -70,6 +71,7 @@ export function useLogin() {
 export function useTotpLogin() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { inlineErrors: true },
     mutationFn: (body: {
       pre_auth: string;
       code?: string;
@@ -82,6 +84,7 @@ export function useTotpLogin() {
 
 export function useRegister() {
   return useMutation({
+    meta: { inlineErrors: true },
     mutationFn: (body: Record<string, unknown>) =>
       api<{ message: string }>("/auth/register", { method: "POST", body }),
   });
@@ -90,6 +93,7 @@ export function useRegister() {
 export function useLogout(all = false) {
   const qc = useQueryClient();
   return useMutation({
+    meta: { inlineErrors: true },
     mutationFn: () => api<undefined>(all ? "/auth/logout-all" : "/auth/logout", { method: "POST" }),
     onSettled: () => {
       qc.setQueryData(meKey, null);
@@ -105,6 +109,7 @@ export function useSendOtp() {
 export function useVerifyOtp() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { inlineErrors: true },
     mutationFn: (code: string) =>
       api<undefined>("/auth/otp/verify", { method: "POST", body: { code } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: meKey }),
@@ -113,6 +118,7 @@ export function useVerifyOtp() {
 
 export function useResendEmail() {
   return useMutation({
+    meta: { inlineErrors: true },
     mutationFn: () => api<undefined>("/auth/email/resend", { method: "POST" }),
   });
 }
@@ -120,6 +126,7 @@ export function useResendEmail() {
 export function useVerifyEmail() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { inlineErrors: true },
     mutationFn: (token: string) =>
       api<undefined>("/auth/email/verify", { method: "POST", body: { token } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: meKey }),
@@ -128,6 +135,7 @@ export function useVerifyEmail() {
 
 export function useForgotPassword() {
   return useMutation({
+    meta: { inlineErrors: true },
     mutationFn: (body: { email: string } & Partial<BotFields>) =>
       api<{ message: string }>("/auth/password/forgot", { method: "POST", body }),
   });
@@ -135,6 +143,7 @@ export function useForgotPassword() {
 
 export function useResetPassword() {
   return useMutation({
+    meta: { inlineErrors: true },
     mutationFn: (body: { token: string; new_password: string }) =>
       api<undefined>("/auth/password/reset", { method: "POST", body }),
   });
@@ -142,6 +151,7 @@ export function useResetPassword() {
 
 export function useChangePassword() {
   return useMutation({
+    meta: { inlineErrors: true },
     mutationFn: (body: { current_password: string; new_password: string }) =>
       api<undefined>("/auth/password/change", { method: "POST", body }),
   });
@@ -156,6 +166,7 @@ export function useSessions() {
 export function useRevokeSession() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { inlineErrors: true },
     mutationFn: (id: string) =>
       api<undefined>(`/auth/sessions/${encodeURIComponent(id)}`, { method: "DELETE" }),
     onSuccess: () => qc.invalidateQueries({ queryKey: sessionsKey }),
@@ -169,8 +180,20 @@ export function useTotpSetup() {
 export function useTotpConfirm() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { inlineErrors: true },
     mutationFn: (code: string) =>
       api<RecoveryCodes>("/auth/totp/confirm", { method: "POST", body: { code } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: meKey }),
+  });
+}
+
+export function useUpdateMe() {
+  const qc = useQueryClient();
+  return useMutation({
+    meta: { inlineErrors: true },
+    mutationFn: (body: { display_name: string }) => api<Me>("/me", { method: "PATCH", body }),
+    onSuccess: (me) => {
+      qc.setQueryData(meKey, me);
+    },
   });
 }

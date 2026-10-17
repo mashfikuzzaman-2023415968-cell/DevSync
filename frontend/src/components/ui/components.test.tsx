@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { Alert } from "./Alert";
+import { Alert } from "./Feedback";
 import { Button } from "./Button";
 import { Field } from "./Field";
 import { OtpInput } from "./OtpInput";
@@ -67,7 +67,8 @@ describe("PasswordMeter", () => {
 
   it("announces the label", () => {
     render(<PasswordMeter password="correct horse battery 42" />);
-    expect(screen.getByText(/Strength: Strong/)).toBeInTheDocument();
+    expect(screen.getByText("Looks strong.")).toBeInTheDocument();
+    expect(screen.getByText(/we check it against leaked/)).toBeInTheDocument();
   });
 });
 

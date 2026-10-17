@@ -1,0 +1,18 @@
+{
+  "hash": "26fd03701343656201f407bc77494884c52c9cf8842cadf3331bc502ea1f9669",
+  "hashed": [
+    "src/components/three/TalentConstellation.tsx",
+    "src/components/three/model.ts",
+    "src/design/tokens.ts"
+  ],
+  "files": [
+    "hero-poster-dark@1x.webp",
+    "hero-poster-dark@2x.webp",
+    "hero-poster-light@1x.webp",
+    "hero-poster-light@2x.webp",
+    "team-dark@1x.webp",
+    "team-dark@2x.webp",
+    "team-light@1x.webp",
+    "team-light@2x.webp"
+  ]
+}

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router";
 import { AuthLayout } from "@/components/AuthLayout";
-import { Alert } from "@/components/ui/Alert";
+import { Alert } from "@/components/ui/Feedback";
 import { useVerifyEmail } from "./api";
 import { messageFor } from "./errors";
 

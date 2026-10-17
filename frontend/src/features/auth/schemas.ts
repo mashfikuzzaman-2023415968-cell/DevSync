@@ -40,3 +40,5 @@ export const changePasswordSchema = z.object({
   current_password: z.string().min(1, "Enter your current password."),
   new_password: password,
 });
+
+export const profileSchema = z.object({ display_name: displayName });
