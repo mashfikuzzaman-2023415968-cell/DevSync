@@ -93,19 +93,30 @@ export function motionVariants(reduced: boolean) {
         },
       },
     }),
-    /** Hero headline words: 40 ms stagger, 8 px rise, blur 4 px → 0. */
+    /** Hero headline (§13.11 #2): the heading rises 8 px while its words appear one by one
+     * (40 ms stagger, blur 4 px → 0). Words stay inline so the heading is one text block and
+     * remains the Largest Contentful Paint element. */
     words: pick(
       reduced,
-      { hidden: {}, show: { transition: { staggerChildren: stagger.words } } },
+      {
+        hidden: { y: 8 },
+        show: {
+          y: 0,
+          transition: {
+            staggerChildren: stagger.words,
+            duration: duration.slow * 2,
+            ease: ease.emphasized,
+          },
+        },
+      },
       { hidden: {}, show: {} },
     ),
     word: pick(
       reduced,
       {
-        hidden: { opacity: 0, y: 8, filter: "blur(4px)" },
+        hidden: { opacity: 0, filter: "blur(4px)" },
         show: {
           opacity: 1,
-          y: 0,
           filter: "blur(0px)",
           transition: { duration: duration.slow, ease: ease.emphasized },
         },

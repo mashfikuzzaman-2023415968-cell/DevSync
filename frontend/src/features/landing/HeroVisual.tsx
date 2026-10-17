@@ -6,10 +6,10 @@
  * a visually hidden sentence describes the idea.
  */
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Still } from "@/components/brand/Still";
 import { useMediaQuery, usePreferences } from "@/design/preferences";
 import { cn } from "@/lib/cn";
 import { heroFallbackReason, whenIdle } from "./heroSupport";
+import { PosterCanvas } from "./PosterCanvas";
 
 const TalentConstellation = lazy(() => import("@/components/three/TalentConstellation"));
 
@@ -39,11 +39,10 @@ export function HeroVisual({ active }: { active: boolean }) {
       data-fallback={reason ?? (lost ? "context-lost" : undefined)}
     >
       <p className="sr-only">{HERO_DESCRIPTION}</p>
-      <Still
-        name="hero-poster"
-        eager
+      <PosterCanvas
+        theme={resolvedTheme}
         className={cn(
-          "absolute inset-0 size-full object-contain transition-opacity duration-crossfade",
+          "absolute inset-0 transition-opacity duration-crossfade",
           ready && live && "opacity-0",
         )}
       />

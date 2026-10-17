@@ -2,7 +2,7 @@
  * 4 → 0), subheading after it, two calls to action, a slowly drifting gradient mesh and the
  * 3D talent constellation on the right (below the text on phones). */
 import { motion } from "framer-motion";
-import { useRef } from "react";
+import { Fragment, useRef } from "react";
 import { Link } from "react-router";
 import { Button } from "@/components/ui/Button";
 import { duration, ease, stagger } from "@/design/motion";
@@ -43,18 +43,20 @@ export function Hero() {
             aria-label={HEADLINE}
           >
             {SENTENCES.map((words, line) => (
-              <span key={words.join(" ")} className="block" aria-hidden="true">
+              <Fragment key={words.join(" ")}>
                 {words.map((w, i) => (
                   <motion.span
                     key={`${String(line)}-${w}-${String(i)}`}
                     variants={m.word}
-                    className="inline-block whitespace-pre"
+                    aria-hidden="true"
+                    className="whitespace-pre"
                   >
                     {w}
                     {i < words.length - 1 ? " " : ""}
                   </motion.span>
                 ))}
-              </span>
+                {line < SENTENCES.length - 1 ? <br /> : null}
+              </Fragment>
             ))}
           </motion.h1>
           <motion.p

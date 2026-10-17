@@ -10,6 +10,7 @@ import { Field } from "@/components/ui/Field";
 import { PasswordMeter } from "@/components/ui/PasswordMeter";
 import { useResetPassword } from "./api";
 import { applyFieldErrors, messageFor } from "./errors";
+import { PASSWORD_RULES } from "./PasswordRules";
 import { resetSchema } from "./schemas";
 
 type Values = z.infer<typeof resetSchema>;
@@ -52,6 +53,7 @@ export default function ResetPasswordPage() {
               label="New password"
               type="password"
               autoComplete="new-password"
+              hint={PASSWORD_RULES}
               error={form.formState.errors.new_password?.message}
               {...form.register("new_password")}
             />

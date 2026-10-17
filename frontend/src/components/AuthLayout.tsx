@@ -1,91 +1,91 @@
+/**
+ * Auth screens layout (spec §13.5 #2–5, §13.11 navigation rules): the DevSync logo links home,
+ * "Back to home" is always there, the form sits left; on wide screens a side panel shows the
+ * constellation still (softly blurred, §13.13) and DevSync's loop.
+ */
 import type { ReactNode } from "react";
 import { Link } from "react-router";
+import { Wordmark } from "@/components/brand/Logo";
+import { Still } from "@/components/brand/Still";
 
-/** DevSync mark: a small team of linked nodes, one amber (the newcomer). The same motif
- * becomes the 3D constellation on the homepage in Phase 2 (spec §13.12–13.13). */
-export function Mark({ size = 28 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-      <rect width="32" height="32" rx="8" className="fill-primary" />
-      <path
-        d="M10 11 22 11 16 22Z"
-        fill="none"
-        className="stroke-on-primary"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <circle cx="10" cy="11" r="3" className="fill-on-primary" />
-      <circle cx="22" cy="11" r="3" className="fill-on-primary" />
-      <circle cx="16" cy="22" r="3" className="fill-newcomer-bg" />
-    </svg>
-  );
-}
+export { Mark } from "@/components/brand/Logo";
 
 const LOOP = [
-  ["Plan", "Break the work into milestones and see the critical path."],
+  ["Plan", "Milestones, dependencies and the critical path."],
   ["Hire a fair team", "Balanced on skill, teamwork, time and cost, with room for newcomers."],
   ["Watch the work", "Progress, risks and deadline impact, without surveillance."],
-  ["Pay by milestone", "Money is held in escrow and released on approval."],
-  ["Learn from it", "What actually happened shapes the next team."],
+  ["Pay by milestone", "Escrow released when you approve the work."],
+  ["Learn from it", "What happened shapes the next team."],
 ] as const;
 
-/** Split auth screen: the form on the left, DevSync's loop on wide screens. */
 export function AuthLayout({
   title,
   subtitle,
   children,
 }: {
   title: string;
-  subtitle?: string;
+  subtitle?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-dvh bg-bg lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)]">
+    <div className="min-h-dvh bg-bg lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,480px)]">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:rounded-md focus:bg-surface focus:px-4 focus:py-2 focus:shadow-md"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-surface focus:px-4 focus:py-2 focus:shadow-md"
       >
         Skip to content
       </a>
-      <div className="flex flex-col px-4 py-6 sm:px-10">
+      <div className="flex min-h-dvh flex-col px-4 pb-[max(env(safe-area-inset-bottom),24px)] pt-[max(env(safe-area-inset-top),20px)] sm:px-10">
         <header className="flex items-center justify-between">
+          <Link to="/" className="rounded-md" aria-label="DevSync home">
+            <Wordmark />
+          </Link>
           <Link
             to="/"
-            className="flex items-center gap-2 rounded-md text-h4 font-semibold text-text"
+            className="inline-flex min-h-11 items-center rounded-md px-2 text-body-sm text-text-muted hover:text-text"
           >
-            <Mark />
-            <span>DevSync</span>
-          </Link>
-          <Link to="/" className="text-body-sm text-text-muted hover:text-text">
             Back to home
           </Link>
         </header>
-        <main id="main" className="flex flex-1 items-center py-10">
-          <div className="w-full max-w-[400px]">
-            <h1 className="text-h3 font-semibold tracking-tight text-text">{title}</h1>
+        <main
+          id="main"
+          className="flex flex-1 items-center justify-center py-10 lg:justify-start lg:pl-[8%]"
+        >
+          <div className="w-full max-w-[420px]">
+            <h1 className="text-h2 font-semibold tracking-tight text-text">{title}</h1>
             {subtitle ? <p className="mt-2 text-body text-text-muted">{subtitle}</p> : null}
             <div className="mt-8">{children}</div>
           </div>
         </main>
       </div>
       <aside
-        className="hidden border-l border-border bg-surface px-10 py-16 lg:block"
+        className="relative hidden overflow-hidden border-l border-border bg-surface lg:flex lg:flex-col lg:justify-end"
         aria-label="How DevSync works"
       >
-        <p className="text-lead font-semibold text-text">One loop, from plan to reputation</p>
-        <ol className="mt-8 space-y-6">
-          {LOOP.map(([step, text], i) => (
-            <li key={step} className="flex gap-4">
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-body-sm font-semibold text-primary tabular">
-                {i + 1}
-              </span>
-              <span>
-                <span className="block text-body-sm font-semibold text-text">{step}</span>
-                <span className="block text-body-sm text-text-muted">{text}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-gradient-to-b from-primary-soft via-surface to-surface"
+        />
+        <Still
+          name="team"
+          className="absolute -right-16 top-10 w-[560px] max-w-none opacity-80 blur-[1.5px]"
+        />
+        <div className="relative px-10 pb-14">
+          <p className="text-lead font-semibold text-text">One loop, from plan to reputation</p>
+          <ol className="mt-6 space-y-4">
+            {LOOP.map(([step, text], i) => (
+              <li key={step} className="flex gap-4">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-body-sm font-semibold tabular text-primary">
+                  {i + 1}
+                </span>
+                <span>
+                  <span className="block text-body-sm font-semibold text-text">{step}</span>
+                  <span className="block text-body-sm text-text-muted">{text}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
       </aside>
     </div>
   );

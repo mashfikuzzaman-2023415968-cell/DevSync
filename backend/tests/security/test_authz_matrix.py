@@ -34,6 +34,8 @@ MATRIX: dict[tuple[str, str], tuple[set[str], str, bool]] = {
     ("GET", "/api/v1/health"): (EVERYONE, "", False),
     ("GET", "/api/v1/health/ready"): (EVERYONE, "", False),
     ("GET", "/api/v1/captcha/challenge"): (EVERYONE, "", False),
+    ("GET", "/api/v1/public/stats"): (EVERYONE, "", False),
+    ("POST", "/api/v1/client-errors"): (EVERYONE, "", False),
     ("GET", "/api/v1/auth/csrf"): (EVERYONE, "", False),
     ("POST", "/api/v1/auth/register"): (EVERYONE, "", False),
     ("POST", "/api/v1/auth/login"): (EVERYONE, "", False),

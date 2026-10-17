@@ -4,6 +4,8 @@
  * Not part of production builds.
  */
 import { useSearchParams } from "react-router";
+import { Wordmark } from "@/components/brand/Logo";
+import { Still } from "@/components/brand/Still";
 import TalentConstellation from "@/components/three/TalentConstellation";
 import { STILL_SIZE, type StillName } from "@/components/brand/stills";
 import type { ThemeName } from "@/design/tokens";
@@ -14,8 +16,33 @@ declare global {
   }
 }
 
+/** 1200×630 social preview: brand background, headline and the team still. */
+function SocialPreview() {
+  return (
+    <div
+      data-social=""
+      className="flex items-center gap-10 bg-gradient-to-br from-primary-soft via-bg to-bg px-16"
+      style={{ width: 1200, height: 630 }}
+    >
+      <div className="flex-1">
+        <Wordmark className="text-h3" />
+        <p className="mt-8 text-[56px] font-semibold leading-[1.1] tracking-tight text-text">
+          Plan the project.
+          <br />
+          Hire a fair team.
+        </p>
+        <p className="mt-6 text-[24px] text-text-muted">
+          Freelance software teams, newcomers included.
+        </p>
+      </div>
+      <Still name="team" eager className="w-[460px]" />
+    </div>
+  );
+}
+
 export default function StillsPage() {
   const [params] = useSearchParams();
+  if (params.get("name") === "social") return <SocialPreview />;
   const name: StillName = params.get("name") === "team" ? "team" : "hero-poster";
   const theme: ThemeName = params.get("theme") === "dark" ? "dark" : "light";
   const scale = params.get("scale") === "2" ? 2 : 1;

@@ -68,6 +68,21 @@ async function main() {
         }
       }
     }
+    // Social preview image (spec §13.11): rendered from the light team still, saved as PNG.
+    const page = await browser.newPage({
+      viewport: { width: 1200, height: 630 },
+      colorScheme: "light",
+    });
+    await page.goto("http://127.0.0.1:5174/__stills?name=social");
+    await page.waitForFunction(() => {
+      const img = document.querySelector("[data-social] img");
+      return img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
+    });
+    await page.evaluate(() => document.fonts.ready);
+    await page
+      .locator("[data-social]")
+      .screenshot({ path: resolve(root, "public/social-preview.png") });
+    await page.close();
   } finally {
     await browser.close();
     await server.close();

@@ -245,6 +245,16 @@ async def test_settings_table_admin_only_but_active_settings_readable() -> None:
     assert version >= 2
 
 
+async def test_public_stats_function_returns_one_aggregate_only() -> None:
+    async with open_session(DbContext.guest()) as db:
+        result = await db.execute(select(column("developers")).select_from(func.public_stats()))
+        rows = result.all()
+        cols = (await db.execute(select("*").select_from(func.public_stats()))).keys()
+    assert list(cols) == ["developers"]
+    assert len(rows) == 1
+    assert rows[0][0] >= 0
+
+
 async def test_outbox_is_write_only_for_web_requests() -> None:
     async with open_session(DbContext.guest()) as db:
         await db.execute(

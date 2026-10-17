@@ -11,3 +11,5 @@ export type CaptchaChallenge = Schemas["CaptchaChallenge"];
 export type TotpSetup = Schemas["TotpSetupResponse"];
 export type RecoveryCodes = Schemas["RecoveryCodesResponse"];
 export type Role = Me["role"];
+export type PublicStatsResponse = Schemas["PublicStats"];
+export type ClientErrorReportBody = Schemas["ClientErrorReport"];

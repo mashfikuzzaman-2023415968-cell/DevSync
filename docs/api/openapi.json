@@ -99,6 +99,72 @@
         "title": "ChangePasswordRequest",
         "type": "object"
       },
+      "ClientErrorReport": {
+        "additionalProperties": false,
+        "description": "A short, already-truncated summary of a frontend error (sanitized again server-side).",
+        "properties": {
+          "kind": {
+            "enum": [
+              "render",
+              "chunk",
+              "unhandled"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "message": {
+            "examples": [
+              "TypeError: x is undefined"
+            ],
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "path": {
+            "examples": [
+              "/settings"
+            ],
+            "maxLength": 300,
+            "minLength": 1,
+            "pattern": "^/",
+            "title": "Path",
+            "type": "string"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z0-9_\\-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "stack": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stack"
+          }
+        },
+        "required": [
+          "message",
+          "path",
+          "kind"
+        ],
+        "title": "ClientErrorReport",
+        "type": "object"
+      },
       "CodeRequest": {
         "additionalProperties": false,
         "description": "A 6-digit code (phone OTP, TOTP confirm, step-up).",
@@ -503,6 +569,30 @@
           "display_name"
         ],
         "title": "MeUpdateRequest",
+        "type": "object"
+      },
+      "PublicStats": {
+        "additionalProperties": false,
+        "description": "Live platform numbers for the homepage. A number is present only once the phase that\nproduces it exists; the homepage never shows zeros (spec §13.11 #3).",
+        "properties": {
+          "developers": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Verified, active developer accounts.",
+            "examples": [
+              42
+            ],
+            "title": "Developers"
+          }
+        },
+        "title": "PublicStats",
         "type": "object"
       },
       "ReadinessResponse": {
@@ -3249,6 +3339,99 @@
         ]
       }
     },
+    "/api/v1/client-errors": {
+      "post": {
+        "description": "Sanitized and logged for the team; nothing is stored or returned.",
+        "operationId": "client_errors_api_v1_client_errors_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientErrorReport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Report a frontend error",
+        "tags": [
+          "public"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "description": "Return ok while the process is serving requests.",
@@ -3583,6 +3766,65 @@
         "summary": "Update my account basics",
         "tags": [
           "me"
+        ]
+      }
+    },
+    "/api/v1/public/stats": {
+      "get": {
+        "description": "Aggregate counts only, cached for 5 minutes; absent numbers are omitted.",
+        "operationId": "public_stats_api_v1_public_stats_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "developers": 42
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/PublicStats"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Live numbers for the homepage",
+        "tags": [
+          "public"
         ]
       }
     }

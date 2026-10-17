@@ -5,17 +5,12 @@
  * most a few reports leave one page view.
  */
 import { api } from "@/api/client";
+import type { ClientErrorReportBody } from "@/api/types";
 
 const MAX_REPORTS = 5;
 let sent = 0;
 
-export interface ClientErrorReport {
-  message: string;
-  stack: string | null;
-  path: string;
-  kind: "render" | "chunk" | "unhandled";
-  request_id: string | null;
-}
+export type ClientErrorReport = ClientErrorReportBody;
 
 export function summarize(error: unknown, kind: ClientErrorReport["kind"]): ClientErrorReport {
   const err = error instanceof Error ? error : new Error(String(error));

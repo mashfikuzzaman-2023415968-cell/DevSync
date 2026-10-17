@@ -1,4 +1,13 @@
+# Homepage and public project pages may be indexed; private areas and the API may not.
 User-agent: *
-Allow: /
+Allow: /$
+Allow: /projects
+Allow: /p/
+Allow: /privacy
+Allow: /terms
 Disallow: /admin
 Disallow: /api
+Disallow: /dev
+Disallow: /client
+Disallow: /settings
+Disallow: /w/

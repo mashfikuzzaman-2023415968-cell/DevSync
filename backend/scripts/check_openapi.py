@@ -31,6 +31,8 @@ PUBLIC_OPERATIONS: set[tuple[str, str]] = {
     ("get", "/api/v1/health"),
     ("get", "/api/v1/health/ready"),
     ("get", "/api/v1/captcha/challenge"),
+    ("get", "/api/v1/public/stats"),
+    ("post", "/api/v1/client-errors"),
     ("get", "/api/v1/auth/csrf"),
     ("post", "/api/v1/auth/register"),
     ("post", "/api/v1/auth/login"),

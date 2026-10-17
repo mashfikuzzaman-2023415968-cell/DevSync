@@ -89,7 +89,10 @@ export default function LoginPage() {
             >
               {showPassword ? "Hide password" : "Show password"}
             </button>
-            <Link to="/forgot-password" className="text-body-sm text-primary">
+            <Link
+              to="/forgot-password"
+              className="inline-flex min-h-11 items-center text-body-sm font-medium text-primary hover:underline"
+            >
               Forgot password?
             </Link>
           </div>

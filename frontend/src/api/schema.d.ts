@@ -424,6 +424,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/client-errors": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Report a frontend error
+     * @description Sanitized and logged for the team; nothing is stored or returned.
+     */
+    post: operations["client_errors_api_v1_client_errors_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/health": {
     parameters: {
       query?: never;
@@ -488,6 +508,26 @@ export interface paths {
     patch: operations["patch_me_api_v1_me_patch"];
     trace?: never;
   };
+  "/api/v1/public/stats": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Live numbers for the homepage
+     * @description Aggregate counts only, cached for 5 minutes; absent numbers are omitted.
+     */
+    get: operations["public_stats_api_v1_public_stats_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -543,6 +583,31 @@ export interface components {
       current_password: string;
       /** New Password */
       new_password: string;
+    };
+    /**
+     * ClientErrorReport
+     * @description A short, already-truncated summary of a frontend error (sanitized again server-side).
+     */
+    ClientErrorReport: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "render" | "chunk" | "unhandled";
+      /**
+       * Message
+       * @example TypeError: x is undefined
+       */
+      message: string;
+      /**
+       * Path
+       * @example /settings
+       */
+      path: string;
+      /** Request Id */
+      request_id?: string | null;
+      /** Stack */
+      stack?: string | null;
     };
     /**
      * CodeRequest
@@ -737,6 +802,19 @@ export interface components {
     MeUpdateRequest: {
       /** Display Name */
       display_name: string;
+    };
+    /**
+     * PublicStats
+     * @description Live platform numbers for the homepage. A number is present only once the phase that
+     *     produces it exists; the homepage never shows zeros (spec §13.11 #3).
+     */
+    PublicStats: {
+      /**
+       * Developers
+       * @description Verified, active developer accounts.
+       * @example 42
+       */
+      developers?: number | null;
     };
     /**
      * ReadinessResponse
@@ -3357,6 +3435,100 @@ export interface operations {
       };
     };
   };
+  client_errors_api_v1_client_errors_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ClientErrorReport"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
   health_api_v1_health_get: {
     parameters: {
       query?: never;
@@ -3680,6 +3852,67 @@ export interface operations {
            *     }
            */
           "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  public_stats_api_v1_public_stats_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "developers": 42
+           *     }
+           */
+          "application/json": components["schemas"]["PublicStats"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
         };
       };
       /** @description Too many requests. Please wait and try again. */

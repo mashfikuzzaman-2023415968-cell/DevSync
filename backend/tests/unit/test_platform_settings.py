@@ -17,7 +17,8 @@ pytestmark = pytest.mark.unit
 
 SEED_DIR = Path(__file__).resolve().parents[2] / "alembic" / "seed"
 SEED_V1 = SEED_DIR / "platform_settings_v1.json"
-SEED = SEED_DIR / "platform_settings_v2.json"
+SEED_V2 = SEED_DIR / "platform_settings_v2.json"
+SEED = SEED_DIR / "platform_settings_v3.json"
 
 
 def doc_with(path: str, value: Any) -> dict[str, Any]:
@@ -47,6 +48,14 @@ def test_v1_snapshot_still_validates_with_new_defaults_filled_in() -> None:
     v1 = json.loads(SEED_V1.read_text(encoding="utf-8"))
     assert "ratelimit" not in v1
     assert validate_settings(v1).ratelimit.login[0].limit == 5
+
+
+def test_v2_snapshot_still_validates_with_new_scopes_filled_in() -> None:
+    v2 = json.loads(SEED_V2.read_text(encoding="utf-8"))
+    assert "public_stats" not in v2["ratelimit"]
+    filled = validate_settings(v2).ratelimit
+    assert filled.public_stats[0].limit == 60
+    assert [r.limit for r in filled.client_errors] == [10, 50]
 
 
 def test_seed_snapshot_equals_schema_defaults_and_validates() -> None:

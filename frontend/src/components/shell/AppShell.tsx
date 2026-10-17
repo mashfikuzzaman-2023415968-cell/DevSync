@@ -21,7 +21,7 @@ import {
   Sun,
   UserRound,
 } from "lucide-react";
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import type { NavItem } from "@/app/navigation";
 import { Wordmark } from "@/components/brand/Logo";
@@ -50,6 +50,10 @@ function isActive(pathname: string, item: NavItem, home: string): boolean {
 function useSidebar(userId: string | undefined) {
   const key = `ds-sidebar:${userId ?? "anon"}`;
   const [collapsed, setCollapsed] = useState(() => readPref(key) === "collapsed");
+  // The user id arrives after the first render; read that user's choice when it does.
+  useEffect(() => {
+    setCollapsed(readPref(key) === "collapsed");
+  }, [key]);
   const toggle = useCallback(() => {
     setCollapsed((c) => {
       writePref(key, c ? null : "collapsed");

@@ -221,6 +221,10 @@ class RateLimitSettings(_Group):
     email_resend: tuple[RateRule, ...] = _rules((3, HOUR))
     totp: tuple[RateRule, ...] = _rules((5, 5 * MINUTE))
     captcha_challenge: tuple[RateRule, ...] = _rules((30, MINUTE))
+    # Phase 2 (DECISIONS D22): homepage stats are cached, so a generous read limit; error
+    # reports are small and few per page view.
+    public_stats: tuple[RateRule, ...] = _rules((60, MINUTE))
+    client_errors: tuple[RateRule, ...] = _rules((10, MINUTE), (50, HOUR))
     bid: tuple[RateRule, ...] = _rules((20, HOUR))
     project_create: tuple[RateRule, ...] = _rules((10, DAY))
     formation_run: tuple[RateRule, ...] = _rules((10, HOUR))

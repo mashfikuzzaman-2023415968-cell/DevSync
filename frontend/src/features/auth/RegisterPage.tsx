@@ -5,11 +5,13 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import { AuthLayout } from "@/components/AuthLayout";
 import { Alert } from "@/components/ui/Feedback";
 import { Button } from "@/components/ui/Button";
+import { RadioGroup } from "@/components/ui/Choice";
 import { Field } from "@/components/ui/Field";
 import { PasswordMeter } from "@/components/ui/PasswordMeter";
 import { useLogin, useRegister } from "./api";
 import { applyFieldErrors, messageFor } from "./errors";
 import { Honeypot } from "./Honeypot";
+import { PASSWORD_RULES } from "./PasswordRules";
 import { registerSchema, type RegisterValues } from "./schemas";
 import { useBotCheck } from "./useBotCheck";
 
@@ -74,32 +76,16 @@ export default function RegisterPage() {
   if (step === 1) {
     return (
       <AuthLayout title="Create your account" subtitle="First, what brings you to DevSync?">
-        <fieldset className="space-y-3">
-          <legend className="sr-only">Account type</legend>
-          {ROLES.map((r) => (
-            <label
-              key={r.value}
-              htmlFor={`role-${r.value}`}
-              className={`flex min-h-11 cursor-pointer gap-3 rounded-lg border bg-surface p-4 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary ${role === r.value ? "border-primary bg-primary-soft" : "border-border hover:border-primary"}`}
-            >
-              <input
-                id={`role-${r.value}`}
-                type="radio"
-                name="role"
-                value={r.value}
-                checked={role === r.value}
-                onChange={() => {
-                  setRole(r.value);
-                }}
-                className="mt-1 accent-[var(--primary)]"
-              />
-              <span>
-                <span className="block text-body font-semibold text-text">{r.title}</span>
-                <span className="block text-body-sm text-text-muted">{r.text}</span>
-              </span>
-            </label>
-          ))}
-        </fieldset>
+        <RadioGroup
+          legend="Account type"
+          hideLegend
+          cards
+          value={role ?? ""}
+          onValueChange={(v) => {
+            setRole(v === "CLIENT" ? "CLIENT" : "DEVELOPER");
+          }}
+          options={ROLES.map((r) => ({ value: r.value, label: r.title, description: r.text }))}
+        />
         <Button
           className="mt-6"
           full
@@ -160,6 +146,7 @@ export default function RegisterPage() {
             label="Password"
             type="password"
             autoComplete="new-password"
+            hint={PASSWORD_RULES}
             enterKeyHint="next"
             error={form.formState.errors.password?.message}
             {...form.register("password")}
