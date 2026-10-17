@@ -27,4 +27,39 @@ Every state-changing request needs `X-CSRF-Token` (from `GET /auth/csrf`) and a 
   summary `{message, stack?, path, kind: render|chunk|unhandled, request_id?}` → 204. Sanitized
   (control characters, query strings, secret-like strings) and logged; nothing is stored.
 
+## Phase 3 endpoints
+Profiles and evidence (Developer unless noted; every request body rejects unknown fields):
+- `GET/PATCH /me/developer-profile` — headline ≤ 120, bio ≤ 2000, hours 1–80, GitHub username,
+  IANA time zone, visibility `PUBLIC|CLIENTS_ONLY`; PATCH sends only changed fields (autosave).
+- `PUT /me/skills` — replace the list: ≤ 20 `{skill_id, self_level 1–5}`, each skill once.
+- `GET/POST /me/portfolio`, `PATCH/DELETE /me/portfolio/{id}`, `PUT /me/portfolio-order`
+  (every id once) — ≤ 20 items, https links, ≤ 8 skills.
+- `POST /me/portfolio/{id}/images` (multipart `file`, ≤ 5 per item),
+  `DELETE /me/portfolio/{id}/images/{image_id}`.
+- `GET/POST /me/certificates` (multipart `title`, `issuer`, `file`), `PATCH` (pending only),
+  `DELETE /me/certificates/{id}` — status stays `PENDING` until an admin decides.
+- `GET/POST /me/external-reviews` (multipart `source`, `rating`, `scale`, `project_date`,
+  `file`; `rating_norm = rating / scale`), `DELETE /me/external-reviews/{id}`.
+- `GET/PATCH /me/client-profile` (Client) — organisation, description, https website.
+- `GET /skills` (any verified account) — the taxonomy.
+- `GET /developers/{id}` (session) and `GET /public/developers/{id}` (public, rate limited) —
+  visibility-filtered profile: skills, verified scores, portfolio with image ids, verified
+  certificates; never email or phone. Hidden and missing look the same (404).
+
+Files (D31, D32):
+- `GET /files/{id}/download` (public; authorized in the `file_access` definer) → 302 to
+  `/files/blob/{key}?t&n&e&s`, a 5-minute HMAC-signed link; the blob endpoint answers with
+  `X-Accel-Redirect` and Nginx streams the bytes (attachment, nosniff, sandbox CSP).
+  Uploads: 422 with `fields.file` for a refused file, 413 when too large, 429 after 20/hour.
+
+Skill tests (Developer, D33):
+- `GET /skill-tests` — each test with `last_score`, `next_attempt_at`, `open_attempt_id`.
+- `POST /skill-tests/{id}/attempts` (10/hour) → 201 attempt: questions (text + 4 options, no
+  answers), `deadline_at`, `server_now`; 409 `IN_PROGRESS` (with `attempt_id`) or
+  `RETAKE_LOCKED` (with `next_attempt_at`).
+- `GET /attempts/{id}` — scores an expired attempt as it stands.
+- `POST /attempts/{id}/answer` `{question_id, choice 0–3}` → `{answered}`; 409 `EXPIRED`/
+  `SUBMITTED` after the deadline or submit.
+- `POST /attempts/{id}/submit` → `{score, correct, total, added_to_profile}`; 409 if submitted.
+
 Error envelope: `{"error": {"code", "message", "fields"?, "request_id"}}`.

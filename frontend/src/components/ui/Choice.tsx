@@ -22,13 +22,13 @@ export const Checkbox = forwardRef<HTMLButtonElement, CheckboxProps>(function Ch
   const autoId = useId();
   const boxId = id ?? autoId;
   return (
-    <div className={cn("flex min-h-11 items-start gap-3 py-1", className)}>
+    <div className={cn("flex items-start gap-3", className)}>
       <CheckboxPrimitive.Root
         ref={ref}
         id={boxId}
         {...rest}
         className={cn(
-          "peer mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-sm border border-text-subtle bg-surface transition-colors duration-fast data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=indeterminate]:border-primary data-[state=indeterminate]:bg-primary text-on-primary disabled:opacity-55",
+          "peer mt-2.5 flex size-5 shrink-0 items-center justify-center rounded-sm border border-text-subtle bg-surface transition-colors duration-fast data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=indeterminate]:border-primary data-[state=indeterminate]:bg-primary text-on-primary disabled:opacity-55",
           focus,
         )}
       >
@@ -42,7 +42,7 @@ export const Checkbox = forwardRef<HTMLButtonElement, CheckboxProps>(function Ch
       </CheckboxPrimitive.Root>
       <label
         htmlFor={boxId}
-        className="cursor-pointer text-body-sm text-text peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+        className="min-h-11 cursor-pointer py-2.5 text-body-sm text-text peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
       >
         {label}
         {description ? (

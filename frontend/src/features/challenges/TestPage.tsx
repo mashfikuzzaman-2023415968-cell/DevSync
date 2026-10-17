@@ -214,7 +214,7 @@ export default function TestPage() {
         breadcrumbs={
           <Link
             to="/dev/challenges"
-            className="inline-flex items-center gap-1 text-body-sm text-text-muted hover:text-text"
+            className="inline-flex min-h-11 items-center gap-1 text-body-sm text-text-muted hover:text-text"
           >
             <ArrowLeft className="size-4" aria-hidden="true" />
             Skill challenges

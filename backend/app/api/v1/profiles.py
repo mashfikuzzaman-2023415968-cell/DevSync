@@ -65,7 +65,7 @@ EX_ITEM = {
     "id": _ID,
     "title": "Clinic booking app",
     "description": "Booking flow with SMS reminders.",
-    "url": "https://example.com/clinic",
+    "url": None,
     "skill_ids": [_SKILL["skill_id"]],
     "position": 0,
     "images": [{"id": "c0ffee00-0000-4000-8000-000000000001", "file": _FILE, "position": 0}],
@@ -92,7 +92,7 @@ EX_REVIEW = {
 EX_CLIENT = {
     "organization": "Rahim Traders",
     "description": "Wholesale textiles; we need an ordering app.",
-    "website": "https://example.com",
+    "website": None,
     "updated_at": "2026-10-18T05:00:00Z",
 }
 EX_PUBLIC = {

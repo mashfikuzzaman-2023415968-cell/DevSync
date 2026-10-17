@@ -131,15 +131,16 @@ export function AboutCard({ profile }: { profile: DeveloperProfile }) {
         }}
         className="grid gap-5 p-5 md:grid-cols-2"
       >
-        <Field
-          label="Headline"
-          className="md:col-span-2"
-          placeholder="Frontend developer who builds accessible forms"
-          maxLength={120}
-          hint="One line about what you do best."
-          error={errors.headline?.message}
-          {...form.register("headline")}
-        />
+        <div className="md:col-span-2">
+          <Field
+            label="Headline"
+            placeholder="Frontend developer who builds accessible forms"
+            maxLength={120}
+            hint="One line about what you do best."
+            error={errors.headline?.message}
+            {...form.register("headline")}
+          />
+        </div>
         <FormField
           label="About"
           className="md:col-span-2"

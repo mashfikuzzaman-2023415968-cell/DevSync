@@ -161,7 +161,12 @@ describe("ProfilePage", () => {
     const headline = await screen.findByLabelText("Headline");
     await userEvent.clear(headline);
     await userEvent.type(headline, "Accessible React forms");
-    await waitFor(() => { expect(screen.getByText("Saved")).toBeInTheDocument(); }, { timeout: 3000 });
+    await waitFor(
+      () => {
+        expect(screen.getByText("Saved")).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
     expect(bodies.at(-1)).toEqual({ headline: "Accessible React forms" });
     expect(screen.getByRole("link", { name: /View public profile/ })).toHaveAttribute(
       "href",
@@ -213,7 +218,9 @@ describe("ProfilePage", () => {
     renderRoutes([{ path: "/", element: <ProfilePage /> }], "/");
     await userEvent.click(await screen.findByRole("button", { name: "Actions for First" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Move down" }));
-    await waitFor(() => { expect(order).toEqual({ ids: ["p2", "p1"] }); });
+    await waitFor(() => {
+      expect(order).toEqual({ ids: ["p2", "p1"] });
+    });
   });
 
   it("shows an error state with Try again when the profile fails to load", async () => {
@@ -301,7 +308,9 @@ describe("Challenges and the timed test", () => {
     expect(await screen.findByText("Question 1 of 2")).toBeInTheDocument();
     expect(screen.getByRole("timer")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("radio", { name: "useEffect" }));
-    await waitFor(() => { expect(answers).toEqual([{ question_id: "q1", choice: 1 }]); });
+    await waitFor(() => {
+      expect(answers).toEqual([{ question_id: "q1", choice: 1 }]);
+    });
     await userEvent.click(screen.getByRole("button", { name: "Next question" }));
     expect(screen.getByText("What does JSX compile to?")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Submit test" }));
@@ -421,7 +430,8 @@ describe("Client profile in Settings", () => {
     expect(body).toBeUndefined();
     await userEvent.clear(screen.getByLabelText("Website"));
     await userEvent.click(screen.getByRole("button", { name: "Save organisation" }));
-    await waitFor(() => { expect(body).toEqual({ organization: "Rahim Traders", description: "", website: "" }); },
-    );
+    await waitFor(() => {
+      expect(body).toEqual({ organization: "Rahim Traders", description: "", website: "" });
+    });
   });
 });

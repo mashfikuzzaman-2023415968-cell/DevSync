@@ -48,6 +48,17 @@ See spec §14.2. Full table to be completed in Phase 14.
 | Client error reports: size, rate limit, CSRF, sanitizing (no query strings or secrets in logs) | `app/api/v1/public.py`, `app/services/client_errors.py` | `tests/unit/test_client_errors.py`, `tests/api/test_public.py` |
 | No dangerous DOM sinks; accessibility checks on every screen | ESLint, `scripts/check_forbidden.py` | gate steps 3, 6, 14 |
 
+## Controls implemented (Phase 3)
+| Control | Where | Tests |
+|---|---|---|
+| Upload pipeline: streamed to a 0600 temp file under a size limit; type by signature; polyglot, active-markup and PDF-action checks (hex-escaped names, compressed object streams); Pillow re-encode under a pixel budget (EXIF/GPS stripped, ≤ 4096 px); random UUID keys, sanitized names as metadata only (D31) | `app/uploads/*` | `tests/unit/test_uploads.py` (100% coverage), `tests/security/test_profiles_files.py`, `e2e/phase3.spec.ts` (GPS gone after download through Nginx) |
+| Downloads: authorization in the `file_access` definer → 5-minute HMAC-signed URL → `X-Accel-Redirect` into an `internal` Nginx location with attachment, nosniff, sandbox CSP (D32) | `app/services/files.py`, `app/api/v1/files.py`, `infra/nginx/nginx.conf` | expiry, tamper, other key, IDOR tests; `e2e/phase3.spec.ts` headers |
+| RLS on every new table (owner / admin; question bank admin + SYSTEM only); attempts and evidence written only by definers; taxonomy read-only; verification and stored-file identity guarded by triggers (D35); `caller_is_system()` in definers (D36) | `alembic/versions/0004_profiles_files_tests.py` | `tests/integration/test_rls_profiles.py` |
+| Correct answers never leave the database: questions via `attempt_questions`, scoring via `score_test_attempt`; response schemas have no answer fields | `app/schemas/skill_tests.py`, migration 0004 | `tests/security/test_skill_tests.py` (schema assertion, lifecycle) |
+| Server-side timer, late answers refused, one open attempt, 30-day retake rule, advisory lock against parallel starts (D33) | migration 0004, `app/services/skill_tests.py` | lifecycle tests, jobs tests |
+| Mass assignment (`user_id`, `status`, `position`, `score`, `correct`) → 422; IDOR → 404; injection corpus stored as inert text; no email/phone on public profiles | `app/schemas/profiles.py`, services | `tests/security/test_profiles_files.py`, `test_authz_matrix.py` |
+| Larger body limit only for POSTs to the upload routes; JSON stays 256 KB | `app/core/middleware.py` | `test_json_endpoints_keep_the_small_body_limit`, oversize test |
+
 ## Dependency update policy (§14.21)
 Dependabot weekly (pip, npm, Docker, GitHub Actions). Critical vulnerabilities fixed within
 48 hours, high within 7 days. `make lock` re-resolves Python locks; the gate fails on unfixed

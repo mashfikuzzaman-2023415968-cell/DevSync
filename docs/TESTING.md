@@ -13,6 +13,14 @@
 | Stills | `make stills` (gate checks the manifest hash) | `frontend/scripts/render-stills.mjs` |
 | Full gate | `make gate PHASE=N` | `backend/scripts/phase_gate.py` |
 
+Phase 3 adds: `tests/unit/test_uploads.py` (detection, polyglots, PDF actions, re-encoding,
+signing, storage), `tests/unit/test_question_bank_seed.py`, `tests/integration/test_rls_profiles.py`,
+`tests/security/test_profiles_files.py`, `tests/security/test_skill_tests.py`,
+`tests/jobs/test_profile_jobs.py`; frontend `components/ui/phase3.test.tsx` and
+`features/profile/profile.test.tsx`; E2E `e2e/phase3.spec.ts` (with the GPS-tagged fixture
+`e2e/files/gps-photo.jpg`). Backend tests that write files use `UPLOAD_DIR=/tmp/uploads` in the
+test container.
+
 E2E notes: every test starts with fresh rate-limit counters (`e2e/test.ts`, D27) and runs on one
 worker; signed-in tests seed users through the test-only router and sign in via the API.
 

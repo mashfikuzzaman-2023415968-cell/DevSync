@@ -6708,8 +6708,7 @@
                 "example": {
                   "description": "Wholesale textiles; we need an ordering app.",
                   "organization": "Rahim Traders",
-                  "updated_at": "2026-10-18T05:00:00Z",
-                  "website": "https://example.com"
+                  "updated_at": "2026-10-18T05:00:00Z"
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ClientProfileOut"
@@ -6829,8 +6828,7 @@
                 "example": {
                   "description": "Wholesale textiles; we need an ordering app.",
                   "organization": "Rahim Traders",
-                  "updated_at": "2026-10-18T05:00:00Z",
-                  "website": "https://example.com"
+                  "updated_at": "2026-10-18T05:00:00Z"
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ClientProfileOut"
@@ -7674,8 +7672,7 @@
                     "skill_ids": [
                       "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
                     ],
-                    "title": "Clinic booking app",
-                    "url": "https://example.com/clinic"
+                    "title": "Clinic booking app"
                   }
                 ],
                 "schema": {
@@ -7818,8 +7815,7 @@
                   "skill_ids": [
                     "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
                   ],
-                  "title": "Clinic booking app",
-                  "url": "https://example.com/clinic"
+                  "title": "Clinic booking app"
                 },
                 "schema": {
                   "$ref": "#/components/schemas/PortfolioItemOut"
@@ -7994,8 +7990,7 @@
                     "skill_ids": [
                       "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
                     ],
-                    "title": "Clinic booking app",
-                    "url": "https://example.com/clinic"
+                    "title": "Clinic booking app"
                   }
                 ],
                 "schema": {
@@ -8296,8 +8291,7 @@
                   "skill_ids": [
                     "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
                   ],
-                  "title": "Clinic booking app",
-                  "url": "https://example.com/clinic"
+                  "title": "Clinic booking app"
                 },
                 "schema": {
                   "$ref": "#/components/schemas/PortfolioItemOut"
@@ -8466,8 +8460,7 @@
                   "skill_ids": [
                     "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
                   ],
-                  "title": "Clinic booking app",
-                  "url": "https://example.com/clinic"
+                  "title": "Clinic booking app"
                 },
                 "schema": {
                   "$ref": "#/components/schemas/PortfolioItemOut"
@@ -8653,8 +8646,7 @@
                   "skill_ids": [
                     "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
                   ],
-                  "title": "Clinic booking app",
-                  "url": "https://example.com/clinic"
+                  "title": "Clinic booking app"
                 },
                 "schema": {
                   "$ref": "#/components/schemas/PortfolioItemOut"

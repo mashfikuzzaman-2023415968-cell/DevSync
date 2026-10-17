@@ -91,7 +91,7 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByLabel("Headline").waitFor();
       await snap(page, `developer-profile-${scheme}-${String(width)}`);
       await page.goto("/dev/challenges");
-      await page.getByRole("heading", { name: "React fundamentals" }).waitFor();
+      await page.getByRole("heading", { name: "React skill test" }).waitFor();
       await snap(page, `skill-challenges-${scheme}-${String(width)}`);
     });
   }

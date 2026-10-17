@@ -90,12 +90,16 @@ export function useRegister() {
   });
 }
 
-export function useLogout(all = false) {
+/** Sign out. `leave` (e.g. navigate home) runs before the session data is cleared, in the
+ * same tick: clearing first would let a route guard send the person to /login and unmount the
+ * caller before it could navigate. */
+export function useLogout(all = false, leave?: () => void) {
   const qc = useQueryClient();
   return useMutation({
     meta: { inlineErrors: true },
     mutationFn: () => api<undefined>(all ? "/auth/logout-all" : "/auth/logout", { method: "POST" }),
     onSettled: () => {
+      leave?.();
       qc.setQueryData(meKey, null);
       qc.clear();
     },

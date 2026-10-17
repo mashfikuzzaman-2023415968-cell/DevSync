@@ -129,8 +129,8 @@ function AppearanceCard() {
 function DevicesCard() {
   const sessions = useSessions();
   const revoke = useRevokeSession();
-  const logoutAll = useLogout(true);
   const navigate = useNavigate();
+  const logoutAll = useLogout(true, () => void navigate("/", { replace: true }));
   return (
     <Card>
       <CardHeader title="Signed-in devices" description="Sign out anywhere you don’t recognise." />
@@ -196,11 +196,7 @@ function DevicesCard() {
           title="Sign out of every device?"
           description="You’ll be signed out here too, and anyone using your account elsewhere loses access immediately."
           confirmLabel="Sign out everywhere"
-          onConfirm={() =>
-            logoutAll.mutateAsync().finally(() => {
-              void navigate("/", { replace: true });
-            })
-          }
+          onConfirm={() => logoutAll.mutateAsync().catch(() => undefined)}
         />
       </div>
     </Card>

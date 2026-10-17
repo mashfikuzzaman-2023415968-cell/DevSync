@@ -23,6 +23,7 @@ from app.models.profiles import (
     FileKind,
     PortfolioImage,
     PortfolioItem,
+    ProfileVisibility,
     StoredFile,
     VerificationStatus,
 )
@@ -167,11 +168,15 @@ async def get_developer_profile(ctx: Ctx) -> DeveloperProfileOut:
 
 async def update_developer_profile(ctx: Ctx, body: DeveloperProfileUpdate) -> DeveloperProfileOut:
     data = _changes(body, nullable=frozenset({"github_username"}))
+    if "visibility" in data:  # store the enum, not the string (the ORM keeps what it is given)
+        data["visibility"] = ProfileVisibility(data["visibility"])
     row = await repo.get_or_create_developer_profile(ctx.db, ctx.uid)
     for key, value in data.items():
         setattr(row, key, value)
     row.updated_at = ctx.now
-    await _audit(ctx, "profile.update", "developer_profile", row.id, data)
+    await _audit(
+        ctx, "profile.update", "developer_profile", row.id, {k: str(v) for k, v in data.items()}
+    )
     await ctx.db.commit()
     return await get_developer_profile(ctx)
 

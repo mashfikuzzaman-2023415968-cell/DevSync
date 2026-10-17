@@ -6415,8 +6415,7 @@ export interface operations {
            * @example {
            *       "description": "Wholesale textiles; we need an ordering app.",
            *       "organization": "Rahim Traders",
-           *       "updated_at": "2026-10-18T05:00:00Z",
-           *       "website": "https://example.com"
+           *       "updated_at": "2026-10-18T05:00:00Z"
            *     }
            */
           "application/json": components["schemas"]["ClientProfileOut"];
@@ -6537,8 +6536,7 @@ export interface operations {
            * @example {
            *       "description": "Wholesale textiles; we need an ordering app.",
            *       "organization": "Rahim Traders",
-           *       "updated_at": "2026-10-18T05:00:00Z",
-           *       "website": "https://example.com"
+           *       "updated_at": "2026-10-18T05:00:00Z"
            *     }
            */
           "application/json": components["schemas"]["ClientProfileOut"];
@@ -7398,8 +7396,7 @@ export interface operations {
            *         "skill_ids": [
            *           "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
            *         ],
-           *         "title": "Clinic booking app",
-           *         "url": "https://example.com/clinic"
+           *         "title": "Clinic booking app"
            *       }
            *     ]
            */
@@ -7539,8 +7536,7 @@ export interface operations {
            *       "skill_ids": [
            *         "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
            *       ],
-           *       "title": "Clinic booking app",
-           *       "url": "https://example.com/clinic"
+           *       "title": "Clinic booking app"
            *     }
            */
           "application/json": components["schemas"]["PortfolioItemOut"];
@@ -7716,8 +7712,7 @@ export interface operations {
            *         "skill_ids": [
            *           "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
            *         ],
-           *         "title": "Clinic booking app",
-           *         "url": "https://example.com/clinic"
+           *         "title": "Clinic booking app"
            *       }
            *     ]
            */
@@ -8005,8 +8000,7 @@ export interface operations {
            *       "skill_ids": [
            *         "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
            *       ],
-           *       "title": "Clinic booking app",
-           *       "url": "https://example.com/clinic"
+           *       "title": "Clinic booking app"
            *     }
            */
           "application/json": components["schemas"]["PortfolioItemOut"];
@@ -8165,8 +8159,7 @@ export interface operations {
            *       "skill_ids": [
            *         "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
            *       ],
-           *       "title": "Clinic booking app",
-           *       "url": "https://example.com/clinic"
+           *       "title": "Clinic booking app"
            *     }
            */
           "application/json": components["schemas"]["PortfolioItemOut"];
@@ -8340,8 +8333,7 @@ export interface operations {
            *       "skill_ids": [
            *         "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
            *       ],
-           *       "title": "Clinic booking app",
-           *       "url": "https://example.com/clinic"
+           *       "title": "Clinic booking app"
            *     }
            */
           "application/json": components["schemas"]["PortfolioItemOut"];

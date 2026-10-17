@@ -114,7 +114,7 @@ function SidebarLink({
 function AccountMenu({ profilePath }: { profilePath: string }) {
   const me = useMe();
   const navigate = useNavigate();
-  const logout = useLogout();
+  const logout = useLogout(false, () => void navigate("/", { replace: true }));
   const { resolvedTheme, setTheme } = usePreferences();
   const name = me.data?.display_name ?? "Account";
   return (
@@ -157,7 +157,7 @@ function AccountMenu({ profilePath }: { profilePath: string }) {
           label: "Sign out",
           icon: <LogOut aria-hidden="true" />,
           onSelect: () => {
-            logout.mutate(undefined, { onSettled: () => void navigate("/", { replace: true }) });
+            logout.mutate();
           },
         },
       ]}
@@ -169,7 +169,7 @@ export function AppShell({ nav, children }: { nav: ShellNav; children?: ReactNod
   const me = useMe();
   const location = useLocation();
   const navigate = useNavigate();
-  const logout = useLogout();
+  const logout = useLogout(false, () => void navigate("/", { replace: true }));
   const m = useMotion();
   const { collapsed, toggle } = useSidebar(me.data?.id);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -356,9 +356,7 @@ export function AppShell({ nav, children }: { nav: ShellNav; children?: ReactNod
                     type="button"
                     onClick={() => {
                       setMoreOpen(false);
-                      logout.mutate(undefined, {
-                        onSettled: () => void navigate("/", { replace: true }),
-                      });
+                      logout.mutate();
                     }}
                     className="flex min-h-12 w-full items-center gap-3 rounded-md px-3 text-body text-danger hover:bg-danger-bg"
                   >

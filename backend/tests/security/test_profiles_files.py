@@ -456,9 +456,14 @@ def test_signed_url_expires_and_tampering_is_refused(
 
 def _profile_with_image(api: Api, visibility: str) -> tuple[str, str]:
     user = api.sign_in_as("DEVELOPER")
-    api.patch(
+    r = api.patch(
         "/api/v1/me/developer-profile", json={"headline": "Visible?", "visibility": visibility}
     )
+    assert r.status_code == 200, r.text
+    assert r.json()["visibility"] == visibility
+    # A second change of visibility alone (the autosave case) works too.
+    again = api.patch("/api/v1/me/developer-profile", json={"visibility": visibility})
+    assert again.status_code == 200, again.text
     item = new_item(api)
     file_id = add_image(api, item["id"], jpeg_with_gps()).json()["images"][0]["file"]["id"]
     return user.user_id, file_id

@@ -38,11 +38,13 @@ function TestCard({ test }: { test: SkillTest }) {
   };
 
   return (
-    <Card className="flex flex-col p-5">
+    <Card className="flex flex-col p-5" role="group" aria-labelledby={`test-${test.id}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-body-sm text-text-muted">{test.skill_name}</p>
-          <h2 className="mt-0.5 text-h4 font-semibold text-text">{test.title}</h2>
+          <h2 id={`test-${test.id}`} className="mt-0.5 text-h4 font-semibold text-text">
+            {test.title}
+          </h2>
           <p className="mt-1 text-body-sm text-text-muted">
             {test.question_count} questions in {minutes(test.time_limit_seconds)}
           </p>

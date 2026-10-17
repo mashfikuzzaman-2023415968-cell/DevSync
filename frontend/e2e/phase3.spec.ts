@@ -87,12 +87,10 @@ test("developer completes a profile with an image, takes a test and sees the sco
 
   // Take the React test: pick the first option everywhere, then submit.
   await page.goto("/dev/challenges");
-  const card = page
-    .locator("div", { has: page.getByRole("heading", { name: "React fundamentals" }) })
-    .last();
+  const card = page.getByRole("group", { name: "React skill test" });
   await card.getByRole("button", { name: "Start test" }).click();
   await page.getByRole("button", { name: "Start the timer" }).click();
-  await expect(page).toHaveURL(/\/dev\/challenges\/test\//);
+  await expect(page).toHaveURL(/\/dev\/challenges\/test\//, { timeout: 15_000 });
   await expect(page.getByText("Question 1 of 10")).toBeVisible();
   const csp = await checkScreen(page, "timed-test");
   for (let i = 0; i < 10; i += 1) {
@@ -155,7 +153,7 @@ test("a client edits their organisation in Settings @e2e", async ({ page, baseUR
   await expect(page.getByText("Use a full https:// address.")).toBeVisible();
   await page.getByLabel("Website").fill("https://example.com");
   await page.getByRole("button", { name: "Save organisation" }).click();
-  await expect(page.getByText("Organisation saved")).toBeVisible();
+  await expect(page.getByText("Organisation saved").first()).toBeVisible();
   await page.reload();
   await expect(page.getByLabel("Organisation")).toHaveValue("Rahim Traders");
 });

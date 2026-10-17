@@ -230,3 +230,73 @@ driver stalled the GPU process intermittently. The test asserts the renderer is 
 (not SwiftShader/llvmpipe) and runs without trace recording, whose screenshots cost frames.
 Measured: 60.0 fps, p95 frame 16.7 ms on the Intel UHD (Raptor Lake). A machine without a GPU
 cannot pass this step.
+
+## Phase 3 — profiles, files, skill tests
+
+**D29 · New dependencies.** Backend: `python-magic` (+ `libmagic1` in the API image) and
+`Pillow`, both named in spec §14.9; `python-multipart`, which FastAPI needs to parse the
+multipart bodies of the upload endpoints (spec §10.2 names multipart uploads). Frontend:
+`@dnd-kit/core`, `@dnd-kit/sortable` and `@dnd-kit/utilities` (spec-named for drag and drop),
+used for portfolio reordering with pointer, touch and keyboard sensors. All releases are older
+than 14 days and pinned exactly.
+
+**D30 · Image "crop preview" without a cropping library.** The spec asks for an image preview
+with crop/fit. Adding a cropper would be a new dependency and a second image pipeline in the
+browser. Instead the dropzone previews the chosen file in exactly the frame it is shown in
+(16:10, `object-fit: cover`), says so, and the server stores the full re-encoded image
+(≤ 4096 px, no metadata). Developers see what clients will see; nothing is cropped away.
+
+**D31 · Upload pipeline details (§14.9).** Accepted by signature only: PNG/JPEG/WebP for
+portfolio images; PDF or image for certificates; PDF, UTF-8 plain text or image for external
+review evidence. Size limits: images `MAX_UPLOAD_MB`, PDF 10 MB, text 1 MB. Polyglots are
+refused: more than 16 bytes after an image's end marker, foreign signatures (ZIP, RAR, 7z,
+PE, ELF) anywhere in the body, HTML/script/SVG markup; PDFs with JavaScript, actions, forms,
+launch or embedded-file keys, including hex-escaped names (`/J#61vaScript`) and keys hidden in
+Flate-compressed object streams (inflated under a 64 MB budget). Links (`/URI`) are allowed
+because real certificates carry verification links. Images are decoded under a 40 MP budget
+and re-encoded into a fresh image, so EXIF/GPS/ICC/comments never survive. Stored files are
+mode 0640 in a 0750 directory owned by the API user (uid/gid 10001); Nginx joins group 10001
+(`group_add`) to serve them from its `internal` location. The signed blob endpoint answers with
+`X-Accel-Redirect`, `Content-Disposition: attachment` and `Cache-Control: private, no-store`;
+Nginx adds `nosniff`, a sandbox CSP, CORP same-origin and no-referrer.
+
+**D32 · Who may download a file.** `GET /files/{id}/download` is public in the API contract
+because visitors of a public profile load its portfolio images. Authorization happens in the
+`file_access` definer: owner, admins, SYSTEM, or — for portfolio images only — anyone who may
+see the profile (visibility rules). Certificates and review evidence are owner/admin only.
+Everything else is 404. The redirect target is a 5-minute HMAC-signed URL bound to the storage
+key, type, name and expiry.
+
+**D33 · Skill-test rules.** 10 random active questions per attempt from ≥ 15 per skill
+(seeded shuffle; the seed is stored), 600 s on the server clock, answers rejected after the
+deadline (409 `EXPIRED`), one open attempt at a time (409 `IN_PROGRESS` with its id), one
+scored attempt per test per 30 days counted from the start of the previous attempt (409
+`RETAKE_LOCKED` with `next_attempt_at`), no practice mode. An attempt left open past its
+deadline is scored as it stands on the next read or by the `attempts.expire` job (every
+minute). Scoring happens inside the database; responses report the score and the number
+correct, never which answers were right. A parallel start is serialised with an advisory lock.
+
+**D34 · Question bank v1 needs a human review.** The 128 questions (16 per skill) in
+`alembic/seed/skills_and_questions_v1.json` were drafted by the AI assistant from
+`scripts/build_question_bank.py` (answer positions balanced by a seeded shuffle, asserted by a
+test). They are plausible but have not been checked by a subject expert; the hand-off asks a
+team member to review them before the demo. Corrections go into a new seed version, not edits
+to v1.
+
+**D35 · Verification is admin-only, also in the database.** Owners may edit and delete their
+certificates and external reviews, but a trigger (`guard_verification`) refuses any change to
+`status`, `reviewed_by`, `reviewed_at` or `reason` unless the caller is an admin or SYSTEM, and
+new rows must start PENDING. A second trigger makes a stored file's identity (owner, key, type,
+size, hash, name) immutable. The taxonomy tables `skills` and `skill_tests` are RLS-exempt
+(public catalogue) and read-only for the runtime roles.
+
+**D36 · `is_system()` inside definer functions.** `is_system()` checks `current_user`, which
+inside a SECURITY DEFINER function is the function's owner, so it is always false there. The
+Phase 3 definers use `caller_is_system()`, which checks `session_user = 'devsync_worker'`
+(the login role, unchanged by SET ROLE) together with the SYSTEM context. A test proves the web
+role claiming SYSTEM still cannot score someone else's attempt, while the worker can.
+
+**D37 · Coverage counts code run in greenlets.** SQLAlchemy's async layer runs the ORM in
+greenlets; coverage.py missed lines after an `await` in services (profiles showed 63% though
+every path was exercised). `concurrency = ["greenlet", "thread"]` fixes the measurement; no
+threshold changed.
