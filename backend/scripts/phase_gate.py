@@ -323,9 +323,16 @@ def step_dependency_audit(g: Gate) -> str:
                 "--rm",
                 "-v",
                 "/var/run/docker.sock:/var/run/docker.sock:ro",
+                "-v",
+                "devsync-trivy-cache:/root/.cache/trivy",  # reuse the DB between runs
                 TRIVY_IMAGE,
                 "image",
                 "--quiet",
+                # mirror.gcr.io is unreachable from some networks; use GitHub's registry.
+                "--db-repository",
+                "ghcr.io/aquasecurity/trivy-db:2",
+                "--java-db-repository",
+                "ghcr.io/aquasecurity/trivy-java-db:1",
                 "--exit-code",
                 "1",
                 "--ignore-unfixed",
@@ -523,10 +530,10 @@ def phase0_checks(g: Gate) -> str:
     if unhealthy:
         raise StepFailed(f"unhealthy services: {unhealthy}")
     probe = in_tests(["python", "-c", HEALTH_PROBE])
-    if not probe.stdout.strip().endswith("form-action 'none'") or not probe.stdout.startswith(
-        "200"
-    ):
-        raise StepFailed(f"health via nginx: {probe.stdout.strip()}")
+    # Compose prints container status lines first; the probe's answer is the last line.
+    answer = probe.stdout.strip().splitlines()[-1] if probe.stdout.strip() else ""
+    if not answer.startswith("200") or not answer.endswith("form-action 'none'"):
+        raise StepFailed(f"health via nginx: {answer}")
     return f"{len(services)} services healthy; https health 200 with headers"
 
 

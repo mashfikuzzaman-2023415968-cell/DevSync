@@ -1,20 +1,27 @@
 # Weekly dependency updates (spec §14.21). Critical fixes within 48 h, high within 7 days.
+# Cooldown: new releases must be 14 days old before Dependabot proposes them (supply-chain
+# safety; security updates are not delayed by cooldown).
 version: 2
 updates:
   - package-ecosystem: pip
     directory: /backend
     schedule: { interval: weekly }
+    cooldown: { default-days: 14 }
     open-pull-requests-limit: 10
   - package-ecosystem: npm
     directory: /frontend
     schedule: { interval: weekly }
+    cooldown: { default-days: 14 }
     open-pull-requests-limit: 10
   - package-ecosystem: docker
     directory: /backend
     schedule: { interval: weekly }
+    cooldown: { default-days: 14 }
   - package-ecosystem: docker
     directory: /infra/nginx
     schedule: { interval: weekly }
+    cooldown: { default-days: 14 }
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
+    cooldown: { default-days: 14 }

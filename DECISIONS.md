@@ -95,3 +95,34 @@ React stays 18. *Alternative rejected:* keep the pinned versions and allowlist t
 to Node 22 LTS (and then Vite 8 / Vitest 5) is recommended before Demo 1. npm 9 hits an
 arborist bug when resolving this tree; use `npx npm@10 install` when changing dependencies
 (`npm ci` works with npm 9).
+
+**D16 · Gate findings fixed on the first full run (2026-10-17).**
+- Nginx serves an explicit `server_name` (`localhost` in development; production names are
+  set at deployment, Phase 15). Catch-all default servers return 400 for any other `Host`,
+  and redirects/proxying use `$server_name`, never the client-supplied `$host` (Semgrep
+  `request-host-used`; host-header attacks, spec §14.3).
+- GitHub Actions pinned by commit SHA; Dependabot `cooldown` of 14 days (Semgrep
+  supply-chain rules; consistent with D1's "no brand-new releases").
+- `Page[T]` uses `typing.Generic` instead of PEP 695 syntax because Semgrep 1.95 cannot parse
+  the latter (the module would otherwise go unscanned).
+- `check_forbidden.py` scans what git would commit (tracked + untracked, honouring
+  `.gitignore`), so local `.env` and dev certificates are not false positives; gitleaks and
+  the git hooks still guard commits.
+- Trivy downloads its database from `ghcr.io` (Google's `mirror.gcr.io` was unreachable) and
+  caches it in the `devsync-trivy-cache` volume.
+- The test stack publishes no host ports (tests use the internal network). Note for `make
+  up`: this laptop runs Apache on port 80; set `HTTP_PORT=8080` in `.env` or stop Apache.
+- Backend image sets `PYTHONPATH=/app` so Alembic and scripts can import `app`; tool caches
+  (ruff, mypy, hypothesis) go to tmpfs in the read-only test container.
+
+**D17 · Docker on the team leader's laptop moved from the snap to Docker's apt packages.**
+The Docker snap (rev 3618) was denied all DNS traffic by AppArmor on Ubuntu 25.04 / kernel
+6.14, so images could not be pulled. Docker CE from download.docker.com (already installed)
+is now the only engine. Teammates should use Docker's apt packages too (as CI does).
+
+**D18 · Nginx base moved to the 1.30 stable line on Debian trixie; images apply security
+updates at build.** `nginxinc/nginx-unprivileged:1.28.0-bookworm` carried 60+ fixable
+HIGH/CRITICAL Debian CVEs (OpenSSL, GnuTLS, Perl, expat…) and bookworm tags are no longer
+rebuilt. Now `1.30.4-trixie` (brotli compiled against 1.30.4 on `debian:trixie-slim`), and
+both runtime images run `apt-get upgrade` during the build. Rebuild with `--pull` before
+each demo so the upgrade layer is refreshed (`make deps-update`, Phase 14).

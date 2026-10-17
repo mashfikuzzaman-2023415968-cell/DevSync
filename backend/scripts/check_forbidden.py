@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import ast
 import re
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -193,13 +194,40 @@ class _PyVisitor(ast.NodeVisitor):
 
 
 def _iter_files(root: Path) -> list[Path]:
-    files: list[Path] = []
-    for path in root.rglob("*"):
-        if any(part in EXCLUDED_DIRS for part in path.relative_to(root).parts):
-            continue
-        if path.is_file():
-            files.append(path)
-    return files
+    """Files git would commit (tracked + untracked, minus .gitignore'd); else a filesystem walk.
+
+    Ignored local files such as `.env` and dev certificates are not repository content,
+    so they are skipped when git is available (gitleaks covers the history separately).
+    """
+    try:
+        out = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(root),
+                "ls-files",
+                "-z",
+                "--cached",
+                "--others",
+                "--exclude-standard",
+            ],
+            capture_output=True,
+            check=True,
+        ).stdout
+        rels = [r for r in out.decode("utf-8").split("\0") if r]
+        return [
+            root / r
+            for r in rels
+            if not any(part in EXCLUDED_DIRS for part in Path(r).parts) and (root / r).is_file()
+        ]
+    except (OSError, subprocess.CalledProcessError):
+        files: list[Path] = []
+        for path in root.rglob("*"):
+            if any(part in EXCLUDED_DIRS for part in path.relative_to(root).parts):
+                continue
+            if path.is_file():
+                files.append(path)
+        return files
 
 
 def scan_python(rel: str, source: str) -> list[tuple[int, str]]:

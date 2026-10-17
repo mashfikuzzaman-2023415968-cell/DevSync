@@ -9,8 +9,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PATH=/opt/venv/bin:$PATH
-RUN groupadd --system --gid 10001 devsync \
+    PATH=/opt/venv/bin:$PATH \
+    PYTHONPATH=/app
+RUN apt-get update && apt-get upgrade -y --no-install-recommends \
+ && apt-get clean && rm -rf /var/lib/apt/lists/* \
+ && groupadd --system --gid 10001 devsync \
  && useradd --system --uid 10001 --gid devsync --home-dir /app --shell /usr/sbin/nologin devsync \
  && python -m venv /opt/venv
 WORKDIR /app

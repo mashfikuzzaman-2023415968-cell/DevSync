@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Generic, TypeVar
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.errors import ErrorCode
@@ -53,7 +55,11 @@ class StateTransitionError(BaseModel):
     error: StateTransitionErrorDetail
 
 
-class Page[T](BaseModel):
+T = TypeVar("T")
+
+
+# Generic[T] instead of PEP 695 `class Page[T]` so Semgrep can parse this module.
+class Page(BaseModel, Generic[T]):  # noqa: UP046
     """Cursor page `{items, next_cursor}` (limit ≤ 100, default 20)."""
 
     items: list[T]

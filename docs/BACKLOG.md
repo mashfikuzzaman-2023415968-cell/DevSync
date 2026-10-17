@@ -12,6 +12,6 @@ authority; proposal IDs are mapped in `FR_MAPPING.md`.
 | P0-5 | Phase gate, forbidden-pattern scanner, layer checker, OpenAPI linter, RLS checker | 0 | Core | done | Taeen |
 | P0-6 | Frontend scaffold, tokens, contrast test, CSP-safe build, Playwright smoke | 0 | Core | done | Taeen |
 | P0-7 | CI workflow, pre-commit, Dependabot | 0 | Core | done | Taeen |
-| P0-8 | Design skills installed and reviewed (§0.4) | 0 | Core | todo | Taeen |
-| P0-9 | Full gate PASS | 0 | Core | todo | Taeen |
+| P0-8 | Design skills installed and reviewed (§0.4) | 0 | Core | done | Taeen |
+| P0-9 | Full gate PASS | 0 | Core | done | Taeen |
 | P1-* | Accounts, authentication, sessions, security core | 1 | Core | todo | — |

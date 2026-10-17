@@ -7,6 +7,7 @@ on:
   schedule:
     - cron: "30 20 * * *" # nightly 02:30 Asia/Dhaka: full gate (all browsers at demo phases)
 
+# Third-party actions are pinned by commit SHA (supply chain, spec §14.12); Dependabot bumps them.
 permissions:
   contents: read
 
@@ -19,8 +20,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "20"
           cache: npm
@@ -34,7 +35,7 @@ jobs:
           python3 backend/scripts/phase_gate.py --phase "$PHASE" --keep-going
       - name: Upload gate artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: gate-report
           path: |
@@ -50,7 +51,7 @@ jobs:
     # Proves the app refuses to start with insecure production settings (spec §14.18).
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Build backend image
         run: docker build -t devsync/backend:ci --target runtime backend
       - name: Insecure production config must fail

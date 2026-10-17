@@ -6,9 +6,13 @@ rules:
     message: Money must use int paisa or Decimal, never float (spec §0.2 rule 10).
     paths:
       include: ["backend/app/"]
-    pattern-either:
-      - pattern: float($X_paisa)
-      - pattern: "$X_paisa: float"
+    patterns:
+      - pattern-either:
+          - pattern: float($X)
+          - pattern: "$X: float"
+      - metavariable-regex:
+          metavariable: $X
+          regex: .*_paisa$
   - id: devsync-no-raw-request-role
     languages: [python]
     severity: ERROR

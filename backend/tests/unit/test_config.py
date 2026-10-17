@@ -33,6 +33,14 @@ def secure_production(**overrides: object) -> Settings:
     return Settings(**values)  # type: ignore[arg-type]
 
 
+@pytest.fixture
+def clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Remove every settings variable from the environment so defaults are really tested."""
+    for name in Settings.model_fields:
+        monkeypatch.delenv(name, raising=False)
+
+
+@pytest.mark.usefixtures("clean_env")
 def test_defaults_are_development_values() -> None:
     s = Settings()
     assert s.DEVSYNC_ENV is Environment.DEVELOPMENT
@@ -106,6 +114,7 @@ def test_all_problems_are_reported_together() -> None:
     assert "SMS_PROVIDER" in text
 
 
+@pytest.mark.usefixtures("clean_env")
 def test_validation_is_skipped_outside_production() -> None:
     validate_production(Settings(DEVSYNC_ENV=Environment.DEVELOPMENT, SECRET_KEY=""))
 
