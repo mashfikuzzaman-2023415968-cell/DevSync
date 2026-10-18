@@ -52,13 +52,13 @@ def _require_stack(monkeypatch: pytest.MonkeyPatch, migrated: str) -> None:
     monkeypatch.setenv("DEVSYNC_ENV", Environment.TEST.value)
 
 
-async def make_user(role: str = "DEVELOPER") -> uuid.UUID:
+async def make_user(role: str = "DEVELOPER", status: str = "ACTIVE") -> uuid.UUID:
     async with open_session(DbContext.system(), job=True) as db:
         user = User(
             email=unique_email(),
             phone_e164="+88017" + str(uuid.uuid4().int)[:8] if role != "ADMIN" else None,
             role=UserRole(role),
-            status=UserStatus.ACTIVE,
+            status=UserStatus(status),
             display_name="RLS",
             password_hash=hash_password("rls test password 1!"),
         )
@@ -383,3 +383,12 @@ async def test_file_access_rules() -> None:
     async with open_session(DbContext.guest()) as db:
         assert (await db.execute(fn(func.file_access(owned.image_file)))).first() is not None
         assert (await db.execute(fn(func.file_access(owned.cert_file)))).first() is None
+
+
+async def test_unverified_clients_cannot_see_clients_only_profiles() -> None:
+    hidden = await seed(ProfileVisibility.CLIENTS_ONLY)
+    pending = await make_user("CLIENT", status="PENDING")
+    async with as_user(pending, "CLIENT") as db:
+        assert await db.scalar(select(func.public_developer_profile(hidden.dev))) is None
+    async with as_user(hidden.client, "CLIENT") as db:  # an ACTIVE client still can
+        assert await db.scalar(select(func.public_developer_profile(hidden.dev))) is not None

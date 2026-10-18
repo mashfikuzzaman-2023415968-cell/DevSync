@@ -57,7 +57,7 @@ LANGUAGE sql STABLE SET search_path = pg_catalog, public AS $$
 $$;
 
 -- Who may see a developer's profile (and its portfolio images): PUBLIC → everyone;
--- CLIENTS_ONLY → signed-in clients, admins and the developer.
+-- CLIENTS_ONLY → signed-in, verified (ACTIVE) clients and admins, and the developer.
 CREATE FUNCTION profile_visible(p_user uuid) RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, public AS $$
   SELECT EXISTS (
@@ -65,7 +65,9 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, public AS $$
     WHERE u.id = p_user AND u.role = 'DEVELOPER' AND u.status = 'ACTIVE'
       AND (coalesce(dp.visibility, 'PUBLIC') = 'PUBLIC'
            OR app_uid() = p_user
-           OR (app_uid() IS NOT NULL AND app_role() IN ('CLIENT', 'ADMIN')))
+           OR (app_uid() IS NOT NULL AND app_role() IN ('CLIENT', 'ADMIN')
+               AND EXISTS (SELECT 1 FROM users c
+                           WHERE c.id = app_uid() AND c.status = 'ACTIVE')))
   )
 $$;
 """
