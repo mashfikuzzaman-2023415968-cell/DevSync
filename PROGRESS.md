@@ -1,11 +1,11 @@
 # DevSync progress
 
 ## Current state
-- **Current owner:** Mashfikuzzaman Taeen (team leader); Phases 4–5 are being handed to a teammate
+- **Current owner:** Salwa Baki (backend developer), Phases 4–5, from 2026-10-18 (hand-off from Mashfikuzzaman Taeen: `docs/handoffs/handoff-01-taeen-to-salwa.md`)
 - **Current phase:** 3 — Profiles, portfolio, files, skill tests
 - **Last gate result:** `PHASE 3 GATE: PASS` (2026-10-18; backend 640 tests, 95.4% coverage, security suite 219; frontend 244 tests, 72% coverage; E2E 40 + edge 13; 94 visual baselines; Lighthouse desktop 97 / mobile 96; 60 fps on the GPU)
 - **In progress:** nothing; Phase 3 complete, tagged `phase-3` and pushed (`main`, `phase-3`)
-- **Very next step:** hand-off document for Phases 4–5 (`docs/handoffs/handoff-01-…`) and `docs/OWNERSHIP.md`; then Phase 4 (projects and the CPM planner) in Plan Mode by the new owner
+- **Very next step:** Salwa: hand-off meeting, run the stack from scratch and confirm `make gate PHASE=3` passes on Salwa’s laptop, then start Phase 4 (projects and the CPM planner) in Plan Mode. Demo 1 is Mon 2 Nov 2026 (Phases 0–5).
 - **Open human tasks:** review the 128 drafted test questions for accuracy (D34); tester's human check of the Phase 3 security review
 
 ## Phase table
@@ -15,8 +15,8 @@
 | 1 Accounts & security core | Taeen | done | PASS | 2026-10-17 | phase-1 |
 | 2 Design system & landing | Taeen | done | PASS | 2026-10-17 | phase-2 |
 | 3 Profiles & skill tests | Taeen | done | PASS | 2026-10-18 | phase-3 |
-| 4 Projects & CPM | — | not started | — | — | — |
-| 5 Marketplace & filtering | — | not started | — | — | — |
+| 4 Projects & CPM | Salwa | not started | — | — | — |
+| 5 Marketplace & filtering | Salwa | not started | — | — | — |
 | 6–15 | — | not started | — | — | — |
 
 ## Gate log (newest first, appended by `make gate`)
@@ -41,7 +41,8 @@
 - This laptop runs Apache on port 80: for `make up`, set `HTTP_PORT=8080` in `.env` or stop Apache.
 - `make certs` produced a self-signed certificate; install mkcert before Demo 1 (D3).
 - Node 20 is end-of-life; move the team to Node 22 LTS before Demo 1 (D15).
-- Tester's human check of `docs/security-reviews/phase-00.md`, `phase-01.md` and `phase-02.md` is pending (Sara).
+- Tester's human check of `docs/security-reviews/phase-00.md` to `phase-03.md` is pending (Sara).
+- The 128 skill-test questions need a human accuracy review (D34).
 - The gate's frame-rate step needs a GPU (`/dev/dri`); run the gate on a laptop (D28). Long gate runs are best started with `systemd-run --user` so closing a terminal or chat doesn't kill them.
 - The 2021 STI paper is cited without a link (no DOI found); add the IEEE Xplore URL when known.
 - Existing dev databases: run `make migrate` (migration 0002); create an admin with `make create-admin`.
