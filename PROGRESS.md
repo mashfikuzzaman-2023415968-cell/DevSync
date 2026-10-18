@@ -1,11 +1,12 @@
 # DevSync progress
 
 ## Current state
-- **Current owner:** Mashfikuzzaman Taeen (team leader)
-- **Current phase:** 2 — Design system, app shell, landing page
-- **Last gate result:** `PHASE 2 GATE: PASS` (2026-10-17; backend 445 tests, 87.7% coverage, security suite 82; frontend 218 tests; E2E 36; 82 visual baselines; Lighthouse desktop 97 / mobile 96; 60 fps on the GPU)
-- **In progress:** nothing; Phase 2 complete, tagged `phase-2` and pushed to GitHub (`main`, `phase-2`)
-- **Very next step:** Phase 3 (profiles, portfolio, files, skill tests) in Plan Mode; the student plans manual testing of Phases 0–2 first
+- **Current owner:** Mashfikuzzaman Taeen (team leader); Phases 4–5 are being handed to a teammate
+- **Current phase:** 3 — Profiles, portfolio, files, skill tests
+- **Last gate result:** `PHASE 3 GATE: PASS` (2026-10-18; backend 640 tests, 95.4% coverage, security suite 219; frontend 244 tests, 72% coverage; E2E 40 + edge 13; 94 visual baselines; Lighthouse desktop 97 / mobile 96; 60 fps on the GPU)
+- **In progress:** nothing; Phase 3 complete, tagged `phase-3` and pushed (`main`, `phase-3`)
+- **Very next step:** hand-off document for Phases 4–5 (`docs/handoffs/handoff-01-…`) and `docs/OWNERSHIP.md`; then Phase 4 (projects and the CPM planner) in Plan Mode by the new owner
+- **Open human tasks:** review the 128 drafted test questions for accuracy (D34); tester's human check of the Phase 3 security review
 
 ## Phase table
 | Phase | Owner | Status | Gate | Date | Tag |
@@ -13,7 +14,7 @@
 | 0 Foundations | Taeen | done | PASS | 2026-10-17 | phase-0 |
 | 1 Accounts & security core | Taeen | done | PASS | 2026-10-17 | phase-1 |
 | 2 Design system & landing | Taeen | done | PASS | 2026-10-17 | phase-2 |
-| 3 Profiles & skill tests | — | not started | — | — | — |
+| 3 Profiles & skill tests | Taeen | done | PASS | 2026-10-18 | phase-3 |
 | 4 Projects & CPM | — | not started | — | — | — |
 | 5 Marketplace & filtering | — | not started | — | — | — |
 | 6–15 | — | not started | — | — | — |
@@ -22,6 +23,7 @@
 | Finished (UTC) | Phase | Result | Tests |
 |---|---|---|---|
 <!-- gate-log -->
+| 2026-10-18T06:26:08+00:00 | phase 3 | PASS | backend 640 / frontend 244 tests |
 | 2026-10-18T06:07:55+00:00 | phase 3 | FAIL (step 3) | backend 640 / frontend 244 tests |
 | 2026-10-17T16:43:18+00:00 | phase 2 | PASS | backend 445 / frontend 218 tests |
 | 2026-10-17T16:20:47+00:00 | phase 2 | FAIL (step 7) | backend 445 / frontend 0 tests |
@@ -45,6 +47,23 @@
 - Existing dev databases: run `make migrate` (migration 0002); create an admin with `make create-admin`.
 
 ## Session log (newest first)
+### 2026-10-18 — Taeen (with Claude Code), Phase 3
+- **Done:** Phase 3 plan approved (`docs/plans/phase-03.md`); migration 0004 (profiles, skills,
+  files, portfolio, certificates, external reviews, question bank, timed attempts, skill
+  evidence) with RLS, guard triggers and SECURITY DEFINER test functions; 8 skills and 128 seeded
+  questions; upload pipeline (`app/uploads/`: signatures, polyglot/PDF checks, Pillow re-encode
+  without EXIF/GPS, signed 5-minute links, Nginx `X-Accel-Redirect`); profile, portfolio,
+  evidence, file and skill-test APIs; orphan-file cleanup and expired-attempt jobs; screens:
+  Profile & portfolio (autosave, drag reorder, dropzone), Skill challenges, timed test, public
+  profile `/d/:id`, client organisation in Settings; real dashboard checklist.
+- **Security review:** `docs/security-reviews/phase-03.md`, 0 unresolved high, 6 findings fixed
+  (definer `is_system()` pitfall, self-verification guard, unverified clients, PDF escapes,
+  parallel starts, upload volume permissions).
+- **Also fixed:** sign-out race (guard redirected to /login before navigating home), visibility
+  PATCH 500, autosave retry loop, coverage measurement under greenlets. Decisions D29–D37.
+- **Gate:** first run failed on lint/types in a script; second run PASS.
+- **Next:** hand-off for Phases 4–5; question-bank review by a team member.
+
 ### 2026-10-17 — Taeen (with Claude Code), Phase 2
 - **Done:** Phase 2 plan approved (`docs/plans/phase-02.md`); design tokens (light/dark), theme
   and reduced-motion providers, motion system + lint rule; component library on Radix; role
