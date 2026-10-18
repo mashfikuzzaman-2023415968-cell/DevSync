@@ -2,7 +2,8 @@
 
 Rules (a layer may import only the layers listed):
 - api          → services, schemas, core, db (only to open the request's DB session)
-- services     → repositories, models, schemas, algorithms, integrations, uploads, db, core, services
+- services     → repositories, models, schemas, algorithms, integrations, uploads, db, core,
+                 services
 - repositories → models, db, core
 - models       → db, core
 - schemas      → core, schemas

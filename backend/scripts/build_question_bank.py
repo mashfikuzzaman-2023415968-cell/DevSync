@@ -10,13 +10,14 @@ import hashlib
 import json
 import random
 import sys
+from typing import Any
 
 
-def Q(text: str, options: list[str], answer: int, d: int = 2) -> dict:  # noqa: N802
+def Q(text: str, options: list[str], answer: int, d: int = 2) -> dict[str, Any]:  # noqa: N802
     return {"text": text, "options": options, "answer": answer, "difficulty": d}
 
 
-skills = [
+skills: list[dict[str, Any]] = [
     {
         "name": "React",
         "domain": "FRONTEND",
