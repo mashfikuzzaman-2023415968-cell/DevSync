@@ -181,6 +181,27 @@ export const routes: RouteObject[] = [
             handle: { title: "Dashboard" },
             lazy: async () => ({ Component: (await import("@/features/home/ClientHome")).default }),
           },
+          {
+            path: "client/projects",
+            handle: { title: "My projects" },
+            lazy: async () => ({
+              Component: (await import("@/features/projects/MyProjectsPage")).default,
+            }),
+          },
+          {
+            path: "client/projects/new",
+            handle: { title: "Create project" },
+            lazy: async () => ({
+              Component: (await import("@/features/projects/CreateProjectPage")).default,
+            }),
+          },
+          {
+            path: "client/projects/:id/plan",
+            handle: { title: "Project plan" },
+            lazy: async () => ({
+              Component: (await import("@/features/projects/PlanPage")).default,
+            }),
+          },
           ...upcoming("/client/"),
         ],
       },

@@ -59,6 +59,15 @@ See spec §14.2. Full table to be completed in Phase 14.
 | Mass assignment (`user_id`, `status`, `position`, `score`, `correct`) → 422; IDOR → 404; injection corpus stored as inert text; no email/phone on public profiles | `app/schemas/profiles.py`, services | `tests/security/test_profiles_files.py`, `test_authz_matrix.py` |
 | Larger body limit only for POSTs to the upload routes; JSON stays 256 KB | `app/core/middleware.py` | `test_json_endpoints_keep_the_small_body_limit`, oversize test |
 
+## Controls implemented (Phase 4)
+| Control | Where | Tests |
+|---|---|---|
+| RLS on all 7 project tables (ENABLE + FORCE): drafts private to their client, non-DRAFT projects public, writes owner-only; child tables and the plan baseline follow project visibility via `project_visible()`/`is_project_client()` SECURITY DEFINER helpers (pinned `search_path`, EXECUTE revoked from PUBLIC) | `alembic/versions/0005_projects_planning.py` | `tests/integration/test_rls_projects.py` |
+| Deny-by-default authz: `project.create/write/read/cancel`, `payment.verify`; ownership deferred to the service and returned as 404 (existence not leaked); admins can read/cancel but not edit others' drafts | `app/core/authz.py`, `app/services/projects.py` | `tests/security/test_authz_matrix.py`, `test_projects.py` (IDOR → 404) |
+| Optimistic concurrency: `PATCH /projects/{id}` requires `If-Match`; stale write → 409 `VERSION_CONFLICT` (prevents lost updates / blind overwrite) | `app/api/v1/projects.py`, `app/services/projects.py` | `test_projects.py` version-conflict test |
+| Publish guards in service **and** DB trigger: verified payment method (D39), ≥1 slot, shares = 100%, acyclic plan, schedule-risk ack (D40); baseline identity/content frozen by trigger | migration 0005, `app/services/projects.py` | `test_publish_requires_payment_then_succeeds`, `test_editing_after_publish_is_rejected` |
+| Mass assignment (`client_id`, `status`, `version`) → 422; CPM cycle → 422 (not a hang); whole-set replaces validated (Σ shares, Σ counts); no raw SQL (ORM only) | `app/schemas/projects.py`, `app/algorithms/cpm.py` | `test_projects.py`, `tests/algorithms/test_cpm.py` |
+
 ## Dependency update policy (§14.21)
 Dependabot weekly (pip, npm, Docker, GitHub Actions). Critical vulnerabilities fixed within
 48 hours, high within 7 days. `make lock` re-resolves Python locks; the gate fails on unfixed

@@ -62,4 +62,28 @@ Skill tests (Developer, D33):
   `SUBMITTED` after the deadline or submit.
 - `POST /attempts/{id}/submit` → `{score, correct, total, added_to_profile}`; 409 if submitted.
 
+## Phase 4 endpoints — projects and the CPM planner (spec §10.2)
+
+Clients own projects; drafts are private until published for bidding. All writes are CLIENT-only
+and object-scoped (a foreign project → 404); reads are the owning client or an admin.
+
+- `GET /projects` → the caller's projects (`ProjectListItem[]`). `POST /projects` → create a DRAFT
+  (`ProjectCreate` → `ProjectOut`).
+- `GET /projects/{id}` → `ProjectOut`. `PATCH /projects/{id}` → edit a DRAFT; requires an
+  `If-Match: <version>` header (optimistic concurrency; stale → 409 `VERSION_CONFLICT`).
+  `DELETE /projects/{id}` → delete a DRAFT.
+- `PUT /projects/{id}/slots` → whole-set replace of skill slots (Σ count = team size, 2–10).
+  `PUT /projects/{id}/milestones` → whole-set replace (Σ `share_bp` = 10000). `PUT
+  /projects/{id}/dependencies` → whole-set replace of finish-to-start edges (acyclic; a cycle →
+  422 with the cycle listed).
+- `POST /projects/{id}/plan/preview` → run CPM on an unsaved plan (`PlanPreviewIn` →
+  `CpmPreviewOut`: schedule, duration, all critical paths, warnings; no persistence). `GET
+  /projects/{id}/plan` → the current/baseline schedule (`PlanOut`).
+- `POST /projects/{id}/publish` → DRAFT → BIDDING after the §8 guards (verified payment method,
+  ≥1 slot, shares = 100%, acyclic; `acknowledge_schedule_risk` required when CPM > deadline, D40);
+  writes plan baseline v1. `POST /projects/{id}/extend-bidding` → extend the bidding deadline
+  (capped). `POST /projects/{id}/cancel` → cancel with a reason (owner or admin).
+- `POST /me/payment-method/verify` → mark the client's simulated payment method verified (D39;
+  CLIENT-only, idempotent).
+
 Error envelope: `{"error": {"code", "message", "fields"?, "request_id"}}`.

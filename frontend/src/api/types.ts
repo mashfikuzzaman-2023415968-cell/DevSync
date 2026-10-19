@@ -31,3 +31,22 @@ export type Attempt = Schemas["AttemptOut"];
 export type AttemptQuestion = Schemas["AttemptQuestion"];
 export type AnswerAccepted = Schemas["AnswerAccepted"];
 export type AttemptResult = Schemas["AttemptResult"];
+
+// Projects and the CPM planner (spec §7.3, §9.10, §10.2)
+export type Project = Schemas["ProjectOut"];
+export type ProjectCreate = Schemas["ProjectCreate"];
+export type ProjectUpdate = Schemas["ProjectUpdate"];
+export type ProjectListItem = Schemas["ProjectListItem"];
+export type ProjectStatus = ProjectListItem["status"];
+export type Slot = Schemas["SlotOut"];
+export type SlotIn = Schemas["SlotIn"];
+export type Milestone = Schemas["MilestoneOut"];
+export type MilestoneIn = Schemas["MilestoneIn"];
+export type Dependency = Schemas["DependencyIn"];
+export type PreviewMilestone = Schemas["PreviewMilestone"];
+export type CpmNode = Schemas["CpmNodeOut"];
+export type CpmPreview = Schemas["CpmPreviewOut"];
+export type Plan = Schemas["PlanOut"];
+export type PlanPreviewIn = Schemas["PlanPreviewIn"];
+export type PublishIn = Schemas["PublishIn"];
+export type CancelIn = Schemas["CancelIn"];

@@ -2,11 +2,11 @@
 
 ## Current state
 - **Current owner:** Salwa Baki (backend developer), Phases 4–5, from 2026-10-18 (hand-off from Mashfikuzzaman Taeen: `docs/handoffs/handoff-01-taeen-to-salwa.md`)
-- **Current phase:** 3 — Profiles, portfolio, files, skill tests
-- **Last gate result:** `PHASE 3 GATE: PASS` (2026-10-18; backend 640 tests, 95.4% coverage, security suite 219; frontend 244 tests, 72% coverage; E2E 40 + edge 13; 94 visual baselines; Lighthouse desktop 97 / mobile 96; 60 fps on the GPU)
-- **In progress:** nothing; Phase 3 complete, tagged `phase-3` and pushed (`main`, `phase-3`)
-- **Very next step:** Salwa: hand-off meeting, run the stack from scratch and confirm `make gate PHASE=3` passes on Salwa’s laptop, then start Phase 4 (projects and the CPM planner) in Plan Mode. Demo 1 is Mon 2 Nov 2026 (Phases 0–5).
-- **Open human tasks:** review the 128 drafted test questions for accuracy (D34); tester's human check of the Phase 3 security review
+- **Current phase:** 4 — Projects and the CPM planner
+- **Last gate result:** `PHASE 3 GATE: PASS` (2026-10-18). Phase 4 gate not yet run end-to-end (needs the Docker stack).
+- **In progress:** Phase 4 is code-complete on branch `phase-4`. Backend (migration 0005, CPM/forecast algorithms, project API, authz, 34 backend + 35 algorithm tests) done earlier; this session added the full **frontend**: create-project wizard (6 steps, live CPM preview, D40 schedule-risk ack), plan page, My Projects + cancel dialog, custom-SVG `Gantt`/`DependencyGraph`/`CpmTable`, data hooks, routes/nav wired. Frontend: 267 tests pass, coverage ≥70% on all four metrics (lines 75.0, branches 70.8, funcs 70.4, stmts 73.8); lint, types, and production build all green. Security review written (0 unresolved high).
+- **Very next step:** run `make gate PHASE=4` with the Docker test stack up (the RAM-heavy/flaky step on the 5.6 GB laptop — regenerate visual baselines for the two new client screens with `make visual-update` if the visual step flags them), confirm `PHASE 4 GATE: PASS`, then commit `phase-4: …`, tag `phase-4`, and hand to the user to push. Demo 1 is Mon 2 Nov 2026 (Phases 0–5).
+- **Open human tasks:** review the 128 drafted test questions for accuracy (D34); tester's human check of the Phase 3 **and** Phase 4 security reviews; sanity-check D39 (simulated payment-method verification) with Taeen.
 
 ## Phase table
 | Phase | Owner | Status | Gate | Date | Tag |
@@ -15,7 +15,7 @@
 | 1 Accounts & security core | Taeen | done | PASS | 2026-10-17 | phase-1 |
 | 2 Design system & landing | Taeen | done | PASS | 2026-10-17 | phase-2 |
 | 3 Profiles & skill tests | Taeen | done | PASS | 2026-10-18 | phase-3 |
-| 4 Projects & CPM | Salwa | not started | — | — | — |
+| 4 Projects & CPM | Salwa | in progress | — | — | — |
 | 5 Marketplace & filtering | Salwa | not started | — | — | — |
 | 6–15 | — | not started | — | — | — |
 
@@ -23,6 +23,10 @@
 | Finished (UTC) | Phase | Result | Tests |
 |---|---|---|---|
 <!-- gate-log -->
+| 2026-10-19T06:08:02+00:00 | phase 3 | FAIL (step 13) | backend 674 / frontend 244 tests |
+| 2026-10-19T05:27:47+00:00 | phase 3 | FAIL (step 12) | backend 674 / frontend - tests |
+| 2026-10-19T05:09:26+00:00 | phase 3 | FAIL (step 12) | backend 674 / frontend - tests |
+| 2026-10-19T04:44:45+00:00 | phase 3 | FAIL (step 6) | backend - / frontend - tests |
 | 2026-10-18T20:25:28+00:00 | phase 3 | FAIL (step 7) | backend - / frontend - tests |
 | 2026-10-18T06:26:08+00:00 | phase 3 | PASS | backend 640 / frontend 244 tests |
 | 2026-10-18T06:07:55+00:00 | phase 3 | FAIL (step 3) | backend 640 / frontend 244 tests |
@@ -49,6 +53,27 @@
 - Existing dev databases: run `make migrate` (migration 0002); create an admin with `make create-admin`.
 
 ## Session log (newest first)
+### 2026-10-19 — Salwa (with Claude Code), Phase 4
+- **Done (backend, earlier in the day):** pure CPM + forecast algorithms (`app/algorithms/`,
+  §18.2 golden verified, 300-milestone CPM < 50 ms); migration `0005` (7 tables, FORCE RLS,
+  `is_project_client`/`project_visible` definers, baseline-immutability + publish-guard triggers);
+  project schemas/repository/service (draft CRUD, whole-set slot/milestone/dependency replace,
+  CPM-cycle → 422, publish §8 guards, extend-bidding cap, cancel, payment-verify D39); 14 routes
+  with OpenAPI examples; authz policies + matrix rows; 34 backend + 35 algorithm tests; ERD
+  generator (`make erd`) and `phase4_checks`. Decisions D38–D42.
+- **Done (frontend, this session):** regenerated `schema.d.ts`; `features/projects/api.ts` (15
+  TanStack Query hooks); custom-SVG `Gantt`, `DependencyGraph`, `CpmTable` (critical path in rose,
+  slack, today/deadline lines, keyboard-focusable, table alternative); 6-step create-project
+  wizard with live CPM preview and D40 schedule-risk acknowledgement; plan page; My Projects +
+  reason-collecting cancel dialog; `TagPicker`; routes/nav wired (`phase:4` flags dropped); new
+  client screens registered in `e2e/screens.ts`. Added a `headers` option to the API client for
+  `If-Match`. 267 frontend tests pass; coverage ≥70% on all four metrics; lint/types/build green.
+- **Security review:** `docs/security-reviews/phase-04.md`, 0 unresolved high, no fixes needed
+  (new surface reused the Phase 1–3 authz/RLS/schema patterns).
+- **Next:** run `make gate PHASE=4` with the Docker stack up (regenerate visual baselines for the
+  two new client screens if the visual step flags them), then commit/tag `phase-4` for the user to
+  push.
+
 ### 2026-10-18 — Taeen (with Claude Code), Phase 3
 - **Done:** Phase 3 plan approved (`docs/plans/phase-03.md`); migration 0004 (profiles, skills,
   files, portfolio, certificates, external reviews, question bank, timed attempts, skill

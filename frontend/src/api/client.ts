@@ -68,6 +68,8 @@ export interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   signal?: AbortSignal;
+  /** Extra request headers (e.g. `If-Match` for optimistic concurrency). */
+  headers?: Record<string, string>;
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -92,6 +94,7 @@ async function send<T>(path: string, method: string, options: RequestOptions): P
   const headers: Record<string, string> = { Accept: "application/json" };
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
   if (UNSAFE.has(method)) headers["X-CSRF-Token"] = await ensureCsrf();
+  if (options.headers) Object.assign(headers, options.headers);
 
   const controller = new AbortController();
   const timer = setTimeout(() => {
