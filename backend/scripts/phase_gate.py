@@ -707,6 +707,7 @@ def step_phase_checks(g: Gate) -> str:
         1: phase1_checks,
         2: phase2_checks,
         3: phase3_checks,
+        4: phase4_checks,
     }
     if g.phase not in checks:
         raise StepFailed(f"no PHASE_CHECKS defined for phase {g.phase}")
@@ -810,6 +811,33 @@ def phase3_checks(g: Gate) -> str:
     return (
         f"{p2}; polyglot uploads rejected; signed URL expiry and tamper refused; "
         "answers absent from test responses; question bank seed valid"
+    )
+
+
+def phase4_checks(g: Gate) -> str:
+    """Spec §17 Phase 4 gate checks: the §18.2 "Online ordering system" plan reproduces the
+    documented CPM (duration 24, the critical path and Frontend's slack 4), a dependency cycle
+    is rejected, the publish guards hold, and draft projects stay private in the database."""
+    p3 = phase3_checks(g)
+    in_tests(
+        [
+            "pytest", "-q", "-p", "no:cacheprovider",
+            "tests/algorithms/test_cpm.py::test_ordering_system_matches_spec_18_2",
+            "tests/algorithms/test_cpm.py::test_cycle_is_detected_and_reported_in_order",
+            "tests/security/test_projects.py::test_preview_matches_spec_18_2",
+            "tests/security/test_projects.py::test_dependency_cycle_rejected",
+            "tests/security/test_projects.py::test_publish_requires_payment_then_succeeds",
+            "tests/security/test_projects.py::test_editing_after_publish_is_rejected",
+            "tests/integration/test_rls_projects.py::test_draft_is_private_but_bidding_is_public",
+        ]
+    )  # fmt: skip
+    if not (ROOT / "docs" / "plans" / "phase-04.md").exists():
+        raise StepFailed("docs/plans/phase-04.md is missing")
+    if not (ROOT / "docs" / "design" / "erd.svg").exists():
+        raise StepFailed("docs/design/erd.svg is missing (run `make erd`)")
+    return (
+        f"{p3}; §18.2 CPM golden values verified; dependency cycle rejected; publish guards "
+        "hold; draft projects private in the DB; ERD generated"
     )
 
 

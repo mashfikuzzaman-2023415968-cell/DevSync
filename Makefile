@@ -45,6 +45,9 @@ lock: ## Re-resolve hashed Python lock files (DECISIONS D1)
 openapi: ## Regenerate docs/api/openapi.json from the code
 	$(COMPOSE_TEST) run --rm --no-deps -v $(CURDIR)/docs:/docs-rw -e OPENAPI_PATH=/docs-rw/api/openapi.json tests python scripts/check_openapi.py --write
 
+erd: ## Generate docs/design/erd.svg from the models (spec §17.0)
+	$(COMPOSE_TEST) run --rm --no-deps -v $(CURDIR)/docs:/docs-rw -e ERD_PATH=/docs-rw/design/erd.svg tests python scripts/gen_erd.py
+
 test-stack-up: ## Start the ephemeral test stack (used by tests and the gate)
 	$(COMPOSE_TEST) up -d --build --wait postgres redis api nginx
 
@@ -92,5 +95,5 @@ visual-update: ## Re-create visual baselines in the pinned image (review the dif
 create-admin: ## Create an administrator (prints TOTP setup and recovery codes once)
 	$(COMPOSE) run --rm worker python scripts/create_admin.py
 
-seed-demo fuzz zap load chaos demo-check demo-up demo-reset demo-preflight erd experiments backup restore-drill docs deps-update ledger-report: ## Arrive in later phases
+seed-demo fuzz zap load chaos demo-check demo-up demo-reset demo-preflight experiments backup restore-drill docs deps-update ledger-report: ## Arrive in later phases
 	@echo "make $@: available from the phase that builds it (see DEVSYNC_BUILD_SPEC.md §16.6 / §17)"

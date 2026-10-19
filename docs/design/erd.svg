@@ -1,0 +1,463 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1210" height="3126" viewBox="0 0 1210 3126" font-family="sans-serif" font-size="12">
+<rect width="1210" height="3126" fill="#f7f8fa"/>
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#94a3b8"/></marker></defs>
+<line x1="155" y1="573" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="455" y1="510" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="755" y1="537" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="1055" y1="501" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="1055" y1="501" x2="755" y2="111" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="155" y1="828" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="455" y1="846" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="755" y1="918" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="1055" y1="864" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="155" y1="1236" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="455" y1="1218" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="755" y1="1209" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="1055" y1="1218" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="155" y1="1626" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="455" y1="1500" x2="755" y2="111" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="755" y1="1464" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="1055" y1="1536" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="155" y1="1989" x2="755" y2="111" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="455" y1="1980" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="755" y1="2016" x2="755" y2="918" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="755" y1="2016" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="755" y1="2016" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="1055" y1="2025" x2="755" y2="918" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="1055" y1="2025" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="1055" y1="2025" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="155" y1="2361" x2="155" y2="1626" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="455" y1="2307" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="455" y1="2307" x2="155" y2="1626" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="755" y1="2280" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="755" y1="2280" x2="155" y2="1626" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="1055" y1="2271" x2="755" y2="918" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="1055" y1="2271" x2="1055" y2="1218" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="155" y1="2652" x2="155" y2="1626" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="155" y1="2652" x2="755" y2="111" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="455" y1="2706" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="455" y1="2706" x2="155" y2="1989" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="755" y1="2643" x2="155" y2="2361" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="755" y1="2643" x2="155" y2="1626" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="755" y1="2643" x2="155" y2="2361" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="1055" y1="2634" x2="155" y2="2361" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="1055" y1="2634" x2="755" y2="111" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="155" y1="2988" x2="455" y2="2706" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="155" y1="2988" x2="1055" y2="210" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<line x1="155" y1="2988" x2="755" y2="111" stroke="#cbd5e1" stroke-width="1" marker-end="url(#a)"/>
+<rect x="40" y="40" width="230" height="214" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="40" y="40" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="50" y="58" fill="#ffffff" font-weight="bold">email_outbox</text>
+<text x="50" y="80" fill="#0f172a">to_email: text</text>
+<text x="50" y="98" fill="#0f172a">template: text</text>
+<text x="50" y="116" fill="#0f172a">payload: jsonb</text>
+<text x="50" y="134" fill="#0f172a">status: enum</text>
+<text x="50" y="152" fill="#0f172a">attempts: smallinteger</text>
+<text x="50" y="170" fill="#0f172a">next_attempt_at: datetime</text>
+<text x="50" y="188" fill="#0f172a">last_error: text</text>
+<text x="50" y="206" fill="#0f172a">id: uuid  PK</text>
+<text x="50" y="224" fill="#0f172a">created_at: datetime</text>
+<text x="50" y="242" fill="#0f172a">updated_at: datetime</text>
+<rect x="340" y="40" width="230" height="142" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="340" y="40" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="350" y="58" fill="#ffffff" font-weight="bold">platform_settings</text>
+<text x="350" y="80" fill="#0f172a">version: integer</text>
+<text x="350" y="98" fill="#0f172a">values: jsonb</text>
+<text x="350" y="116" fill="#0f172a">changed_by: uuid</text>
+<text x="350" y="134" fill="#0f172a">reason: text</text>
+<text x="350" y="152" fill="#0f172a">created_at: datetime</text>
+<text x="350" y="170" fill="#0f172a">id: uuid  PK</text>
+<rect x="640" y="40" width="230" height="142" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="640" y="40" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="650" y="58" fill="#ffffff" font-weight="bold">skills</text>
+<text x="650" y="80" fill="#0f172a">name: text</text>
+<text x="650" y="98" fill="#0f172a">domain: enum</text>
+<text x="650" y="116" fill="#0f172a">active: boolean</text>
+<text x="650" y="134" fill="#0f172a">id: uuid  PK</text>
+<text x="650" y="152" fill="#0f172a">created_at: datetime</text>
+<text x="650" y="170" fill="#0f172a">updated_at: datetime</text>
+<rect x="940" y="40" width="230" height="340" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="940" y="40" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="950" y="58" fill="#ffffff" font-weight="bold">users</text>
+<text x="950" y="80" fill="#0f172a">email: citext</text>
+<text x="950" y="98" fill="#0f172a">phone_e164: text</text>
+<text x="950" y="116" fill="#0f172a">password_hash: text</text>
+<text x="950" y="134" fill="#0f172a">role: enum</text>
+<text x="950" y="152" fill="#0f172a">status: enum</text>
+<text x="950" y="170" fill="#0f172a">display_name: text</text>
+<text x="950" y="188" fill="#0f172a">email_verified_at: datetime</text>
+<text x="950" y="206" fill="#0f172a">phone_verified_at: datetime</text>
+<text x="950" y="224" fill="#0f172a">payment_verified_at: datetime</text>
+<text x="950" y="242" fill="#0f172a">failed_login_count: smallinteger</text>
+<text x="950" y="260" fill="#0f172a">first_failed_login_at: datetime</text>
+<text x="950" y="278" fill="#0f172a">locked_until: datetime</text>
+<text x="950" y="296" fill="#0f172a">last_login_at: datetime</text>
+<text x="950" y="314" fill="#0f172a">deleted_at: datetime</text>
+<text x="950" y="332" fill="#0f172a">id: uuid  PK</text>
+<text x="950" y="350" fill="#0f172a">created_at: datetime</text>
+<text x="950" y="368" fill="#0f172a">updated_at: datetime</text>
+<rect x="40" y="430" width="230" height="286" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="40" y="430" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="50" y="448" fill="#ffffff" font-weight="bold">audit_log</text>
+<text x="50" y="470" fill="#0f172a">seq: biginteger</text>
+<text x="50" y="488" fill="#0f172a">actor_id: uuid  FK → users</text>
+<text x="50" y="506" fill="#0f172a">actor_role: text</text>
+<text x="50" y="524" fill="#0f172a">action: text</text>
+<text x="50" y="542" fill="#0f172a">entity_type: text</text>
+<text x="50" y="560" fill="#0f172a">entity_id: text</text>
+<text x="50" y="578" fill="#0f172a">before: jsonb</text>
+<text x="50" y="596" fill="#0f172a">after: jsonb</text>
+<text x="50" y="614" fill="#0f172a">ip: inet</text>
+<text x="50" y="632" fill="#0f172a">request_id: text</text>
+<text x="50" y="650" fill="#0f172a">at: datetime</text>
+<text x="50" y="668" fill="#0f172a">prev_hash: largebinary</text>
+<text x="50" y="686" fill="#0f172a">hash: largebinary</text>
+<text x="50" y="704" fill="#0f172a">id: uuid  PK</text>
+<rect x="340" y="430" width="230" height="160" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="340" y="430" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="350" y="448" fill="#ffffff" font-weight="bold">client_profiles</text>
+<text x="350" y="470" fill="#0f172a">user_id: uuid  FK → users</text>
+<text x="350" y="488" fill="#0f172a">organization: text</text>
+<text x="350" y="506" fill="#0f172a">description: text</text>
+<text x="350" y="524" fill="#0f172a">website: text</text>
+<text x="350" y="542" fill="#0f172a">id: uuid  PK</text>
+<text x="350" y="560" fill="#0f172a">created_at: datetime</text>
+<text x="350" y="578" fill="#0f172a">updated_at: datetime</text>
+<rect x="640" y="430" width="230" height="214" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="640" y="430" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="650" y="448" fill="#ffffff" font-weight="bold">developer_profiles</text>
+<text x="650" y="470" fill="#0f172a">user_id: uuid  FK → users</text>
+<text x="650" y="488" fill="#0f172a">headline: text</text>
+<text x="650" y="506" fill="#0f172a">bio: text</text>
+<text x="650" y="524" fill="#0f172a">hours_per_week: smallinteger</text>
+<text x="650" y="542" fill="#0f172a">github_username: text</text>
+<text x="650" y="560" fill="#0f172a">timezone: text</text>
+<text x="650" y="578" fill="#0f172a">visibility: enum</text>
+<text x="650" y="596" fill="#0f172a">id: uuid  PK</text>
+<text x="650" y="614" fill="#0f172a">created_at: datetime</text>
+<text x="650" y="632" fill="#0f172a">updated_at: datetime</text>
+<rect x="940" y="430" width="230" height="142" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="940" y="430" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="950" y="448" fill="#ffffff" font-weight="bold">developer_skills</text>
+<text x="950" y="470" fill="#0f172a">user_id: uuid  FK → users</text>
+<text x="950" y="488" fill="#0f172a">skill_id: uuid  FK → skills</text>
+<text x="950" y="506" fill="#0f172a">self_level: smallinteger</text>
+<text x="950" y="524" fill="#0f172a">id: uuid  PK</text>
+<text x="950" y="542" fill="#0f172a">created_at: datetime</text>
+<text x="950" y="560" fill="#0f172a">updated_at: datetime</text>
+<rect x="40" y="766" width="230" height="124" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="40" y="766" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="50" y="784" fill="#ffffff" font-weight="bold">devices_seen</text>
+<text x="50" y="806" fill="#0f172a">user_id: uuid  FK → users</text>
+<text x="50" y="824" fill="#0f172a">fingerprint_hash: largebinary</text>
+<text x="50" y="842" fill="#0f172a">first_seen: datetime</text>
+<text x="50" y="860" fill="#0f172a">last_seen: datetime</text>
+<text x="50" y="878" fill="#0f172a">id: uuid  PK</text>
+<rect x="340" y="766" width="230" height="160" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="340" y="766" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="350" y="784" fill="#ffffff" font-weight="bold">email_tokens</text>
+<text x="350" y="806" fill="#0f172a">user_id: uuid  FK → users</text>
+<text x="350" y="824" fill="#0f172a">purpose: enum</text>
+<text x="350" y="842" fill="#0f172a">token_hash: largebinary</text>
+<text x="350" y="860" fill="#0f172a">expires_at: datetime</text>
+<text x="350" y="878" fill="#0f172a">consumed_at: datetime</text>
+<text x="350" y="896" fill="#0f172a">created_at: datetime</text>
+<text x="350" y="914" fill="#0f172a">id: uuid  PK</text>
+<rect x="640" y="766" width="230" height="304" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="640" y="766" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="650" y="784" fill="#ffffff" font-weight="bold">files</text>
+<text x="650" y="806" fill="#0f172a">owner_id: uuid  FK → users</text>
+<text x="650" y="824" fill="#0f172a">kind: enum</text>
+<text x="650" y="842" fill="#0f172a">storage_key: uuid</text>
+<text x="650" y="860" fill="#0f172a">original_name: text</text>
+<text x="650" y="878" fill="#0f172a">mime_type: text</text>
+<text x="650" y="896" fill="#0f172a">size_bytes: biginteger</text>
+<text x="650" y="914" fill="#0f172a">width: integer</text>
+<text x="650" y="932" fill="#0f172a">height: integer</text>
+<text x="650" y="950" fill="#0f172a">sha256: text</text>
+<text x="650" y="968" fill="#0f172a">scan_status: enum</text>
+<text x="650" y="986" fill="#0f172a">attached_at: datetime</text>
+<text x="650" y="1004" fill="#0f172a">deleted_at: datetime</text>
+<text x="650" y="1022" fill="#0f172a">id: uuid  PK</text>
+<text x="650" y="1040" fill="#0f172a">created_at: datetime</text>
+<text x="650" y="1058" fill="#0f172a">updated_at: datetime</text>
+<rect x="940" y="766" width="230" height="196" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="940" y="766" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="950" y="784" fill="#ffffff" font-weight="bold">idempotency_keys</text>
+<text x="950" y="806" fill="#0f172a">user_id: uuid  FK → users</text>
+<text x="950" y="824" fill="#0f172a">key: text</text>
+<text x="950" y="842" fill="#0f172a">request_hash: largebinary</text>
+<text x="950" y="860" fill="#0f172a">response: jsonb</text>
+<text x="950" y="878" fill="#0f172a">status_code: smallinteger</text>
+<text x="950" y="896" fill="#0f172a">expires_at: datetime</text>
+<text x="950" y="914" fill="#0f172a">id: uuid  PK</text>
+<text x="950" y="932" fill="#0f172a">created_at: datetime</text>
+<text x="950" y="950" fill="#0f172a">updated_at: datetime</text>
+<rect x="40" y="1120" width="230" height="232" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="40" y="1120" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="50" y="1138" fill="#ffffff" font-weight="bold">jobs</text>
+<text x="50" y="1160" fill="#0f172a">type: text</text>
+<text x="50" y="1178" fill="#0f172a">status: enum</text>
+<text x="50" y="1196" fill="#0f172a">progress: smallinteger</text>
+<text x="50" y="1214" fill="#0f172a">requested_by: uuid  FK → users</text>
+<text x="50" y="1232" fill="#0f172a">result_ref: text</text>
+<text x="50" y="1250" fill="#0f172a">error_code: text</text>
+<text x="50" y="1268" fill="#0f172a">started_at: datetime</text>
+<text x="50" y="1286" fill="#0f172a">finished_at: datetime</text>
+<text x="50" y="1304" fill="#0f172a">id: uuid  PK</text>
+<text x="50" y="1322" fill="#0f172a">created_at: datetime</text>
+<text x="50" y="1340" fill="#0f172a">updated_at: datetime</text>
+<rect x="340" y="1120" width="230" height="196" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="340" y="1120" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="350" y="1138" fill="#ffffff" font-weight="bold">notifications</text>
+<text x="350" y="1160" fill="#0f172a">user_id: uuid  FK → users</text>
+<text x="350" y="1178" fill="#0f172a">type: text</text>
+<text x="350" y="1196" fill="#0f172a">title: text</text>
+<text x="350" y="1214" fill="#0f172a">body: text</text>
+<text x="350" y="1232" fill="#0f172a">link_path: text</text>
+<text x="350" y="1250" fill="#0f172a">read_at: datetime</text>
+<text x="350" y="1268" fill="#0f172a">id: uuid  PK</text>
+<text x="350" y="1286" fill="#0f172a">created_at: datetime</text>
+<text x="350" y="1304" fill="#0f172a">updated_at: datetime</text>
+<rect x="640" y="1120" width="230" height="178" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="640" y="1120" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="650" y="1138" fill="#ffffff" font-weight="bold">otp_codes</text>
+<text x="650" y="1160" fill="#0f172a">user_id: uuid  FK → users</text>
+<text x="650" y="1178" fill="#0f172a">purpose: enum</text>
+<text x="650" y="1196" fill="#0f172a">code_hash: largebinary</text>
+<text x="650" y="1214" fill="#0f172a">expires_at: datetime</text>
+<text x="650" y="1232" fill="#0f172a">attempts: smallinteger</text>
+<text x="650" y="1250" fill="#0f172a">consumed_at: datetime</text>
+<text x="650" y="1268" fill="#0f172a">created_at: datetime</text>
+<text x="650" y="1286" fill="#0f172a">id: uuid  PK</text>
+<rect x="940" y="1120" width="230" height="196" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="940" y="1120" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="950" y="1138" fill="#ffffff" font-weight="bold">portfolio_items</text>
+<text x="950" y="1160" fill="#0f172a">user_id: uuid  FK → users</text>
+<text x="950" y="1178" fill="#0f172a">title: text</text>
+<text x="950" y="1196" fill="#0f172a">description: text</text>
+<text x="950" y="1214" fill="#0f172a">url: text</text>
+<text x="950" y="1232" fill="#0f172a">skill_ids: array</text>
+<text x="950" y="1250" fill="#0f172a">position: smallinteger</text>
+<text x="950" y="1268" fill="#0f172a">id: uuid  PK</text>
+<text x="950" y="1286" fill="#0f172a">created_at: datetime</text>
+<text x="950" y="1304" fill="#0f172a">updated_at: datetime</text>
+<rect x="40" y="1402" width="230" height="448" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="40" y="1402" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="50" y="1420" fill="#ffffff" font-weight="bold">projects</text>
+<text x="50" y="1442" fill="#0f172a">client_id: uuid  FK → users</text>
+<text x="50" y="1460" fill="#0f172a">title: text</text>
+<text x="50" y="1478" fill="#0f172a">summary: text</text>
+<text x="50" y="1496" fill="#0f172a">description: text</text>
+<text x="50" y="1514" fill="#0f172a">requirements: text</text>
+<text x="50" y="1532" fill="#0f172a">budget_paisa: biginteger</text>
+<text x="50" y="1550" fill="#0f172a">bonus_pool_paisa: biginteger</text>
+<text x="50" y="1568" fill="#0f172a">deadline_days: smallinteger</text>
+<text x="50" y="1586" fill="#0f172a">start_date: date</text>
+<text x="50" y="1604" fill="#0f172a">bidding_deadline: datetime</text>
+<text x="50" y="1622" fill="#0f172a">team_size: smallinteger</text>
+<text x="50" y="1640" fill="#0f172a">status: enum</text>
+<text x="50" y="1658" fill="#0f172a">cancel_reason: text</text>
+<text x="50" y="1676" fill="#0f172a">cancelled_at: datetime</text>
+<text x="50" y="1694" fill="#0f172a">completed_at: datetime</text>
+<text x="50" y="1712" fill="#0f172a">repo_url: text</text>
+<text x="50" y="1730" fill="#0f172a">settings_version: integer</text>
+<text x="50" y="1748" fill="#0f172a">current_baseline_id: uuid</text>
+<text x="50" y="1766" fill="#0f172a">bidding_extensions: smallinteger</text>
+<text x="50" y="1784" fill="#0f172a">version: integer</text>
+<text x="50" y="1802" fill="#0f172a">id: uuid  PK</text>
+<text x="50" y="1820" fill="#0f172a">created_at: datetime</text>
+<text x="50" y="1838" fill="#0f172a">updated_at: datetime</text>
+<rect x="340" y="1402" width="230" height="196" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="340" y="1402" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="350" y="1420" fill="#ffffff" font-weight="bold">question_bank</text>
+<text x="350" y="1442" fill="#0f172a">skill_id: uuid  FK → skills</text>
+<text x="350" y="1460" fill="#0f172a">text: text</text>
+<text x="350" y="1478" fill="#0f172a">options: jsonb</text>
+<text x="350" y="1496" fill="#0f172a">correct_index: smallinteger</text>
+<text x="350" y="1514" fill="#0f172a">difficulty: smallinteger</text>
+<text x="350" y="1532" fill="#0f172a">active: boolean</text>
+<text x="350" y="1550" fill="#0f172a">id: uuid  PK</text>
+<text x="350" y="1568" fill="#0f172a">created_at: datetime</text>
+<text x="350" y="1586" fill="#0f172a">updated_at: datetime</text>
+<rect x="640" y="1402" width="230" height="124" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="640" y="1402" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="650" y="1420" fill="#ffffff" font-weight="bold">recovery_codes</text>
+<text x="650" y="1442" fill="#0f172a">user_id: uuid  FK → users</text>
+<text x="650" y="1460" fill="#0f172a">code_hash: text</text>
+<text x="650" y="1478" fill="#0f172a">used_at: datetime</text>
+<text x="650" y="1496" fill="#0f172a">created_at: datetime</text>
+<text x="650" y="1514" fill="#0f172a">id: uuid  PK</text>
+<rect x="940" y="1402" width="230" height="268" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="940" y="1402" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="950" y="1420" fill="#ffffff" font-weight="bold">sessions</text>
+<text x="950" y="1442" fill="#0f172a">user_id: uuid  FK → users</text>
+<text x="950" y="1460" fill="#0f172a">token_hash: largebinary</text>
+<text x="950" y="1478" fill="#0f172a">csrf_secret: largebinary</text>
+<text x="950" y="1496" fill="#0f172a">ip: inet</text>
+<text x="950" y="1514" fill="#0f172a">user_agent: text</text>
+<text x="950" y="1532" fill="#0f172a">created_at: datetime</text>
+<text x="950" y="1550" fill="#0f172a">last_seen_at: datetime</text>
+<text x="950" y="1568" fill="#0f172a">rotated_at: datetime</text>
+<text x="950" y="1586" fill="#0f172a">expires_at: datetime</text>
+<text x="950" y="1604" fill="#0f172a">revoked_at: datetime</text>
+<text x="950" y="1622" fill="#0f172a">step_up_until: datetime</text>
+<text x="950" y="1640" fill="#0f172a">totp_verified: boolean</text>
+<text x="950" y="1658" fill="#0f172a">id: uuid  PK</text>
+<rect x="40" y="1900" width="230" height="178" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="40" y="1900" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="50" y="1918" fill="#ffffff" font-weight="bold">skill_tests</text>
+<text x="50" y="1940" fill="#0f172a">skill_id: uuid  FK → skills</text>
+<text x="50" y="1958" fill="#0f172a">title: text</text>
+<text x="50" y="1976" fill="#0f172a">question_count: smallinteger</text>
+<text x="50" y="1994" fill="#0f172a">time_limit_seconds: integer</text>
+<text x="50" y="2012" fill="#0f172a">active: boolean</text>
+<text x="50" y="2030" fill="#0f172a">id: uuid  PK</text>
+<text x="50" y="2048" fill="#0f172a">created_at: datetime</text>
+<text x="50" y="2066" fill="#0f172a">updated_at: datetime</text>
+<rect x="340" y="1900" width="230" height="160" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="340" y="1900" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="350" y="1918" fill="#ffffff" font-weight="bold">totp_credentials</text>
+<text x="350" y="1940" fill="#0f172a">user_id: uuid  FK → users</text>
+<text x="350" y="1958" fill="#0f172a">secret_encrypted: largebinary</text>
+<text x="350" y="1976" fill="#0f172a">confirmed_at: datetime</text>
+<text x="350" y="1994" fill="#0f172a">last_used_step: biginteger</text>
+<text x="350" y="2012" fill="#0f172a">id: uuid  PK</text>
+<text x="350" y="2030" fill="#0f172a">created_at: datetime</text>
+<text x="350" y="2048" fill="#0f172a">updated_at: datetime</text>
+<rect x="640" y="1900" width="230" height="232" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="640" y="1900" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="650" y="1918" fill="#ffffff" font-weight="bold">certificates</text>
+<text x="650" y="1940" fill="#0f172a">user_id: uuid  FK → users</text>
+<text x="650" y="1958" fill="#0f172a">title: text</text>
+<text x="650" y="1976" fill="#0f172a">issuer: text</text>
+<text x="650" y="1994" fill="#0f172a">file_id: uuid  FK → files</text>
+<text x="650" y="2012" fill="#0f172a">status: enum</text>
+<text x="650" y="2030" fill="#0f172a">reviewed_by: uuid  FK → users</text>
+<text x="650" y="2048" fill="#0f172a">reviewed_at: datetime</text>
+<text x="650" y="2066" fill="#0f172a">reason: text</text>
+<text x="650" y="2084" fill="#0f172a">id: uuid  PK</text>
+<text x="650" y="2102" fill="#0f172a">created_at: datetime</text>
+<text x="650" y="2120" fill="#0f172a">updated_at: datetime</text>
+<rect x="940" y="1900" width="230" height="250" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="940" y="1900" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="950" y="1918" fill="#ffffff" font-weight="bold">external_reviews</text>
+<text x="950" y="1940" fill="#0f172a">developer_id: uuid  FK → users</text>
+<text x="950" y="1958" fill="#0f172a">source: text</text>
+<text x="950" y="1976" fill="#0f172a">rating_norm: numeric</text>
+<text x="950" y="1994" fill="#0f172a">project_date: date</text>
+<text x="950" y="2012" fill="#0f172a">evidence_file_id: uuid  FK → files</text>
+<text x="950" y="2030" fill="#0f172a">status: enum</text>
+<text x="950" y="2048" fill="#0f172a">reviewed_by: uuid  FK → users</text>
+<text x="950" y="2066" fill="#0f172a">reviewed_at: datetime</text>
+<text x="950" y="2084" fill="#0f172a">reason: text</text>
+<text x="950" y="2102" fill="#0f172a">id: uuid  PK</text>
+<text x="950" y="2120" fill="#0f172a">created_at: datetime</text>
+<text x="950" y="2138" fill="#0f172a">updated_at: datetime</text>
+<rect x="40" y="2200" width="230" height="322" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="40" y="2200" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="50" y="2218" fill="#ffffff" font-weight="bold">milestones</text>
+<text x="50" y="2240" fill="#0f172a">project_id: uuid  FK → projects</text>
+<text x="50" y="2258" fill="#0f172a">name: text</text>
+<text x="50" y="2276" fill="#0f172a">description: text</text>
+<text x="50" y="2294" fill="#0f172a">duration_days: smallinteger</text>
+<text x="50" y="2312" fill="#0f172a">share_bp: integer</text>
+<text x="50" y="2330" fill="#0f172a">position: integer</text>
+<text x="50" y="2348" fill="#0f172a">status: enum</text>
+<text x="50" y="2366" fill="#0f172a">actual_start: date</text>
+<text x="50" y="2384" fill="#0f172a">actual_finish: date</text>
+<text x="50" y="2402" fill="#0f172a">revision_count: smallinteger</text>
+<text x="50" y="2420" fill="#0f172a">submitted_at: datetime</text>
+<text x="50" y="2438" fill="#0f172a">approved_at: datetime</text>
+<text x="50" y="2456" fill="#0f172a">auto_approve_at: datetime</text>
+<text x="50" y="2474" fill="#0f172a">id: uuid  PK</text>
+<text x="50" y="2492" fill="#0f172a">created_at: datetime</text>
+<text x="50" y="2510" fill="#0f172a">updated_at: datetime</text>
+<rect x="340" y="2200" width="230" height="214" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="340" y="2200" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="350" y="2218" fill="#ffffff" font-weight="bold">plan_baselines</text>
+<text x="350" y="2240" fill="#0f172a">project_id: uuid  FK → projects</text>
+<text x="350" y="2258" fill="#0f172a">version: integer</text>
+<text x="350" y="2276" fill="#0f172a">cpm: jsonb</text>
+<text x="350" y="2294" fill="#0f172a">reason: text</text>
+<text x="350" y="2312" fill="#0f172a">created_by: uuid  FK → users</text>
+<text x="350" y="2330" fill="#0f172a">approved_by_client: boolean</text>
+<text x="350" y="2348" fill="#0f172a">approved_by_lead: boolean</text>
+<text x="350" y="2366" fill="#0f172a">id: uuid  PK</text>
+<text x="350" y="2384" fill="#0f172a">created_at: datetime</text>
+<text x="350" y="2402" fill="#0f172a">updated_at: datetime</text>
+<rect x="640" y="2200" width="230" height="160" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="640" y="2200" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="650" y="2218" fill="#ffffff" font-weight="bold">plan_change_requests</text>
+<text x="650" y="2240" fill="#0f172a">project_id: uuid  FK → projects</text>
+<text x="650" y="2258" fill="#0f172a">proposed_by: uuid  FK → users</text>
+<text x="650" y="2276" fill="#0f172a">changes: jsonb</text>
+<text x="650" y="2294" fill="#0f172a">status: enum</text>
+<text x="650" y="2312" fill="#0f172a">id: uuid  PK</text>
+<text x="650" y="2330" fill="#0f172a">created_at: datetime</text>
+<text x="650" y="2348" fill="#0f172a">updated_at: datetime</text>
+<rect x="940" y="2200" width="230" height="142" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="940" y="2200" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="950" y="2218" fill="#ffffff" font-weight="bold">portfolio_images</text>
+<text x="950" y="2240" fill="#0f172a">portfolio_item_id: uuid  FK → portfolio_items</text>
+<text x="950" y="2258" fill="#0f172a">file_id: uuid  FK → files</text>
+<text x="950" y="2276" fill="#0f172a">position: smallinteger</text>
+<text x="950" y="2294" fill="#0f172a">id: uuid  PK</text>
+<text x="950" y="2312" fill="#0f172a">created_at: datetime</text>
+<text x="950" y="2330" fill="#0f172a">updated_at: datetime</text>
+<rect x="40" y="2572" width="230" height="160" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="40" y="2572" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="50" y="2590" fill="#ffffff" font-weight="bold">project_slots</text>
+<text x="50" y="2612" fill="#0f172a">project_id: uuid  FK → projects</text>
+<text x="50" y="2630" fill="#0f172a">skill_id: uuid  FK → skills</text>
+<text x="50" y="2648" fill="#0f172a">label: text</text>
+<text x="50" y="2666" fill="#0f172a">count: smallinteger</text>
+<text x="50" y="2684" fill="#0f172a">id: uuid  PK</text>
+<text x="50" y="2702" fill="#0f172a">created_at: datetime</text>
+<text x="50" y="2720" fill="#0f172a">updated_at: datetime</text>
+<rect x="340" y="2572" width="230" height="268" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="340" y="2572" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="350" y="2590" fill="#ffffff" font-weight="bold">test_attempts</text>
+<text x="350" y="2612" fill="#0f172a">test_id: uuid  FK → skill_tests</text>
+<text x="350" y="2630" fill="#0f172a">user_id: uuid  FK → users</text>
+<text x="350" y="2648" fill="#0f172a">question_ids: array</text>
+<text x="350" y="2666" fill="#0f172a">answers: jsonb</text>
+<text x="350" y="2684" fill="#0f172a">seed: biginteger</text>
+<text x="350" y="2702" fill="#0f172a">started_at: datetime</text>
+<text x="350" y="2720" fill="#0f172a">deadline_at: datetime</text>
+<text x="350" y="2738" fill="#0f172a">submitted_at: datetime</text>
+<text x="350" y="2756" fill="#0f172a">score: numeric</text>
+<text x="350" y="2774" fill="#0f172a">scored: boolean</text>
+<text x="350" y="2792" fill="#0f172a">id: uuid  PK</text>
+<text x="350" y="2810" fill="#0f172a">created_at: datetime</text>
+<text x="350" y="2828" fill="#0f172a">updated_at: datetime</text>
+<rect x="640" y="2572" width="230" height="142" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="640" y="2572" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="650" y="2590" fill="#ffffff" font-weight="bold">milestone_dependencies</text>
+<text x="650" y="2612" fill="#0f172a">project_id: uuid  FK → projects</text>
+<text x="650" y="2630" fill="#0f172a">predecessor_id: uuid  FK → milestones</text>
+<text x="650" y="2648" fill="#0f172a">successor_id: uuid  FK → milestones</text>
+<text x="650" y="2666" fill="#0f172a">id: uuid  PK</text>
+<text x="650" y="2684" fill="#0f172a">created_at: datetime</text>
+<text x="650" y="2702" fill="#0f172a">updated_at: datetime</text>
+<rect x="940" y="2572" width="230" height="124" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="940" y="2572" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="950" y="2590" fill="#ffffff" font-weight="bold">milestone_skills</text>
+<text x="950" y="2612" fill="#0f172a">milestone_id: uuid  FK → milestones</text>
+<text x="950" y="2630" fill="#0f172a">skill_id: uuid  FK → skills</text>
+<text x="950" y="2648" fill="#0f172a">id: uuid  PK</text>
+<text x="950" y="2666" fill="#0f172a">created_at: datetime</text>
+<text x="950" y="2684" fill="#0f172a">updated_at: datetime</text>
+<rect x="40" y="2890" width="230" height="196" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+<rect x="40" y="2890" width="230" height="26" rx="6" fill="#1e293b"/>
+<text x="50" y="2908" fill="#ffffff" font-weight="bold">skill_evidence</text>
+<text x="50" y="2930" fill="#0f172a">user_id: uuid  FK → users</text>
+<text x="50" y="2948" fill="#0f172a">skill_id: uuid  FK → skills</text>
+<text x="50" y="2966" fill="#0f172a">source: enum</text>
+<text x="50" y="2984" fill="#0f172a">score: numeric</text>
+<text x="50" y="3002" fill="#0f172a">attempt_id: uuid  FK → test_attempts</text>
+<text x="50" y="3020" fill="#0f172a">at: datetime</text>
+<text x="50" y="3038" fill="#0f172a">id: uuid  PK</text>
+<text x="50" y="3056" fill="#0f172a">created_at: datetime</text>
+<text x="50" y="3074" fill="#0f172a">updated_at: datetime</text>
+</svg>
