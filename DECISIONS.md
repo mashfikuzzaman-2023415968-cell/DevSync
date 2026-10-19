@@ -300,3 +300,31 @@ role claiming SYSTEM still cannot score someone else's attempt, while the worker
 greenlets; coverage.py missed lines after an `await` in services (profiles showed 63% though
 every path was exercised). `concurrency = ["greenlet", "thread"]` fixes the measurement; no
 threshold changed.
+
+## 2026-10-19 — Phase 4 (planning; approved by Salwa Baki)
+
+**D38 · Full project/milestone enums created up front.** Migration `0005` defines the complete
+`project_status` (DRAFT, BIDDING, FORMING, TEAM_PENDING, IN_PROGRESS, ON_HOLD, REVIEW_WINDOW,
+COMPLETED, CANCELLED) and `milestone_status` (PLANNED, FUNDED, ACTIVE, SUBMITTED, APPROVED,
+CHANGES_REQUESTED, AUTO_APPROVED, PAID, DISPUTED, REFUNDED) enums from spec §8, even though
+Phase 4 only drives DRAFT↔edit, DRAFT→BIDDING, BIDDING→BIDDING (extend) and →CANCELLED. *Reason:*
+`ALTER TYPE … ADD VALUE` cannot run inside a transaction and would churn later migrations; the
+service still rejects every not-yet-implemented transition via the transition table
+(`InvalidStateTransition` → 409 `INVALID_STATE`). *Alt:* add enum values per phase.
+
+**D39 · Simulated payment-method verification.** Spec §8's DRAFT→BIDDING guard needs "payment
+method verified". Payments are simulated (spec §0.2 rule 17), so a client marks their method
+verified through `POST /me/payment-method/verify` (CLIENT only, idempotent, sets
+`users.payment_verified_at`); the wizard's publish step calls it. No real gateway. *Alts
+considered:* admin-set only (adds friction to the demo) or seed-only (can't be shown live).
+To be sanity-checked with Taeen since the hand-off flagged it; recorded so Phase 4 can proceed.
+
+**D40 · CPM-over-deadline is an acknowledged warning, not a block.** When CPM duration >
+`deadline_days`, DRAFT→BIDDING is still allowed if the client acknowledges
+(`publish` body `acknowledge_schedule_risk: true`), matching spec §8 ("CPM duration ≤ deadline
+**or client acknowledged warning**"). The wizard surfaces the warning in step 6. *Alt:* hard
+block (contradicts §8).
+
+**Demo-1 risk rule (confirmed with Salwa; §17.0, hand-off §6).** If Demo 1 is at risk, only skill
+tests and recommended projects may move to Demo 2. The **CPM planner and sealed bidding with
+Algorithm 1 filtering never move.**
