@@ -42,9 +42,6 @@ export function useProject(id: string) {
   });
 }
 
-
-
-
 export function useProjectPlan(id: string) {
   return useQuery({
     queryKey: keys.plan(id),
