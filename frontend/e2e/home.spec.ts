@@ -128,7 +128,18 @@ test("the render loop stops when the hero is off screen @e2e", async ({ page }) 
   await page.evaluate(() => {
     window.scrollTo(0, document.body.scrollHeight / 2);
   });
-  await page.waitForTimeout(600);
+  // Wait until the render loop has actually paused (the frame count stops rising) rather than
+  // assuming a fixed settle time, which is flaky on slower machines; then confirm it stays paused.
+  await expect
+    .poll(
+      async () => {
+        const before = await frames();
+        await page.waitForTimeout(200);
+        return (await frames()) - before;
+      },
+      { timeout: 10_000 },
+    )
+    .toBe(0);
   const b = await frames();
   await page.waitForTimeout(800);
   expect(await frames()).toBe(b);

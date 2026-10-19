@@ -340,3 +340,10 @@ assertion is unchanged** — not a weakened test, a race made robust across mach
 earlier failures this session were environment-only (Trivy cache SIGBUS after the Docker restart;
 a stale tmpfs test-Postgres with out-of-date role passwords) and were cleared by re-pulling and
 recreating the test stack — no code or security default changed.
+
+**D42 · Flake fix in a Phase 2 E2E test (`home.spec.ts`), same cause as D41.** "the render loop
+stops when the hero is off screen" assumed the 3D loop pauses within a fixed 600 ms after the hero
+scrolls off-screen; on Salwa's slower laptop the IntersectionObserver pause took longer under CPU
+load, so the frame count was still rising when sampled (1/40 E2E flaked). Fix: poll until the
+frame count stops rising (the loop has actually paused), then assert it stays paused for 800 ms —
+the behaviour under test (loop stops off-screen) is unchanged. Flagged to Taeen.
