@@ -90,6 +90,10 @@ describe("route guards", () => {
       ),
     );
     renderRoutes(routes, "/admin");
-    expect(await screen.findByRole("heading", { name: "Administration" })).toBeInTheDocument();
+    // The admin area is a separate lazy chunk (§14.17); loading it under coverage
+    // instrumentation can exceed findBy's 1 s default, so wait within the test budget.
+    expect(
+      await screen.findByRole("heading", { name: "Administration" }, { timeout: 10_000 }),
+    ).toBeInTheDocument();
   });
 });

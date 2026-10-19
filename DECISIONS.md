@@ -328,3 +328,15 @@ block (contradicts §8).
 **Demo-1 risk rule (confirmed with Salwa; §17.0, hand-off §6).** If Demo 1 is at risk, only skill
 tests and recommended projects may move to Demo 2. The **CPM planner and sealed bidding with
 Algorithm 1 filtering never move.**
+
+**D41 · Flake fix in a Phase 3 test (`guards.test.tsx`), found re-running the Phase 3 gate on
+Salwa's laptop.** The admin area is a separate lazy code-split chunk (§14.17); under coverage
+instrumentation on a lower-spec machine (5.6 GB RAM) its dynamic import + `/admin/session` fetch
+exceeded React Testing Library's `findBy` **default 1 s** timeout, so the full `vitest run
+--coverage` failed one test (`loads the admin area…`) while it passed 3/3 in isolation. Fix:
+pass `{ timeout: 10_000 }` to that one `findByRole` (well under the 20 s `testTimeout`); **the
+assertion is unchanged** — not a weakened test, a race made robust across machines (spec §16.10,
+"find the race; don't add blind retries"). Flagged to Taeen (Phases 0–3 owner). The gate's two
+earlier failures this session were environment-only (Trivy cache SIGBUS after the Docker restart;
+a stale tmpfs test-Postgres with out-of-date role passwords) and were cleared by re-pulling and
+recreating the test stack — no code or security default changed.
