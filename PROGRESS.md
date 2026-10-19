@@ -3,9 +3,9 @@
 ## Current state
 - **Current owner:** Salwa Baki (backend developer), Phases 4–5, from 2026-10-18 (hand-off from Mashfikuzzaman Taeen: `docs/handoffs/handoff-01-taeen-to-salwa.md`)
 - **Current phase:** 4 — Projects and the CPM planner
-- **Last gate result:** `PHASE 3 GATE: PASS` (2026-10-18). Phase 4 gate run here on 2026-10-19: **steps 1–12 all PASS** (backend 716 tests / 95.9%, security suite 243, API contract, frontend 267 / 75.1%, migrations, static-security, deps, RLS, review 0-high); only **step 13 E2E** fails, on a *different* WebGL/multi-session test each run (responsive → fixed; then `auth:83`, `home:120`, `home:106`) — the D28 5.6 GB RAM/GPU flake, not a Phase 4 defect. To be finished on a higher-RAM machine / CI.
-- **In progress:** Phase 4 is code-complete on branch `phase-4`. Backend (migration 0005, CPM/forecast algorithms, project API, authz, 34 backend + 35 algorithm tests) done earlier; this session added the full **frontend**: create-project wizard (6 steps, live CPM preview, D40 schedule-risk ack), plan page, My Projects + cancel dialog, custom-SVG `Gantt`/`DependencyGraph`/`CpmTable`, data hooks, routes/nav wired. Frontend: 267 tests pass, coverage ≥70% on all four metrics (lines 75.0, branches 70.8, funcs 70.4, stmts 73.8); lint, types, and production build all green. Security review written (0 unresolved high).
-- **Very next step:** run `make gate PHASE=4` on a higher-RAM machine or CI (steps 1–12 already green here; only the E2E step needs an environment that won't flake under load). The visual step (14/15) was never reached, so confirm whether the two new client screens need baselines (`make visual-update`). On `PHASE 4 GATE: PASS`, tag `phase-4` and push (Salwa holds the token). Demo 1 is Mon 2 Nov 2026 (Phases 0–5).
+- **Last gate result:** `PHASE 4 GATE: PASS` on 2026-10-20 (Taeen's laptop, branch `phase-4` at the review-fix commits): all 19 applicable steps — backend 716 tests / 95.9%, security suite 243, frontend 269 / 75.3%, E2E 43 + edge 13, axe clean, 112 visual baselines, Lighthouse desktop 100 / mobile 96, GPU 60 fps, CPM perf budget met. Salwa's earlier step-13 failures were the 5.6 GB laptop, not the code.
+- **In progress:** Phase 4 is complete on branch `phase-4` and **not yet merged or tagged** — Salwa merges into `main` and tags `phase-4`. Taeen's review (with Claude Code) found and fixed real defects the gate couldn't see because Phase 4 had no E2E of its own: the wizard couldn't save its first step, publishing was impossible (no payment verification in the UI), loops couldn't be created to show the rejection, the plan page's dependency graph had no edges, plus the missing unsaved-changes prompt and typed-title cancel. All recorded in DECISIONS D43; `e2e/phase4.spec.ts` now covers the spec's Phase 4 flow.
+- **Very next step:** Salwa: pull `phase-4`, read D43, merge into `main`, tag `phase-4`, push; then start Phase 5 in Plan Mode. Lesson for Phase 5: write the spec's E2E flow early and run it against the real stack (mocked unit tests can't catch wrong URLs or missing endpoints). Demo 1 is Mon 2 Nov 2026 (Phases 0–5).
 - **Open human tasks:** review the 128 drafted test questions for accuracy (D34); tester's human check of the Phase 3 **and** Phase 4 security reviews; sanity-check D39 (simulated payment-method verification) with Taeen.
 
 ## Phase table
@@ -15,7 +15,7 @@
 | 1 Accounts & security core | Taeen | done | PASS | 2026-10-17 | phase-1 |
 | 2 Design system & landing | Taeen | done | PASS | 2026-10-17 | phase-2 |
 | 3 Profiles & skill tests | Taeen | done | PASS | 2026-10-18 | phase-3 |
-| 4 Projects & CPM | Salwa | in progress | — | — | — |
+| 4 Projects & CPM | Salwa (review fixes: Taeen) | done, awaiting merge | PASS | 2026-10-20 | (Salwa tags) |
 | 5 Marketplace & filtering | Salwa | not started | — | — | — |
 | 6–15 | — | not started | — | — | — |
 
@@ -23,6 +23,7 @@
 | Finished (UTC) | Phase | Result | Tests |
 |---|---|---|---|
 <!-- gate-log -->
+| 2026-10-19T20:26:29+00:00 | phase 4 | PASS | backend 716 / frontend 269 tests |
 | 2026-10-19T20:05:41+00:00 | phase 4 | FAIL (step 3) | backend 716 / frontend 269 tests |
 | 2026-10-19T19:17:13+00:00 | phase 4 | PASS | backend 716 / frontend 267 tests |
 | 2026-10-19T16:34:19+00:00 | phase 4 | FAIL (step 13) | backend 716 / frontend 267 tests |
@@ -62,6 +63,13 @@
 - Existing dev databases: run `make migrate` (migration 0002); create an admin with `make create-admin`.
 
 ## Session log (newest first)
+### 2026-10-20 — Taeen (with Claude Code), Phase 4 review
+- **Done:** pulled `phase-4`; ran the gate (PASS as delivered on this laptop); reviewed against
+  the spec and wrote the missing Phase 4 E2E, which exposed broken wizard saves, impossible
+  publishing, no loop demo, a plan graph without edges, and missing spec items — all fixed (D43),
+  with unit/API/E2E tests and visual baselines for the planning screens. Gate PASS.
+- **Next:** Salwa merges and tags `phase-4`, then Phase 5.
+
 ### 2026-10-19 — Salwa (with Claude Code), Phase 4
 - **Done (backend, earlier in the day):** pure CPM + forecast algorithms (`app/algorithms/`,
   §18.2 golden verified, 300-milestone CPM < 50 ms); migration `0005` (7 tables, FORCE RLS,
