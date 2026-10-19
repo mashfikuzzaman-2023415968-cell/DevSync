@@ -47,6 +47,7 @@ from app.schemas.projects import (
     DependenciesReplace,
     MilestoneOut,
     MilestonesReplace,
+    PlanEdge,
     PlanOut,
     PlanPreviewIn,
     ProjectCreate,
@@ -444,6 +445,10 @@ async def get_plan(ctx: Ctx, project_id: uuid.UUID) -> PlanOut:
         baseline_version=baseline.version if baseline else None,
         duration=result.duration,
         nodes=_cpm_nodes(result, names),
+        # The dependency graph needs the edges too (spec §13.5 screen 22); keys match node keys.
+        edges=[
+            PlanEdge(predecessor=str(d.predecessor_id), successor=str(d.successor_id)) for d in deps
+        ],
         critical_paths=[[names.get(k, k) for k in path] for path in result.critical_paths],
         deadline_days=project.deadline_days,
         exceeds_deadline=result.duration > project.deadline_days,

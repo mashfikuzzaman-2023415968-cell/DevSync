@@ -1,13 +1,13 @@
 /**
  * Visual baselines (spec §13.14 #2, §16.5 step 15): homepage, auth screens, the app shell and
- * the Phase 3 profile and challenge screens,
+ * the Phase 3 profile and challenge screens and the Phase 4 planning screens,
  * light and dark, at 390, 768 and 1440 px. Rendered with reduced motion (final states, poster
  * instead of the live scene) and a fixed clock so they are stable.
  * Update with `make visual-update` (runs in the pinned Playwright image).
  */
 import type { Page } from "@playwright/test";
 import { expect, resetLimits, test } from "./test";
-import { apiSignIn } from "./fixtures";
+import { apiSignIn, createOrderingProject } from "./fixtures";
 
 const WIDTHS = [390, 768, 1440] as const;
 const FIXED_NOW = new Date("2026-10-12T04:00:00Z"); // 10:00 in Dhaka → "Good morning"
@@ -93,6 +93,21 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto("/dev/challenges");
       await page.getByRole("heading", { name: "React skill test" }).waitFor();
       await snap(page, `skill-challenges-${scheme}-${String(width)}`);
+    });
+
+    test(`client planning ${scheme} ${String(width)} @visual`, async ({ page, baseURL }) => {
+      await prepare(page, scheme, width);
+      await apiSignIn(page, baseURL ?? "", "CLIENT", "Rahim Uddin");
+      await page.goto("/client/projects");
+      await page.getByText("No projects yet").waitFor();
+      await snap(page, `client-projects-empty-${scheme}-${String(width)}`);
+      await page.goto("/client/projects/new");
+      await page.getByLabel("Project title").waitFor();
+      await snap(page, `create-project-${scheme}-${String(width)}`);
+      const id = await createOrderingProject(page, baseURL ?? "");
+      await page.goto(`/client/projects/${id}/plan`);
+      await page.getByLabel("Frontend: days 4–13, slack 4 days").waitFor();
+      await snap(page, `project-plan-${scheme}-${String(width)}`);
     });
   }
 }

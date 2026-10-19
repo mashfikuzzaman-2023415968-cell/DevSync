@@ -13,7 +13,7 @@ import type { CpmPreview, PreviewMilestone, Skill } from "@/api/types";
 import { CpmTable } from "@/components/CpmTable";
 import { DependencyGraph, type GraphEdge } from "@/components/DependencyGraph";
 import { Gantt } from "@/components/Gantt";
-import { Button } from "@/components/ui/Button";
+import { Button, IconButton } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Display";
 import { Alert, Progress } from "@/components/ui/Feedback";
 import { Field, FormField } from "@/components/ui/Field";
@@ -137,7 +137,10 @@ export function MilestonesStep({
         />
         <ul className="mt-4 flex flex-col gap-4">
           {milestones.map((m, i) => {
-            const earlier = milestones.slice(0, i);
+            // Any other milestone may come first. A loop is allowed here on purpose so the plan
+            // preview can show it and the client can fix it (Demo 1: "a circular dependency is
+            // rejected"); "Continue" stays disabled and the server rejects it too.
+            const others = milestones.filter((x) => x.key !== m.key);
             return (
               <li key={m.key} className="rounded-lg border border-border p-4">
                 <div className="flex items-start gap-3">
@@ -201,15 +204,13 @@ export function MilestonesStep({
                     <div className="sm:col-span-3">
                       <FormField
                         label="Must finish after"
-                        hint={
-                          earlier.length ? undefined : "The first milestone has no predecessors."
-                        }
+                        hint={others.length ? undefined : "Add another milestone to link them."}
                       >
                         {(a11y) => (
                           <TagPicker
                             id={a11y.id}
                             aria-describedby={a11y["aria-describedby"]}
-                            options={earlier.map((p) => ({
+                            options={others.map((p) => ({
                               value: p.key,
                               label: p.name || "Untitled",
                             }))}
@@ -217,30 +218,28 @@ export function MilestonesStep({
                             onChange={(v) => {
                               update(m.key, { predecessor_keys: v });
                             }}
-                            empty="This is the first milestone."
+                            empty="Add another milestone first."
                           />
                         )}
                       </FormField>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                  <IconButton
                     onClick={() => {
                       remove(m.key);
                     }}
                     aria-label={`Remove ${m.name || "milestone"}`}
-                    className="mt-6"
+                    className="mt-5"
                   >
                     <Trash2 aria-hidden="true" />
-                  </Button>
+                  </IconButton>
                 </div>
               </li>
             );
           })}
         </ul>
         <div className="mt-4 flex items-center justify-between gap-4">
-          <Button variant="outline" size="sm" onClick={add} disabled={milestones.length >= 300}>
+          <Button variant="outline" onClick={add} disabled={milestones.length >= 300}>
             <Plus aria-hidden="true" />
             Add milestone
           </Button>

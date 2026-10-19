@@ -77,7 +77,8 @@ export function SegmentedControl<T extends string>({
             }}
             className={cn(
               "relative min-h-11 flex-1 rounded-md px-4 font-medium transition-colors duration-fast focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
-              size === "sm" ? "min-h-9 px-3 text-body-sm" : "text-body-sm",
+              // Small on desktop only: touch screens keep the 44 px target (spec §13.14).
+              size === "sm" ? "px-3 text-body-sm lg:min-h-9" : "text-body-sm",
               active ? "text-text" : "text-text-muted hover:text-text",
             )}
           >

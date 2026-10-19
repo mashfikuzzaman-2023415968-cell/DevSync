@@ -15,7 +15,7 @@ import { Badge, Card, CardHeader, Skeleton } from "@/components/ui/Display";
 import { EmptyState, ErrorState, PageHeader } from "@/components/ui/Feedback";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { formatDate, formatDays } from "@/lib/format";
-import { useProject, useProjectDependencies, useProjectPlan } from "./api";
+import { useProject, useProjectPlan } from "./api";
 
 type View = "gantt" | "table";
 
@@ -23,12 +23,11 @@ export default function PlanPage() {
   const { id = "" } = useParams();
   const project = useProject(id);
   const plan = useProjectPlan(id);
-  const deps = useProjectDependencies(id);
   const [view, setView] = useState<View>("gantt");
 
   const edges = useMemo<GraphEdge[]>(
-    () => (deps.data ?? []).map((d): GraphEdge => [d.predecessor_id, d.successor_id]),
-    [deps.data],
+    () => (plan.data?.edges ?? []).map((e): GraphEdge => [e.predecessor, e.successor]),
+    [plan.data],
   );
 
   if (project.isError || plan.isError) {
@@ -72,7 +71,7 @@ export default function PlanPage() {
   return (
     <>
       <PageHeader
-        title={`${project.data?.title ?? "Project"} · Plan`}
+        title={`Plan: ${project.data?.title ?? "Project"}`}
         description="The critical path is shown in red. Milestones with slack can start later without delaying the finish."
       />
 

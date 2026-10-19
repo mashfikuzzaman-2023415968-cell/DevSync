@@ -347,3 +347,32 @@ scrolls off-screen; on Salwa's slower laptop the IntersectionObserver pause took
 load, so the frame count was still rising when sampled (1/40 E2E flaked). Fix: poll until the
 frame count stops rising (the loop has actually paused), then assert it stays paused for 800 ms —
 the behaviour under test (loop stops off-screen) is unchanged. Flagged to Taeen.
+
+**D43 · Phase 4 review fixes (Taeen, with Claude Code, before Salwa's merge).** The Phase 4 gate
+passed on Taeen's laptop as delivered, but a review against the spec and a new end-to-end test
+of the Demo 1 path found these defects, now fixed on `phase-4`:
+1. *The wizard could not save its first step.* `useUpdateProject` was bound to the placeholder
+   id `"preview"`, so the first PATCH went to `/projects/preview` (422). The draft is now patched
+   by its real id; after slot/milestone/dependency replaces (which bump the version) the wizard
+   re-reads the version so the Budget step's `If-Match` is current.
+2. *Publishing was impossible from the UI.* Publishing needs a verified payment method (D39),
+   but nothing in the UI verified it. `GET /me` now returns `payment_verified`, and the Review
+   step offers "Verify payment method" (simulated, one click); Publish stays disabled until then.
+3. *A circular dependency could not be shown* (Demo 1 walkthrough): "Must finish after" offered
+   only earlier milestones. It now offers every other milestone; a loop shows the alert and
+   blocks Continue, and the server still rejects it.
+4. *The plan page's dependency graph had no edges*: it called `GET /projects/{id}/dependencies`,
+   which the spec doesn't define (405). `GET /projects/{id}/plan` now includes `edges`
+   (spec §10: the plan is the read path); unused GET hooks for slots/milestones were removed.
+5. Spec items that were missing: the unsaved-changes prompt on the wizard (screen 21) and typing
+   the project title to cancel (§17 Phase 4).
+6. Polish found by the new checks: touch targets ≥ 44 px on touch screens (segmented control,
+   tag chips, remove buttons, toast close), the shared Select's runtime `<style>` now carries the
+   CSP nonce (a latent Phase 2 bug first exercised here), "A · B" meta strings replaced, and the
+   test fixture's §18.2 Frontend row corrected to the spec (ES 4, EF 13, LS 8, LF 17).
+7. Tests added: `e2e/phase4.spec.ts` (the spec's Phase 4 E2E: §18.2 plan via the wizard,
+   critical path and slack, loop rejected, payment verification, publish, cancel a draft, leave
+   prompt; plus CSP/axe/layout on the wizard's milestones step and the plan page), visual
+   baselines for My projects, Create project and the plan page, and unit/API assertions for
+   each fix. *Lesson:* mocked frontend tests can't catch a wrong URL or a missing endpoint; the
+   spec's E2E for each phase is not optional.

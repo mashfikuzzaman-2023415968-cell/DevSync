@@ -45,7 +45,7 @@ export function TagPicker({
               toggle(o.value);
             }}
             className={cn(
-              "inline-flex min-h-8 items-center gap-1 rounded-full border px-3 py-1 text-body-sm transition-colors duration-fast focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+              "inline-flex min-h-11 items-center gap-1 rounded-full lg:min-h-8 border px-3 py-1 text-body-sm transition-colors duration-fast focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
               on
                 ? "border-primary bg-primary-soft text-primary"
                 : "border-border text-text-muted hover:border-text-subtle",

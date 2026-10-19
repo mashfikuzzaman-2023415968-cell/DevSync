@@ -112,6 +112,7 @@ EX_PLAN = {
     "baseline_version": 1,
     "duration": 24,
     "nodes": EX_NODES,
+    "edges": [{"predecessor": "m1", "successor": "m2"}],
     "critical_paths": [["Requirements & design", "Database"]],
     "deadline_days": 30,
     "exceeds_deadline": False,

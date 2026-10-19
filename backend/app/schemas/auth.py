@@ -163,6 +163,7 @@ class MeResponse(BaseModel):
     phone_verified: bool
     totp_enabled: bool
     totp_verified: bool
+    payment_verified: bool = False  # simulated payment method (D39); needed to publish projects
     created_at: datetime
 
 

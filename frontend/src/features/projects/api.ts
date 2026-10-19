@@ -1,6 +1,7 @@
 /** Project and CPM-planner data hooks (spec §7.3, §9.10, §10.2 Projects). */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
+import { meKey } from "@/features/auth/api";
 import type {
   CancelIn,
   CpmPreview,
@@ -41,26 +42,8 @@ export function useProject(id: string) {
   });
 }
 
-export function useProjectSlots(id: string) {
-  return useQuery({
-    queryKey: keys.slots(id),
-    queryFn: () => api<Slot[]>(`/projects/${id}/slots`),
-  });
-}
 
-export function useProjectMilestones(id: string) {
-  return useQuery({
-    queryKey: keys.milestones(id),
-    queryFn: () => api<Milestone[]>(`/projects/${id}/milestones`),
-  });
-}
 
-export function useProjectDependencies(id: string) {
-  return useQuery({
-    queryKey: keys.dependencies(id),
-    queryFn: () => api<Dependency[]>(`/projects/${id}/dependencies`),
-  });
-}
 
 export function useProjectPlan(id: string) {
   return useQuery({
@@ -82,19 +65,29 @@ export function useCreateProject() {
   });
 }
 
-/** Patch a DRAFT; sends the current version via If-Match so stale saves 409. */
+/** Patch a DRAFT; sends the current version via If-Match so stale saves 409. `projectId`
+ * overrides the hook's id: the wizard creates the draft and patches it in the same click,
+ * before a re-render could hand the hook the new id. */
 export function useUpdateProject(id: string) {
   const qc = useQueryClient();
   return useMutation({
     meta: { inlineErrors: true },
-    mutationFn: ({ body, version }: { body: ProjectUpdate; version: number }) =>
-      api<Project>(`/projects/${id}`, {
+    mutationFn: ({
+      body,
+      version,
+      projectId = id,
+    }: {
+      body: ProjectUpdate;
+      version: number;
+      projectId?: string;
+    }) =>
+      api<Project>(`/projects/${projectId}`, {
         method: "PATCH",
         body,
         headers: { "If-Match": String(version) },
       }),
     onSuccess: (project) => {
-      qc.setQueryData(keys.project(id), project);
+      qc.setQueryData(keys.project(project.id), project);
       void qc.invalidateQueries({ queryKey: keys.list });
     },
   });
@@ -189,5 +182,15 @@ export function useExtendBidding(id: string) {
       qc.setQueryData(keys.project(id), project);
       void qc.invalidateQueries({ queryKey: keys.list });
     },
+  });
+}
+
+/** Verify the client's (simulated) payment method; publishing needs it (D39). */
+export function useVerifyPaymentMethod() {
+  const qc = useQueryClient();
+  return useMutation({
+    meta: { inlineErrors: true },
+    mutationFn: () => api<undefined>("/me/payment-method/verify", { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: meKey }),
   });
 }

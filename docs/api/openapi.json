@@ -1563,6 +1563,11 @@
             "title": "Id",
             "type": "string"
           },
+          "payment_verified": {
+            "default": false,
+            "title": "Payment Verified",
+            "type": "boolean"
+          },
           "phone_e164": {
             "anyOf": [
               {
@@ -1768,6 +1773,25 @@
         "title": "MilestonesReplace",
         "type": "object"
       },
+      "PlanEdge": {
+        "description": "A finish-to-start dependency between two plan nodes (by node key).",
+        "properties": {
+          "predecessor": {
+            "title": "Predecessor",
+            "type": "string"
+          },
+          "successor": {
+            "title": "Successor",
+            "type": "string"
+          }
+        },
+        "required": [
+          "predecessor",
+          "successor"
+        ],
+        "title": "PlanEdge",
+        "type": "object"
+      },
       "PlanOut": {
         "description": "The saved baseline plan: CPM schedule and critical paths (GET /projects/{id}/plan).",
         "properties": {
@@ -1800,6 +1824,13 @@
             "title": "Duration",
             "type": "integer"
           },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/PlanEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
           "exceeds_deadline": {
             "title": "Exceeds Deadline",
             "type": "boolean"
@@ -1816,6 +1847,7 @@
           "baseline_version",
           "duration",
           "nodes",
+          "edges",
           "critical_paths",
           "deadline_days",
           "exceeds_deadline"
@@ -6805,6 +6837,7 @@
                   "email": "rahim@devsync.local",
                   "email_verified": true,
                   "id": "6f1c3a52-6a3e-4c0e-9d4c-2f1b0b6e2a11",
+                  "payment_verified": false,
                   "phone_e164": "+8801712345678",
                   "phone_verified": true,
                   "role": "CLIENT",
@@ -6933,6 +6966,7 @@
                   "email": "rahim@devsync.local",
                   "email_verified": true,
                   "id": "6f1c3a52-6a3e-4c0e-9d4c-2f1b0b6e2a11",
+                  "payment_verified": false,
                   "phone_e164": "+8801712345678",
                   "phone_verified": true,
                   "role": "CLIENT",
@@ -11471,6 +11505,12 @@
                   ],
                   "deadline_days": 30,
                   "duration": 24,
+                  "edges": [
+                    {
+                      "predecessor": "m1",
+                      "successor": "m2"
+                    }
+                  ],
                   "exceeds_deadline": false,
                   "nodes": [
                     {

@@ -5,18 +5,20 @@
  * step publishes the draft for bidding, asking the client to acknowledge the risk if the plan
  * runs past the deadline (DECISIONS D40).
  */
-import { ArrowLeft, ArrowRight, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { useNavigate } from "react-router";
-import type { CpmPreview } from "@/api/types";
-import { ApiError } from "@/api/client";
-import { Button } from "@/components/ui/Button";
+import { ArrowLeft, ArrowRight, CircleCheck, CreditCard, Plus, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useBlocker, useNavigate } from "react-router";
+import type { CpmPreview, Project } from "@/api/types";
+import { api, ApiError } from "@/api/client";
+import { Button, IconButton } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Choice";
 import { Card, CardHeader } from "@/components/ui/Display";
 import { Alert, PageHeader, Stepper } from "@/components/ui/Feedback";
 import { Field, FormField, Textarea } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
+import { Dialog } from "@/components/ui/Overlay";
 import { toast } from "@/components/ui/toast-store";
+import { useMe } from "@/features/auth/api";
 import { useSkills } from "@/features/profile/api";
 import { formatDays, formatMoney } from "@/lib/format";
 import { MilestonesStep } from "./MilestonesStep";
@@ -27,6 +29,7 @@ import {
   useReplaceMilestones,
   useReplaceSlots,
   useUpdateProject,
+  useVerifyPaymentMethod,
 } from "./api";
 import { newKey, toPaisa, type MilestoneRow, type SlotRow } from "./schemas";
 
@@ -46,6 +49,8 @@ interface Draft {
 
 export default function CreateProjectPage() {
   const navigate = useNavigate();
+  const me = useMe();
+  const paymentVerified = me.data?.payment_verified === true;
   const skills = useSkills();
   const create = useCreateProject();
 
@@ -76,6 +81,31 @@ export default function CreateProjectPage() {
   const [biddingDeadline, setBiddingDeadline] = useState("");
   const [cpm, setCpm] = useState<CpmPreview | null>(null);
   const [ack, setAck] = useState(false);
+  // Unsaved-changes prompt (spec §13.5 screen 21): edits made since the last saved step.
+  const [dirty, setDirty] = useState(false);
+  const [published, setPublished] = useState(false);
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      dirty && !published && currentLocation.pathname !== nextLocation.pathname,
+  );
+  useEffect(() => {
+    if (!dirty || published) return undefined;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => {
+      window.removeEventListener("beforeunload", warn);
+    };
+  }, [dirty, published]);
+
+  // Any edit marks the wizard dirty until the step is saved.
+  const edit =
+    <T,>(set: (v: T) => void) =>
+    (v: T) => {
+      set(v);
+      setDirty(true);
+    };
 
   const draftId = draft?.id ?? "preview";
   const update = useUpdateProject(draftId);
@@ -114,8 +144,17 @@ export default function CreateProjectPage() {
     return next;
   }
 
+  /** Slot, milestone and dependency replaces bump the server's version too; re-read it so the
+   * next PATCH (sent with If-Match) isn't rejected as stale. */
+  async function refreshVersion(d: Draft): Promise<Draft> {
+    const project = await api<Project>(`/projects/${d.id}`);
+    const next = { id: project.id, version: project.version };
+    setDraft(next);
+    return next;
+  }
+
   async function patch(body: Parameters<typeof update.mutateAsync>[0]["body"], d: Draft) {
-    const project = await update.mutateAsync({ body, version: d.version });
+    const project = await update.mutateAsync({ body, version: d.version, projectId: d.id });
     const next = { id: project.id, version: project.version };
     setDraft(next);
     return next;
@@ -142,6 +181,7 @@ export default function CreateProjectPage() {
         await putSlots.mutateAsync(
           slots.map((r) => ({ skill_id: r.skill_id, count: r.count, label: r.label.trim() })),
         );
+        await refreshVersion(d);
       } else if (current === 3) {
         const saved = await putMilestones.mutateAsync(
           milestones.map((m) => ({
@@ -163,6 +203,7 @@ export default function CreateProjectPage() {
           }),
         );
         await putDeps.mutateAsync(deps);
+        await refreshVersion(d);
       } else if (current === 4) {
         await patch(
           {
@@ -173,6 +214,7 @@ export default function CreateProjectPage() {
           d,
         );
       }
+      setDirty(false);
       return true;
     } catch (e) {
       setError(problem(e));
@@ -194,7 +236,10 @@ export default function CreateProjectPage() {
     if (step === 2) return teamSize >= 2 && teamSize <= 10 && slots.every((r) => r.skill_id);
     if (step === 3)
       return (
-        milestones.length > 0 && milestones.every((m) => m.name.trim()) && totalShareBp === 10_000
+        milestones.length > 0 &&
+        milestones.every((m) => m.name.trim()) &&
+        totalShareBp === 10_000 &&
+        !cpm?.cycle?.length
       );
     if (step === 4) return Number(budgetTaka) >= 1;
     return true;
@@ -230,7 +275,7 @@ export default function CreateProjectPage() {
               required
               value={title}
               onChange={(e) => {
-                setTitle(e.target.value);
+                edit(setTitle)(e.target.value);
               }}
               placeholder="e.g. Online ordering system"
               maxLength={120}
@@ -241,7 +286,7 @@ export default function CreateProjectPage() {
                   {...a11y}
                   value={summary}
                   onChange={(e) => {
-                    setSummary(e.target.value);
+                    edit(setSummary)(e.target.value);
                   }}
                   maxLength={300}
                   rows={2}
@@ -262,7 +307,7 @@ export default function CreateProjectPage() {
                   {...a11y}
                   value={requirements}
                   onChange={(e) => {
-                    setRequirements(e.target.value);
+                    edit(setRequirements)(e.target.value);
                   }}
                   maxLength={5000}
                   rows={6}
@@ -275,7 +320,7 @@ export default function CreateProjectPage() {
                   {...a11y}
                   value={description}
                   onChange={(e) => {
-                    setDescription(e.target.value);
+                    edit(setDescription)(e.target.value);
                   }}
                   maxLength={10000}
                   rows={3}
@@ -292,7 +337,7 @@ export default function CreateProjectPage() {
                 required
                 value={deadlineDays}
                 onChange={(e) => {
-                  setDeadlineDays(Number(e.target.value));
+                  edit(setDeadlineDays)(Number(e.target.value));
                 }}
               />
               <Field
@@ -300,7 +345,7 @@ export default function CreateProjectPage() {
                 type="date"
                 value={startDate}
                 onChange={(e) => {
-                  setStartDate(e.target.value);
+                  edit(setStartDate)(e.target.value);
                 }}
               />
             </div>
@@ -324,6 +369,7 @@ export default function CreateProjectPage() {
                         {...a11y}
                         value={r.skill_id || undefined}
                         onChange={(v) => {
+                          setDirty(true);
                           setSlots((xs) => xs.map((x, j) => (j === i ? { ...x, skill_id: v } : x)));
                         }}
                         options={skillOptions}
@@ -341,33 +387,32 @@ export default function CreateProjectPage() {
                     max={10}
                     value={r.count}
                     onChange={(e) => {
+                      setDirty(true);
                       setSlots((xs) =>
                         xs.map((x, j) => (j === i ? { ...x, count: Number(e.target.value) } : x)),
                       );
                     }}
                   />
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <IconButton
                   aria-label="Remove slot"
                   disabled={slots.length <= 1}
                   onClick={() => {
+                    setDirty(true);
                     setSlots((xs) => xs.filter((_, j) => j !== i));
                   }}
-                  className="mb-1"
                 >
                   <Trash2 aria-hidden="true" />
-                </Button>
+                </IconButton>
               </li>
             ))}
           </ul>
           <div className="mt-4 flex items-center justify-between">
             <Button
               variant="outline"
-              size="sm"
               disabled={slots.length >= 20}
               onClick={() => {
+                setDirty(true);
                 setSlots((xs) => [...xs, { skill_id: "", count: 1, label: "" }]);
               }}
             >
@@ -388,7 +433,7 @@ export default function CreateProjectPage() {
         <MilestonesStep
           projectId={draftId}
           milestones={milestones}
-          onChange={setMilestones}
+          onChange={edit(setMilestones)}
           skills={skills.data ?? []}
           teamSize={teamSize}
           slotCount={slots.length}
@@ -412,7 +457,7 @@ export default function CreateProjectPage() {
               required
               value={budgetTaka}
               onChange={(e) => {
-                setBudgetTaka(e.target.value);
+                edit(setBudgetTaka)(e.target.value);
               }}
               placeholder="e.g. 120000"
             />
@@ -423,7 +468,7 @@ export default function CreateProjectPage() {
               min={0}
               value={bonusTaka}
               onChange={(e) => {
-                setBonusTaka(e.target.value);
+                edit(setBonusTaka)(e.target.value);
               }}
             />
             <Field
@@ -431,7 +476,7 @@ export default function CreateProjectPage() {
               type="datetime-local"
               value={biddingDeadline}
               onChange={(e) => {
-                setBiddingDeadline(e.target.value);
+                edit(setBiddingDeadline)(e.target.value);
               }}
             />
           </div>
@@ -471,6 +516,7 @@ export default function CreateProjectPage() {
               </div>
             </Alert>
           )}
+          <PaymentMethod verified={paymentVerified} />
         </Card>
       )}
 
@@ -493,15 +539,95 @@ export default function CreateProjectPage() {
         ) : (
           <PublishButton
             projectId={draftId}
-            disabled={!draft || (exceeds && !ack)}
+            disabled={!draft || !paymentVerified || (exceeds && !ack)}
             ack={ack}
             onDone={(id) => {
-              void navigate(`/client/projects/${id}/plan`);
+              setPublished(true);
+              // Navigate after the "published" state is applied, so the prompt doesn't fire.
+              window.setTimeout(() => {
+                void navigate(`/client/projects/${id}/plan`);
+              }, 0);
             }}
           />
         )}
       </div>
+
+      <Dialog
+        open={blocker.state === "blocked"}
+        onOpenChange={(open) => {
+          if (!open && blocker.state === "blocked") blocker.reset();
+        }}
+        title="Leave without saving?"
+        description="Changes on this step haven’t been saved. Earlier steps are already saved in your draft."
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (blocker.state === "blocked") blocker.reset();
+              }}
+            >
+              Stay on this step
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (blocker.state === "blocked") blocker.proceed();
+              }}
+            >
+              Leave without saving
+            </Button>
+          </>
+        }
+      >
+        <p className="text-body-sm text-text-muted">
+          Use “Continue” to save this step, or leave and lose these edits.
+        </p>
+      </Dialog>
     </>
+  );
+}
+
+/** Payments are simulated (spec §0.2 rule 17); publishing still needs a verified method (D39). */
+function PaymentMethod({ verified }: { verified: boolean }) {
+  const verify = useVerifyPaymentMethod();
+  if (verified) {
+    return (
+      <p className="mt-5 flex items-center gap-2 text-body-sm text-success">
+        <CircleCheck className="size-4" aria-hidden="true" />
+        Payment method verified
+      </p>
+    );
+  }
+  return (
+    <Alert tone="info" title="Verify a payment method to publish" className="mt-5">
+      The budget is held in escrow while the team works. Payments in DevSync are simulated, so
+      verifying takes one click and no card details.
+      <div className="mt-3">
+        <Button
+          variant="outline"
+          size="sm"
+          loading={verify.isPending}
+          icon={<CreditCard aria-hidden="true" />}
+          onClick={() => {
+            verify.mutate(undefined, {
+              onSuccess: () => {
+                toast({ tone: "success", title: "Payment method verified" });
+              },
+              onError: (e) => {
+                toast({
+                  tone: "danger",
+                  title: "Payment method not verified",
+                  description: e instanceof ApiError ? e.message : "Please try again.",
+                });
+              },
+            });
+          }}
+        >
+          Verify payment method
+        </Button>
+      </div>
+    </Alert>
   );
 }
 

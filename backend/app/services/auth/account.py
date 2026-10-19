@@ -36,6 +36,7 @@ def _me_view(user: User, totp_enabled: bool, principal: Principal) -> MeResponse
         phone_verified=user.phone_verified_at is not None,
         totp_enabled=totp_enabled,
         totp_verified=principal.totp_verified,
+        payment_verified=user.payment_verified_at is not None,
         created_at=user.created_at,
     )
 

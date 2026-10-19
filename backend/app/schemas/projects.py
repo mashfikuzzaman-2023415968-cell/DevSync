@@ -232,12 +232,20 @@ class CpmPreviewOut(BaseModel):
     warnings: list[str]
 
 
+class PlanEdge(BaseModel):
+    """A finish-to-start dependency between two plan nodes (by node key)."""
+
+    predecessor: str
+    successor: str
+
+
 class PlanOut(BaseModel):
     """The saved baseline plan: CPM schedule and critical paths (GET /projects/{id}/plan)."""
 
     baseline_version: int | None
     duration: int
     nodes: list[CpmNodeOut]
+    edges: list[PlanEdge]
     critical_paths: list[list[str]]
     deadline_days: int
     exceeds_deadline: bool

@@ -42,7 +42,7 @@ export function Toaster() {
             </div>
             <ToastPrimitive.Close
               aria-label="Dismiss"
-              className="absolute right-1.5 top-1.5 inline-flex size-9 items-center justify-center rounded-full text-text-muted hover:bg-surface-2 hover:text-text"
+              className="absolute right-1.5 top-1.5 inline-flex size-11 items-center lg:size-9 justify-center rounded-full text-text-muted hover:bg-surface-2 hover:text-text"
             >
               <X className="size-4" aria-hidden="true" />
             </ToastPrimitive.Close>

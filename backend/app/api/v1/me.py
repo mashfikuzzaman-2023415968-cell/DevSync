@@ -27,6 +27,7 @@ EXAMPLE = {
     "phone_verified": True,
     "totp_enabled": False,
     "totp_verified": False,
+    "payment_verified": False,
     "created_at": "2026-10-17T05:00:00Z",
 }
 

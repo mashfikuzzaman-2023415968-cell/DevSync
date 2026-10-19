@@ -26,18 +26,33 @@ const NODES: CpmNode[] = [
   { key: "a", name: "Requirements", es: 0, ef: 4, ls: 0, lf: 4, slack: 0, critical: true },
   { key: "b", name: "Database", es: 4, ef: 9, ls: 4, lf: 9, slack: 0, critical: true },
   { key: "c", name: "Backend API", es: 9, ef: 17, ls: 9, lf: 17, slack: 0, critical: true },
-  { key: "d", name: "Frontend", es: 9, ef: 14, ls: 13, lf: 18, slack: 4, critical: false },
+  { key: "d", name: "Frontend", es: 4, ef: 13, ls: 8, lf: 17, slack: 4, critical: false },
   { key: "e", name: "Integration", es: 17, ef: 20, ls: 17, lf: 20, slack: 0, critical: true },
   { key: "f", name: "Testing", es: 20, ef: 24, ls: 20, lf: 24, slack: 0, critical: true },
 ];
 const EDGES: [string, string][] = [
   ["a", "b"],
   ["b", "c"],
-  ["b", "d"],
+  ["a", "d"],
   ["c", "e"],
   ["d", "e"],
   ["e", "f"],
 ];
+
+const ME = {
+  id: "c1",
+  email: "rahim@example.com",
+  phone_e164: "+8801712345678",
+  display_name: "Rahim",
+  role: "CLIENT",
+  status: "ACTIVE",
+  email_verified: true,
+  phone_verified: true,
+  totp_enabled: false,
+  totp_verified: false,
+  payment_verified: false,
+  created_at: "2026-10-17T00:00:00Z",
+};
 
 const SKILLS: Skill[] = [
   { id: "s-react", name: "React", domain: "FRONTEND" },
@@ -84,7 +99,7 @@ describe("Gantt", () => {
     expect(
       screen.getByLabelText(/Requirements: days 0–4, on the critical path/i),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText(/Frontend: days 9–14, slack 4 days/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Frontend: days 4–13, slack 4 days/i)).toBeInTheDocument();
   });
 
   it("renders without a today or deadline line and at a tighter zoom", () => {
@@ -168,7 +183,7 @@ describe("MyProjectsPage", () => {
     expect(await screen.findByText("No projects yet")).toBeInTheDocument();
   });
 
-  it("lists projects and cancels one with a reason", async () => {
+  it("lists projects and cancels one with a reason and the typed title", async () => {
     const user = userEvent.setup();
     let cancelled: unknown = null;
     server.use(
@@ -217,7 +232,15 @@ describe("MyProjectsPage", () => {
     // Too short: the confirm stays disabled.
     expect(within(dialog).getByRole("button", { name: "Cancel project" })).toBeDisabled();
     await user.type(reason, "Re-scoping the work.");
-    await user.click(within(dialog).getByRole("button", { name: "Cancel project" }));
+    // A reason alone isn't enough: the project title must be typed to confirm.
+    const confirm = within(dialog).getByRole("button", { name: "Cancel project" });
+    expect(confirm).toBeDisabled();
+    const typed = within(dialog).getByLabelText(/Type “Ordering system” to confirm/);
+    await user.type(typed, "Ordering");
+    expect(confirm).toBeDisabled();
+    await user.type(typed, " system");
+    expect(confirm).toBeEnabled();
+    await user.click(confirm);
     await waitFor(() => {
       expect(cancelled).toEqual({ reason: "Re-scoping the work." });
     });
@@ -232,6 +255,7 @@ describe("PlanPage", () => {
     duration: DURATION_24,
     exceeds_deadline: false,
     nodes: NODES,
+    edges: EDGES.map(([p, s]) => ({ predecessor: p, successor: s })),
   };
 
   function planHandlers() {
@@ -259,9 +283,6 @@ describe("PlanPage", () => {
           updated_at: "2026-10-01T00:00:00Z",
         }),
       ),
-      http.get(`${API}/projects/p1/dependencies`, () =>
-        HttpResponse.json(EDGES.map(([p, s]) => ({ predecessor_id: p, successor_id: s }))),
-      ),
     );
   }
 
@@ -271,9 +292,12 @@ describe("PlanPage", () => {
     server.use(http.get(`${API}/projects/p1/plan`, () => HttpResponse.json(plan)));
     renderRoutes(routes("/client/projects/:id/plan", <PlanPage />), "/client/projects/p1/plan");
 
-    expect(await screen.findByText("Ordering system · Plan")).toBeInTheDocument();
+    expect(await screen.findByText("Plan: Ordering system")).toBeInTheDocument();
     expect(screen.getByText("Duration 24 days")).toBeInTheDocument();
     expect(screen.getByText("5 critical milestones")).toBeInTheDocument();
+    // The dependency graph draws one arrow per edge from the plan response.
+    const graph = screen.getByRole("img", { name: /depend/i });
+    expect(graph.querySelectorAll("path")).toHaveLength(EDGES.length);
     // Toggle to the table alternative.
     await user.click(screen.getByRole("radio", { name: "Table" }));
     expect(await screen.findByRole("table")).toBeInTheDocument();
@@ -373,15 +397,26 @@ describe("CreateProjectPage", () => {
     const user = userEvent.setup();
     const calls: string[] = [];
     let publishBody: unknown = null;
+    let verified = false;
     server.use(
       http.get(`${API}/auth/csrf`, () => new HttpResponse(null, { status: 204 })),
+      http.get(`${API}/me`, () => HttpResponse.json({ ...ME, payment_verified: verified })),
+      http.post(`${API}/me/payment-method/verify`, () => {
+        verified = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
       http.get(`${API}/skills`, () => HttpResponse.json(SKILLS)),
       http.post(`${API}/projects`, () =>
         HttpResponse.json({ id: "p1", version: 1, status: "DRAFT" }),
       ),
-      http.patch(`${API}/projects/p1`, () => {
-        calls.push("patch");
+      http.patch(`${API}/projects/p1`, ({ request }) => {
+        calls.push(`patch@${request.headers.get("If-Match") ?? "-"}`);
         return HttpResponse.json({ id: "p1", version: calls.length + 1 });
+      }),
+      // Re-read after the slot/milestone/dependency replaces (they bump the version).
+      http.get(`${API}/projects/p1`, () => {
+        calls.push("reread");
+        return HttpResponse.json({ id: "p1", version: 40 });
       }),
       http.put(`${API}/projects/p1/slots`, () => {
         calls.push("slots");
@@ -445,18 +480,27 @@ describe("CreateProjectPage", () => {
     await user.type(screen.getByLabelText(/Budget \(৳\)/), "120000");
     await next();
 
-    // Step 5 — Review: the plan overruns, so publish needs the acknowledgement.
+    // Step 5 — Review: the plan overruns, so publish needs the acknowledgement, and a
+    // (simulated) payment method must be verified first (D39).
     expect(await screen.findByText("Review and publish")).toBeInTheDocument();
     const publish = screen.getByRole("button", { name: /Publish for bidding/ });
     expect(publish).toBeDisabled();
     await user.click(screen.getByLabelText(/understand the schedule risk/i));
-    expect(publish).toBeEnabled();
+    expect(publish).toBeDisabled(); // still needs a verified payment method
+    await user.click(screen.getByRole("button", { name: /Verify payment method/ }));
+    expect(await screen.findByText("Payment method verified")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(publish).toBeEnabled();
+    });
     await user.click(publish);
 
     await waitFor(() => {
       expect(publishBody).toEqual({ acknowledge_schedule_risk: true });
     });
     expect(await screen.findByText("plan-page")).toBeInTheDocument();
+    // The draft is patched by its real id, and the budget PATCH carries the re-read version.
+    expect(calls).toContain("reread");
+    expect(calls).toContain("patch@40");
     expect(calls).toContain("slots");
     expect(calls).toContain("milestones");
     expect(calls).toContain("deps");
@@ -559,6 +603,49 @@ describe("MilestonesStep", () => {
       await screen.findByText(/depend on each other in a loop/i, {}, { timeout: 3000 }),
     ).toBeInTheDocument();
     expect(screen.getByText(/Requirements → Database → Requirements/)).toBeInTheDocument();
+  });
+
+  it("lets a later milestone be chosen as a predecessor, so a loop can be shown", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get(`${API}/auth/csrf`, () => new HttpResponse(null, { status: 204 })),
+      http.post(`${API}/projects/p1/plan/preview`, () => HttpResponse.json(PREVIEW)),
+    );
+    renderRoutes([{ path: "/x", element: <Harness /> }], "/x");
+    await user.click(await screen.findByRole("button", { name: /Add milestone/ }));
+    const names = screen.getAllByLabelText(/^Name/);
+    await user.type(names[1] as HTMLElement, "Database");
+    // The first milestone can now depend on the second (a later one).
+    const first = screen.getAllByRole("listitem")[0] as HTMLElement;
+    expect(within(first).getByRole("button", { name: "Database" })).toBeInTheDocument();
+    expect(within(first).queryByRole("button", { name: "Requirements" })).toBeNull(); // not itself
+  });
+
+  it("asks before leaving with unsaved changes", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get(`${API}/auth/csrf`, () => new HttpResponse(null, { status: 204 })),
+      http.get(`${API}/skills`, () => HttpResponse.json(SKILLS)),
+    );
+    const { router } = renderRoutes(
+      [
+        ...routes("/client/projects/new", <CreateProjectPage />),
+        { path: "/client/projects", element: <Probe label="projects-list" /> },
+      ],
+      "/client/projects/new",
+    );
+    await user.type(await screen.findByLabelText(/Project title/), "Ordering system");
+    void router.navigate("/client/projects");
+    const dialog = await screen.findByRole("dialog", { name: "Leave without saving?" });
+    await user.click(within(dialog).getByRole("button", { name: "Stay on this step" }));
+    expect(screen.getByLabelText(/Project title/)).toHaveValue("Ordering system");
+    void router.navigate("/client/projects");
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Leave without saving",
+      }),
+    );
+    expect(await screen.findByText("projects-list")).toBeInTheDocument();
   });
 });
 

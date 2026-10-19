@@ -5,6 +5,12 @@ import { Command } from "cmdk";
 import { Check, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { forwardRef, useState } from "react";
 import { cn } from "@/lib/cn";
+import { readNonce } from "@/lib/nonce";
+
+function nonceProp(): { nonce?: string } {
+  const nonce = readNonce();
+  return nonce ? { nonce } : {};
+}
 import { controlClass } from "./Field";
 
 export interface Option {
@@ -54,7 +60,9 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(function Select
           sideOffset={6}
           className="anim-pop z-50 max-h-[min(var(--radix-select-content-available-height),320px)] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg border border-border bg-surface shadow-lg"
         >
-          <SelectPrimitive.Viewport className="p-1">
+          {/* Radix adds a <style> here to hide the scrollbar; the per-response nonce lets it
+              through the strict CSP (D23). */}
+          <SelectPrimitive.Viewport className="p-1" {...nonceProp()}>
             {options.map((o) => (
               <SelectPrimitive.Item
                 key={o.value}

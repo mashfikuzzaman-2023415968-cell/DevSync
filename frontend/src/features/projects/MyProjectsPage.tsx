@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge, Card, Skeleton, type Tone } from "@/components/ui/Display";
 import { Dialog } from "@/components/ui/Overlay";
 import { EmptyState, ErrorState, PageHeader } from "@/components/ui/Feedback";
-import { FormField, Textarea } from "@/components/ui/Field";
+import { Field, FormField, Textarea } from "@/components/ui/Field";
 import { toast } from "@/components/ui/toast-store";
 import { formatDate, formatDays, formatMoney } from "@/lib/format";
 import { useCancelProject, useMyProjects } from "./api";
@@ -103,8 +103,9 @@ function ProjectRow({ project: p }: { project: ProjectListItem }) {
           <Badge tone={STATUS_TONE[p.status] ?? "neutral"}>{label(p.status)}</Badge>
         </div>
         <p className="mt-1 text-body-sm text-text-muted">
-          {formatMoney(p.budget_paisa)} · {p.team_size} people · {formatDays(p.deadline_days)}
-          {p.bidding_deadline ? ` · bids close ${formatDate(p.bidding_deadline)}` : ""}
+          Budget {formatMoney(p.budget_paisa)}, team of {p.team_size}, {formatDays(p.deadline_days)}{" "}
+          to deliver
+          {p.bidding_deadline ? `, bids close ${formatDate(p.bidding_deadline)}` : ""}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
@@ -120,15 +121,20 @@ function ProjectRow({ project: p }: { project: ProjectListItem }) {
 function CancelDialog({ id, title }: { id: string; title: string }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
+  const [typed, setTyped] = useState("");
   const cancel = useCancelProject(id);
-  const ready = reason.trim().length >= 3;
+  // Spec §17 Phase 4: confirm by typing the project title (a serious, visible action).
+  const ready = reason.trim().length >= 3 && typed.trim() === title.trim();
 
   return (
     <Dialog
       open={open}
       onOpenChange={(o) => {
         setOpen(o);
-        if (!o) setReason("");
+        if (!o) {
+          setReason("");
+          setTyped("");
+        }
       }}
       trigger={
         <Button variant="ghost" size="sm">
@@ -189,6 +195,16 @@ function CancelDialog({ id, title }: { id: string; title: string }) {
           />
         )}
       </FormField>
+      <div className="mt-4">
+        <Field
+          label={`Type “${title}” to confirm`}
+          autoComplete="off"
+          value={typed}
+          onChange={(e) => {
+            setTyped(e.target.value);
+          }}
+        />
+      </div>
     </Dialog>
   );
 }

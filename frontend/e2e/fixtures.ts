@@ -138,3 +138,95 @@ export async function watchPage(page: Page, origin: string) {
     violations: () => page.evaluate(() => (window as unknown as { __csp: string[] }).__csp),
   };
 }
+
+/** The §18.2 "Online ordering system" plan: name, days, share (basis points), predecessors. */
+export const ORDERING_PLAN: [string, number, number, string[]][] = [
+  ["Requirements & design", 4, 1000, []],
+  ["Database", 5, 1500, ["Requirements & design"]],
+  ["Backend API", 8, 2500, ["Database"]],
+  ["Frontend", 9, 2000, ["Requirements & design"]],
+  ["Integration", 3, 1000, ["Backend API", "Frontend"]],
+  ["Testing & launch", 4, 2000, ["Integration"]],
+];
+
+/** Build the §18.2 project for the signed-in client through the API (a deterministic draft with
+ * a fixed start date, optionally published). Returns the project id. */
+export async function createOrderingProject(
+  page: Page,
+  baseURL: string,
+  { publish = false }: { publish?: boolean } = {},
+): Promise<string> {
+  const req = page.request;
+  const ok = async (r: Awaited<ReturnType<APIRequestContext["get"]>>) => {
+    if (!r.ok()) throw new Error(`${r.url()} → ${String(r.status())} ${await r.text()}`);
+    return (await r.json()) as Record<string, unknown>;
+  };
+  const skills = (await (await req.get("/api/v1/skills")).json()) as { id: string; name: string }[];
+  const skill = (name: string) => skills.find((s) => s.name === name)?.id ?? "";
+  const project = await ok(
+    await req.post("/api/v1/projects", {
+      headers: await csrfHeaders(req, baseURL),
+      data: {
+        title: "Online ordering system",
+        summary: "Customers order online; staff track orders.",
+        description: "",
+        requirements: "Ordering, simulated payments and order tracking.",
+        budget_paisa: 12_000_000,
+        bonus_pool_paisa: 0,
+        deadline_days: 30,
+        team_size: 4,
+        start_date: "2026-11-02",
+      },
+    }),
+  );
+  const id = String(project.id);
+  await ok(
+    await req.put(`/api/v1/projects/${id}/slots`, {
+      headers: await csrfHeaders(req, baseURL),
+      data: {
+        slots: ["React", "FastAPI", "PostgreSQL", "Testing"].map((n) => ({
+          skill_id: skill(n),
+          count: 1,
+        })),
+      },
+    }),
+  );
+  const saved = (await (
+    await req.put(`/api/v1/projects/${id}/milestones`, {
+      headers: await csrfHeaders(req, baseURL),
+      data: {
+        milestones: ORDERING_PLAN.map(([name, days, share]) => ({
+          name,
+          description: "",
+          duration_days: days,
+          share_bp: share,
+          skill_ids: [],
+        })),
+      },
+    })
+  ).json()) as { id: string; name: string }[];
+  const idOf = (name: string) => saved.find((m) => m.name === name)?.id ?? "";
+  await ok(
+    await req.put(`/api/v1/projects/${id}/dependencies`, {
+      headers: await csrfHeaders(req, baseURL),
+      data: {
+        dependencies: ORDERING_PLAN.flatMap(([name, , , preds]) =>
+          preds.map((p) => ({ predecessor_id: idOf(p), successor_id: idOf(name) })),
+        ),
+      },
+    }),
+  );
+  if (publish) {
+    const verified = await req.post("/api/v1/me/payment-method/verify", {
+      headers: await csrfHeaders(req, baseURL),
+    });
+    if (verified.status() !== 204) throw new Error(`verify → ${String(verified.status())}`);
+    await ok(
+      await req.post(`/api/v1/projects/${id}/publish`, {
+        headers: await csrfHeaders(req, baseURL),
+        data: {},
+      }),
+    );
+  }
+  return id;
+}

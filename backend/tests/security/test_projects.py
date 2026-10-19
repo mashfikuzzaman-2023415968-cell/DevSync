@@ -280,7 +280,9 @@ def test_publish_requires_payment_then_succeeds(api: Api) -> None:
     blocked = api.post(f"/api/v1/projects/{pid}/publish", json={})
     assert blocked.status_code == 422
     assert "payment_method" in blocked.json()["error"]["fields"]
+    assert api.get("/api/v1/me").json()["payment_verified"] is False
     assert api.post("/api/v1/me/payment-method/verify").status_code == 204
+    assert api.get("/api/v1/me").json()["payment_verified"] is True  # the wizard reads this
     ok = api.post(f"/api/v1/projects/{pid}/publish", json={})
     assert ok.status_code == 200, ok.text
     body = ok.json()
@@ -401,6 +403,10 @@ def test_get_plan_returns_schedule(api: Api) -> None:
     r = api.get(f"/api/v1/projects/{pid}/plan")
     assert r.status_code == 200
     assert r.json()["duration"] == 15  # 5 + 10 in series
+    # The dependency graph on the plan page draws these edges; keys match the node keys.
+    edges = r.json()["edges"]
+    assert edges == [{"predecessor": m[0]["id"], "successor": m[1]["id"]}]
+    assert {e["predecessor"] for e in edges} <= {n["key"] for n in r.json()["nodes"]}
 
 
 # --------------------------------------------------------------------------- IDOR / sealing
