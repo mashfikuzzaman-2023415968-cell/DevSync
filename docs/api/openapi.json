@@ -347,6 +347,23 @@
         "title": "Body_create_external_review_api_v1_me_external_reviews_post",
         "type": "object"
       },
+      "CancelIn": {
+        "additionalProperties": false,
+        "description": "Cancel a project with a reason (spec §8 cancellation rules).",
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "CancelIn",
+        "type": "object"
+      },
       "CaptchaChallenge": {
         "description": "ALTCHA v1 challenge.",
         "properties": {
@@ -665,6 +682,161 @@
           "code"
         ],
         "title": "CodeRequest",
+        "type": "object"
+      },
+      "CpmNodeOut": {
+        "description": "Schedule of one milestone (day offsets from project start).",
+        "properties": {
+          "critical": {
+            "title": "Critical",
+            "type": "boolean"
+          },
+          "ef": {
+            "title": "Ef",
+            "type": "integer"
+          },
+          "es": {
+            "title": "Es",
+            "type": "integer"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "lf": {
+            "title": "Lf",
+            "type": "integer"
+          },
+          "ls": {
+            "title": "Ls",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slack": {
+            "title": "Slack",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "es",
+          "ef",
+          "ls",
+          "lf",
+          "slack",
+          "critical"
+        ],
+        "title": "CpmNodeOut",
+        "type": "object"
+      },
+      "CpmPreviewOut": {
+        "description": "CPM result for a plan: schedule, duration, all critical paths and plan warnings.",
+        "properties": {
+          "critical_paths": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Critical Paths",
+            "type": "array"
+          },
+          "cycle": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cycle"
+          },
+          "duration": {
+            "title": "Duration",
+            "type": "integer"
+          },
+          "feasible": {
+            "title": "Feasible",
+            "type": "boolean"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/CpmNodeOut"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "total_share_bp": {
+            "title": "Total Share Bp",
+            "type": "integer"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "feasible",
+          "duration",
+          "nodes",
+          "critical_paths",
+          "total_share_bp",
+          "warnings"
+        ],
+        "title": "CpmPreviewOut",
+        "type": "object"
+      },
+      "DependenciesReplace": {
+        "additionalProperties": false,
+        "description": "Whole-set replace of a project's milestone dependencies (acyclic; checked by CPM).",
+        "properties": {
+          "dependencies": {
+            "items": {
+              "$ref": "#/components/schemas/DependencyIn"
+            },
+            "maxItems": 1200,
+            "title": "Dependencies",
+            "type": "array"
+          }
+        },
+        "required": [
+          "dependencies"
+        ],
+        "title": "DependenciesReplace",
+        "type": "object"
+      },
+      "DependencyIn": {
+        "additionalProperties": false,
+        "description": "A finish-to-start edge between two of the project's milestones (by id).",
+        "properties": {
+          "predecessor_id": {
+            "format": "uuid",
+            "title": "Predecessor Id",
+            "type": "string"
+          },
+          "successor_id": {
+            "format": "uuid",
+            "title": "Successor Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "predecessor_id",
+          "successor_id"
+        ],
+        "title": "DependencyIn",
         "type": "object"
       },
       "DeveloperProfileOut": {
@@ -1465,6 +1637,236 @@
         "title": "MeUpdateRequest",
         "type": "object"
       },
+      "MilestoneIn": {
+        "additionalProperties": false,
+        "description": "A milestone in a whole-set replace; `id` is present for an existing milestone.",
+        "properties": {
+          "description": {
+            "default": "",
+            "maxLength": 5000,
+            "title": "Description",
+            "type": "string"
+          },
+          "duration_days": {
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Duration Days",
+            "type": "integer"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "share_bp": {
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Share Bp",
+            "type": "integer"
+          },
+          "skill_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Skill Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "duration_days",
+          "share_bp"
+        ],
+        "title": "MilestoneIn",
+        "type": "object"
+      },
+      "MilestoneOut": {
+        "description": "A stored milestone.",
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "duration_days": {
+            "title": "Duration Days",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "share_bp": {
+            "title": "Share Bp",
+            "type": "integer"
+          },
+          "skill_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Skill Ids",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "duration_days",
+          "share_bp",
+          "position",
+          "status",
+          "skill_ids"
+        ],
+        "title": "MilestoneOut",
+        "type": "object"
+      },
+      "MilestonesReplace": {
+        "additionalProperties": false,
+        "description": "Whole-set replace of a project's milestones (Σ share_bp must equal 10000).",
+        "properties": {
+          "milestones": {
+            "items": {
+              "$ref": "#/components/schemas/MilestoneIn"
+            },
+            "maxItems": 300,
+            "title": "Milestones",
+            "type": "array"
+          }
+        },
+        "required": [
+          "milestones"
+        ],
+        "title": "MilestonesReplace",
+        "type": "object"
+      },
+      "PlanOut": {
+        "description": "The saved baseline plan: CPM schedule and critical paths (GET /projects/{id}/plan).",
+        "properties": {
+          "baseline_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Version"
+          },
+          "critical_paths": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Critical Paths",
+            "type": "array"
+          },
+          "deadline_days": {
+            "title": "Deadline Days",
+            "type": "integer"
+          },
+          "duration": {
+            "title": "Duration",
+            "type": "integer"
+          },
+          "exceeds_deadline": {
+            "title": "Exceeds Deadline",
+            "type": "boolean"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/CpmNodeOut"
+            },
+            "title": "Nodes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "baseline_version",
+          "duration",
+          "nodes",
+          "critical_paths",
+          "deadline_days",
+          "exceeds_deadline"
+        ],
+        "title": "PlanOut",
+        "type": "object"
+      },
+      "PlanPreviewIn": {
+        "additionalProperties": false,
+        "description": "Run CPM on an unsaved plan to preview the timeline and warnings (no persistence).",
+        "properties": {
+          "milestones": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewMilestone"
+            },
+            "maxItems": 300,
+            "title": "Milestones",
+            "type": "array"
+          },
+          "slot_count": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slot Count"
+          },
+          "team_size": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 2.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Size"
+          }
+        },
+        "required": [
+          "milestones"
+        ],
+        "title": "PlanPreviewIn",
+        "type": "object"
+      },
       "PortfolioImageOut": {
         "description": "An image of a portfolio item.",
         "properties": {
@@ -1674,6 +2076,469 @@
         "title": "PortfolioReorder",
         "type": "object"
       },
+      "PreviewMilestone": {
+        "additionalProperties": false,
+        "description": "A milestone in an unsaved plan, identified by a client `key` for dependency references.",
+        "properties": {
+          "duration_days": {
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Duration Days",
+            "type": "integer"
+          },
+          "key": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "default": "",
+            "maxLength": 160,
+            "title": "Name",
+            "type": "string"
+          },
+          "predecessor_keys": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 300,
+            "title": "Predecessor Keys",
+            "type": "array"
+          },
+          "share_bp": {
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Share Bp",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "duration_days",
+          "share_bp"
+        ],
+        "title": "PreviewMilestone",
+        "type": "object"
+      },
+      "ProjectCreate": {
+        "additionalProperties": false,
+        "description": "Create a DRAFT project (spec §10.2 POST /projects).",
+        "properties": {
+          "bidding_deadline": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bidding Deadline"
+          },
+          "bonus_pool_paisa": {
+            "default": 0,
+            "maximum": 10000000000.0,
+            "minimum": 0.0,
+            "title": "Bonus Pool Paisa",
+            "type": "integer"
+          },
+          "budget_paisa": {
+            "maximum": 10000000000.0,
+            "minimum": 0.0,
+            "title": "Budget Paisa",
+            "type": "integer"
+          },
+          "deadline_days": {
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Deadline Days",
+            "type": "integer"
+          },
+          "description": {
+            "default": "",
+            "maxLength": 10000,
+            "title": "Description",
+            "type": "string"
+          },
+          "requirements": {
+            "default": "",
+            "maxLength": 5000,
+            "title": "Requirements",
+            "type": "string"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "summary": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Summary",
+            "type": "string"
+          },
+          "team_size": {
+            "maximum": 10.0,
+            "minimum": 2.0,
+            "title": "Team Size",
+            "type": "integer"
+          },
+          "title": {
+            "maxLength": 120,
+            "minLength": 5,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "budget_paisa",
+          "deadline_days",
+          "team_size"
+        ],
+        "title": "ProjectCreate",
+        "type": "object"
+      },
+      "ProjectListItem": {
+        "description": "A row in the client's project list.",
+        "properties": {
+          "bidding_deadline": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bidding Deadline"
+          },
+          "budget_paisa": {
+            "title": "Budget Paisa",
+            "type": "integer"
+          },
+          "deadline_days": {
+            "title": "Deadline Days",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "team_size": {
+            "title": "Team Size",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "status",
+          "budget_paisa",
+          "team_size",
+          "deadline_days",
+          "bidding_deadline",
+          "updated_at"
+        ],
+        "title": "ProjectListItem",
+        "type": "object"
+      },
+      "ProjectOut": {
+        "description": "A project as returned to its client (spec §7.3).",
+        "properties": {
+          "bidding_deadline": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bidding Deadline"
+          },
+          "bidding_extensions": {
+            "title": "Bidding Extensions",
+            "type": "integer"
+          },
+          "bonus_pool_paisa": {
+            "title": "Bonus Pool Paisa",
+            "type": "integer"
+          },
+          "budget_paisa": {
+            "title": "Budget Paisa",
+            "type": "integer"
+          },
+          "cancel_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Reason"
+          },
+          "client_id": {
+            "format": "uuid",
+            "title": "Client Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_baseline_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Baseline Id"
+          },
+          "deadline_days": {
+            "title": "Deadline Days",
+            "type": "integer"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "requirements": {
+            "title": "Requirements",
+            "type": "string"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "team_size": {
+            "title": "Team Size",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "client_id",
+          "title",
+          "summary",
+          "description",
+          "requirements",
+          "budget_paisa",
+          "bonus_pool_paisa",
+          "deadline_days",
+          "team_size",
+          "start_date",
+          "bidding_deadline",
+          "status",
+          "cancel_reason",
+          "bidding_extensions",
+          "current_baseline_id",
+          "version",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ProjectOut",
+        "type": "object"
+      },
+      "ProjectUpdate": {
+        "additionalProperties": false,
+        "description": "Patch a DRAFT project's fields (all optional).",
+        "properties": {
+          "bidding_deadline": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bidding Deadline"
+          },
+          "bonus_pool_paisa": {
+            "anyOf": [
+              {
+                "maximum": 10000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bonus Pool Paisa"
+          },
+          "budget_paisa": {
+            "anyOf": [
+              {
+                "maximum": 10000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Paisa"
+          },
+          "deadline_days": {
+            "anyOf": [
+              {
+                "maximum": 365.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline Days"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "requirements": {
+            "anyOf": [
+              {
+                "maxLength": 5000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requirements"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "team_size": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 2.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Size"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 5,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "ProjectUpdate",
+        "type": "object"
+      },
       "PublicCertificate": {
         "description": "A verified certificate.",
         "properties": {
@@ -1810,6 +2675,19 @@
           }
         },
         "title": "PublicStats",
+        "type": "object"
+      },
+      "PublishIn": {
+        "additionalProperties": false,
+        "description": "Publish a DRAFT for bidding; acknowledge schedule risk if CPM > deadline (D40).",
+        "properties": {
+          "acknowledge_schedule_risk": {
+            "default": false,
+            "title": "Acknowledge Schedule Risk",
+            "type": "boolean"
+          }
+        },
+        "title": "PublishIn",
         "type": "object"
       },
       "ReadinessResponse": {
@@ -2218,6 +3096,84 @@
           "skills"
         ],
         "title": "SkillsUpdate",
+        "type": "object"
+      },
+      "SlotIn": {
+        "additionalProperties": false,
+        "description": "One required skill position in the team.",
+        "properties": {
+          "count": {
+            "default": 1,
+            "minimum": 1.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "label": {
+            "default": "",
+            "maxLength": 120,
+            "title": "Label",
+            "type": "string"
+          },
+          "skill_id": {
+            "format": "uuid",
+            "title": "Skill Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "skill_id"
+        ],
+        "title": "SlotIn",
+        "type": "object"
+      },
+      "SlotOut": {
+        "description": "A stored slot.",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "skill_id": {
+            "format": "uuid",
+            "title": "Skill Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "skill_id",
+          "label",
+          "count"
+        ],
+        "title": "SlotOut",
+        "type": "object"
+      },
+      "SlotsReplace": {
+        "additionalProperties": false,
+        "description": "Whole-set replace of a project's slots (Σ count must equal team_size).",
+        "properties": {
+          "slots": {
+            "items": {
+              "$ref": "#/components/schemas/SlotIn"
+            },
+            "maxItems": 20,
+            "title": "Slots",
+            "type": "array"
+          }
+        },
+        "required": [
+          "slots"
+        ],
+        "title": "SlotsReplace",
         "type": "object"
       },
       "TotpLoginRequest": {
@@ -7642,6 +8598,105 @@
         ]
       }
     },
+    "/api/v1/me/payment-method/verify": {
+      "post": {
+        "operationId": "verify_payment_method_api_v1_me_payment_method_verify_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Verify a (simulated) payment method",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
     "/api/v1/me/portfolio": {
       "get": {
         "description": "Items in display order with their images.",
@@ -8907,6 +9962,2187 @@
         "summary": "Replace my skills",
         "tags": [
           "profiles"
+        ]
+      }
+    },
+    "/api/v1/projects": {
+      "get": {
+        "operationId": "list_projects_api_v1_projects_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "bidding_deadline": "2026-11-05T12:00:00Z",
+                    "budget_paisa": 12000000,
+                    "deadline_days": 30,
+                    "id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+                    "status": "BIDDING",
+                    "team_size": 4,
+                    "title": "Online ordering system",
+                    "updated_at": "2026-10-19T06:00:00Z"
+                  }
+                ],
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectListItem"
+                  },
+                  "title": "Response List Projects Api V1 Projects Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "List my projects",
+        "tags": [
+          "projects"
+        ]
+      },
+      "post": {
+        "operationId": "create_project_api_v1_projects_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "bidding_deadline": "2026-11-05T12:00:00Z",
+                  "bidding_extensions": 0,
+                  "bonus_pool_paisa": 1200000,
+                  "budget_paisa": 12000000,
+                  "client_id": "11111111-1111-4111-8111-111111111111",
+                  "created_at": "2026-10-19T06:00:00Z",
+                  "deadline_days": 30,
+                  "description": "Menu, cart, checkout and an admin dashboard.",
+                  "id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+                  "requirements": "React front end, FastAPI back end, PostgreSQL.",
+                  "start_date": "2026-11-02",
+                  "status": "DRAFT",
+                  "summary": "A web app for a restaurant to take and track orders.",
+                  "team_size": 4,
+                  "title": "Online ordering system",
+                  "updated_at": "2026-10-19T06:00:00Z",
+                  "version": 1
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Create a draft project",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}": {
+      "delete": {
+        "operationId": "delete_project_api_v1_projects__project_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Delete a draft project",
+        "tags": [
+          "projects"
+        ]
+      },
+      "get": {
+        "operationId": "get_project_api_v1_projects__project_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "bidding_deadline": "2026-11-05T12:00:00Z",
+                  "bidding_extensions": 0,
+                  "bonus_pool_paisa": 1200000,
+                  "budget_paisa": 12000000,
+                  "client_id": "11111111-1111-4111-8111-111111111111",
+                  "created_at": "2026-10-19T06:00:00Z",
+                  "deadline_days": 30,
+                  "description": "Menu, cart, checkout and an admin dashboard.",
+                  "id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+                  "requirements": "React front end, FastAPI back end, PostgreSQL.",
+                  "start_date": "2026-11-02",
+                  "status": "DRAFT",
+                  "summary": "A web app for a restaurant to take and track orders.",
+                  "team_size": 4,
+                  "title": "Online ordering system",
+                  "updated_at": "2026-10-19T06:00:00Z",
+                  "version": 1
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Get a project",
+        "tags": [
+          "projects"
+        ]
+      },
+      "patch": {
+        "operationId": "update_project_api_v1_projects__project_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Project version",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Project version",
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "bidding_deadline": "2026-11-05T12:00:00Z",
+                  "bidding_extensions": 0,
+                  "bonus_pool_paisa": 1200000,
+                  "budget_paisa": 12000000,
+                  "client_id": "11111111-1111-4111-8111-111111111111",
+                  "created_at": "2026-10-19T06:00:00Z",
+                  "deadline_days": 30,
+                  "description": "Menu, cart, checkout and an admin dashboard.",
+                  "id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+                  "requirements": "React front end, FastAPI back end, PostgreSQL.",
+                  "start_date": "2026-11-02",
+                  "status": "DRAFT",
+                  "summary": "A web app for a restaurant to take and track orders.",
+                  "team_size": 4,
+                  "title": "Online ordering system",
+                  "updated_at": "2026-10-19T06:00:00Z",
+                  "version": 1
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Update a draft project",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/cancel": {
+      "post": {
+        "operationId": "cancel_project_api_v1_projects__project_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "bidding_deadline": "2026-11-05T12:00:00Z",
+                  "bidding_extensions": 0,
+                  "bonus_pool_paisa": 1200000,
+                  "budget_paisa": 12000000,
+                  "cancel_reason": "Budget changed.",
+                  "client_id": "11111111-1111-4111-8111-111111111111",
+                  "created_at": "2026-10-19T06:00:00Z",
+                  "deadline_days": 30,
+                  "description": "Menu, cart, checkout and an admin dashboard.",
+                  "id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+                  "requirements": "React front end, FastAPI back end, PostgreSQL.",
+                  "start_date": "2026-11-02",
+                  "status": "CANCELLED",
+                  "summary": "A web app for a restaurant to take and track orders.",
+                  "team_size": 4,
+                  "title": "Online ordering system",
+                  "updated_at": "2026-10-19T06:00:00Z",
+                  "version": 1
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Cancel a project",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/dependencies": {
+      "put": {
+        "operationId": "replace_dependencies_api_v1_projects__project_id__dependencies_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DependenciesReplace"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "critical": true,
+                    "ef": 4,
+                    "es": 0,
+                    "key": "3c2b1a09-8f7e-4d6c-b5a4-1e2d3c4b5a60",
+                    "lf": 4,
+                    "ls": 0,
+                    "name": "Requirements & design",
+                    "slack": 0
+                  }
+                ],
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CpmNodeOut"
+                  },
+                  "title": "Response Replace Dependencies Api V1 Projects  Project Id  Dependencies Put",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Replace the project's milestone dependencies",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/extend-bidding": {
+      "post": {
+        "operationId": "extend_bidding_api_v1_projects__project_id__extend_bidding_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "bidding_deadline": "2026-11-05T12:00:00Z",
+                  "bidding_extensions": 1,
+                  "bonus_pool_paisa": 1200000,
+                  "budget_paisa": 12000000,
+                  "client_id": "11111111-1111-4111-8111-111111111111",
+                  "created_at": "2026-10-19T06:00:00Z",
+                  "deadline_days": 30,
+                  "description": "Menu, cart, checkout and an admin dashboard.",
+                  "id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+                  "requirements": "React front end, FastAPI back end, PostgreSQL.",
+                  "start_date": "2026-11-02",
+                  "status": "BIDDING",
+                  "summary": "A web app for a restaurant to take and track orders.",
+                  "team_size": 4,
+                  "title": "Online ordering system",
+                  "updated_at": "2026-10-19T06:00:00Z",
+                  "version": 1
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Extend the bidding deadline",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/milestones": {
+      "put": {
+        "operationId": "replace_milestones_api_v1_projects__project_id__milestones_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MilestonesReplace"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "description": "Scope, wireframes and the data model.",
+                    "duration_days": 4,
+                    "id": "3c2b1a09-8f7e-4d6c-b5a4-1e2d3c4b5a60",
+                    "name": "Requirements & design",
+                    "position": 0,
+                    "share_bp": 1500,
+                    "skill_ids": [
+                      "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
+                    ],
+                    "status": "PLANNED"
+                  }
+                ],
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MilestoneOut"
+                  },
+                  "title": "Response Replace Milestones Api V1 Projects  Project Id  Milestones Put",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Replace the project's milestones",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/plan": {
+      "get": {
+        "operationId": "get_plan_api_v1_projects__project_id__plan_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "baseline_version": 1,
+                  "critical_paths": [
+                    [
+                      "Requirements & design",
+                      "Database"
+                    ]
+                  ],
+                  "deadline_days": 30,
+                  "duration": 24,
+                  "exceeds_deadline": false,
+                  "nodes": [
+                    {
+                      "critical": true,
+                      "ef": 4,
+                      "es": 0,
+                      "key": "3c2b1a09-8f7e-4d6c-b5a4-1e2d3c4b5a60",
+                      "lf": 4,
+                      "ls": 0,
+                      "name": "Requirements & design",
+                      "slack": 0
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/PlanOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "The saved baseline plan and critical paths",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/plan/preview": {
+      "post": {
+        "operationId": "preview_plan_api_v1_projects__project_id__plan_preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanPreviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "critical_paths": [
+                    [
+                      "Requirements & design",
+                      "Database",
+                      "Backend API",
+                      "Integration",
+                      "Testing & launch"
+                    ]
+                  ],
+                  "duration": 24,
+                  "feasible": true,
+                  "nodes": [
+                    {
+                      "critical": true,
+                      "ef": 4,
+                      "es": 0,
+                      "key": "3c2b1a09-8f7e-4d6c-b5a4-1e2d3c4b5a60",
+                      "lf": 4,
+                      "ls": 0,
+                      "name": "Requirements & design",
+                      "slack": 0
+                    }
+                  ],
+                  "total_share_bp": 10000,
+                  "warnings": []
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/CpmPreviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Preview the CPM timeline of an unsaved plan",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/publish": {
+      "post": {
+        "operationId": "publish_project_api_v1_projects__project_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Project version",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Project version",
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "bidding_deadline": "2026-11-05T12:00:00Z",
+                  "bidding_extensions": 0,
+                  "bonus_pool_paisa": 1200000,
+                  "budget_paisa": 12000000,
+                  "client_id": "11111111-1111-4111-8111-111111111111",
+                  "created_at": "2026-10-19T06:00:00Z",
+                  "deadline_days": 30,
+                  "description": "Menu, cart, checkout and an admin dashboard.",
+                  "id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+                  "requirements": "React front end, FastAPI back end, PostgreSQL.",
+                  "start_date": "2026-11-02",
+                  "status": "BIDDING",
+                  "summary": "A web app for a restaurant to take and track orders.",
+                  "team_size": 4,
+                  "title": "Online ordering system",
+                  "updated_at": "2026-10-19T06:00:00Z",
+                  "version": 1
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Publish a draft project for bidding",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/slots": {
+      "put": {
+        "operationId": "replace_slots_api_v1_projects__project_id__slots_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlotsReplace"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "count": 1,
+                    "id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+                    "label": "React developer",
+                    "skill_id": "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
+                  }
+                ],
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SlotOut"
+                  },
+                  "title": "Response Replace Slots Api V1 Projects  Project Id  Slots Put",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Replace the project's skill slots",
+        "tags": [
+          "projects"
         ]
       }
     },

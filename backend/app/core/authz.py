@@ -178,3 +178,42 @@ def _test_take(p: Principal, resource: Any) -> None:
     owner = getattr(resource, "user_id", None)
     if resource is not None and owner != p.user_id:
         raise NotFoundError
+
+
+# --------------------------------------------------------------------------- Phase 4 policies
+
+
+def _require_client_or_admin(p: Principal) -> None:
+    _require_active(p)
+    if p.role != "CLIENT" and not p.is_admin:
+        raise ForbiddenError(code=ErrorCode.ROLE_NOT_ALLOWED)
+
+
+@policy("project.create")
+def _project_create(p: Principal, _r: Any) -> None:
+    """Clients create and own projects."""
+    _require_role(p, "CLIENT")
+
+
+@policy("project.write")
+def _project_write(p: Principal, _r: Any) -> None:
+    """Edit a draft project and its plan; object ownership is checked in the service (→ 404)."""
+    _require_role(p, "CLIENT")
+
+
+@policy("project.read")
+def _project_read(p: Principal, _r: Any) -> None:
+    """A project's own client, or an admin; the service hides other clients' projects (→ 404)."""
+    _require_client_or_admin(p)
+
+
+@policy("project.cancel")
+def _project_cancel(p: Principal, _r: Any) -> None:
+    """The owning client cancels; an admin may cancel with a reason (§2.2)."""
+    _require_client_or_admin(p)
+
+
+@policy("payment.verify")
+def _payment_verify(p: Principal, _r: Any) -> None:
+    """Clients mark their simulated payment method verified (D39)."""
+    _require_role(p, "CLIENT")

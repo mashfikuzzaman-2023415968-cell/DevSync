@@ -20,7 +20,18 @@ from fastapi.openapi.utils import get_openapi
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.routing import Route
 
-from app.api.v1 import admin, auth, captcha, files, health, me, profiles, public, skill_tests
+from app.api.v1 import (
+    admin,
+    auth,
+    captcha,
+    files,
+    health,
+    me,
+    profiles,
+    projects,
+    public,
+    skill_tests,
+)
 from app.core.auth_middleware import CsrfMiddleware, GlobalRateLimitMiddleware, SessionMiddleware
 from app.core.config import Environment, Settings, get_settings, validate_production
 from app.core.errors import install_exception_handlers
@@ -102,7 +113,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     app.state.settings = settings
-    for module in (health, captcha, public, auth, me, admin, profiles, files, skill_tests):
+    for module in (
+        health,
+        captcha,
+        public,
+        auth,
+        me,
+        admin,
+        profiles,
+        files,
+        skill_tests,
+        projects,
+    ):
         app.include_router(module.router, prefix=API_PREFIX)
     if settings.DEVSYNC_ENV is Environment.TEST:
         from app.api.v1 import test_seed  # noqa: PLC0415 - imported only in the test environment

@@ -89,6 +89,21 @@ MATRIX: dict[tuple[str, str], tuple[set[str], str, bool]] = {
     ("GET", "/api/v1/attempts/{attempt_id}"): ({DEV}, "auth", True),
     ("POST", "/api/v1/attempts/{attempt_id}/answer"): ({DEV}, "auth", True),
     ("POST", "/api/v1/attempts/{attempt_id}/submit"): ({DEV}, "auth", True),
+    # Phase 4: projects and the CPM planner
+    ("POST", "/api/v1/projects"): ({CLIENT}, "auth", False),
+    ("GET", "/api/v1/projects"): ({CLIENT, ADMIN}, "auth", False),
+    ("GET", "/api/v1/projects/{project_id}"): ({CLIENT, ADMIN}, "auth", True),
+    ("PATCH", "/api/v1/projects/{project_id}"): ({CLIENT}, "auth", True),
+    ("DELETE", "/api/v1/projects/{project_id}"): ({CLIENT}, "auth", True),
+    ("PUT", "/api/v1/projects/{project_id}/slots"): ({CLIENT}, "auth", True),
+    ("PUT", "/api/v1/projects/{project_id}/milestones"): ({CLIENT}, "auth", True),
+    ("PUT", "/api/v1/projects/{project_id}/dependencies"): ({CLIENT}, "auth", True),
+    ("POST", "/api/v1/projects/{project_id}/plan/preview"): ({CLIENT, ADMIN}, "auth", True),
+    ("GET", "/api/v1/projects/{project_id}/plan"): ({CLIENT, ADMIN}, "auth", True),
+    ("POST", "/api/v1/projects/{project_id}/publish"): ({CLIENT}, "auth", True),
+    ("POST", "/api/v1/projects/{project_id}/extend-bidding"): ({CLIENT}, "auth", True),
+    ("POST", "/api/v1/projects/{project_id}/cancel"): ({CLIENT, ADMIN}, "auth", True),
+    ("POST", "/api/v1/me/payment-method/verify"): ({CLIENT}, "auth", False),
 }
 
 BODIES: dict[tuple[str, str], dict[str, Any]] = {

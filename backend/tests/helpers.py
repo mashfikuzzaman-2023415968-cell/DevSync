@@ -107,6 +107,9 @@ class Api:
     def patch(self, path: str, **kw: Any) -> Any:
         return self.request("PATCH", path, **kw)
 
+    def put(self, path: str, **kw: Any) -> Any:
+        return self.request("PUT", path, **kw)
+
     def delete(self, path: str, **kw: Any) -> Any:
         return self.request("DELETE", path, **kw)
 
