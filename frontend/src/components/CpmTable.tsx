@@ -8,7 +8,13 @@ import type { CpmNode } from "@/api/types";
 import { cn } from "@/lib/cn";
 import { formatDays } from "@/lib/format";
 
-export function CpmTable({ nodes, className }: { nodes: CpmNode[]; className?: string | undefined }) {
+export function CpmTable({
+  nodes,
+  className,
+}: {
+  nodes: CpmNode[];
+  className?: string | undefined;
+}) {
   return (
     <div className={cn("overflow-x-auto", className)}>
       <table className="w-full text-body-sm">

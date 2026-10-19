@@ -413,8 +413,7 @@ async def plan_preview(ctx: Ctx, project_id: uuid.UUID, data: PlanPreviewIn) -> 
         warnings.append(f"Milestone shares total {total_share / 100:.0f}%, not 100%.")
     if result.duration > project.deadline_days:
         warnings.append(
-            f"The plan needs {result.duration} days, over the "
-            f"{project.deadline_days}-day deadline."
+            f"The plan needs {result.duration} days, over the {project.deadline_days}-day deadline."
         )
     if (
         data.slot_count is not None

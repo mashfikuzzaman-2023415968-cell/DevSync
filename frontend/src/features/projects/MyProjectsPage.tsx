@@ -139,7 +139,12 @@ function CancelDialog({ id, title }: { id: string; title: string }) {
       description={`“${title}” will be withdrawn. Tell bidders why.`}
       footer={
         <>
-          <Button variant="outline" onClick={() => { setOpen(false); }}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setOpen(false);
+            }}
+          >
             Keep it
           </Button>
           <Button
@@ -175,7 +180,9 @@ function CancelDialog({ id, title }: { id: string; title: string }) {
           <Textarea
             {...a11y}
             value={reason}
-            onChange={(e) => { setReason(e.target.value); }}
+            onChange={(e) => {
+              setReason(e.target.value);
+            }}
             rows={3}
             maxLength={500}
             placeholder="e.g. Requirements changed and we're re-scoping."

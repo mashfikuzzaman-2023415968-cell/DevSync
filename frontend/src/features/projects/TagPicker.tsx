@@ -41,7 +41,9 @@ export function TagPicker({
             key={o.value}
             type="button"
             aria-pressed={on}
-            onClick={() => { toggle(o.value); }}
+            onClick={() => {
+              toggle(o.value);
+            }}
             className={cn(
               "inline-flex min-h-8 items-center gap-1 rounded-full border px-3 py-1 text-body-sm transition-colors duration-fast focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
               on

@@ -12,6 +12,7 @@ import html
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -44,7 +45,7 @@ def _column_line(column: object) -> str:
     flags = []
     if getattr(column, "primary_key", False):
         flags.append("PK")
-    fks = getattr(column, "foreign_keys", set())
+    fks: Any = getattr(column, "foreign_keys", set())
     target = None
     for fk in fks:
         flags.append("FK")

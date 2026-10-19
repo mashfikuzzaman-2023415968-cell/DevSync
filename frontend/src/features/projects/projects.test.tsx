@@ -62,9 +62,9 @@ describe("schemas", () => {
   });
 
   it("requires a positive budget", () => {
-    expect(budgetSchema.safeParse({ budget_taka: 0, bonus_taka: 0, bidding_deadline: "" }).success).toBe(
-      false,
-    );
+    expect(
+      budgetSchema.safeParse({ budget_taka: 0, bonus_taka: 0, bidding_deadline: "" }).success,
+    ).toBe(false);
     expect(
       budgetSchema.safeParse({ budget_taka: 1000, bonus_taka: 0, bidding_deadline: "" }).success,
     ).toBe(true);
@@ -81,7 +81,9 @@ describe("Gantt", () => {
     const img = screen.getByRole("img");
     expect(img).toHaveAccessibleName(/6 milestones/i);
     // Every milestone bar is a focusable group with a descriptive label.
-    expect(screen.getByLabelText(/Requirements: days 0–4, on the critical path/i)).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/Requirements: days 0–4, on the critical path/i),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText(/Frontend: days 9–14, slack 4 days/i)).toBeInTheDocument();
   });
 
@@ -374,7 +376,9 @@ describe("CreateProjectPage", () => {
     server.use(
       http.get(`${API}/auth/csrf`, () => new HttpResponse(null, { status: 204 })),
       http.get(`${API}/skills`, () => HttpResponse.json(SKILLS)),
-      http.post(`${API}/projects`, () => HttpResponse.json({ id: "p1", version: 1, status: "DRAFT" })),
+      http.post(`${API}/projects`, () =>
+        HttpResponse.json({ id: "p1", version: 1, status: "DRAFT" }),
+      ),
       http.patch(`${API}/projects/p1`, () => {
         calls.push("patch");
         return HttpResponse.json({ id: "p1", version: calls.length + 1 });
@@ -435,7 +439,9 @@ describe("CreateProjectPage", () => {
     await next();
 
     // Step 4 — Budget
-    expect(await screen.findByText(/held in escrow and released by milestone/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/held in escrow and released by milestone/i),
+    ).toBeInTheDocument();
     await user.type(screen.getByLabelText(/Budget \(৳\)/), "120000");
     await next();
 
@@ -469,7 +475,14 @@ const PREVIEW = {
 
 function Harness({ shareBp = 10_000 }: { shareBp?: number }) {
   const [rows, setRows] = useState<MilestoneRow[]>([
-    { key: "k1", name: "Requirements", duration_days: 4, share_bp: shareBp, skill_ids: [], predecessor_keys: [] },
+    {
+      key: "k1",
+      name: "Requirements",
+      duration_days: 4,
+      share_bp: shareBp,
+      skill_ids: [],
+      predecessor_keys: [],
+    },
   ]);
   return (
     <MilestonesStep
@@ -599,4 +612,3 @@ describe("api hooks", () => {
     await del.result.current.mutateAsync("p1");
   });
 });
-

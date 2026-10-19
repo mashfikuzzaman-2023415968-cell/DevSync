@@ -46,8 +46,7 @@ function layout(nodes: GraphNode[], edges: GraphEdge[]) {
   for (let pass = 0; pass < nodes.length; pass += 1) {
     let changed = false;
     for (const n of nodes) {
-      const want =
-        preds.get(n.key)?.reduce((m, p) => Math.max(m, (layer.get(p) ?? 0) + 1), 0) ?? 0;
+      const want = preds.get(n.key)?.reduce((m, p) => Math.max(m, (layer.get(p) ?? 0) + 1), 0) ?? 0;
       if (want !== layer.get(n.key)) {
         layer.set(n.key, want);
         changed = true;
@@ -136,10 +135,7 @@ export function DependencyGraph({
               width={NODE_W}
               height={NODE_H}
               rx="8"
-              className={cn(
-                "fill-surface",
-                n.critical ? "stroke-danger" : "stroke-border",
-              )}
+              className={cn("fill-surface", n.critical ? "stroke-danger" : "stroke-border")}
               strokeWidth={n.critical ? "2" : "1"}
             />
             <text

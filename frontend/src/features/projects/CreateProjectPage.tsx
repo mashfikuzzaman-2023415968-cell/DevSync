@@ -62,7 +62,14 @@ export default function CreateProjectPage() {
   const [startDate, setStartDate] = useState("");
   const [slots, setSlots] = useState<SlotRow[]>([{ skill_id: "", count: 1, label: "" }]);
   const [milestones, setMilestones] = useState<MilestoneRow[]>([
-    { key: newKey(), name: "", duration_days: 3, share_bp: 10_000, skill_ids: [], predecessor_keys: [] },
+    {
+      key: newKey(),
+      name: "",
+      duration_days: 3,
+      share_bp: 10_000,
+      skill_ids: [],
+      predecessor_keys: [],
+    },
   ]);
   const [budgetTaka, setBudgetTaka] = useState("");
   const [bonusTaka, setBonusTaka] = useState("0");
@@ -185,7 +192,10 @@ export default function CreateProjectPage() {
   const canContinue = (() => {
     if (step === 0) return title.trim().length >= 5;
     if (step === 2) return teamSize >= 2 && teamSize <= 10 && slots.every((r) => r.skill_id);
-    if (step === 3) return milestones.length > 0 && milestones.every((m) => m.name.trim()) && totalShareBp === 10_000;
+    if (step === 3)
+      return (
+        milestones.length > 0 && milestones.every((m) => m.name.trim()) && totalShareBp === 10_000
+      );
     if (step === 4) return Number(budgetTaka) >= 1;
     return true;
   })();
@@ -199,7 +209,9 @@ export default function CreateProjectPage() {
         title="Create a project"
         description="Describe the work, split it into milestones and see the critical path before anyone bids."
       />
-      <div className="mb-6">
+      {/* The 6-step stepper is wider than a tablet in its desktop form; let it scroll
+          horizontally inside its own box rather than push the page wide (spec §13.14). */}
+      <div className="mb-6 overflow-x-auto">
         <Stepper steps={STEPS} current={step} />
       </div>
 
@@ -217,7 +229,9 @@ export default function CreateProjectPage() {
               label="Project title"
               required
               value={title}
-              onChange={(e) => { setTitle(e.target.value); }}
+              onChange={(e) => {
+                setTitle(e.target.value);
+              }}
               placeholder="e.g. Online ordering system"
               maxLength={120}
             />
@@ -226,7 +240,9 @@ export default function CreateProjectPage() {
                 <Textarea
                   {...a11y}
                   value={summary}
-                  onChange={(e) => { setSummary(e.target.value); }}
+                  onChange={(e) => {
+                    setSummary(e.target.value);
+                  }}
                   maxLength={300}
                   rows={2}
                 />
@@ -245,7 +261,9 @@ export default function CreateProjectPage() {
                 <Textarea
                   {...a11y}
                   value={requirements}
-                  onChange={(e) => { setRequirements(e.target.value); }}
+                  onChange={(e) => {
+                    setRequirements(e.target.value);
+                  }}
                   maxLength={5000}
                   rows={6}
                 />
@@ -256,7 +274,9 @@ export default function CreateProjectPage() {
                 <Textarea
                   {...a11y}
                   value={description}
-                  onChange={(e) => { setDescription(e.target.value); }}
+                  onChange={(e) => {
+                    setDescription(e.target.value);
+                  }}
                   maxLength={10000}
                   rows={3}
                 />
@@ -271,13 +291,17 @@ export default function CreateProjectPage() {
                 max={365}
                 required
                 value={deadlineDays}
-                onChange={(e) => { setDeadlineDays(Number(e.target.value)); }}
+                onChange={(e) => {
+                  setDeadlineDays(Number(e.target.value));
+                }}
               />
               <Field
                 label="Preferred start (optional)"
                 type="date"
                 value={startDate}
-                onChange={(e) => { setStartDate(e.target.value); }}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                }}
               />
             </div>
           </div>
@@ -328,7 +352,9 @@ export default function CreateProjectPage() {
                   size="sm"
                   aria-label="Remove slot"
                   disabled={slots.length <= 1}
-                  onClick={() => { setSlots((xs) => xs.filter((_, j) => j !== i)); }}
+                  onClick={() => {
+                    setSlots((xs) => xs.filter((_, j) => j !== i));
+                  }}
                   className="mb-1"
                 >
                   <Trash2 aria-hidden="true" />
@@ -341,7 +367,9 @@ export default function CreateProjectPage() {
               variant="outline"
               size="sm"
               disabled={slots.length >= 20}
-              onClick={() => { setSlots((xs) => [...xs, { skill_id: "", count: 1, label: "" }]); }}
+              onClick={() => {
+                setSlots((xs) => [...xs, { skill_id: "", count: 1, label: "" }]);
+              }}
             >
               <Plus aria-hidden="true" />
               Add slot
@@ -383,7 +411,9 @@ export default function CreateProjectPage() {
               min={1}
               required
               value={budgetTaka}
-              onChange={(e) => { setBudgetTaka(e.target.value); }}
+              onChange={(e) => {
+                setBudgetTaka(e.target.value);
+              }}
               placeholder="e.g. 120000"
             />
             <Field
@@ -392,13 +422,17 @@ export default function CreateProjectPage() {
               inputMode="numeric"
               min={0}
               value={bonusTaka}
-              onChange={(e) => { setBonusTaka(e.target.value); }}
+              onChange={(e) => {
+                setBonusTaka(e.target.value);
+              }}
             />
             <Field
               label="Bidding closes (optional)"
               type="datetime-local"
               value={biddingDeadline}
-              onChange={(e) => { setBiddingDeadline(e.target.value); }}
+              onChange={(e) => {
+                setBiddingDeadline(e.target.value);
+              }}
             />
           </div>
         </Card>
@@ -415,11 +449,11 @@ export default function CreateProjectPage() {
             <Summary label="Team size" value={String(teamSize)} />
             <Summary label="Milestones" value={String(milestones.length)} />
             <Summary label="Deadline" value={formatDays(deadlineDays)} />
+            <Summary label="Planned duration" value={cpm ? formatDays(cpm.duration) : "—"} />
             <Summary
-              label="Planned duration"
-              value={cpm ? formatDays(cpm.duration) : "—"}
+              label="Budget"
+              value={budgetTaka ? formatMoney(toPaisa(Number(budgetTaka))) : "—"}
             />
-            <Summary label="Budget" value={budgetTaka ? formatMoney(toPaisa(Number(budgetTaka))) : "—"} />
           </dl>
           {exceeds && (
             <Alert tone="warning" title="The plan runs past your deadline" className="mt-5">
@@ -429,7 +463,9 @@ export default function CreateProjectPage() {
               <div className="mt-3">
                 <Checkbox
                   checked={ack}
-                  onCheckedChange={(v) => { setAck(v === true); }}
+                  onCheckedChange={(v) => {
+                    setAck(v === true);
+                  }}
                   label="I understand the schedule risk and want to publish anyway"
                 />
               </div>
@@ -444,7 +480,13 @@ export default function CreateProjectPage() {
           Back
         </Button>
         {step < STEPS.length - 1 ? (
-          <Button onClick={() => { void next(); }} loading={busy} disabled={!canContinue}>
+          <Button
+            onClick={() => {
+              void next();
+            }}
+            loading={busy}
+            disabled={!canContinue}
+          >
             Continue
             <ArrowRight aria-hidden="true" />
           </Button>
@@ -453,7 +495,9 @@ export default function CreateProjectPage() {
             projectId={draftId}
             disabled={!draft || (exceeds && !ack)}
             ack={ack}
-            onDone={(id) => { void navigate(`/client/projects/${id}/plan`); }}
+            onDone={(id) => {
+              void navigate(`/client/projects/${id}/plan`);
+            }}
           />
         )}
       </div>
@@ -491,7 +535,11 @@ function PublishButton({
           { acknowledge_schedule_risk: ack },
           {
             onSuccess: (project) => {
-              toast({ tone: "success", title: "Published", description: "Your project is open for bids." });
+              toast({
+                tone: "success",
+                title: "Published",
+                description: "Your project is open for bids.",
+              });
               onDone(project.id);
             },
             onError: (e) => {

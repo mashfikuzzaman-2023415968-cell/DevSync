@@ -61,8 +61,8 @@ export function Gantt({
         className="min-w-full"
       >
         <title id={titleId}>
-          Gantt chart: {nodes.length} milestones over {formatDays(duration)}, {criticalCount} on
-          the critical path.
+          Gantt chart: {nodes.length} milestones over {formatDays(duration)}, {criticalCount} on the
+          critical path.
         </title>
 
         {/* Day/week grid */}

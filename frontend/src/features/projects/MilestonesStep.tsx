@@ -52,7 +52,8 @@ export function MilestonesStep({
   const [result, setResult] = useState<CpmPreview | null>(null);
 
   const totalBp = milestones.reduce((s, m) => s + (m.share_bp || 0), 0);
-  const ready = milestones.length > 0 && milestones.every((m) => m.name.trim() && m.duration_days > 0);
+  const ready =
+    milestones.length > 0 && milestones.every((m) => m.name.trim() && m.duration_days > 0);
 
   // Debounced preview: the request key changes only when the plan changes.
   const planKey = JSON.stringify(
@@ -66,15 +67,13 @@ export function MilestonesStep({
       return undefined;
     }
     const body = {
-      milestones: milestones.map(
-        (m): PreviewMilestone => ({
-          key: m.key,
-          name: m.name,
-          duration_days: m.duration_days,
-          share_bp: m.share_bp,
-          predecessor_keys: m.predecessor_keys,
-        }),
-      ),
+      milestones: milestones.map((m): PreviewMilestone => ({
+        key: m.key,
+        name: m.name,
+        duration_days: m.duration_days,
+        share_bp: m.share_bp,
+        predecessor_keys: m.predecessor_keys,
+      })),
       team_size: teamSize,
       slot_count: slotCount,
     };
@@ -116,7 +115,14 @@ export function MilestonesStep({
   function add() {
     onChange([
       ...milestones,
-      { key: newKey(), name: "", duration_days: 3, share_bp: 0, skill_ids: [], predecessor_keys: [] },
+      {
+        key: newKey(),
+        name: "",
+        duration_days: 3,
+        share_bp: 0,
+        skill_ids: [],
+        predecessor_keys: [],
+      },
     ]);
   }
 
@@ -143,7 +149,9 @@ export function MilestonesStep({
                       <Field
                         label="Name"
                         value={m.name}
-                        onChange={(e) => { update(m.key, { name: e.target.value }); }}
+                        onChange={(e) => {
+                          update(m.key, { name: e.target.value });
+                        }}
                         placeholder="e.g. Database schema"
                         maxLength={160}
                       />
@@ -156,7 +164,9 @@ export function MilestonesStep({
                         min={1}
                         max={365}
                         value={m.duration_days}
-                        onChange={(e) => { update(m.key, { duration_days: Number(e.target.value) }); }}
+                        onChange={(e) => {
+                          update(m.key, { duration_days: Number(e.target.value) });
+                        }}
                       />
                     </div>
                     <div className="sm:col-span-1">
@@ -167,7 +177,9 @@ export function MilestonesStep({
                         min={0}
                         max={100}
                         value={bpToPct(m.share_bp)}
-                        onChange={(e) => { update(m.key, { share_bp: pctToBp(Number(e.target.value)) }); }}
+                        onChange={(e) => {
+                          update(m.key, { share_bp: pctToBp(Number(e.target.value)) });
+                        }}
                       />
                     </div>
                     <div className="sm:col-span-3">
@@ -178,7 +190,9 @@ export function MilestonesStep({
                             aria-describedby={a11y["aria-describedby"]}
                             options={skillOptions}
                             value={m.skill_ids}
-                            onChange={(v) => { update(m.key, { skill_ids: v }); }}
+                            onChange={(v) => {
+                              update(m.key, { skill_ids: v });
+                            }}
                             empty="Add skills in the earlier step."
                           />
                         )}
@@ -187,15 +201,22 @@ export function MilestonesStep({
                     <div className="sm:col-span-3">
                       <FormField
                         label="Must finish after"
-                        hint={earlier.length ? undefined : "The first milestone has no predecessors."}
+                        hint={
+                          earlier.length ? undefined : "The first milestone has no predecessors."
+                        }
                       >
                         {(a11y) => (
                           <TagPicker
                             id={a11y.id}
                             aria-describedby={a11y["aria-describedby"]}
-                            options={earlier.map((p) => ({ value: p.key, label: p.name || "Untitled" }))}
+                            options={earlier.map((p) => ({
+                              value: p.key,
+                              label: p.name || "Untitled",
+                            }))}
                             value={m.predecessor_keys}
-                            onChange={(v) => { update(m.key, { predecessor_keys: v }); }}
+                            onChange={(v) => {
+                              update(m.key, { predecessor_keys: v });
+                            }}
                             empty="This is the first milestone."
                           />
                         )}
@@ -205,7 +226,9 @@ export function MilestonesStep({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => { remove(m.key); }}
+                    onClick={() => {
+                      remove(m.key);
+                    }}
                     aria-label={`Remove ${m.name || "milestone"}`}
                     className="mt-6"
                   >
@@ -227,7 +250,10 @@ export function MilestonesStep({
 
       <Card>
         <div className="flex items-center justify-between gap-3">
-          <CardHeader title="Plan preview" description="Runs the critical-path method as you edit." />
+          <CardHeader
+            title="Plan preview"
+            description="Runs the critical-path method as you edit."
+          />
           <SegmentedControl<PreviewView>
             label="Plan view"
             size="sm"
@@ -327,7 +353,13 @@ function ShareMeter({ totalBp }: { totalBp: number }) {
   );
 }
 
-function Chip({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "ok" | "warn" }) {
+function Chip({
+  children,
+  tone = "neutral",
+}: {
+  children: ReactNode;
+  tone?: "neutral" | "ok" | "warn";
+}) {
   return (
     <span
       className={cn(

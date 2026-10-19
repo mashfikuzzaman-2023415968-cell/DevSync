@@ -95,7 +95,7 @@ EX_MILESTONES = [
     }
 ]
 EX_NODES = [
-    {"key": _MID, "name": "Requirements & design", "es": 0, "ef": 4, "ls": 0, "lf": 4,
+    {"key": "m1", "name": "Requirements & design", "es": 0, "ef": 4, "ls": 0, "lf": 4,
      "slack": 0, "critical": True}
 ]  # fmt: skip
 EX_PREVIEW = {
