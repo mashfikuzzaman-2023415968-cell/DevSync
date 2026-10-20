@@ -1,5 +1,11 @@
 """SQLAlchemy models (spec §7). Importing this package registers every table on `Base.metadata`."""
 
+from app.models.bidding import (
+    AvailabilityReservation,
+    Bid,
+    BidStatus,
+    ReservationStatus,
+)
 from app.models.foundation import AuditLog, IdempotencyKey, Job, JobStatus, PlatformSettings
 from app.models.identity import (
     DeviceSeen,
@@ -50,9 +56,13 @@ from app.models.projects import (
     ProjectSlot,
     ProjectStatus,
 )
+from app.models.reputation import ReputationSnapshot
 
 __all__ = [
     "AuditLog",
+    "AvailabilityReservation",
+    "Bid",
+    "BidStatus",
     "Certificate",
     "ClientProfile",
     "DeveloperProfile",
@@ -87,6 +97,8 @@ __all__ = [
     "ProjectStatus",
     "Question",
     "RecoveryCode",
+    "ReputationSnapshot",
+    "ReservationStatus",
     "ScanStatus",
     "Session",
     "Skill",

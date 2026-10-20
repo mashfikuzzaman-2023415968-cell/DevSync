@@ -19,6 +19,7 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     CheckConstraint,
+    Computed,
     Date,
     DateTime,
     ForeignKey,
@@ -28,7 +29,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, Timestamps, UUIDPrimaryKey
@@ -107,6 +108,15 @@ class Project(UUIDPrimaryKey, Timestamps, Base):
         SmallInteger, nullable=False, server_default="0"
     )
     version: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+    # Full-text search over title + summary (Phase 5 marketplace, migration 0006); skills are a
+    # structured filter joined at query time. Generated/persisted so it can't drift from the text.
+    search_vector: Mapped[str | None] = mapped_column(
+        TSVECTOR,
+        Computed(
+            "to_tsvector('simple', coalesce(title, '') || ' ' || coalesce(summary, ''))",
+            persisted=True,
+        ),
+    )
 
     __table_args__ = (
         CheckConstraint("char_length(title) BETWEEN 5 AND 120", name="title_len"),
@@ -120,6 +130,7 @@ class Project(UUIDPrimaryKey, Timestamps, Base):
         CheckConstraint("bidding_extensions >= 0", name="extensions_nonneg"),
         Index("ix_projects_status_bidding_deadline", "status", "bidding_deadline"),
         Index("ix_projects_client_id", "client_id"),
+        Index("ix_projects_search", "search_vector", postgresql_using="gin"),
     )
 
 
