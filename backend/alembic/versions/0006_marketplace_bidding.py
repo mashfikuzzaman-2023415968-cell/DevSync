@@ -46,7 +46,8 @@ ALTER TABLE bids ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bids FORCE ROW LEVEL SECURITY;
 CREATE POLICY migrator_all ON bids TO devsync_migrator USING (true) WITH CHECK (true);
 CREATE POLICY bid_select ON bids FOR SELECT TO devsync_app, devsync_worker
-  USING (developer_id = app_uid() OR is_project_client(project_id) OR is_admin());
+  USING (developer_id = app_uid() OR is_project_client(project_id) OR is_admin()
+         OR app_role() = 'SYSTEM');
 CREATE POLICY bid_insert ON bids FOR INSERT TO devsync_app, devsync_worker
   WITH CHECK (
     (developer_id = app_uid() AND app_role() = 'DEVELOPER' AND project_is_bidding(project_id))
@@ -63,7 +64,8 @@ ALTER TABLE availability_reservations FORCE ROW LEVEL SECURITY;
 CREATE POLICY migrator_all ON availability_reservations TO devsync_migrator
   USING (true) WITH CHECK (true);
 CREATE POLICY reservation_select ON availability_reservations FOR SELECT TO devsync_app, devsync_worker
-  USING (developer_id = app_uid() OR is_project_client(project_id) OR is_admin());
+  USING (developer_id = app_uid() OR is_project_client(project_id) OR is_admin()
+         OR app_role() = 'SYSTEM');
 CREATE POLICY reservation_write ON availability_reservations FOR ALL TO devsync_app, devsync_worker
   USING (developer_id = app_uid() OR app_role() = 'SYSTEM')
   WITH CHECK (developer_id = app_uid() OR app_role() = 'SYSTEM');
@@ -73,8 +75,27 @@ ALTER TABLE reputation_snapshots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reputation_snapshots FORCE ROW LEVEL SECURITY;
 CREATE POLICY migrator_all ON reputation_snapshots TO devsync_migrator USING (true) WITH CHECK (true);
 CREATE POLICY snapshot_select ON reputation_snapshots FOR SELECT TO devsync_app, devsync_worker
-  USING (app_uid() IS NOT NULL OR is_admin());
+  USING (app_uid() IS NOT NULL OR is_admin() OR app_role() = 'SYSTEM');
 CREATE POLICY snapshot_write ON reputation_snapshots FOR ALL TO devsync_app, devsync_worker
+  USING (app_role() = 'SYSTEM') WITH CHECK (app_role() = 'SYSTEM');
+
+-- Eligibility (Algorithm 1) is computed in a SYSTEM session on behalf of the project's client or
+-- the deadline job; it needs to read each bidder's skills, skill evidence and profile hours. These
+-- additive SELECT policies grant SYSTEM that read (the Phase 3 owner/admin policies are unchanged;
+-- RLS is permissive, so these only widen reads for the SYSTEM role, never for the web user).
+CREATE POLICY system_read ON developer_skills FOR SELECT TO devsync_worker
+  USING (app_role() = 'SYSTEM');
+CREATE POLICY system_read ON skill_evidence FOR SELECT TO devsync_worker
+  USING (app_role() = 'SYSTEM');
+CREATE POLICY system_read ON developer_profiles FOR SELECT TO devsync_worker
+  USING (app_role() = 'SYSTEM');
+CREATE POLICY system_read ON users FOR SELECT TO devsync_worker
+  USING (app_role() = 'SYSTEM');
+
+-- SYSTEM jobs transition project status (bidding deadline → FORMING here; later phases drive the
+-- rest of the lifecycle). An additive UPDATE policy for the worker's SYSTEM role; the Phase 4
+-- client/admin policies are unchanged.
+CREATE POLICY system_update ON projects FOR UPDATE TO devsync_worker
   USING (app_role() = 'SYSTEM') WITH CHECK (app_role() = 'SYSTEM');
 """
 
@@ -293,7 +314,13 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Drop the tables first (their RLS policies and indexes go with them), then the search column
+    # Policies added to Phase 3 tables aren't dropped with the 0006 tables, so drop them first.
+    op.execute("DROP POLICY IF EXISTS system_read ON developer_skills")
+    op.execute("DROP POLICY IF EXISTS system_read ON skill_evidence")
+    op.execute("DROP POLICY IF EXISTS system_read ON developer_profiles")
+    op.execute("DROP POLICY IF EXISTS system_read ON users")
+    op.execute("DROP POLICY IF EXISTS system_update ON projects")
+    # Drop the 0006 tables (their RLS policies and indexes go with them), then the search column
     # and the helper function, then the enum types.
     op.drop_index("ix_projects_search", table_name="projects")
     op.drop_column("projects", "search_vector")

@@ -14,7 +14,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
-from app.jobs import email_jobs, profile_jobs, tasks
+from app.jobs import bidding_jobs, email_jobs, profile_jobs, tasks
 from app.jobs.queues import get_queue
 
 log = get_logger(__name__)
@@ -23,6 +23,7 @@ EMAIL_INTERVAL_SECONDS = 30
 EXPIRE_INTERVAL_MINUTES = 5
 UPLOADS_CLEANUP_HOURS = 1
 ATTEMPTS_EXPIRE_MINUTES = 1
+BIDDING_DEADLINE_MINUTES = 5
 
 
 def enqueue_ping() -> None:
@@ -48,6 +49,11 @@ def enqueue_uploads_cleanup() -> None:
 def enqueue_attempts_expire() -> None:
     """Score skill-test attempts whose deadline passed without a submit."""
     get_queue("default").enqueue(profile_jobs.attempts_expire, job_timeout=60, result_ttl=3600)
+
+
+def enqueue_bidding_deadline() -> None:
+    """Close projects whose bidding deadline passed (→ FORMING, or notify too-few-bids)."""
+    get_queue("default").enqueue(bidding_jobs.bidding_deadline, job_timeout=120, result_ttl=3600)
 
 
 def build_scheduler() -> BlockingScheduler:
@@ -85,6 +91,14 @@ def build_scheduler() -> BlockingScheduler:
         "interval",
         minutes=ATTEMPTS_EXPIRE_MINUTES,
         id="attempts.expire",
+        coalesce=True,
+        max_instances=1,
+    )
+    scheduler.add_job(
+        enqueue_bidding_deadline,
+        "interval",
+        minutes=BIDDING_DEADLINE_MINUTES,
+        id="bidding.deadline",
         coalesce=True,
         max_instances=1,
     )

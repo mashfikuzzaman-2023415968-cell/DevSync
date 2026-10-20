@@ -13,6 +13,7 @@ from collections.abc import Sequence
 from datetime import date, timedelta
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.algorithms import availability as avail
 from app.algorithms.filtering import (
@@ -30,6 +31,8 @@ from app.algorithms.filtering import (
 from app.core.audit import write_audit
 from app.core.errors import DomainError, ErrorCode, NotFoundError
 from app.core.settings_cache import active_settings
+from app.db.context import DbContext
+from app.db.session import open_session
 from app.models.bidding import Bid, BidStatus
 from app.models.identity import User
 from app.models.profiles import DeveloperProfile, SkillEvidence
@@ -92,9 +95,9 @@ def _period(project: Project, today: date) -> avail.Period:
     return avail.Period(from_=start, to=start + timedelta(days=project.deadline_days))
 
 
-async def _evidence_scores(ctx: Ctx, developer_id: uuid.UUID) -> dict[uuid.UUID, float]:
+async def _evidence_scores(db: AsyncSession, developer_id: uuid.UUID) -> dict[uuid.UUID, float]:
     """Best skill-evidence score per skill for a developer (for the newcomer rule)."""
-    rows = await ctx.db.execute(
+    rows = await db.execute(
         select(SkillEvidence.skill_id, SkillEvidence.score).where(
             SkillEvidence.user_id == developer_id
         )
@@ -105,19 +108,19 @@ async def _evidence_scores(ctx: Ctx, developer_id: uuid.UUID) -> dict[uuid.UUID,
     return best
 
 
-async def _available(ctx: Ctx, developer_id: uuid.UUID, project: Project, commitment: int) -> bool:
+async def _available(
+    db: AsyncSession, developer_id: uuid.UUID, project: Project, commitment: int, today: date
+) -> bool:
     reservations = [
         avail.Reservation(avail.Period(r.from_date, r.to_date), r.hours_per_week)
-        for r in await repo.confirmed_reservations(ctx.db, developer_id)
+        for r in await repo.confirmed_reservations(db, developer_id)
         if r.project_id != project.id
     ]
-    profile = await ctx.db.scalar(
+    profile = await db.scalar(
         select(DeveloperProfile).where(DeveloperProfile.user_id == developer_id)
     )
     profile_hours = profile.hours_per_week if profile else 20
-    return avail.is_feasible(
-        reservations, _period(project, ctx.now.date()), commitment, profile_hours
-    )
+    return avail.is_feasible(reservations, _period(project, today), commitment, profile_hours)
 
 
 def _project_input(project: Project, slots: Sequence[ProjectSlot], fee_bp: int) -> ProjectInput:
@@ -282,7 +285,7 @@ async def eligibility_preview(
         )
     rep = await reputation_read.read_one(ctx.db, ctx.uid, settings)
     dev_skills = await repo.developer_skill_ids(ctx.db, ctx.uid)
-    evidence = await _evidence_scores(ctx, ctx.uid)
+    evidence = await _evidence_scores(ctx.db, ctx.uid)
     commitment = await _default_hours(ctx, body.hours_per_week_committed)
     bid = BidInput(
         bid_id="preview",
@@ -297,7 +300,7 @@ async def eligibility_preview(
         skill_evidence_score=evidence.get(slot.skill_id),
         has_slot_skill=slot.skill_id in dev_skills,
         active=ctx.principal.is_active,
-        available=await _available(ctx, ctx.uid, project, commitment),
+        available=await _available(ctx.db, ctx.uid, project, commitment, ctx.now.date()),
         self_dealing=False,
     )
     proj = _project_input(project, list(slots.values()), settings.pay.platform_fee_bp)
@@ -362,18 +365,18 @@ def _preview_checks(
 # --------------------------------------------------------------------------- client bids view
 
 
-async def _filter_project(
-    ctx: Ctx, project: Project
+async def evaluate_project(
+    db: AsyncSession, project: Project, settings: PlatformSettingsValues, today: date
 ) -> tuple[list[Bid], FilterResult, dict[uuid.UUID, reputation_read.ReputationView]]:
-    settings = await active_settings(ctx.db)
-    bids = list(await repo.list_active_for_project(ctx.db, project.id))
-    slots = list(await projrepo.load_slots(ctx.db, project.id))
-    reps = await reputation_read.read_many(ctx.db, [b.developer_id for b in bids], settings)
+    """Run Algorithm 1 over a project's active bids. Ctx-free so the deadline job can reuse it."""
+    bids = list(await repo.list_active_for_project(db, project.id))
+    slots = list(await projrepo.load_slots(db, project.id))
+    reps = await reputation_read.read_many(db, [b.developer_id for b in bids], settings)
     inputs: list[BidInput] = []
     for b in bids:
         rep = reps[b.developer_id]
-        dev_skills = await repo.developer_skill_ids(ctx.db, b.developer_id)
-        evidence = await _evidence_scores(ctx, b.developer_id)
+        dev_skills = await repo.developer_skill_ids(db, b.developer_id)
+        evidence = await _evidence_scores(db, b.developer_id)
         slot = next((s for s in slots if s.id == b.slot_id), None)
         inputs.append(
             BidInput(
@@ -390,7 +393,7 @@ async def _filter_project(
                 has_slot_skill=slot is not None and slot.skill_id in dev_skills,
                 active=True,
                 available=await _available(
-                    ctx, b.developer_id, project, b.hours_per_week_committed
+                    db, b.developer_id, project, b.hours_per_week_committed, today
                 ),
                 self_dealing=False,
             )
@@ -402,53 +405,59 @@ async def _filter_project(
 
 async def client_bids(ctx: Ctx, project_id: uuid.UUID) -> ClientBidsOut:
     project = await _own_project(ctx, project_id)
-    bids, result, reps = await _filter_project(ctx, project)
-    slots = {s.id: s for s in await projrepo.load_slots(ctx.db, project_id)}
-    names = {
-        u.id: u.display_name
-        for u in await ctx.db.scalars(
-            select(User).where(User.id.in_([b.developer_id for b in bids]))
-        )
-    }
-    rejected = dict(result.rejected)
-    rows: list[ClientBidOut] = []
-    for b in bids:
-        bid_id = str(b.id)
-        eligible = bid_id in result.eligible
-        reasons: list[str] = []
-        if bid_id in rejected:
-            reasons = [rejected[bid_id].value]
-        elif bid_id in result.not_shortlisted:
-            reasons = [ReasonCode.NOT_SHORTLISTED.value]
-        rep = reps[b.developer_id]
-        slot = slots.get(b.slot_id)
-        rows.append(
-            ClientBidOut(
-                id=b.id,
-                developer_id=b.developer_id,
-                developer_name=names.get(b.developer_id, "Developer"),
-                slot_id=b.slot_id,
-                slot_label=slot.label if slot else "",
-                status=b.status.value,
-                price_paisa=b.price_paisa,
-                days_needed=b.days_needed,
-                competency=rep.c,
-                performance=rep.p,
-                is_newcomer=rep.is_newcomer,
-                seeded=rep.seeded,
-                eligible=eligible,
-                reasons=reasons,
+    settings = await active_settings(ctx.db)
+    # Eligibility needs each bidder's skills/evidence, which the client can't read directly;
+    # evaluate in a SYSTEM session (the caller is already confirmed as the project's owner, and
+    # only the verdict — not raw developer data — is returned). See migration 0006.
+    async with open_session(DbContext.system(), job=True) as sysdb:
+        bids, result, reps = await evaluate_project(sysdb, project, settings, ctx.now.date())
+        slots = {s.id: s for s in await projrepo.load_slots(sysdb, project_id)}
+        names = {
+            u.id: u.display_name
+            for u in await sysdb.scalars(
+                select(User).where(User.id.in_([b.developer_id for b in bids]))
             )
-        )
-    coverage = [
-        SlotCoverage(
-            slot_id=s.id,
-            slot_label=s.label,
-            needed=s.count,
-            eligible=sum(1 for b in bids if b.slot_id == s.id and str(b.id) in result.eligible),
-        )
-        for s in slots.values()
-    ]
+        }
+        rejected = dict(result.rejected)
+        rows: list[ClientBidOut] = []
+        for b in bids:
+            bid_id = str(b.id)
+            reasons: list[str] = []
+            if bid_id in rejected:
+                reasons = [rejected[bid_id].value]
+            elif bid_id in result.not_shortlisted:
+                reasons = [ReasonCode.NOT_SHORTLISTED.value]
+            rep = reps[b.developer_id]
+            slot = slots.get(b.slot_id)
+            rows.append(
+                ClientBidOut(
+                    id=b.id,
+                    developer_id=b.developer_id,
+                    developer_name=names.get(b.developer_id, "Developer"),
+                    slot_id=b.slot_id,
+                    slot_label=slot.label if slot else "",
+                    status=b.status.value,
+                    price_paisa=b.price_paisa,
+                    days_needed=b.days_needed,
+                    competency=rep.c,
+                    performance=rep.p,
+                    is_newcomer=rep.is_newcomer,
+                    seeded=rep.seeded,
+                    eligible=bid_id in result.eligible,
+                    reasons=reasons,
+                )
+            )
+        coverage = [
+            SlotCoverage(
+                slot_id=s.id,
+                slot_label=s.label,
+                needed=s.count,
+                eligible=sum(
+                    1 for b in bids if b.slot_id == s.id and str(b.id) in result.eligible
+                ),
+            )
+            for s in slots.values()
+        ]
     return ClientBidsOut(
         bids=rows,
         coverage=coverage,
