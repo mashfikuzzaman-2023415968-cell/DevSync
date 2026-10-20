@@ -125,8 +125,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         profiles,
         files,
         skill_tests,
-        projects,
+        # marketplace before projects so /projects/search and /projects/recommended match their
+        # own handlers, not /projects/{project_id}.
         marketplace,
+        projects,
         bids,
     ):
         app.include_router(module.router, prefix=API_PREFIX)
