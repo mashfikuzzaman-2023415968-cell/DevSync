@@ -2811,6 +2811,91 @@
         "title": "ProjectCreate",
         "type": "object"
       },
+      "ProjectDetail": {
+        "description": "A single open project with its slots, for the developer's bid sheet (spec §13.5 #11).",
+        "properties": {
+          "bidding_deadline": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bidding Deadline"
+          },
+          "budget_paisa": {
+            "title": "Budget Paisa",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "deadline_days": {
+            "title": "Deadline Days",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "requirements": {
+            "title": "Requirements",
+            "type": "string"
+          },
+          "skills": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Skills",
+            "type": "array"
+          },
+          "slots": {
+            "items": {
+              "$ref": "#/components/schemas/SlotCard"
+            },
+            "title": "Slots",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "team_size": {
+            "title": "Team Size",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "summary",
+          "status",
+          "budget_paisa",
+          "deadline_days",
+          "team_size",
+          "bidding_deadline",
+          "skills",
+          "created_at",
+          "requirements",
+          "slots"
+        ],
+        "title": "ProjectDetail",
+        "type": "object"
+      },
       "ProjectListItem": {
         "description": "A row in the client's project list.",
         "properties": {
@@ -3740,6 +3825,42 @@
           "skills"
         ],
         "title": "SkillsUpdate",
+        "type": "object"
+      },
+      "SlotCard": {
+        "description": "A project slot a developer can bid on (no bid data).",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "skill": {
+            "title": "Skill",
+            "type": "string"
+          },
+          "skill_id": {
+            "format": "uuid",
+            "title": "Skill Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "skill",
+          "skill_id",
+          "count"
+        ],
+        "title": "SlotCard",
         "type": "object"
       },
       "SlotCoverage": {
@@ -14495,7 +14616,7 @@
               "application/json": {
                 "example": {},
                 "schema": {
-                  "$ref": "#/components/schemas/ProjectCard"
+                  "$ref": "#/components/schemas/ProjectDetail"
                 }
               }
             },

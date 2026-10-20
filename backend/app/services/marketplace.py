@@ -23,7 +23,12 @@ from app.models.profiles import Skill
 from app.models.projects import Project, ProjectSlot, ProjectStatus
 from app.repositories import bids as bidrepo
 from app.schemas.common import Page
-from app.schemas.marketplace import ProjectCard, RecommendedProject
+from app.schemas.marketplace import (
+    ProjectCard,
+    ProjectDetail,
+    RecommendedProject,
+    SlotCard,
+)
 
 SORTS = {"newest", "budget", "deadline"}
 MAX_LIMIT = 100
@@ -178,10 +183,20 @@ async def recommended(db: AsyncSession, developer_id: uuid.UUID) -> list[Recomme
     ]
 
 
-async def get_public(db: AsyncSession, project_id: uuid.UUID) -> ProjectCard:
-    """One non-DRAFT project for the public page (limited columns, no bids). 404 otherwise."""
+async def get_public(db: AsyncSession, project_id: uuid.UUID) -> ProjectDetail:
+    """One non-DRAFT project with its slots for the bid sheet (limited columns, no bids)."""
     project = await db.get(Project, project_id)
     if project is None or project.status == ProjectStatus.DRAFT:
         raise NotFoundError
-    skill_map = await _skill_names(db, [project.id])
-    return _card(project, skill_map.get(project.id, []))
+    rows = await db.execute(
+        select(ProjectSlot, Skill.name)
+        .join(Skill, Skill.id == ProjectSlot.skill_id)
+        .where(ProjectSlot.project_id == project_id)
+        .order_by(Skill.name)
+    )
+    slots = [
+        SlotCard(id=s.id, label=s.label, skill=name, skill_id=s.skill_id, count=s.count)
+        for s, name in rows
+    ]
+    card = _card(project, [sc.skill for sc in slots])
+    return ProjectDetail(**card.model_dump(), requirements=project.requirements, slots=slots)

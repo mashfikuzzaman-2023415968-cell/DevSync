@@ -33,3 +33,20 @@ class RecommendedProject(BaseModel):
 
     project: ProjectCard
     skill_match_count: int
+
+
+class SlotCard(BaseModel):
+    """A project slot a developer can bid on (no bid data)."""
+
+    id: uuid.UUID
+    label: str
+    skill: str
+    skill_id: uuid.UUID
+    count: int
+
+
+class ProjectDetail(ProjectCard):
+    """A single open project with its slots, for the developer's bid sheet (spec §13.5 #11)."""
+
+    requirements: str
+    slots: list[SlotCard]

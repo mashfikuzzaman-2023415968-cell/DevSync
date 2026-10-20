@@ -2513,6 +2513,42 @@ export interface components {
             title: string;
         };
         /**
+         * ProjectDetail
+         * @description A single open project with its slots, for the developer's bid sheet (spec §13.5 #11).
+         */
+        ProjectDetail: {
+            /** Bidding Deadline */
+            bidding_deadline: string | null;
+            /** Budget Paisa */
+            budget_paisa: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Deadline Days */
+            deadline_days: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Requirements */
+            requirements: string;
+            /** Skills */
+            skills: string[];
+            /** Slots */
+            slots: components["schemas"]["SlotCard"][];
+            /** Status */
+            status: string;
+            /** Summary */
+            summary: string;
+            /** Team Size */
+            team_size: number;
+            /** Title */
+            title: string;
+        };
+        /**
          * ProjectListItem
          * @description A row in the client's project list.
          */
@@ -2904,6 +2940,28 @@ export interface components {
         SkillsUpdate: {
             /** Skills */
             skills: components["schemas"]["SkillLevel"][];
+        };
+        /**
+         * SlotCard
+         * @description A project slot a developer can bid on (no bid data).
+         */
+        SlotCard: {
+            /** Count */
+            count: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Label */
+            label: string;
+            /** Skill */
+            skill: string;
+            /**
+             * Skill Id
+             * Format: uuid
+             */
+            skill_id: string;
         };
         /** SlotCoverage */
         SlotCoverage: {
@@ -13240,7 +13298,7 @@ export interface operations {
                 };
                 content: {
                     /** @example {} */
-                    "application/json": components["schemas"]["ProjectCard"];
+                    "application/json": components["schemas"]["ProjectDetail"];
                 };
             };
             /** @description We couldn't find that. */

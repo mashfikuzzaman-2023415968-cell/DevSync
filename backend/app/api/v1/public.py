@@ -11,7 +11,7 @@ from redis.asyncio import Redis
 from app.api.deps import DbSession, principal_of, rate_limit, redis_client
 from app.core.errors import DomainError, ErrorCode
 from app.schemas.common import Page, error_responses
-from app.schemas.marketplace import ProjectCard
+from app.schemas.marketplace import ProjectCard, ProjectDetail
 from app.schemas.public import ClientErrorReport, PublicStats
 from app.services import marketplace as market
 from app.services.client_errors import record_client_error
@@ -83,11 +83,11 @@ async def public_projects(
 @router.get(
     "/public/projects/{project_id}",
     summary="Public view of one open project",
-    response_model=ProjectCard,
+    response_model=ProjectDetail,
     responses={
         200: {"content": {"application/json": {"example": {}}}},
         **error_responses(404, 422),
     },
 )
-async def public_project(db: DbSession, project_id: uuid.UUID) -> ProjectCard:
+async def public_project(db: DbSession, project_id: uuid.UUID) -> ProjectDetail:
     return await market.get_public(db, project_id)
