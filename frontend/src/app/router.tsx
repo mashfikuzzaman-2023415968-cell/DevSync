@@ -166,6 +166,27 @@ export const routes: RouteObject[] = [
               Component: (await import("@/features/challenges/TestPage")).default,
             }),
           },
+          {
+            path: "dev/find",
+            handle: { title: "Find work" },
+            lazy: async () => ({
+              Component: (await import("@/features/marketplace/FindProjectsPage")).default,
+            }),
+          },
+          {
+            path: "dev/projects/:id",
+            handle: { title: "Project" },
+            lazy: async () => ({
+              Component: (await import("@/features/marketplace/ProjectBidPage")).default,
+            }),
+          },
+          {
+            path: "dev/bids",
+            handle: { title: "My bids" },
+            lazy: async () => ({
+              Component: (await import("@/features/bids/MyBidsPage")).default,
+            }),
+          },
           ...upcoming("/dev/"),
         ],
       },
@@ -200,6 +221,13 @@ export const routes: RouteObject[] = [
             handle: { title: "Project plan" },
             lazy: async () => ({
               Component: (await import("@/features/projects/PlanPage")).default,
+            }),
+          },
+          {
+            path: "client/projects/:id/bids",
+            handle: { title: "Bids" },
+            lazy: async () => ({
+              Component: (await import("@/features/bids/ClientBidsPage")).default,
             }),
           },
           ...upcoming("/client/"),

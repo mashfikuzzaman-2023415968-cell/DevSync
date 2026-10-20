@@ -50,3 +50,17 @@ export type Plan = Schemas["PlanOut"];
 export type PlanPreviewIn = Schemas["PlanPreviewIn"];
 export type PublishIn = Schemas["PublishIn"];
 export type CancelIn = Schemas["CancelIn"];
+
+// Marketplace, sealed bids and eligibility (spec §9.2, §10 Marketplace/Bids)
+export type ProjectCard = Schemas["ProjectCard"];
+export type ProjectDetail = Schemas["ProjectDetail"];
+export type SlotCard = Schemas["SlotCard"];
+export type RecommendedProject = Schemas["RecommendedProject"];
+export type ProjectCardPage = Schemas["Page_ProjectCard_"];
+export type BidCreate = Schemas["BidCreate"];
+export type BidUpdate = Schemas["BidUpdate"];
+export type Bid = Schemas["BidOut"];
+export type EligibilityIn = Schemas["EligibilityIn"];
+export type EligibilityOut = Schemas["EligibilityOut"];
+export type ClientBids = Schemas["ClientBidsOut"];
+export type ClientBid = Schemas["ClientBidOut"];

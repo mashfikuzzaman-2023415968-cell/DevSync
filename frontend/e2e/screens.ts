@@ -24,7 +24,9 @@ export const PUBLIC_SCREENS: Screen[] = [
 
 export const SIGNED_IN_SCREENS: Screen[] = [
   { name: "developer-home", path: "/dev", role: "DEVELOPER" },
-  { name: "developer-coming-soon", path: "/dev/find", role: "DEVELOPER" },
+  { name: "find-work", path: "/dev/find", role: "DEVELOPER" },
+  { name: "my-bids", path: "/dev/bids", role: "DEVELOPER" },
+  { name: "developer-coming-soon", path: "/dev/projects", role: "DEVELOPER" },
   { name: "settings", path: "/settings", role: "DEVELOPER" },
   { name: "developer-profile", path: "/dev/profile", role: "DEVELOPER" },
   { name: "skill-challenges", path: "/dev/challenges", role: "DEVELOPER" },

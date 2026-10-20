@@ -59,10 +59,9 @@ const developer: NavItem[] = [
     label: "Find projects",
     to: "/dev/find",
     icon: Search,
-    phase: 5,
     keywords: ["search", "work", "bid"],
   },
-  { label: "My bids", to: "/dev/bids", icon: Gavel, phase: 5 },
+  { label: "My bids", to: "/dev/bids", icon: Gavel },
   { label: "My projects", to: "/dev/projects", icon: FolderKanban, phase: 9 },
   {
     label: "Skill challenges",
