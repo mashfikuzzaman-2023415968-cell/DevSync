@@ -2,10 +2,10 @@
 
 ## Current state
 - **Current owner:** Salwa Baki (backend developer), Phases 4–5, from 2026-10-18 (hand-off from Mashfikuzzaman Taeen: `docs/handoffs/handoff-01-taeen-to-salwa.md`)
-- **Current phase:** 4 — Projects and the CPM planner
+- **Current phase:** 5 — Marketplace, sealed bidding, Algorithm 1 filtering (Phase 4 merged + tagged)
 - **Last gate result:** `PHASE 4 GATE: PASS` on 2026-10-20 (Taeen's laptop, branch `phase-4` at the review-fix commits): all 19 applicable steps — backend 716 tests / 95.9%, security suite 243, frontend 269 / 75.3%, E2E 43 + edge 13, axe clean, 112 visual baselines, Lighthouse desktop 100 / mobile 96, GPU 60 fps, CPM perf budget met. Salwa's earlier step-13 failures were the 5.6 GB laptop, not the code.
-- **In progress:** Phase 4 is complete on branch `phase-4` and **not yet merged or tagged** — Salwa merges into `main` and tags `phase-4`. Taeen's review (with Claude Code) found and fixed real defects the gate couldn't see because Phase 4 had no E2E of its own: the wizard couldn't save its first step, publishing was impossible (no payment verification in the UI), loops couldn't be created to show the rejection, the plan page's dependency graph had no edges, plus the missing unsaved-changes prompt and typed-title cancel. All recorded in DECISIONS D43; `e2e/phase4.spec.ts` now covers the spec's Phase 4 flow.
-- **Very next step:** Salwa: pull `phase-4`, read D43, merge into `main`, tag `phase-4`, push; then start Phase 5 in Plan Mode. Lesson for Phase 5: write the spec's E2E flow early and run it against the real stack (mocked unit tests can't catch wrong URLs or missing endpoints). Demo 1 is Mon 2 Nov 2026 (Phases 0–5).
+- **In progress:** Phase 4 **merged into `main` and tagged `phase-4`** (gate PASS on Taeen's laptop; Salwa merged ff-only and tagged at `5b4edc5` on 2026-10-20). Taeen's review (with Claude Code) found and fixed real defects the gate couldn't see because Phase 4 had no E2E of its own: the wizard couldn't save its first step, publishing was impossible (no payment verification in the UI), loops couldn't be created to show the rejection, the plan page's dependency graph had no edges, plus the missing unsaved-changes prompt and typed-title cancel. All recorded in DECISIONS D43; `e2e/phase4.spec.ts` now covers the spec's Phase 4 flow. Salwa re-verified on her laptop before merge: tsc -b, eslint, prettier, vitest 269, backend unit+api 347 (stack-only tests green on Taeen's gate).
+- **Very next step:** Salwa: start Phase 5 (marketplace, sealed bidding, Algorithm 1 filtering) in Plan Mode → `docs/plans/phase-05.md` for approval before any code. Lesson carried from Phase 4: write the spec's E2E flow early and run it against the real stack (mocked unit tests can't catch wrong URLs or missing endpoints). Demo 1 is Mon 2 Nov 2026 (Phases 0–5).
 - **Open human tasks:** review the 128 drafted test questions for accuracy (D34); tester's human check of the Phase 3 **and** Phase 4 security reviews; sanity-check D39 (simulated payment-method verification) with Taeen.
 
 ## Phase table
@@ -15,7 +15,7 @@
 | 1 Accounts & security core | Taeen | done | PASS | 2026-10-17 | phase-1 |
 | 2 Design system & landing | Taeen | done | PASS | 2026-10-17 | phase-2 |
 | 3 Profiles & skill tests | Taeen | done | PASS | 2026-10-18 | phase-3 |
-| 4 Projects & CPM | Salwa (review fixes: Taeen) | done, awaiting merge | PASS | 2026-10-20 | (Salwa tags) |
+| 4 Projects & CPM | Salwa (review fixes: Taeen) | done | PASS | 2026-10-20 | phase-4 |
 | 5 Marketplace & filtering | Salwa | not started | — | — | — |
 | 6–15 | — | not started | — | — | — |
 
@@ -63,6 +63,16 @@
 - Existing dev databases: run `make migrate` (migration 0002); create an admin with `make create-admin`.
 
 ## Session log (newest first)
+### 2026-10-20 — Salwa (with Claude Code), Phase 4 merge
+- **Done:** reviewed Taeen's Phase 4 fixes (DECISIONS D43) and agreed with all of them — several
+  fixed real defects in the original frontend (the `"preview"` placeholder id, GET hooks on
+  endpoints that don't exist, missing payment-verify UI, plan-graph edges). Re-verified on this
+  laptop: `tsc -b`, eslint, prettier, vitest (269), backend `pytest -m "unit or api"` (347;
+  stack-only tests skipped here, green on Taeen's gate), DB at `0005`. Skipped the full-stack
+  `phase4.spec.ts` locally (2.6 GB free → D28 flake risk; already PASS on Taeen's gate).
+- **Merged** `phase-4` into `main` (ff-only) and **tagged `phase-4`** at `5b4edc5`.
+- **Next:** Phase 5 in Plan Mode.
+
 ### 2026-10-20 — Taeen (with Claude Code), Phase 4 review
 - **Done:** pulled `phase-4`; ran the gate (PASS as delivered on this laptop); reviewed against
   the spec and wrote the missing Phase 4 E2E, which exposed broken wizard saves, impossible
