@@ -99,6 +99,7 @@ class FilterParams:
     relax_step: float = 0.05
     relax_max_steps: int = 3
     shortlist_factor: int = 3
+    shortlist_min: int = 6
     mode: Mode = Mode.DEVSYNC
 
 
@@ -225,7 +226,7 @@ def filter_bids(bids: list[BidInput], project: ProjectInput, params: FilterParam
             (b for b in eligible if b.slot_id == slot_id),
             key=lambda b: (_order_key(b, params.advancement), b.bid_id),
         )
-        k = max(params.shortlist_factor * spec.count, 6)
+        k = max(params.shortlist_factor * spec.count, params.shortlist_min)
         shortlisted[slot_id] = tuple(b.bid_id for b in in_slot[:k])
         not_shortlisted.extend(b.bid_id for b in in_slot[k:])
 
