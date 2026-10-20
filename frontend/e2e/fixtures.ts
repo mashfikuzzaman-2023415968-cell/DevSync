@@ -11,7 +11,7 @@ export function uniquePhone(): string {
   return `+88017${String(Math.floor(10_000_000 + Math.random() * 89_999_999))}`;
 }
 
-async function csrfHeaders(
+export async function csrfHeaders(
   request: APIRequestContext,
   baseURL: string,
 ): Promise<Record<string, string>> {

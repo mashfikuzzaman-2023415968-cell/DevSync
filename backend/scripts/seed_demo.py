@@ -287,6 +287,79 @@ async def _assert_filter(pid: uuid.UUID) -> None:
         )
 
 
+async def _seed_too_few(ids: dict[str, uuid.UUID], skills: dict[str, uuid.UUID]) -> None:
+    """A second BIDDING project with far too few bids, for the too-few-bids banner (§9.19)."""
+    rahim = ids["rahim"]
+    async with _as(rahim, "CLIENT") as db:
+        project = Project(
+            client_id=rahim,
+            title="Mobile companion app",
+            summary="A mobile companion for the ordering system.",
+            requirements="React Native screens and an API client.",
+            budget_paisa=8_000_000,
+            deadline_days=25,
+            team_size=3,
+            status=ProjectStatus.BIDDING,
+            start_date=get_clock().now().date() + timedelta(days=5),
+            bidding_deadline=datetime.now(UTC) + timedelta(days=7),
+        )
+        db.add(project)
+        await db.flush()
+        slot = ProjectSlot(
+            project_id=project.id, skill_id=skills["React"], label="React developer", count=3
+        )
+        db.add(slot)
+        await db.flush()
+        m = Milestone(
+            project_id=project.id, name="Build", duration_days=20, share_bp=10_000, position=0
+        )
+        db.add(m)
+        pid, sid = project.id, slot.id
+        await db.commit()
+    # A single eligible bid, far short of the team of three.
+    async with _as(ids["arif"], "DEVELOPER") as db:
+        db.add(
+            Bid(
+                project_id=pid,
+                developer_id=ids["arif"],
+                slot_id=sid,
+                price_paisa=2_500_000,
+                days_needed=18,
+                hours_per_week_committed=20,
+                status=BidStatus.ACTIVE,
+            )
+        )
+        await db.commit()
+
+
+async def _make_admin(settings: Settings) -> dict[str, str]:
+    res = await create_user(
+        settings,
+        role="ADMIN",
+        email="admin@devsync.local",
+        phone=None,
+        password=_PW,
+        display_name="Administrator",
+        verified=True,
+        with_totp=True,
+    )
+    return {"totp_secret": res["totp_secret"] or ""}
+
+
+def _print_accounts(admin: dict[str, str]) -> None:
+    """Print the demo accounts once (the Makefile tees this to runs/demos/accounts-1.txt)."""
+    print("=== DEMO ACCOUNTS (STAGE 1) ===")
+    print(f"client       rahim@devsync.local            {_PW}")
+    for slug in EXPERIENCED:
+        print(f"developer    {slug}@devsync.local{' ' * (18 - len(slug))}{_PW}")
+    for slug in NEWCOMERS:
+        print(f"newcomer     {slug}@devsync.local{' ' * (18 - len(slug))}{_PW}")
+    print(
+        f"admin        admin@devsync.local            {_PW}   TOTP secret: {admin['totp_secret']}"
+    )
+    print("=== END DEMO ACCOUNTS ===")
+
+
 async def seed_stage1() -> None:
     settings = get_settings()
     async with open_session(DbContext.system(), job=True) as db:
@@ -295,11 +368,14 @@ async def seed_stage1() -> None:
     if missing:
         raise SystemExit(f"skills not seeded: {missing}; run migrations first")
     ids = await _make_users(settings)
+    admin = await _make_admin(settings)
     await _seed_reputation(ids)
     await _seed_dev_data(ids, skills)
     pid, slot_ids = await _seed_project(ids, skills)
     await _seed_bids(ids, pid, slot_ids)
+    await _seed_too_few(ids, skills)
     await _assert_filter(pid)
+    _print_accounts(admin)
 
 
 def main() -> int:

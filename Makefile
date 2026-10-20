@@ -95,8 +95,28 @@ visual-update: ## Re-create visual baselines in the pinned image (review the dif
 create-admin: ## Create an administrator (prints TOTP setup and recovery codes once)
 	$(COMPOSE) run --rm worker python scripts/create_admin.py
 
-seed-demo: ## Load demo data for a stage: make seed-demo STAGE=1 (spec §18)
-	$(COMPOSE) run --rm worker python scripts/seed_demo.py --stage $(or $(STAGE),1)
+DEMO_STAGE ?= $(or $(STAGE),1)
 
-fuzz zap load chaos demo-check demo-up demo-reset demo-preflight experiments backup restore-drill docs deps-update ledger-report: ## Arrive in later phases
+seed-demo: ## Load demo data for a stage: make seed-demo STAGE=1 (spec §18)
+	$(COMPOSE) run --rm worker python scripts/seed_demo.py --stage $(DEMO_STAGE)
+
+demo-reset: ## Reset and reload the demo seed (prints accounts): make demo-reset STAGE=1
+	$(COMPOSE) run --rm migrate
+	$(COMPOSE) run --rm --entrypoint python migrate scripts/demo_reset.py
+	@mkdir -p runs/demos
+	$(COMPOSE) run --rm worker python scripts/seed_demo.py --stage $(DEMO_STAGE) \
+	  | tee runs/demos/accounts-$(DEMO_STAGE).txt
+
+demo-up: ## Start the demo stack and load the seed: make demo-up STAGE=1 (spec §17.0)
+	$(COMPOSE) up -d --build --wait
+	@$(MAKE) --no-print-directory demo-reset STAGE=$(DEMO_STAGE)
+	@echo "Demo ready: https://localhost   Mailpit: http://127.0.0.1:8025   accounts: runs/demos/accounts-$(DEMO_STAGE).txt"
+
+demo-preflight: ## Pre-presentation checks (Docker, ports, disk, cert, seed integrity)
+	@python3 backend/scripts/demo_preflight.py --stage $(DEMO_STAGE)
+
+demo-check: ## Full Demo-N readiness: gates, seed, walkthrough x3 on 4 browsers, report (§17.0)
+	@python3 backend/scripts/demo_check.py --demo $(or $(DEMO),1)
+
+fuzz zap load chaos experiments backup restore-drill docs deps-update ledger-report: ## Arrive in later phases
 	@echo "make $@: available from the phase that builds it (see DEVSYNC_BUILD_SPEC.md §16.6 / §17)"
