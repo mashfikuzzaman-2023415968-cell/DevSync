@@ -86,4 +86,23 @@ and object-scoped (a foreign project → 404); reads are the owning client or an
 - `POST /me/payment-method/verify` → mark the client's simulated payment method verified (D39;
   CLIENT-only, idempotent).
 
+## Phase 5 endpoints — marketplace, sealed bids (spec §10 Marketplace/Bids, §9.2)
+
+Marketplace is developer-only and read-only; it never returns any bid data (sealed, §14.5).
+
+- `GET /projects/search?q=&skills=&budget_min=&budget_max=&deadline_max=&team_size=&sort=&cursor=&limit=`
+  → cursor page of project cards. Full-text (`plainto_tsquery`) over title+summary; whitelisted
+  filters (unknown params → 422); `sort ∈ {newest, budget, deadline}`. `GET /projects/recommended`
+  → projects matching the developer's skills (§9.16). (Developer.)
+- `GET /public/projects` · `GET /public/projects/{id}` → the public marketplace: open projects with
+  limited columns and, for one project, its slots; never any bid data. (Anyone.)
+- `POST /projects/{id}/bids` → place a sealed bid (one ACTIVE per project; only while BIDDING, else
+  409 `INVALID_STATE`). `GET /me/bids`. `PATCH /bids/{id}` · `DELETE /bids/{id}` (withdraw). All
+  developer-owned; another developer's bid is 404. (Developer.)
+- `POST /projects/{id}/bids/eligibility` → dry-run Algorithm 1 for the bid sheet's live preview
+  (per-constraint pass/fail + reason; not persisted, D45). (Developer.)
+- `GET /projects/{id}/bids` → all bids on the caller's own project with reputation (C, P) and the
+  eligibility verdict + reasons, slot coverage, relaxations and the too-few flag. (Client, own;
+  admin.)
+
 Error envelope: `{"error": {"code", "message", "fields"?, "request_id"}}`.

@@ -68,6 +68,16 @@ See spec §14.2. Full table to be completed in Phase 14.
 | Publish guards in service **and** DB trigger: verified payment method (D39), ≥1 slot, shares = 100%, acyclic plan, schedule-risk ack (D40); baseline identity/content frozen by trigger | migration 0005, `app/services/projects.py` | `test_publish_requires_payment_then_succeeds`, `test_editing_after_publish_is_rejected` |
 | Mass assignment (`client_id`, `status`, `version`) → 422; CPM cycle → 422 (not a hang); whole-set replaces validated (Σ shares, Σ counts); no raw SQL (ORM only) | `app/schemas/projects.py`, `app/algorithms/cpm.py` | `test_projects.py`, `tests/algorithms/test_cpm.py` |
 
+## Controls implemented (Phase 5)
+| Control | Where | Tests |
+|---|---|---|
+| Sealed bids in the database: RLS on `bids`/`availability_reservations` makes a bid visible only to its developer, the project's client and admins — never another developer; writes are the bidder's while BIDDING (or SYSTEM) | `alembic/versions/0006_marketplace_bidding.py` | `tests/integration/test_rls_bids.py`, `tests/security/test_bids.py` |
+| Sealed-bid authorization: `bid.view` (client/admin only) for the all-bids view, `bid.read` (developer) for `/me/bids`; a developer gets 404/403, never another's bid; marketplace responses never select bid columns | `app/core/authz.py`, `app/services/marketplace.py` | `test_authz_matrix.py`, `test_bids.py` |
+| Eligibility computed in a SYSTEM session with minimal additive RLS (D50); the caller is authorised as the project owner first and only the verdict is returned | migration 0006, `app/services/bids.py` | `test_bids.py::test_client_sees_all_bids_with_eligibility` |
+| Search input safety: `plainto_tsquery` (no user regex), whitelisted filters/sort → 422, tampered cursor → 422 | `app/services/marketplace.py` | search tests |
+| Bid rules: one ACTIVE bid per project (partial unique), bid only while BIDDING (409), rate limit 20/h; mass assignment (`status`, `developer_id`, `ineligible_reasons`) → 422 | `app/services/bids.py`, `app/schemas/bids.py` | `test_bids.py` |
+| Reputation snapshots public-read, SYSTEM-write; the "seeded" marker shows only outside production | migration 0006, `app/services/reputation_read.py` | `test_rls_bids.py` |
+
 ## Dependency update policy (§14.21)
 Dependabot weekly (pip, npm, Docker, GitHub Actions). Critical vulnerabilities fixed within
 48 hours, high within 7 days. `make lock` re-resolves Python locks; the gate fails on unfixed

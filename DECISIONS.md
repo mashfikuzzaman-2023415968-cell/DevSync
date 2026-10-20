@@ -376,3 +376,41 @@ of the Demo 1 path found these defects, now fixed on `phase-4`:
    baselines for My projects, Create project and the plan page, and unit/API assertions for
    each fix. *Lesson:* mocked frontend tests can't catch a wrong URL or a missing endpoint; the
    spec's E2E for each phase is not optional.
+
+## 2026-10-20 — Phase 5 (marketplace, sealed bidding, Algorithm 1 filtering; Salwa with Claude Code)
+
+**D44 · Fixed reputation snapshots in Phase 5.** Experienced developers get hand-set snapshot
+values (`scripts/seed_data/stage1_reputation.json`, §18.4); only `newcomer_snapshot()` is computed.
+The seed recomputes `C` (Eq. 4) and `P` (Eq. 12) from the stored sub-scores and asserts them so the
+table can't drift. The single read path is `services/reputation_read.py`, so Phase 6 swaps computed
+values in without touching filtering.
+
+**D45 · Eligibility dry-run endpoint.** `POST /projects/{id}/bids/eligibility` (developer, not
+persisted) returns per-constraint pass/fail + the would-be reason for the bid sheet's live preview.
+Not in the §10 table; added for screen 11. *Confirmed by Salwa.*
+
+**D46 · Shortlist size.** Per-slot `K_s = max(shortlist_factor·count_s, shortlist_min)` (default
+3/6, §9.2) — the algorithm text, which is what the Phase 7 PSO consumes — rather than the §6.2
+"max(3·N, 20)" phrasing. *Confirmed by Salwa.*
+
+**D47 · Too-few-bids actions in Phase 5.** The banner's "lower standards" stores client P0/C0
+overrides and "reduce team" edits slots while BIDDING; both reflect immediately in the eligibility
+counts. Formation (Phase 7) consumes them. Extend/cancel reuse the Phase 4 endpoints.
+
+**D48 · "Seeded" reputation marker.** `reputation_read` returns `seeded = (settings_version is
+None)`; the bid table and profile show the marker only outside production. Phase 6 sets
+`settings_version` when it computes a snapshot, flipping the flag off.
+
+**D49 · One ACTIVE bid per developer via a partial unique index.** A plain `UNIQUE(project,
+developer)` (§7.4) conflicts with the `WITHDRAWN` state and re-bidding (the B2 churn check, §9.15),
+so `bids` uses `UNIQUE(project_id, developer_id) WHERE status='ACTIVE'`: a withdrawn row is kept and
+a fresh bid can be placed.
+
+**D50 · Eligibility is computed in a SYSTEM session.** Algorithm 1 reads each bidder's skills,
+skill evidence and reputation, which neither the project's client nor a plain web user may read
+under RLS. The client-bids view and the bidding-deadline job evaluate eligibility in a SYSTEM
+session; migration 0006 adds minimal, additive SYSTEM policies (read on bids/reservations/snapshots/
+developer_skills/skill_evidence/developer_profiles/users; INSERT on skill_evidence; UPDATE on
+projects for the BIDDING→FORMING transition). The Phase 3/4 owner policies are unchanged; RLS is
+permissive, so these only widen the SYSTEM role. The caller is authorised as the project owner first
+and only the eligibility verdict — never raw developer data — is returned.
