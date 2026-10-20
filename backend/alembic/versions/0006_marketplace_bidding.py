@@ -87,6 +87,10 @@ CREATE POLICY system_read ON developer_skills FOR SELECT TO devsync_worker
   USING (app_role() = 'SYSTEM');
 CREATE POLICY system_read ON skill_evidence FOR SELECT TO devsync_worker
   USING (app_role() = 'SYSTEM');
+-- SYSTEM jobs (the seed, and the Phase 6 reputation simulator) create skill evidence, like the
+-- skill-test scoring definer does; the owner/admin policies are unchanged.
+CREATE POLICY system_write ON skill_evidence FOR INSERT TO devsync_worker
+  WITH CHECK (app_role() = 'SYSTEM');
 CREATE POLICY system_read ON developer_profiles FOR SELECT TO devsync_worker
   USING (app_role() = 'SYSTEM');
 CREATE POLICY system_read ON users FOR SELECT TO devsync_worker
@@ -317,6 +321,7 @@ def downgrade() -> None:
     # Policies added to Phase 3 tables aren't dropped with the 0006 tables, so drop them first.
     op.execute("DROP POLICY IF EXISTS system_read ON developer_skills")
     op.execute("DROP POLICY IF EXISTS system_read ON skill_evidence")
+    op.execute("DROP POLICY IF EXISTS system_write ON skill_evidence")
     op.execute("DROP POLICY IF EXISTS system_read ON developer_profiles")
     op.execute("DROP POLICY IF EXISTS system_read ON users")
     op.execute("DROP POLICY IF EXISTS system_update ON projects")

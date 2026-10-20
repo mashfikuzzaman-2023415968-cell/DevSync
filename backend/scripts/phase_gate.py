@@ -708,6 +708,7 @@ def step_phase_checks(g: Gate) -> str:
         2: phase2_checks,
         3: phase3_checks,
         4: phase4_checks,
+        5: phase5_checks,
     }
     if g.phase not in checks:
         raise StepFailed(f"no PHASE_CHECKS defined for phase {g.phase}")
@@ -838,6 +839,33 @@ def phase4_checks(g: Gate) -> str:
     return (
         f"{p3}; §18.2 CPM golden values verified; dependency cycle rejected; publish guards "
         "hold; draft projects private in the DB; ERD generated"
+    )
+
+
+def phase5_checks(g: Gate) -> str:
+    """Spec §17 Phase 5 gate checks: the §18.4 stage-1 seed reproduces the documented eligible /
+    ineligible counts and reasons for "Online ordering system" (10 eligible; Shakib TOO_SLOW,
+    Lamia NO_SKILL_EVIDENCE); Algorithm 1 boundaries and the newcomer rule hold; bids are sealed
+    between developers; and the bidding-deadline job behaves."""
+    p4 = phase4_checks(g)
+    # The seed self-asserts the §18.4 counts (it exits non-zero on any mismatch).
+    in_tests(["python", "scripts/seed_demo.py", "--stage", "1"])
+    in_tests(
+        [
+            "pytest", "-q", "-p", "no:cacheprovider",
+            "tests/algorithms/test_filtering.py::test_equal_to_every_threshold_passes",
+            "tests/algorithms/test_filtering.py::test_newcomer_no_skill_evidence",
+            "tests/algorithms/test_filtering.py::test_relaxation_reported_and_finds_candidates",
+            "tests/security/test_bids.py::test_bids_are_sealed_between_developers",
+            "tests/integration/test_rls_bids.py::test_a_bid_is_sealed_from_other_developers",
+            "tests/jobs/test_bidding_deadline.py::test_too_few_bids_stays_bidding_notifies_once",
+        ]
+    )  # fmt: skip
+    if not (ROOT / "docs" / "plans" / "phase-05.md").exists():
+        raise StepFailed("docs/plans/phase-05.md is missing")
+    return (
+        f"{p4}; §18.4 stage-1 seed reproduces 10 eligible + TOO_SLOW/NO_SKILL_EVIDENCE; "
+        "Algorithm 1 boundaries + newcomer rule; bids sealed; bidding-deadline job verified"
     )
 
 

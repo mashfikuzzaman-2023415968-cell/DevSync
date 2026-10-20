@@ -1,0 +1,12 @@
+{
+  "_comment": "Fixed Stage-1 reputation sub-scores for experienced seeded developers (spec §18.4). C and P are recomputed from these by the seed (Eq. 4 with f=0.7; Eq. 12 with 0.5/0.25/0.25) and asserted, so the table cannot drift. Keyed by developer slug.",
+  "arif": {"omega": 0.78, "x": 0.86, "xm": 0.77, "beta": 0.84, "mu": 0.80, "t": 0.70, "completed_projects": 8, "distinct_clients": 5},
+  "nusrat": {"omega": 0.72, "x": 0.82, "xm": 0.81, "beta": 0.86, "mu": 0.72, "t": 0.74, "completed_projects": 6, "distinct_clients": 5},
+  "tanvir": {"omega": 0.66, "x": 0.70, "xm": 0.62, "beta": 0.71, "mu": 0.67, "t": 0.60, "completed_projects": 4, "distinct_clients": 3},
+  "sadia": {"omega": 0.58, "x": 0.75, "xm": 0.70, "beta": 0.73, "mu": 0.60, "t": 0.66, "completed_projects": 3, "distinct_clients": 3},
+  "rafi": {"omega": 0.62, "x": 0.64, "xm": 0.58, "beta": 0.66, "mu": 0.63, "t": 0.58, "completed_projects": 3, "distinct_clients": 3},
+  "imran": {"omega": 0.40, "x": 0.70, "xm": 0.60, "beta": 0.90, "mu": 0.00, "t": 0.65, "completed_projects": 7, "distinct_clients": 1},
+  "farhan": {"omega": 0.55, "x": 0.60, "xm": 0.55, "beta": 0.62, "mu": 0.67, "t": 0.52, "completed_projects": 3, "distinct_clients": 3},
+  "shakib": {"omega": 0.60, "x": 0.58, "xm": 0.55, "beta": 0.64, "mu": 0.67, "t": 0.30, "completed_projects": 4, "distinct_clients": 3},
+  "zahid": {"omega": 0.50, "x": 0.62, "xm": 0.55, "beta": 0.65, "mu": 0.50, "t": 0.60, "completed_projects": 3, "distinct_clients": 2}
+}

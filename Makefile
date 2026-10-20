@@ -95,5 +95,8 @@ visual-update: ## Re-create visual baselines in the pinned image (review the dif
 create-admin: ## Create an administrator (prints TOTP setup and recovery codes once)
 	$(COMPOSE) run --rm worker python scripts/create_admin.py
 
-seed-demo fuzz zap load chaos demo-check demo-up demo-reset demo-preflight experiments backup restore-drill docs deps-update ledger-report: ## Arrive in later phases
+seed-demo: ## Load demo data for a stage: make seed-demo STAGE=1 (spec §18)
+	$(COMPOSE) run --rm worker python scripts/seed_demo.py --stage $(or $(STAGE),1)
+
+fuzz zap load chaos demo-check demo-up demo-reset demo-preflight experiments backup restore-drill docs deps-update ledger-report: ## Arrive in later phases
 	@echo "make $@: available from the phase that builds it (see DEVSYNC_BUILD_SPEC.md §16.6 / §17)"
