@@ -70,7 +70,7 @@ class Bid(UUIDPrimaryKey, Timestamps, Base):
     days_needed: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     proposal: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     expected_contribution: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
-    portfolio_item_ids: Mapped[list[uuid.UUID]] = mapped_column(
+    portfolio_item_ids: Mapped[list[str]] = mapped_column(
         JSONB, nullable=False, server_default="[]"
     )
     hours_per_week_committed: Mapped[int] = mapped_column(SmallInteger, nullable=False)

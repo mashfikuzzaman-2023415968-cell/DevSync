@@ -217,3 +217,46 @@ def _project_cancel(p: Principal, _r: Any) -> None:
 def _payment_verify(p: Principal, _r: Any) -> None:
     """Clients mark their simulated payment method verified (D39)."""
     _require_role(p, "CLIENT")
+
+
+# --------------------------------------------------------------------------- Phase 5 policies
+
+
+@policy("marketplace.read")
+def _marketplace_read(p: Principal, _r: Any) -> None:
+    """Developers search and see recommended projects (§9.16)."""
+    _require_role(p, "DEVELOPER")
+
+
+@policy("bid.create")
+def _bid_create(p: Principal, _r: Any) -> None:
+    """Developers place sealed bids; the service enforces the BIDDING state and one-per-project."""
+    _require_role(p, "DEVELOPER")
+
+
+@policy("bid.write")
+def _bid_write(p: Principal, _r: Any) -> None:
+    """Edit or withdraw one's own bid; bid ownership is checked in the service (→ 404)."""
+    _require_role(p, "DEVELOPER")
+
+
+@policy("bid.read")
+def _bid_read(p: Principal, _r: Any) -> None:
+    """A developer reads their own bids (`/me/bids`); the service scopes to the caller."""
+    _require_role(p, "DEVELOPER")
+
+
+@policy("bid.view")
+def _bid_view(p: Principal, _r: Any) -> None:
+    """A client reads their own project's bids (sealed, §14.5); an admin may too.
+
+    The service returns the bids only for the caller's own project; a developer never reaches
+    this view (wrong role → 403), and a foreign project is 404.
+    """
+    _require_client_or_admin(p)
+
+
+@policy("reputation.read")
+def _reputation_read(p: Principal, _r: Any) -> None:
+    """Reputation snapshots are a public value for any active account (spec §14.15)."""
+    _require_active(p)

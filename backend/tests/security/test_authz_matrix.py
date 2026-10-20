@@ -104,6 +104,17 @@ MATRIX: dict[tuple[str, str], tuple[set[str], str, bool]] = {
     ("POST", "/api/v1/projects/{project_id}/extend-bidding"): ({CLIENT}, "auth", True),
     ("POST", "/api/v1/projects/{project_id}/cancel"): ({CLIENT, ADMIN}, "auth", True),
     ("POST", "/api/v1/me/payment-method/verify"): ({CLIENT}, "auth", False),
+    # Phase 5: marketplace, sealed bids, public projects.
+    ("GET", "/api/v1/projects/search"): ({DEV}, "auth", False),
+    ("GET", "/api/v1/projects/recommended"): ({DEV}, "auth", False),
+    ("GET", "/api/v1/public/projects"): (EVERYONE, "", False),
+    ("GET", "/api/v1/public/projects/{project_id}"): (EVERYONE, "", True),
+    ("POST", "/api/v1/projects/{project_id}/bids"): ({DEV}, "auth", True),
+    ("POST", "/api/v1/projects/{project_id}/bids/eligibility"): ({DEV}, "auth", True),
+    ("GET", "/api/v1/me/bids"): ({DEV}, "auth", False),
+    ("PATCH", "/api/v1/bids/{bid_id}"): ({DEV}, "auth", True),
+    ("DELETE", "/api/v1/bids/{bid_id}"): ({DEV}, "auth", True),
+    ("GET", "/api/v1/projects/{project_id}/bids"): ({CLIENT, ADMIN}, "auth", True),
 }
 
 BODIES: dict[tuple[str, str], dict[str, Any]] = {
@@ -126,6 +137,17 @@ BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "question_id": str(uuid.uuid4()),
         "choice": 0,
     },
+    ("POST", "/api/v1/projects/{project_id}/bids"): {
+        "slot_id": str(uuid.uuid4()),
+        "price_paisa": 1_800_000,
+        "days_needed": 20,
+    },
+    ("POST", "/api/v1/projects/{project_id}/bids/eligibility"): {
+        "slot_id": str(uuid.uuid4()),
+        "price_paisa": 1_800_000,
+        "days_needed": 20,
+    },
+    ("PATCH", "/api/v1/bids/{bid_id}"): {"price_paisa": 1_900_000},
 }
 PATH_PARAM = re.compile(r"\{[a-z_]+\}")
 

@@ -23,9 +23,11 @@ from starlette.routing import Route
 from app.api.v1 import (
     admin,
     auth,
+    bids,
     captcha,
     files,
     health,
+    marketplace,
     me,
     profiles,
     projects,
@@ -124,6 +126,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         files,
         skill_tests,
         projects,
+        marketplace,
+        bids,
     ):
         app.include_router(module.router, prefix=API_PREFIX)
     if settings.DEVSYNC_ENV is Environment.TEST:

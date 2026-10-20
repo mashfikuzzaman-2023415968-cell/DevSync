@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response
@@ -9,8 +10,10 @@ from redis.asyncio import Redis
 
 from app.api.deps import DbSession, principal_of, rate_limit, redis_client
 from app.core.errors import DomainError, ErrorCode
-from app.schemas.common import error_responses
+from app.schemas.common import Page, error_responses
+from app.schemas.marketplace import ProjectCard
 from app.schemas.public import ClientErrorReport, PublicStats
+from app.services import marketplace as market
 from app.services.client_errors import record_client_error
 from app.services.public_stats import get_public_stats
 
@@ -56,3 +59,35 @@ async def client_errors(request: Request, report: ClientErrorReport) -> Response
     p = principal_of(request)
     record_client_error(report, str(p.user_id) if p else None)
     return Response(status_code=204)
+
+
+@router.get(
+    "/public/projects",
+    summary="Public list of open projects",
+    response_model=Page[ProjectCard],
+    responses={
+        200: {"content": {"application/json": {"example": {"items": [], "next_cursor": None}}}},
+        **error_responses(422),
+    },
+)
+async def public_projects(
+    db: DbSession,
+    q: str | None = None,
+    cursor: str | None = None,
+    limit: int = 20,
+) -> Page[ProjectCard]:
+    """Open projects for anyone (limited columns, never any bid data)."""
+    return await market.search(db, q=q, cursor=cursor, limit=limit)
+
+
+@router.get(
+    "/public/projects/{project_id}",
+    summary="Public view of one open project",
+    response_model=ProjectCard,
+    responses={
+        200: {"content": {"application/json": {"example": {}}}},
+        **error_responses(404, 422),
+    },
+)
+async def public_project(db: DbSession, project_id: uuid.UUID) -> ProjectCard:
+    return await market.get_public(db, project_id)

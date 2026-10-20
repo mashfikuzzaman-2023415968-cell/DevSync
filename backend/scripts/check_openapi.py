@@ -45,6 +45,9 @@ PUBLIC_OPERATIONS: set[tuple[str, str]] = {
     ("get", "/api/v1/public/developers/{developer_id}"),
     ("get", "/api/v1/files/{file_id}/download"),
     ("get", "/api/v1/files/blob/{storage_key}"),
+    # Phase 5: the public marketplace (limited columns, never any bid data).
+    ("get", "/api/v1/public/projects"),
+    ("get", "/api/v1/public/projects/{project_id}"),
 }
 HTTP_METHODS = {"get", "post", "put", "patch", "delete"}
 
