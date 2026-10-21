@@ -57,11 +57,21 @@ function defaultMessage(status: number): string {
   return "The request could not be completed.";
 }
 
+let csrfFetch: Promise<string> | null = null;
+
+/** The CSRF token: the cookie when present, otherwise one fetch of `/auth/csrf` shared by
+ * concurrent callers. The token comes from the response header, because WebKit may expose the
+ * new cookie to `document.cookie` only a moment later (the cookie itself is still sent and
+ * must match, D53). */
 async function ensureCsrf(): Promise<string> {
   const existing = readCookie(CSRF_COOKIE);
   if (existing) return existing;
-  await fetch(`${API_BASE}/auth/csrf`, { credentials: "same-origin" });
-  return readCookie(CSRF_COOKIE) ?? "";
+  csrfFetch ??= fetch(`${API_BASE}/auth/csrf`, { credentials: "same-origin" })
+    .then((r) => r.headers.get("X-CSRF-Token") ?? readCookie(CSRF_COOKIE) ?? "")
+    .finally(() => {
+      csrfFetch = null;
+    });
+  return csrfFetch;
 }
 
 export interface RequestOptions {

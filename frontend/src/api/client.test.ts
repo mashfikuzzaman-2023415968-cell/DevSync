@@ -5,6 +5,7 @@ import { ApiError, api } from "./client";
 
 describe("api client", () => {
   it("adds the CSRF header from the cookie on unsafe requests, fetching it first if missing", async () => {
+    document.cookie = "__Host-ds_csrf=; path=/; secure; max-age=0";
     let seen: string | null = null;
     server.use(
       http.get("*/api/v1/auth/csrf", () => {
@@ -18,6 +19,29 @@ describe("api client", () => {
     );
     await expect(api("/things", { method: "POST", body: {} })).resolves.toEqual({ ok: true });
     expect(seen).toBe("nonce.sig");
+  });
+
+  it("uses the echoed token when the new cookie isn't readable yet, with one shared fetch", async () => {
+    document.cookie = "__Host-ds_csrf=; path=/; secure; max-age=0";
+    let fetches = 0;
+    const seen: (string | null)[] = [];
+    server.use(
+      http.get("*/api/v1/auth/csrf", () => {
+        fetches += 1;
+        // The cookie reaches document.cookie late (WebKit); only the header carries it now.
+        return new HttpResponse(null, { status: 204, headers: { "X-CSRF-Token": "late.sig" } });
+      }),
+      http.post("*/api/v1/things", ({ request }) => {
+        seen.push(request.headers.get("X-CSRF-Token"));
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+    await Promise.all([
+      api("/things", { method: "POST", body: {} }),
+      api("/things", { method: "POST", body: {} }),
+    ]);
+    expect(fetches).toBe(1);
+    expect(seen).toEqual(["late.sig", "late.sig"]);
   });
 
   it("does not send CSRF on GET and returns undefined for 204", async () => {

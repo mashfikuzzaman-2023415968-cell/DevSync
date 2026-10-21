@@ -4735,11 +4735,19 @@
     },
     "/api/v1/auth/csrf": {
       "get": {
-        "description": "Bound to the current session, or to the anonymous key for public forms.",
+        "description": "Bound to the current session, or to the anonymous key for public forms.\n\nThe token is echoed in `X-CSRF-Token` because WebKit can expose a cookie set by a `fetch`\nresponse to `document.cookie` only a moment later; the client would then send an empty\nheader. The cookie is still required and must match (double submit, D53).",
         "operationId": "get_csrf_api_v1_auth_csrf_get",
         "responses": {
           "204": {
-            "description": "Cookie `__Host-ds_csrf` set"
+            "description": "Cookie `__Host-ds_csrf` set; the same token is echoed in a header",
+            "headers": {
+              "X-CSRF-Token": {
+                "description": "The token just set in the cookie, for the X-CSRF-Token header",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           },
           "413": {
             "content": {

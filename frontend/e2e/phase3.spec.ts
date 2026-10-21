@@ -124,7 +124,11 @@ test("a clients-only profile is hidden from visitors and shown to clients @e2e",
 }) => {
   const dev = await apiSignIn(page, baseURL ?? "", "DEVELOPER", "Hidden Dev");
   await page.goto("/dev/profile");
-  await page.getByRole("radio", { name: /Clients only/ }).click();
+  // Wait for every card to load: a card arriving mid-click moves the radio and the click is lost.
+  await expect(page.locator(".skeleton")).toHaveCount(0);
+  const clientsOnly = page.getByRole("radio", { name: /Clients only/ });
+  await clientsOnly.click();
+  await expect(clientsOnly).toBeChecked();
   await expect(page.getByText("Saved", { exact: true })).toBeVisible({ timeout: 10_000 });
 
   const visitor = await browser.newContext({ ignoreHTTPSErrors: true, baseURL: baseURL ?? "" });

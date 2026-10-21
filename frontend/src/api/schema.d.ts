@@ -95,6 +95,10 @@ export interface paths {
     /**
      * Issue a CSRF token cookie
      * @description Bound to the current session, or to the anonymous key for public forms.
+     *
+     *     The token is echoed in `X-CSRF-Token` because WebKit can expose a cookie set by a `fetch`
+     *     response to `document.cookie` only a moment later; the client would then send an empty
+     *     header. The cookie is still required and must match (double submit, D53).
      */
     get: operations["get_csrf_api_v1_auth_csrf_get"];
     put?: never;
@@ -3729,9 +3733,11 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Cookie `__Host-ds_csrf` set */
+      /** @description Cookie `__Host-ds_csrf` set; the same token is echoed in a header */
       204: {
         headers: {
+          /** @description The token just set in the cookie, for the X-CSRF-Token header */
+          "X-CSRF-Token"?: string;
           [name: string]: unknown;
         };
         content?: never;
@@ -10625,7 +10631,7 @@ export interface operations {
         budget_max?: number | null;
         deadline_max?: number | null;
         team_size?: number | null;
-        sort?: string;
+        sort?: "newest" | "budget" | "deadline";
         cursor?: string | null;
         limit?: number;
       };

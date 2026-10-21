@@ -463,4 +463,11 @@ answers `captcha_required`, like the login page (unit-tested, incl. no retry on 
 home redirect for that navigation, otherwise the lazily loaded homepage could render while the
 user data was still cached and bounce back to the role home, whose guard then sent the person to
 /login. (3) The plain hero headline has a space before each `<br>`, so its accessible name is
-"project. Hire…" in every engine (WebKit/Firefox joined the sentences).
+"project. Hire…" in every engine (WebKit/Firefox joined the sentences). (4) `GET /auth/csrf` echoes the
+token in an `X-CSRF-Token` header: in WebKit `document.cookie` can show a cookie set by a `fetch`
+response only a moment later, so the next POST sometimes went out with an empty header
+(`csrf_rejected` in the gate's API log). The client prefers the echoed token and shares one
+fetch between concurrent callers; the server check (cookie = header, signature, Origin) is
+unchanged. (5) The clients-only profile E2E waits for every card to finish loading before
+clicking the visibility radio (a card arriving mid-click moved the radio and the click was lost;
+the trace showed no PATCH), and asserts the radio is checked before waiting for "Saved".

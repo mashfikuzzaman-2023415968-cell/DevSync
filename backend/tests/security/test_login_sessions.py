@@ -204,6 +204,49 @@ def test_anonymous_token_is_not_valid_for_a_session(api: Api) -> None:
     assert r.status_code == 403
 
 
+def _echoed_token(api: Api) -> str:
+    r = api.client.get("/api/v1/auth/csrf")
+    assert r.status_code == 204
+    assert r.headers["cache-control"] == "no-store"
+    echoed = str(r.headers["x-csrf-token"])
+    assert echoed == api.client.cookies.get("__Host-ds_csrf")
+    return echoed
+
+
+def test_csrf_endpoint_echoes_the_anonymous_token(api: Api) -> None:
+    echoed = _echoed_token(api)
+    r = api.request(
+        "POST",
+        "/api/v1/auth/password/forgot",
+        csrf=False,
+        headers={"X-CSRF-Token": echoed},
+        json={"email": unique_email(), "captcha": "test-bypass"},
+    )
+    assert r.status_code == 202, r.text
+
+
+def test_csrf_endpoint_echoes_the_session_token(api: Api) -> None:
+    api.sign_in_as("CLIENT")
+    echoed = _echoed_token(api)
+    r = api.request("POST", "/api/v1/auth/logout", csrf=False, headers={"X-CSRF-Token": echoed})
+    assert r.status_code == 204, r.text
+
+
+def test_echoed_token_without_its_cookie_is_rejected(api: Api) -> None:
+    r = api.client.get("/api/v1/auth/csrf")
+    echoed = r.headers["x-csrf-token"]
+    api.replace_cookie("__Host-ds_csrf", api.csrf_token())  # a different, valid token
+    rejected = api.request(
+        "POST",
+        "/api/v1/auth/password/forgot",
+        csrf=False,
+        headers={"X-CSRF-Token": echoed},
+        json={"email": unique_email()},
+    )
+    assert rejected.status_code == 403
+    assert rejected.json()["error"]["code"] == "CSRF_FAILED"
+
+
 # --------------------------------------------------------------------------- session lifecycle
 
 

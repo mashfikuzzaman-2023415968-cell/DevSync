@@ -94,14 +94,31 @@ def _bypass(settings: Settings, payload: str | None) -> bool:
     "/csrf",
     summary="Issue a CSRF token cookie",
     status_code=204,
-    responses={204: {"description": "Cookie `__Host-ds_csrf` set"}},
+    responses={
+        204: {
+            "description": "Cookie `__Host-ds_csrf` set; the same token is echoed in a header",
+            "headers": {
+                "X-CSRF-Token": {
+                    "description": "The token just set in the cookie, for the X-CSRF-Token header",
+                    "schema": {"type": "string"},
+                }
+            },
+        }
+    },
 )
 async def get_csrf(request: Request, settings: SettingsDep) -> Response:
-    """Bound to the current session, or to the anonymous key for public forms."""
+    """Bound to the current session, or to the anonymous key for public forms.
+
+    The token is echoed in `X-CSRF-Token` because WebKit can expose a cookie set by a `fetch`
+    response to `document.cookie` only a moment later; the client would then send an empty
+    header. The cookie is still required and must match (double submit, D53)."""
     found = session_of(request)
     key = found[1].csrf_secret if found else derive_key(settings.SECRET_KEY, "csrf-anonymous")
+    token = csrf.issue_token(key)
     response = Response(status_code=204)
-    response.headers.append("set-cookie", csrf_cookie(csrf.issue_token(key)))
+    response.headers.append("set-cookie", csrf_cookie(token))
+    response.headers["X-CSRF-Token"] = token
+    response.headers["Cache-Control"] = "no-store"
     return response
 
 
