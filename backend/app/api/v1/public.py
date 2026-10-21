@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from redis.asyncio import Redis
 
 from app.api.deps import DbSession, principal_of, rate_limit, redis_client
@@ -72,9 +72,9 @@ async def client_errors(request: Request, report: ClientErrorReport) -> Response
 )
 async def public_projects(
     db: DbSession,
-    q: str | None = None,
-    cursor: str | None = None,
-    limit: int = 20,
+    q: Annotated[str | None, Query(max_length=200)] = None,
+    cursor: Annotated[str | None, Query(min_length=1, max_length=200)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> Page[ProjectCard]:
     """Open projects for anyone (limited columns, never any bid data)."""
     return await market.search(db, q=q, cursor=cursor, limit=limit)

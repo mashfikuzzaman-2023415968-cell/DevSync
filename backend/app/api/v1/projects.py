@@ -146,7 +146,7 @@ async def list_projects(ctx: Reader) -> list[ProjectListItem]:
 
 
 @router.get(
-    "/projects/{project_id}",
+    "/projects/{project_id:uuid}",  # uuid-only: never shadows /projects/search|recommended
     summary="Get a project",
     response_model=ProjectOut,
     responses={200: _ok(EX_PROJECT), **error_responses(401, 403, 404, 422)},
@@ -156,7 +156,7 @@ async def get_project(ctx: Reader, project_id: uuid.UUID) -> ProjectOut:
 
 
 @router.patch(
-    "/projects/{project_id}",
+    "/projects/{project_id:uuid}",  # uuid-only: never shadows /projects/search|recommended
     summary="Update a draft project",
     response_model=ProjectOut,
     responses={200: _ok(EX_PROJECT), **error_responses(401, 403, 404, 409, 422)},
@@ -168,7 +168,7 @@ async def update_project(
 
 
 @router.delete(
-    "/projects/{project_id}",
+    "/projects/{project_id:uuid}",  # uuid-only: never shadows /projects/search|recommended
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a draft project",
     responses=error_responses(401, 403, 404, 409, 422),

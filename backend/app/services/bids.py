@@ -452,9 +452,7 @@ async def client_bids(ctx: Ctx, project_id: uuid.UUID) -> ClientBidsOut:
                 slot_id=s.id,
                 slot_label=s.label,
                 needed=s.count,
-                eligible=sum(
-                    1 for b in bids if b.slot_id == s.id and str(b.id) in result.eligible
-                ),
+                eligible=sum(1 for b in bids if b.slot_id == s.id and str(b.id) in result.eligible),
             )
             for s in slots.values()
         ]

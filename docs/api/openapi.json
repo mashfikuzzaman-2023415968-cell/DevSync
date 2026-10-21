@@ -11726,6 +11726,11 @@
             "required": false,
             "schema": {
               "default": "newest",
+              "enum": [
+                "newest",
+                "budget",
+                "deadline"
+              ],
               "title": "Sort",
               "type": "string"
             }
@@ -11738,6 +11743,7 @@
               "anyOf": [
                 {
                   "maxLength": 200,
+                  "minLength": 1,
                   "type": "string"
                 },
                 {
@@ -14487,6 +14493,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "maxLength": 200,
                   "type": "string"
                 },
                 {
@@ -14503,6 +14510,8 @@
             "schema": {
               "anyOf": [
                 {
+                  "maxLength": 200,
+                  "minLength": 1,
                   "type": "string"
                 },
                 {
@@ -14518,6 +14527,8 @@
             "required": false,
             "schema": {
               "default": 20,
+              "maximum": 100,
+              "minimum": 1,
               "title": "Limit",
               "type": "integer"
             }

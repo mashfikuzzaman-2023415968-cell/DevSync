@@ -182,15 +182,16 @@ def _sufficient(eligible: list[BidInput], project: ProjectInput, team_size: int)
     return all(per_slot[s] >= spec.count for s, spec in project.slots.items())
 
 
-def _order_key(bid: BidInput, advancement: Advancement) -> float:
-    """Sort key for the advancement choice: descending P/C (negated), ascending t/c."""
+def _order_key(bid: BidInput, advancement: Advancement) -> float | int:
+    """Sort key for the advancement choice: descending P/C (negated), ascending t/c. Prices stay
+    integer paisa (never float, spec §0.2 rule 10)."""
     if advancement is Advancement.P:
         return -bid.p
     if advancement is Advancement.C:
         return -bid.c
     if advancement is Advancement.T:
-        return float(bid.t_days)
-    return float(bid.c_paisa)
+        return bid.t_days
+    return bid.c_paisa
 
 
 def filter_bids(bids: list[BidInput], project: ProjectInput, params: FilterParams) -> FilterResult:

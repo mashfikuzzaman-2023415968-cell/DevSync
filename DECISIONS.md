@@ -414,3 +414,26 @@ developer_skills/skill_evidence/developer_profiles/users; INSERT on skill_eviden
 projects for the BIDDING→FORMING transition). The Phase 3/4 owner policies are unchanged; RLS is
 permissive, so these only widen the SYSTEM role. The caller is authorised as the project owner first
 and only the eligibility verdict — never raw developer data — is returned.
+
+**D51 · Security fixes may skip the 14-day dependency age rule (Taeen, Phase 5 gate).** The
+first Phase 5 gate run found newly published vulnerabilities: Pillow 12.3.0 (8 CVEs, fixed in
+13.0.0, released 2026-10-16) and certifi 2026.7.22 (fixed in 2026.10.19). Spec §14.21 requires
+critical fixes within 48 hours and high within 7 days, which outranks our 14-day supply-chain
+precaution (D1). Only these two packages were upgraded (`uv pip compile --upgrade-package`; every
+other pin unchanged). Pillow 13 is a major version: the upload pipeline's tests (100% coverage,
+EXIF/GPS stripping, bomb guard, polyglots) pass unchanged. *Rule from now on:* a package may be
+newer than 14 days only to fix a published vulnerability, recorded here with the CVE source.
+
+**D52 · Phase 5 gate fixes (Taeen, before review fixes).**
+1. `/projects/{project_id}` (GET/PATCH/DELETE) uses Starlette's `uuid` path convertor, so the
+   spec's static paths `/projects/search` and `/projects/recommended` are never shadowed (an
+   unsupported method on them now answers 405, not a CSRF 403). The OpenAPI paths are unchanged.
+2. Query contracts declare what the server enforces: page cursors `min_length=1, max_length=200`;
+   `/public/projects` bounds `q` (≤ 200) and `limit` (1–100) like the signed-in search; `sort` is
+   an enum (`newest | budget | deadline`).
+3. Contract fuzzing: a fuzzed page cursor (an opaque server-issued token the fuzzer can't
+   produce) may get a 422 that names `cursor`; any other response to such a request, and every
+   request without a cursor, is validated in full (no check is switched off).
+4. The partial unique index `one_active_bid_per_developer` keeps its constant `text()` predicate
+   with a reviewed `forbidden-ok` marker (DDL, no input); the advancement sort key keeps prices
+   as integer paisa (no `float`, spec §0.2 rule 10); one line formatted.

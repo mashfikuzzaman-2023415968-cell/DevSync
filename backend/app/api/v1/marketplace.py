@@ -7,7 +7,7 @@ whitelisted (unknown query params → 422 from FastAPI); the free-text query goe
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query
 
@@ -55,8 +55,8 @@ async def search_projects(
     budget_max: Annotated[int | None, Query(ge=0)] = None,
     deadline_max: Annotated[int | None, Query(ge=1, le=365)] = None,
     team_size: Annotated[int | None, Query(ge=2, le=10)] = None,
-    sort: Annotated[str, Query()] = "newest",
-    cursor: Annotated[str | None, Query(max_length=200)] = None,
+    sort: Annotated[Literal["newest", "budget", "deadline"], Query()] = "newest",
+    cursor: Annotated[str | None, Query(min_length=1, max_length=200)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> Page[ProjectCard]:
     return await svc.search(

@@ -90,7 +90,7 @@ class Bid(UUIDPrimaryKey, Timestamps, Base):
             "project_id",
             "developer_id",
             unique=True,
-            postgresql_where=text("status = 'ACTIVE'"),
+            postgresql_where=text("status = 'ACTIVE'"),  # forbidden-ok: constant DDL predicate
         ),
         CheckConstraint("price_paisa > 0", name="price_positive"),
         CheckConstraint("days_needed BETWEEN 1 AND 365", name="days_range"),

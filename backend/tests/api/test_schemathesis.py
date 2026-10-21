@@ -42,4 +42,14 @@ def test_api_contract(case: schemathesis.Case) -> None:
     # Rate limiting is tested on its own; here every example must reach the contract.
     for key in _REDIS.scan_iter("rl:*"):
         _REDIS.delete(key)
+    # A page cursor is an opaque token only the server issues, so a generated one is (almost)
+    # never valid: a 422 naming the cursor is the correct answer to it. Any other response to
+    # such a request — and every request without a cursor — is validated in full.
+    if isinstance(case.query, dict) and case.query.get("cursor") is not None:
+        response = case.call()
+        assert response.status_code < 500, response.text
+        if response.status_code == 422 and "cursor" in response.json()["error"].get("fields", {}):
+            return
+        case.validate_response(response)
+        return
     case.call_and_validate()
