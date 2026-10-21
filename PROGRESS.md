@@ -1,12 +1,12 @@
 # DevSync progress
 
 ## Current state
-- **Current owner:** Salwa Baki (backend developer), Phases 4–5, from 2026-10-18 (hand-off from Mashfikuzzaman Taeen: `docs/handoffs/handoff-01-taeen-to-salwa.md`)
-- **Current phase:** 5 — Marketplace, sealed bidding, Algorithm 1 filtering (Phase 4 merged + tagged)
-- **Last gate result:** `PHASE 4 GATE: PASS` (2026-10-20, Taeen's laptop; merged + tagged `phase-4`). Phase 5 backend + frontend built and verified piecemeal in the test stack; full `make gate PHASE=5` not yet run end-to-end (the 4-browser ×3 E2E is the RAM-heavy step, likely finished on Taeen's laptop per D28).
-- **In progress:** Phase 5 (marketplace, sealed bidding, Algorithm 1 filtering) — plan approved (`docs/plans/phase-05.md`); **code complete on branch `phase-5`**. Backend: migration 0006 (bids, reservations, reputation snapshots, project search; FORCE RLS sealing bids + additive SYSTEM eligibility policies, D50); pure `filtering.py`/`reputation.py`/`availability.py` (35 tests, 99%); marketplace + bids services, 12 routes, authz matrix; bidding-deadline job; stage-1 seed asserting the §18.4 counts (10 eligible; Shakib TOO_SLOW, Lamia NO_SKILL_EVIDENCE); `phase5_checks`. Frontend: Find Projects (URL-synced filters), bid sheet with live eligibility, My Bids, client Bids + too-few banner; 278 tests, coverage ≥70% all metrics. ~60 backend tests pass against Postgres; ruff/mypy/eslint/tsc/build/OpenAPI/check_rls all clean. Security review `docs/security-reviews/phase-05.md` (0 unresolved high). Decisions D44–D50.
-- **Very next step:** write `e2e/phase5.spec.ts` (real-stack, cross-context sealed bid) + the Demo-1 tooling (`demo-check/up/reset/preflight`, `e2e/demos/demo-1.spec.ts`); regenerate visual baselines for the new screens; then run the full `make gate PHASE=5` (likely on Taeen's higher-RAM laptop) and, on PASS, merge + tag `phase-5` and run `make demo-check DEMO=1`. Demo 1 is Mon 2 Nov 2026 (Phases 0–5).
-- **Open human tasks:** review the 128 drafted test questions for accuracy (D34); tester's human check of the Phase 3 **and** Phase 4 security reviews; sanity-check D39 (simulated payment-method verification) with Taeen.
+- **Current owner:** Salwa Baki (backend developer), Phases 4–5, from 2026-10-18 (hand-off from Mashfikuzzaman Taeen: `docs/handoffs/handoff-01-taeen-to-salwa.md`); Phase 5 gate finished by Taeen.
+- **Current phase:** 5 — Marketplace, sealed bidding, Algorithm 1 filtering — **gate passed, not yet merged or tagged**.
+- **Last gate result:** `PHASE 5 GATE: PASS` (2026-10-21 20:00 UTC, Taeen's laptop, branch `phase-5`): backend 785 tests (95.4% coverage), security suite 246, frontend 283, E2E 177 × 3 on chromium/firefox/webkit/mobile, visual 112 baselines, Lighthouse desktop 97 / mobile 94.
+- **In progress:** nothing building. Gate fixes are in D51–D53 and security-review findings 3–5 (CSRF token echo for WebKit, CAPTCHA retry after sign-up, search control characters → 500, sign-out full page load, cross-browser E2E robustness).
+- **Very next step:** push `phase-5`; merge (fast-forward) into `main` and tag `phase-5` (owner decides who); `make demo-check DEMO=1`. Then the Phase 5 follow-ups listed under Known issues (too-few-bids actions, client Bids columns, portfolio ownership on bids, search pagination for every sort, recommendations per §9.16, time-enforced bidding deadline). Demo 1 is Mon 2 Nov 2026 (Phases 0–5).
+- **Open human tasks:** decide whether clients see bid prices live during bidding (spec) or only after it closes; decide the software-rendering hero fallback (D53 follow-up); review the 128 drafted test questions (D34); tester's human check of the Phase 3, 4 and 5 security reviews; sanity-check D39 (simulated payment-method verification).
 
 ## Phase table
 | Phase | Owner | Status | Gate | Date | Tag |
@@ -16,13 +16,14 @@
 | 2 Design system & landing | Taeen | done | PASS | 2026-10-17 | phase-2 |
 | 3 Profiles & skill tests | Taeen | done | PASS | 2026-10-18 | phase-3 |
 | 4 Projects & CPM | Salwa (review fixes: Taeen) | done | PASS | 2026-10-20 | phase-4 |
-| 5 Marketplace & filtering | Salwa | code complete (gate pending) | — | — | — |
+| 5 Marketplace & filtering | Salwa (gate fixes: Taeen) | gate passed (merge + tag pending) | PASS | 2026-10-21 | — |
 | 6–15 | — | not started | — | — | — |
 
 ## Gate log (newest first, appended by `make gate`)
 | Finished (UTC) | Phase | Result | Tests |
 |---|---|---|---|
 <!-- gate-log -->
+| 2026-10-21T20:00:03+00:00 | phase 5 | PASS | backend 785 / frontend 283 tests |
 | 2026-10-21T17:12:45+00:00 | phase 5 | FAIL (step 13) | backend 778 / frontend 283 tests |
 | 2026-10-21T14:14:09+00:00 | phase 5 | FAIL (step 13) | backend 775 / frontend 283 tests |
 | 2026-10-21T11:35:34+00:00 | phase 5 | FAIL (step 3) | backend 775 / frontend 278 tests |
@@ -64,8 +65,23 @@
 - The gate's frame-rate step needs a GPU (`/dev/dri`); run the gate on a laptop (D28). Long gate runs are best started with `systemd-run --user` so closing a terminal or chat doesn't kill them.
 - The 2021 STI paper is cited without a link (no DOI found); add the IEEE Xplore URL when known.
 - Existing dev databases: run `make migrate` (migration 0002); create an admin with `make create-admin`.
+- Phase 5 follow-ups (gate passes; product gaps against the spec, to fix before Demo 1 where possible):
+  - too-few-bids banner offers only a link; the spec's five actions (extend, lower standards, raise budget, reduce team, cancel) need UI (extend has an endpoint) — D47 overstates this;
+  - client Bids screen lacks hours/week, teamwork, proposal preview, slot/eligibility filters and a phone card list;
+  - a bid's `portfolio_item_ids` are not checked to belong to the bidder;
+  - search pagination works only for the `newest` sort; search does not include skill names;
+  - recommended projects lack typical days, hours fit and the 5-minute cache (§9.16);
+  - `pcs_replication` mode disables relaxation (check against [PCS]);
+  - bidding deadline enforced by project status only, not also by time; changes to a project after bids exist need defined handling;
+  - possible additions: team-cost estimate; auto-cancel when the client ignores the too-few banner; wider E2E for bidding.
 
 ## Session log (newest first)
+### 2026-10-21 — Taeen (with Claude Code), Phase 5 review and gate
+- Reviewed Salwa's Phase 5 and ran the gate until `PHASE 5 GATE: PASS` (run 9 of the day; runs 4–6 were cut short by a battery that would not charge).
+- Real defects fixed: vulnerable Pillow/certifi (D51); `/projects/{id}` shadowing search routes, query bounds, float-free ordering (D52); WebKit could send an empty CSRF header after `GET /auth/csrf` (token now echoed in a header); sign-up's automatic sign-in now solves the CAPTCHA when asked; NUL/control characters in search → 500 (now cleaned, skill filters capped at 20); sign-out does a full page load; hero headline accessible name; 44 px touch targets (D53, security review findings 3–5).
+- E2E robustness: viewport-aware helpers, smooth scrolling off in tests, homepage link tests on reduced motion (software WebGL in the container), gitleaks skips Playwright output.
+- Not merged or tagged; follow-ups recorded under Known issues.
+
 ### 2026-10-20 — Salwa (with Claude Code), Phase 5 build
 - **Done:** approved `docs/plans/phase-05.md`; built Phase 5 end to end on `phase-5`. Backend —
   migration 0006 (bids/reservations/reputation_snapshots + project search, sealed-bid RLS, SYSTEM
