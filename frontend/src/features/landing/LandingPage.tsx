@@ -2,8 +2,8 @@
  * Homepage (spec §13.11): the front door of DevSync. Guests always land here; signed-in users
  * are redirected to their role home. Sections top to bottom as specified.
  */
-import { Navigate, useLocation } from "react-router";
-import { isSignedOutState, useMe } from "@/features/auth/api";
+import { Navigate } from "react-router";
+import { useMe } from "@/features/auth/api";
 import { roleHome } from "@/lib/redirects";
 import { AudienceToggle } from "./Audience";
 import { BackToTop } from "./BackToTop";
@@ -20,9 +20,7 @@ import { StatsStrip } from "./StatsStrip";
 
 export default function LandingPage() {
   const me = useMe();
-  const signingOut = isSignedOutState(useLocation().state);
-  if (me.data && !signingOut)
-    return <Navigate to={roleHome(me.data.role, me.data.status)} replace />;
+  if (me.data) return <Navigate to={roleHome(me.data.role, me.data.status)} replace />;
   return (
     <div className="min-h-dvh bg-bg">
       <a

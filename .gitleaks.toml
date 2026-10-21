@@ -9,6 +9,8 @@ paths = [
   '''\.venv/''',
   '''frontend/dist/''',
   '''frontend/coverage/''',
+  '''frontend/test-results/''',  # Playwright traces (test-stack session cookies), gitignored
+  '''frontend/playwright-report/''',
   '''runs/''',
   '''infra/nginx/certs/''',
   '''\.env$''',

@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { LaptopMinimal, LogOut, Monitor, Moon, Sun } from "lucide-react";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { useNavigate } from "react-router";
 import type { z } from "zod";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, Skeleton } from "@/components/ui/Display";
@@ -23,7 +22,6 @@ import {
   useRevokeSession,
   useSessions,
   useUpdateMe,
-  SIGNED_OUT_STATE,
 } from "@/features/auth/api";
 import { applyFieldErrors, messageFor } from "@/features/auth/errors";
 import { PASSWORD_RULES } from "@/features/auth/PasswordRules";
@@ -130,10 +128,7 @@ function AppearanceCard() {
 function DevicesCard() {
   const sessions = useSessions();
   const revoke = useRevokeSession();
-  const navigate = useNavigate();
-  const logoutAll = useLogout(true, () =>
-    navigate("/", { replace: true, state: SIGNED_OUT_STATE }),
-  );
+  const logoutAll = useLogout(true);
   return (
     <Card>
       <CardHeader title="Signed-in devices" description="Sign out anywhere you don’t recognise." />

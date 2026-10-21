@@ -1,8 +1,9 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { NAV } from "@/app/navigation";
+import { pageLoad } from "@/lib/redirects";
 import { server } from "@/test/server";
 import { Probe, renderRoutes } from "@/test/render";
 import { AppShell } from "./AppShell";
@@ -95,19 +96,31 @@ describe("AppShell (spec §13.4)", () => {
     expect(within(sheet).queryByRole("link", { name: "Find projects" })).not.toBeInTheDocument();
   });
 
-  it("signs out from the account menu and returns to the homepage", async () => {
+  it.each([
+    ["signs out", 204],
+    ["still leaves when the sign-out request fails", 500],
+  ])("%s from the account menu with a fresh load of the homepage", async (_name, status) => {
+    const to = vi.spyOn(pageLoad, "to").mockImplementation(() => undefined);
+    let posted = false;
     server.use(
       http.get("*/api/v1/auth/csrf", () => {
         document.cookie = "__Host-ds_csrf=t.s; path=/; secure";
         return new HttpResponse(null, { status: 204 });
       }),
-      http.post("*/api/v1/auth/logout", () => new HttpResponse(null, { status: 204 })),
+      http.post("*/api/v1/auth/logout", () => {
+        posted = true;
+        return new HttpResponse(null, { status });
+      }),
     );
     const user = userEvent.setup();
     shell();
     await user.click(await screen.findByRole("button", { name: "Account menu" }));
     await user.click(await screen.findByRole("menuitem", { name: "Sign out" }));
-    expect(await screen.findByText("homepage")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(to).toHaveBeenCalledWith("/");
+    });
+    expect(posted).toBe(true);
+    to.mockRestore();
   });
 });
 

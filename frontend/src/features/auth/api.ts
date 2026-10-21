@@ -11,6 +11,7 @@ import type {
   TotpSetup,
 } from "@/api/types";
 import { solveChallenge } from "@/lib/captcha";
+import { pageLoad } from "@/lib/redirects";
 
 export const meKey = ["me"] as const;
 
@@ -90,31 +91,15 @@ export function useRegister() {
   });
 }
 
-/** Navigation state for the move to "/" after signing out: the homepage must not send the
- * leaving user back to their role home while the signed-in data is still being cleared. */
-export const SIGNED_OUT_STATE = { signedOut: true } as const;
-
-export function isSignedOutState(state: unknown): boolean {
-  return (
-    typeof state === "object" && state !== null && "signedOut" in state && state.signedOut === true
-  );
-}
-
-/** Sign out. `leave` (navigate home with SIGNED_OUT_STATE) runs first and the session data is
- * cleared only once that navigation has finished: clearing earlier lets the route guard of the
- * page being left see "no user" and send the person to /login instead. */
-export function useLogout(all = false, leave?: () => void | Promise<void>) {
-  const qc = useQueryClient();
+/** Sign out, then load the homepage afresh. A full page load (not an in-app navigation) drops
+ * every cached piece of the person's data, and no route guard of the page being left can see
+ * "no user" mid-navigation and send them to /login instead (a race WebKit lost, D53). */
+export function useLogout(all = false) {
   return useMutation({
     meta: { inlineErrors: true },
     mutationFn: () => api<undefined>(all ? "/auth/logout-all" : "/auth/logout", { method: "POST" }),
-    onSettled: async () => {
-      try {
-        await leave?.();
-      } finally {
-        qc.setQueryData(meKey, null);
-        qc.clear();
-      }
+    onSettled: () => {
+      pageLoad.to("/");
     },
   });
 }

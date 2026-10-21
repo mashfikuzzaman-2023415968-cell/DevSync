@@ -459,10 +459,11 @@ so a person on a shared IP with ≥ 3 recent failed sign-ins (an office or campu
 container, another browser's throttling test) got "complete the verification check" although
 the account existed — the follow-up sign-in now solves the check and retries when the server
 answers `captcha_required`, like the login page (unit-tested, incl. no retry on other errors).
-(2) Sign-out navigates to "/" with `SIGNED_OUT_STATE`; the homepage skips its signed-in → role
-home redirect for that navigation, otherwise the lazily loaded homepage could render while the
-user data was still cached and bounce back to the role home, whose guard then sent the person to
-/login. (3) The plain hero headline has a space before each `<br>`, so its accessible name is
+(2) Sign-out ends with a full page load of "/" (`location.replace`), not an in-app
+navigation. React Router reports a navigation done before React commits it, so clearing the
+signed-in data afterwards let the page being left (its guard) send WebKit users to /login; a
+fresh load also drops every cached piece of the person's data. It happens even when the
+sign-out request fails, so a stale session is never left on screen. (3) The plain hero headline has a space before each `<br>`, so its accessible name is
 "project. Hire…" in every engine (WebKit/Firefox joined the sentences). (4) `GET /auth/csrf` echoes the
 token in an `X-CSRF-Token` header: in WebKit `document.cookie` can show a cookie set by a `fetch`
 response only a moment later, so the next POST sometimes went out with an empty header
@@ -470,4 +471,9 @@ response only a moment later, so the next POST sometimes went out with an empty 
 fetch between concurrent callers; the server check (cookie = header, signature, Origin) is
 unchanged. (5) The clients-only profile E2E waits for every card to finish loading before
 clicking the visibility radio (a card arriving mid-click moved the radio and the click was lost;
-the trace showed no PATCH), and asserts the radio is checked before waiting for "Saved".
+the trace showed no PATCH), and asserts the radio is checked before waiting for "Saved". (6) gitleaks scans the working tree
+(`--no-git`), so after any failed E2E run the next gate failed step 5 on Playwright traces in
+`frontend/test-results/` (115 `generic-api-key` hits, all session cookies of the throwaway test
+stack). That folder and `frontend/playwright-report/` are gitignored generated output, so they
+join the allowlist next to `frontend/dist/`, `frontend/coverage/` and `runs/`; tracked files are
+scanned exactly as before.

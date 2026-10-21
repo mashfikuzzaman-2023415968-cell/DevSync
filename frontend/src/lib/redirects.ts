@@ -58,3 +58,10 @@ export function safeRedirect(
   if (status === "PENDING") return "/verify";
   return isSafePath(target) ? target : roleHome(role, status);
 }
+
+/** Full page loads (sign-out): kept on an object so unit tests can replace `to`. */
+export const pageLoad = {
+  to(path: string): void {
+    window.location.replace(path);
+  },
+};
