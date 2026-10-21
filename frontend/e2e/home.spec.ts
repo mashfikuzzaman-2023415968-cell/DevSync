@@ -67,6 +67,10 @@ test("a fresh visit to / shows the homepage, not login @e2e", async ({ page }) =
 test("navbar, hero, call-to-action and footer links reach the right pages @e2e", async ({
   page,
 }) => {
+  // These checks are about where links go, not the 3D hero (covered below). In the test
+  // container WebKit renders WebGL in software and its shader compile can block the page for
+  // seconds, swallowing clicks; reduced motion shows the poster instead (D53).
+  await page.emulateMedia({ reducedMotion: "reduce" });
   const checks: [string, string, RegExp][] = [
     ["header", "Sign in", /\/login$/],
     ["header", "Get started", /\/register$/],
@@ -106,6 +110,10 @@ test("navbar, hero, call-to-action and footer links reach the right pages @e2e",
 });
 
 test("Hire a team preselects Client and Find work preselects Developer @e2e", async ({ page }) => {
+  // These checks are about where links go, not the 3D hero (covered below). In the test
+  // container WebKit renders WebGL in software and its shader compile can block the page for
+  // seconds, swallowing clicks; reduced motion shows the poster instead (D53).
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await page
     .locator("section[aria-labelledby=hero-title]")

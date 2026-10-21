@@ -11,6 +11,22 @@ export async function resetLimits(request: APIRequestContext): Promise<void> {
 }
 
 export const test = base.extend<{ freshLimits: undefined }>({
+  // The app scrolls smoothly (index.css). When Playwright scrolls an element into view to click
+  // it, Firefox and WebKit can still be animating, so the click lands where the element used to
+  // be and is lost (D53). Tests turn the animation off; nothing asserts on scroll motion.
+  page: async ({ page }, provide) => {
+    await page.addInitScript(() => {
+      // The <html> element may not exist yet (WebKit) or be replaced (Firefox) when this runs,
+      // so set it again once the page is parsed.
+      const off = () => {
+        const root = document.documentElement as HTMLElement | null;
+        if (root) root.style.scrollBehavior = "auto";
+      };
+      document.addEventListener("DOMContentLoaded", off);
+      off();
+    });
+    await provide(page);
+  },
   freshLimits: [
     async ({ request }, use) => {
       await resetLimits(request);
@@ -32,23 +48,4 @@ export async function mainNav(page: Page): Promise<Locator> {
     .getByRole("button", { name: "More" })
     .click();
   return page.getByRole("dialog", { name: "More" });
-}
-
-/** Click once the page has stopped scrolling. The app scrolls smoothly (index.css), so in Firefox
- * the scroll Playwright starts to bring an element into view can still be animating when it
- * clicks, and the click lands where the element used to be. */
-export async function clickSettled(target: Locator): Promise<void> {
-  await target.scrollIntoViewIfNeeded();
-  await target.page().waitForFunction(
-    () =>
-      new Promise<boolean>((resolve) => {
-        const y = window.scrollY;
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            resolve(window.scrollY === y);
-          });
-        });
-      }),
-  );
-  await target.click();
 }

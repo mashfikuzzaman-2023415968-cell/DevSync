@@ -472,11 +472,18 @@ fetch between concurrent callers; the server check (cookie = header, signature, 
 unchanged. (5) The clients-only profile E2E waits for every card to finish loading before
 clicking the visibility radio (a card arriving mid-click moved the radio and the click was lost;
 the trace showed no PATCH), and asserts the radio is checked before waiting for "Saved".
-That alone was not enough: the app scrolls smoothly (`scroll-behavior: smooth`, kept for the
-homepage anchors), so in Firefox the scroll Playwright starts to bring an element into view was
-still animating when it clicked (~1 in 10 runs). `clickSettled()` (e2e/test.ts) scrolls the
-element into view, waits until the page stops scrolling, then clicks; used for below-the-fold
-clicks in the profile and Settings tests (44/44 repeated runs on three engines). (7) Search input: schemathesis
+That alone was not enough: the app scrolls smoothly (`scroll-behavior: smooth`, kept for users
+and the homepage anchors), so in Firefox and WebKit the scroll Playwright starts to bring an
+element into view was still animating when it clicked, and the click landed where the element
+used to be (profile radio, footer links; traces show "not stable" / "outside of the viewport"
+right before the click). The shared fixture (e2e/test.ts) turns scroll animation off on every
+test page (inline `scroll-behavior: auto`, re-applied after parsing because WebKit has no
+<html> yet and Firefox replaces it); nothing asserts on scroll motion. The homepage link tests
+also request reduced motion: in the container WebKit renders WebGL in software and the 3D
+shader compile blocked the page for ~8 s, swallowing clicks; the 3D hero has its own tests.
+Follow-up for the user (not done, changes §13.12 fallbacks): also show the poster when WebGL
+would render in software (`failIfMajorPerformanceCaveat`), which would move the live-scene
+E2E check to the GPU project. 48/48 repeated runs on three engines. (7) Search input: schemathesis
 sent `q=\x00…` to `GET /public/projects` and got a 500 (PostgreSQL rejects NUL in text).
 `services/marketplace.search` now cleans `q` and each skill name like profile one-line fields
 (control characters removed, NFC, trimmed, empties dropped) and allows at most 20 skill filters

@@ -7,7 +7,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
-import { clickSettled, expect, resetLimits, test } from "./test";
+import { expect, resetLimits, test } from "./test";
 import { apiSignIn, watchPage } from "./fixtures";
 import { layoutProblems } from "./layout-checks";
 
@@ -127,7 +127,7 @@ test("a clients-only profile is hidden from visitors and shown to clients @e2e",
   // Wait for every card to load: a card arriving mid-click moves the radio and the click is lost.
   await expect(page.locator(".skeleton")).toHaveCount(0);
   const clientsOnly = page.getByRole("radio", { name: /Clients only/ });
-  await clickSettled(clientsOnly);
+  await clientsOnly.click();
   await expect(clientsOnly).toBeChecked();
   await expect(page.getByText("Saved", { exact: true })).toBeVisible({ timeout: 10_000 });
 
@@ -153,7 +153,7 @@ test("a client edits their organisation in Settings @e2e", async ({ page, baseUR
   await page.getByLabel("Organisation").fill("Rahim Traders");
   await page.getByLabel("What you do").fill("Wholesale textiles; we need an ordering app.");
   await page.getByLabel("Website").fill("http://example.com");
-  await clickSettled(page.getByRole("button", { name: "Save organisation" }));
+  await page.getByRole("button", { name: "Save organisation" }).click();
   await expect(page.getByText("Use a full https:// address.")).toBeVisible();
   await page.getByLabel("Website").fill("https://example.com");
   await page.getByRole("button", { name: "Save organisation" }).click();
