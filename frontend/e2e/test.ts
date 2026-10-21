@@ -33,3 +33,22 @@ export async function mainNav(page: Page): Promise<Locator> {
     .click();
   return page.getByRole("dialog", { name: "More" });
 }
+
+/** Click once the page has stopped scrolling. The app scrolls smoothly (index.css), so in Firefox
+ * the scroll Playwright starts to bring an element into view can still be animating when it
+ * clicks, and the click lands where the element used to be. */
+export async function clickSettled(target: Locator): Promise<void> {
+  await target.scrollIntoViewIfNeeded();
+  await target.page().waitForFunction(
+    () =>
+      new Promise<boolean>((resolve) => {
+        const y = window.scrollY;
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            resolve(window.scrollY === y);
+          });
+        });
+      }),
+  );
+  await target.click();
+}

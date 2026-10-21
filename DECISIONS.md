@@ -471,7 +471,12 @@ response only a moment later, so the next POST sometimes went out with an empty 
 fetch between concurrent callers; the server check (cookie = header, signature, Origin) is
 unchanged. (5) The clients-only profile E2E waits for every card to finish loading before
 clicking the visibility radio (a card arriving mid-click moved the radio and the click was lost;
-the trace showed no PATCH), and asserts the radio is checked before waiting for "Saved". (6) gitleaks scans the working tree
+the trace showed no PATCH), and asserts the radio is checked before waiting for "Saved".
+That alone was not enough: the app scrolls smoothly (`scroll-behavior: smooth`, kept for the
+homepage anchors), so in Firefox the scroll Playwright starts to bring an element into view was
+still animating when it clicked (~1 in 10 runs). `clickSettled()` (e2e/test.ts) scrolls the
+element into view, waits until the page stops scrolling, then clicks; used for below-the-fold
+clicks in the profile and Settings tests (44/44 repeated runs on three engines). (6) gitleaks scans the working tree
 (`--no-git`), so after any failed E2E run the next gate failed step 5 on Playwright traces in
 `frontend/test-results/` (115 `generic-api-key` hits, all session cookies of the throwaway test
 stack). That folder and `frontend/playwright-report/` are gitignored generated output, so they
