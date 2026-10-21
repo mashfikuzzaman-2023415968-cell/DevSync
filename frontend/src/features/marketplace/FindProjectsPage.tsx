@@ -62,7 +62,7 @@ export default function FindProjectsPage() {
           <CardHeader title="Filters" />
           <div className="mt-4 flex flex-col gap-4">
             <Field
-              label="Search"
+              label="Search projects"
               type="search"
               value={filters.q ?? ""}
               onChange={(e) => {
@@ -115,14 +115,21 @@ export default function FindProjectsPage() {
         <div className="flex flex-col gap-6">
           {recommended.data && recommended.data.length > 0 ? (
             <Card>
-              <CardHeader title="Recommended for you" description="Projects matching your skills." />
+              <CardHeader
+                title="Recommended for you"
+                description="Projects matching your skills."
+              />
               <ul className="mt-3 flex flex-wrap gap-2">
                 {recommended.data.slice(0, 6).map((r) => (
                   <li key={r.project.id}>
-                    <Button asChild variant="outline" size="sm">
+                    <Button asChild variant="outline">
                       <Link to={`/dev/projects/${r.project.id}`}>
                         {r.project.title}
-                        <span className="text-text-muted"> · {r.skill_match_count} skills</span>
+                        <span className="text-text-muted">
+                          {r.skill_match_count === 1
+                            ? "1 matching skill"
+                            : `${String(r.skill_match_count)} matching skills`}
+                        </span>
                       </Link>
                     </Button>
                   </li>
@@ -179,7 +186,7 @@ function ProjectResult({ project }: { project: Card_ }) {
         <div className="min-w-0">
           <Link
             to={`/dev/projects/${project.id}`}
-            className="font-medium text-text hover:text-primary hover:underline"
+            className="inline-flex min-h-11 items-center font-medium text-text hover:text-primary hover:underline"
           >
             {project.title}
           </Link>

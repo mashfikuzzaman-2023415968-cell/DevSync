@@ -48,7 +48,7 @@ test("a developer searches, previews eligibility, bids and withdraws @e2e", asyn
   await apiSignIn(page, baseURL ?? "", "DEVELOPER", "Nadia Rahman");
   const watch = await watchPage(page, origin);
   await page.goto("/dev/find");
-  await page.getByLabel("Search").fill("ordering");
+  await page.getByLabel("Search projects", { exact: true }).fill("ordering");
   await expect(page.getByRole("link", { name: "Online ordering system" }).first()).toBeVisible();
   // The filter is reflected in the URL (survives reload).
   await expect(page).toHaveURL(/q=ordering/);
@@ -61,12 +61,12 @@ test("a developer searches, previews eligibility, bids and withdraws @e2e", asyn
   await page.getByRole("option", { name: /React/ }).first().click();
   await page.getByLabel(/Your price/).fill("18000");
   await page.getByLabel(/Days you need/).fill("20");
-  await expect(
-    page.getByText(/meet every requirement|would be filtered out/i),
-  ).toBeVisible({ timeout: 5000 });
+  await expect(page.getByText(/meet every requirement|would be filtered out/i)).toBeVisible({
+    timeout: 5000,
+  });
 
   await page.getByRole("button", { name: "Place sealed bid" }).click();
-  await expect(page.getByText("Bid placed")).toBeVisible();
+  await expect(page.getByText("Bid placed").first()).toBeVisible();
 
   // It shows up in My Bids.
   await page.goto("/dev/bids");
@@ -91,11 +91,14 @@ test("a bid is sealed from other developers across browser contexts @e2e", async
   await apiSignIn(a, baseURL ?? "", "DEVELOPER", "Developer A");
   await a.goto(`/dev/projects/${projectId}`);
   await a.getByRole("combobox").click();
-  await a.getByRole("option", { name: /FastAPI/ }).first().click();
+  await a
+    .getByRole("option", { name: /FastAPI/ })
+    .first()
+    .click();
   await a.getByLabel(/Your price/).fill("22000");
   await a.getByLabel(/Days you need/).fill("18");
   await a.getByRole("button", { name: "Place sealed bid" }).click();
-  await expect(a.getByText("Bid placed")).toBeVisible();
+  await expect(a.getByText("Bid placed").first()).toBeVisible();
 
   // Developer B, in a separate context, sees nothing of it.
   const ctxB = await browser.newContext({ ignoreHTTPSErrors: true, baseURL: baseURL ?? "" });
@@ -120,10 +123,13 @@ test("the client sees all bids with eligibility and the too-few banner @e2e", as
   const projectId = await createOrderingProject(page, baseURL ?? "", { publish: true });
 
   // One developer bids (far short of the team of four → too-few).
-  const ctx = await page.context().browser()?.newContext({
-    ignoreHTTPSErrors: true,
-    baseURL: baseURL ?? "",
-  });
+  const ctx = await page
+    .context()
+    .browser()
+    ?.newContext({
+      ignoreHTTPSErrors: true,
+      baseURL: baseURL ?? "",
+    });
   if (!ctx) throw new Error("no browser");
   const dev = await ctx.newPage();
   await apiSignIn(dev, baseURL ?? "", "DEVELOPER", "Arif Hossain");
@@ -133,7 +139,7 @@ test("the client sees all bids with eligibility and the too-few banner @e2e", as
   await dev.getByLabel(/Your price/).fill("18000");
   await dev.getByLabel(/Days you need/).fill("20");
   await dev.getByRole("button", { name: "Place sealed bid" }).click();
-  await expect(dev.getByText("Bid placed")).toBeVisible();
+  await expect(dev.getByText("Bid placed").first()).toBeVisible();
   await ctx.close();
 
   // Back as the client: the bids table shows the bid and the too-few banner.

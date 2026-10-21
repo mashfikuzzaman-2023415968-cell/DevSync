@@ -31,7 +31,20 @@ describe("MyBidsPage", () => {
     server.use(
       http.get(`${API}/me/bids`, () =>
         HttpResponse.json([
-          { id: "b1", project_id: PID, slot_id: "s", status: "ACTIVE", price_paisa: 1_800_000, days_needed: 20, proposal: "", expected_contribution: "", portfolio_item_ids: [], hours_per_week_committed: 20, created_at: "2026-10-21T06:00:00Z", updated_at: "2026-10-21T06:00:00Z" },
+          {
+            id: "b1",
+            project_id: PID,
+            slot_id: "s",
+            status: "ACTIVE",
+            price_paisa: 1_800_000,
+            days_needed: 20,
+            proposal: "",
+            expected_contribution: "",
+            portfolio_item_ids: [],
+            hours_per_week_committed: 20,
+            created_at: "2026-10-21T06:00:00Z",
+            updated_at: "2026-10-21T06:00:00Z",
+          },
         ]),
       ),
     );
@@ -66,7 +79,14 @@ describe("ClientBidsPage", () => {
         HttpResponse.json({
           bids: [
             bid({}),
-            bid({ id: "b2", developer_name: "Shakib Hasan", is_newcomer: false, eligible: false, reasons: ["TOO_SLOW"], days_needed: 31 }),
+            bid({
+              id: "b2",
+              developer_name: "Shakib Hasan",
+              is_newcomer: false,
+              eligible: false,
+              reasons: ["TOO_SLOW"],
+              days_needed: 31,
+            }),
           ],
           coverage: [{ slot_id: "s1", slot_label: "React developer", needed: 1, eligible: 1 }],
           relaxations: [{ step: 1, p0: 0.4, c0: 0.35 }],

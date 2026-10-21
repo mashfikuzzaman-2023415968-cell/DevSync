@@ -30,7 +30,7 @@ import { Avatar } from "@/components/ui/Display";
 import { DropdownMenu, Sheet, Tooltip } from "@/components/ui/Overlay";
 import { useMediaQuery, usePreferences } from "@/design/preferences";
 import { useMotion } from "@/design/useMotion";
-import { useLogout, useMe } from "@/features/auth/api";
+import { SIGNED_OUT_STATE, useLogout, useMe } from "@/features/auth/api";
 import { cn } from "@/lib/cn";
 import { readPref, writePref } from "@/lib/storage";
 import { CommandPalette, useCommandShortcut } from "./CommandPalette";
@@ -114,7 +114,7 @@ function SidebarLink({
 function AccountMenu({ profilePath }: { profilePath: string }) {
   const me = useMe();
   const navigate = useNavigate();
-  const logout = useLogout(false, () => void navigate("/", { replace: true }));
+  const logout = useLogout(false, () => navigate("/", { replace: true, state: SIGNED_OUT_STATE }));
   const { resolvedTheme, setTheme } = usePreferences();
   const name = me.data?.display_name ?? "Account";
   return (
@@ -169,7 +169,7 @@ export function AppShell({ nav, children }: { nav: ShellNav; children?: ReactNod
   const me = useMe();
   const location = useLocation();
   const navigate = useNavigate();
-  const logout = useLogout(false, () => void navigate("/", { replace: true }));
+  const logout = useLogout(false, () => navigate("/", { replace: true, state: SIGNED_OUT_STATE }));
   const m = useMotion();
   const { collapsed, toggle } = useSidebar(me.data?.id);
   const [paletteOpen, setPaletteOpen] = useState(false);

@@ -65,12 +65,10 @@ describe("FindProjectsPage", () => {
     server.use(
       http.get(`${API}/skills`, () => HttpResponse.json(SKILLS)),
       http.get(`${API}/projects/recommended`, () => HttpResponse.json([])),
-      http.get(`${API}/projects/search`, () =>
-        HttpResponse.json({ items: [], next_cursor: null }),
-      ),
+      http.get(`${API}/projects/search`, () => HttpResponse.json({ items: [], next_cursor: null })),
     );
     const { router } = routes("/dev/find", <FindProjectsPage />, "/dev/find");
-    await user.type(await screen.findByLabelText("Search"), "ordering");
+    await user.type(await screen.findByLabelText("Search projects"), "ordering");
     await waitFor(() => {
       expect(router.state.location.search).toContain("q=ordering");
     });
@@ -81,9 +79,7 @@ describe("FindProjectsPage", () => {
     server.use(
       http.get(`${API}/skills`, () => HttpResponse.json(SKILLS)),
       http.get(`${API}/projects/recommended`, () => HttpResponse.json([])),
-      http.get(`${API}/projects/search`, () =>
-        HttpResponse.json({ items: [], next_cursor: null }),
-      ),
+      http.get(`${API}/projects/search`, () => HttpResponse.json({ items: [], next_cursor: null })),
     );
     routes("/dev/find", <FindProjectsPage />, "/dev/find");
     expect(await screen.findByText("No projects match")).toBeInTheDocument();
@@ -125,7 +121,9 @@ describe("ProjectBidPage", () => {
     await user.click(await screen.findByRole("option", { name: /React/ }));
     await user.type(screen.getByLabelText(/Your price/), "20000");
     await user.type(screen.getByLabelText(/Days you need/), "31");
-    expect(await screen.findByText(/would be filtered out/i, {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(
+      await screen.findByText(/would be filtered out/i, {}, { timeout: 3000 }),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Place sealed bid/ }));
     await waitFor(() => {
@@ -139,7 +137,20 @@ describe("ProjectBidPage", () => {
       http.get(`${API}/public/projects/${PID}`, () => HttpResponse.json(DETAIL)),
       http.get(`${API}/me/bids`, () =>
         HttpResponse.json([
-          { id: "b1", project_id: PID, slot_id: SLOT, status: "ACTIVE", price_paisa: 1_800_000, days_needed: 20, proposal: "", expected_contribution: "", portfolio_item_ids: [], hours_per_week_committed: 20, created_at: "2026-10-21T06:00:00Z", updated_at: "2026-10-21T06:00:00Z" },
+          {
+            id: "b1",
+            project_id: PID,
+            slot_id: SLOT,
+            status: "ACTIVE",
+            price_paisa: 1_800_000,
+            days_needed: 20,
+            proposal: "",
+            expected_contribution: "",
+            portfolio_item_ids: [],
+            hours_per_week_committed: 20,
+            created_at: "2026-10-21T06:00:00Z",
+            updated_at: "2026-10-21T06:00:00Z",
+          },
         ]),
       ),
     );

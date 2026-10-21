@@ -3,7 +3,7 @@
  * test-only router (DEVSYNC_ENV=test). All E2E traffic comes from one container IP, so without
  * this, independent tests would throttle each other under the real per-IP limits (§14.8).
  */
-import { test as base, type APIRequestContext } from "@playwright/test";
+import { test as base, type APIRequestContext, type Locator, type Page } from "@playwright/test";
 
 export async function resetLimits(request: APIRequestContext): Promise<void> {
   const r = await request.get("/api/v1/__test__/ratelimits/reset");
@@ -21,3 +21,15 @@ export const test = base.extend<{ freshLimits: undefined }>({
 });
 
 export { expect } from "@playwright/test";
+
+/** The role navigation: the sidebar on desktop and tablet, or the "More" sheet behind the bottom
+ * tab bar on phones (spec §13.14). Returns the region whose links the test can click. */
+export async function mainNav(page: Page): Promise<Locator> {
+  const sidebar = page.getByRole("complementary", { name: "Main navigation" });
+  if ((page.viewportSize()?.width ?? 1280) >= 768) return sidebar; // sidebar or rail
+  await page
+    .getByRole("navigation", { name: "Quick navigation" })
+    .getByRole("button", { name: "More" })
+    .click();
+  return page.getByRole("dialog", { name: "More" });
+}

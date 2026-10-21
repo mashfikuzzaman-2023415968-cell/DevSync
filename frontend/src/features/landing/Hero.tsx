@@ -43,7 +43,13 @@ export function Hero() {
               {SENTENCES.map((words, line) => (
                 <Fragment key={words.join(" ")}>
                   {words.join(" ")}
-                  {line < SENTENCES.length - 1 ? <br /> : null}
+                  {/* The space keeps the accessible name "project. Hire" in every engine. */}
+                  {line < SENTENCES.length - 1 ? (
+                    <>
+                      {" "}
+                      <br />
+                    </>
+                  ) : null}
                 </Fragment>
               ))}
             </h1>

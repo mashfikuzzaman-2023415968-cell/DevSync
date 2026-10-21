@@ -191,12 +191,12 @@ test("leaving the wizard with unsaved changes asks first @e2e", async ({ page, b
   await apiSignIn(page, baseURL ?? "", "CLIENT", "Rahim Uddin");
   await page.goto("/client/projects/new");
   await page.getByLabel("Project title").fill("Unsaved idea");
-  await page.getByRole("link", { name: "Dashboard" }).first().click();
+  await page.locator('a[href="/client"]').filter({ visible: true }).first().click();
   const dialog = page.getByRole("dialog", { name: "Leave without saving?" });
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Stay on this step" }).click();
   await expect(page.getByLabel("Project title")).toHaveValue("Unsaved idea");
-  await page.getByRole("link", { name: "Dashboard" }).first().click();
+  await page.locator('a[href="/client"]').filter({ visible: true }).first().click();
   await page
     .getByRole("dialog", { name: "Leave without saving?" })
     .getByRole("button", { name: "Leave without saving" })

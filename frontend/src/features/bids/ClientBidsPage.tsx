@@ -87,7 +87,10 @@ export default function ClientBidsPage() {
 
       {data.bids.length === 0 ? (
         <Card>
-          <EmptyState title="No bids yet" description="Bids will appear here as developers apply." />
+          <EmptyState
+            title="No bids yet"
+            description="Bids will appear here as developers apply."
+          />
         </Card>
       ) : (
         <Card className="overflow-x-auto">
@@ -95,13 +98,27 @@ export default function ClientBidsPage() {
             <caption className="sr-only">Bids with developer, reputation and eligibility.</caption>
             <thead>
               <tr className="border-b border-border text-left text-text-muted">
-                <th scope="col" className="py-2 pr-3 font-medium">Developer</th>
-                <th scope="col" className="py-2 px-3 font-medium">Role</th>
-                <th scope="col" className="py-2 px-3 text-right font-medium tabular">Price</th>
-                <th scope="col" className="py-2 px-3 text-right font-medium tabular">Days</th>
-                <th scope="col" className="py-2 px-3 text-right font-medium tabular">C</th>
-                <th scope="col" className="py-2 px-3 text-right font-medium tabular">P</th>
-                <th scope="col" className="py-2 pl-3 font-medium">Eligibility</th>
+                <th scope="col" className="py-2 pr-3 font-medium">
+                  Developer
+                </th>
+                <th scope="col" className="py-2 px-3 font-medium">
+                  Role
+                </th>
+                <th scope="col" className="py-2 px-3 text-right font-medium tabular">
+                  Price
+                </th>
+                <th scope="col" className="py-2 px-3 text-right font-medium tabular">
+                  Days
+                </th>
+                <th scope="col" className="py-2 px-3 text-right font-medium tabular">
+                  C
+                </th>
+                <th scope="col" className="py-2 px-3 text-right font-medium tabular">
+                  P
+                </th>
+                <th scope="col" className="py-2 pl-3 font-medium">
+                  Eligibility
+                </th>
               </tr>
             </thead>
             <tbody>

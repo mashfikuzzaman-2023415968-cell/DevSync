@@ -23,6 +23,7 @@ import {
   useRevokeSession,
   useSessions,
   useUpdateMe,
+  SIGNED_OUT_STATE,
 } from "@/features/auth/api";
 import { applyFieldErrors, messageFor } from "@/features/auth/errors";
 import { PASSWORD_RULES } from "@/features/auth/PasswordRules";
@@ -130,7 +131,9 @@ function DevicesCard() {
   const sessions = useSessions();
   const revoke = useRevokeSession();
   const navigate = useNavigate();
-  const logoutAll = useLogout(true, () => void navigate("/", { replace: true }));
+  const logoutAll = useLogout(true, () =>
+    navigate("/", { replace: true, state: SIGNED_OUT_STATE }),
+  );
   return (
     <Card>
       <CardHeader title="Signed-in devices" description="Sign out anywhere you don’t recognise." />

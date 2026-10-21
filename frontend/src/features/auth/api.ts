@@ -90,18 +90,31 @@ export function useRegister() {
   });
 }
 
-/** Sign out. `leave` (e.g. navigate home) runs before the session data is cleared, in the
- * same tick: clearing first would let a route guard send the person to /login and unmount the
- * caller before it could navigate. */
-export function useLogout(all = false, leave?: () => void) {
+/** Navigation state for the move to "/" after signing out: the homepage must not send the
+ * leaving user back to their role home while the signed-in data is still being cleared. */
+export const SIGNED_OUT_STATE = { signedOut: true } as const;
+
+export function isSignedOutState(state: unknown): boolean {
+  return (
+    typeof state === "object" && state !== null && "signedOut" in state && state.signedOut === true
+  );
+}
+
+/** Sign out. `leave` (navigate home with SIGNED_OUT_STATE) runs first and the session data is
+ * cleared only once that navigation has finished: clearing earlier lets the route guard of the
+ * page being left see "no user" and send the person to /login instead. */
+export function useLogout(all = false, leave?: () => void | Promise<void>) {
   const qc = useQueryClient();
   return useMutation({
     meta: { inlineErrors: true },
     mutationFn: () => api<undefined>(all ? "/auth/logout-all" : "/auth/logout", { method: "POST" }),
-    onSettled: () => {
-      leave?.();
-      qc.setQueryData(meKey, null);
-      qc.clear();
+    onSettled: async () => {
+      try {
+        await leave?.();
+      } finally {
+        qc.setQueryData(meKey, null);
+        qc.clear();
+      }
     },
   });
 }

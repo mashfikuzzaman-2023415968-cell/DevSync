@@ -60,7 +60,7 @@ export default function MyBidsPage() {
                 <div className="min-w-0">
                   <Link
                     to={`/dev/projects/${b.project_id}`}
-                    className="font-medium text-text hover:text-primary hover:underline"
+                    className="inline-flex min-h-11 items-center font-medium text-text hover:text-primary hover:underline"
                   >
                     View project
                   </Link>

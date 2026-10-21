@@ -1,12 +1,18 @@
 /** App shell per role (spec §13.4, §17 Phase 2 tests). */
-import { expect, test } from "./test";
+import { expect, mainNav, test } from "./test";
 import { apiSignIn } from "./fixtures";
 
 test("each role sees its own navigation and pages @e2e", async ({ page, baseURL }) => {
   await apiSignIn(page, baseURL ?? "", "DEVELOPER");
   await page.goto("/dev");
-  const nav = page.getByRole("complementary", { name: "Main navigation" });
-  await expect(nav.getByRole("link", { name: "Find projects" })).toBeVisible();
+  // "Find projects" is a sidebar item on desktop and the "Find work" tab on phones.
+  await expect(
+    page
+      .getByRole("link", { name: /^(Find projects|Find work)$/ })
+      .filter({ visible: true })
+      .first(),
+  ).toBeVisible();
+  const nav = await mainNav(page);
   await nav.getByRole("link", { name: "Reputation" }).click();
   await expect(page).toHaveURL(/\/dev\/reputation$/);
   await expect(page.getByRole("heading", { level: 1, name: "Reputation" })).toBeVisible();
@@ -19,11 +25,7 @@ test("each role sees its own navigation and pages @e2e", async ({ page, baseURL 
 test("client navigation and the admin area hidden from them @e2e", async ({ page, baseURL }) => {
   await apiSignIn(page, baseURL ?? "", "CLIENT");
   await page.goto("/client");
-  await expect(
-    page
-      .getByRole("complementary", { name: "Main navigation" })
-      .getByRole("link", { name: "Create project" }),
-  ).toBeVisible();
+  await expect((await mainNav(page)).getByRole("link", { name: "Create project" })).toBeVisible();
   await page.goto("/admin");
   await expect(page).not.toHaveURL(/\/admin$/);
 });
@@ -32,11 +34,7 @@ test("admin shell after two-step sign-in @e2e", async ({ page, baseURL }) => {
   await apiSignIn(page, baseURL ?? "", "ADMIN", "Admin");
   await page.goto("/admin");
   await expect(page.getByRole("heading", { level: 1, name: "Administration" })).toBeVisible();
-  await expect(
-    page
-      .getByRole("complementary", { name: "Main navigation" })
-      .getByRole("link", { name: "Audit log" }),
-  ).toBeVisible();
+  await expect((await mainNav(page)).getByRole("link", { name: "Audit log" })).toBeVisible();
 });
 
 test("sidebar collapse persists across reloads @e2e", async ({ page, baseURL }) => {

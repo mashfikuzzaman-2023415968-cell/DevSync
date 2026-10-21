@@ -4,7 +4,10 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { PreferencesProvider } from "@/design/preferences";
 import { server } from "@/test/server";
-import { renderRoutes } from "@/test/render";
+import { Probe, renderRoutes } from "@/test/render";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createMemoryRouter, RouterProvider } from "react-router";
+import { SIGNED_OUT_STATE } from "@/features/auth/api";
 import { AudienceToggle } from "./Audience";
 import { FAQ, Faq } from "./Faq";
 import { FairnessSpotlight } from "./FairnessSpotlight";
@@ -173,5 +176,47 @@ describe("3D hero fallbacks (spec §13.12)", () => {
     cancel();
     await new Promise((r) => setTimeout(r, 300));
     expect(ran).toBe(1);
+  });
+
+  describe("signed-in visitors", () => {
+    function signedIn(state?: unknown) {
+      server.use(
+        http.get("*/api/v1/me", () =>
+          HttpResponse.json({ id: "u1", role: "CLIENT", status: "ACTIVE", display_name: "Rahim" }),
+        ),
+        http.get("*/api/v1/public/stats", () => HttpResponse.json({})),
+      );
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const router = createMemoryRouter(
+        [
+          { path: "/", element: <LandingPage /> },
+          { path: "/client", element: <Probe label="client home" /> },
+        ],
+        { initialEntries: [{ pathname: "/", state }] },
+      );
+      render(
+        <QueryClientProvider client={client}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>,
+      );
+      return router;
+    }
+
+    it("are sent to their role home", async () => {
+      signedIn();
+      expect(await screen.findByText("client home")).toBeInTheDocument();
+    });
+
+    it("stay on the homepage while signing out", async () => {
+      const router = signedIn(SIGNED_OUT_STATE);
+      expect(await screen.findByRole("heading", { level: 1, name: HEADLINE })).toBeInTheDocument();
+      await new Promise((r) => setTimeout(r, 50));
+      expect(router.state.location.pathname).toBe("/");
+    });
+
+    it("ignore look-alike navigation state", async () => {
+      signedIn({ signedOut: "yes" });
+      expect(await screen.findByText("client home")).toBeInTheDocument();
+    });
   });
 });

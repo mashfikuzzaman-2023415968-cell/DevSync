@@ -16,7 +16,12 @@ import { Field, FormField, Textarea } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
 import { toast } from "@/components/ui/toast-store";
 import { formatDays, formatMoney } from "@/lib/format";
-import { useCreateBid, useEligibilityPreview, useMyBids, useWithdrawBid } from "@/features/bids/api";
+import {
+  useCreateBid,
+  useEligibilityPreview,
+  useMyBids,
+  useWithdrawBid,
+} from "@/features/bids/api";
 import { usePublicProject } from "./api";
 
 const PREVIEW_DELAY_MS = 500;
@@ -49,7 +54,11 @@ export default function ProjectBidPage() {
     }
     const timer = window.setTimeout(() => {
       runPreview(
-        { slot_id: slotId, price_paisa: Math.round(Number(priceTaka) * 100), days_needed: Number(days) },
+        {
+          slot_id: slotId,
+          price_paisa: Math.round(Number(priceTaka) * 100),
+          days_needed: Number(days),
+        },
         { onSuccess: setVerdict },
       );
     }, PREVIEW_DELAY_MS);
@@ -99,7 +108,11 @@ export default function ProjectBidPage() {
       },
       {
         onSuccess: () => {
-          toast({ tone: "success", title: "Bid placed", description: "Only the client can see it." });
+          toast({
+            tone: "success",
+            title: "Bid placed",
+            description: "Only the client can see it.",
+          });
         },
         onError: (e) => {
           toast({
@@ -135,7 +148,9 @@ export default function ProjectBidPage() {
           {p.requirements ? (
             <div className="mt-4">
               <h3 className="text-body-sm font-semibold text-text">Requirements</h3>
-              <p className="mt-1 whitespace-pre-wrap text-body-sm text-text-muted">{p.requirements}</p>
+              <p className="mt-1 whitespace-pre-wrap text-body-sm text-text-muted">
+                {p.requirements}
+              </p>
             </div>
           ) : null}
           <div className="mt-4">

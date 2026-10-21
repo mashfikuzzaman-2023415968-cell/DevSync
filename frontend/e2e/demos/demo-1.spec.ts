@@ -28,10 +28,10 @@ async function shot(page: Page, info: TestInfo, name: string): Promise<void> {
   await page.screenshot({ path: info.outputPath(`${name}.png`), fullPage: true });
 }
 
-test("Demo 1 — planning, sealed bidding and Algorithm 1 filtering @demo", async (
-  { page, baseURL },
-  info,
-) => {
+test("Demo 1 — planning, sealed bidding and Algorithm 1 filtering @demo", async ({
+  page,
+  baseURL,
+}, info) => {
   const url = baseURL ?? "";
 
   // 1. Landing page.
@@ -65,7 +65,7 @@ test("Demo 1 — planning, sealed bidding and Algorithm 1 filtering @demo", asyn
   // 4. A newcomer searches, opens the project and sees the live eligibility preview.
   await loginSeeded(page, url, "nadia@devsync.local");
   await page.goto("/dev/find");
-  await page.getByLabel("Search").fill("ordering");
+  await page.getByLabel("Search projects", { exact: true }).fill("ordering");
   await expect(page.getByRole("link", { name: ORDERING }).first()).toBeVisible();
   await shot(page, info, "04-find-work");
   await page.goto(`/dev/projects/${projectId}`);
@@ -73,8 +73,8 @@ test("Demo 1 — planning, sealed bidding and Algorithm 1 filtering @demo", asyn
   await page.getByRole("option", { name: /React/ }).first().click();
   await page.getByLabel(/Your price/).fill("18000");
   await page.getByLabel(/Days you need/).fill("20");
-  await expect(
-    page.getByText(/meet every requirement|would be filtered out/i),
-  ).toBeVisible({ timeout: 5000 });
+  await expect(page.getByText(/meet every requirement|would be filtered out/i)).toBeVisible({
+    timeout: 5000,
+  });
   await shot(page, info, "05-bid-sheet-eligibility");
 });

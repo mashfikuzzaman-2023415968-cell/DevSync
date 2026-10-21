@@ -2,6 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { Link, useNavigate, useSearchParams } from "react-router";
+import { ApiError } from "@/api/client";
 import { AuthLayout } from "@/components/AuthLayout";
 import { Alert } from "@/components/ui/Feedback";
 import { Button } from "@/components/ui/Button";
@@ -60,11 +61,20 @@ export default function RegisterPage() {
         ...bots,
       });
       // The answer is the same whether or not the email exists; signing in proves it was ours.
-      await login.mutateAsync({
-        email: values.email,
-        password: values.password,
-        ...(await bot.fields(false)),
-      });
+      const signIn = async (withCaptcha: boolean) =>
+        login.mutateAsync({
+          email: values.email,
+          password: values.password,
+          ...(await bot.fields(withCaptcha)),
+        });
+      try {
+        await signIn(false);
+      } catch (e) {
+        // On a shared network the IP may have recent failed sign-ins, so the server asks for the
+        // check again; solve it rather than stranding a person whose account now exists.
+        if (e instanceof ApiError && e.details.captcha_required === true) await signIn(true);
+        else throw e;
+      }
       void navigate("/verify", { replace: true });
     } catch (e) {
       if (!applyFieldErrors(e, form.setError, ["display_name", "email", "phone", "password"])) {

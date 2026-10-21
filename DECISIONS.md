@@ -437,3 +437,30 @@ newer than 14 days only to fix a published vulnerability, recorded here with the
 4. The partial unique index `one_active_bid_per_developer` keeps its constant `text()` predicate
    with a reviewed `forbidden-ok` marker (DDL, no input); the advancement sort key keeps prices
    as integer paisa (no `float`, spec §0.2 rule 10); one line formatted.
+
+**D53 · First cross-browser E2E run (Phase 5 is the first demo phase: chromium, firefox, webkit,
+mobile).** Chromium passed everything; the other engines exposed issues never tested before.
+*App fixes:* touch targets on Find Projects (title links, recommended buttons) and My Bids
+("View project"); the Find Projects search field is "Search projects" (it shared the accessible
+name "Search" with the header's command-palette button); sign-out now clears the session only
+after the navigation home has finished (slower engines still lost the D43 race and landed on
+/login). *Test fixes (behaviour by design, now tested per viewport instead of desktop-only):*
+phones load the 3D scene on the first interaction (D26), use the bottom tab bar + "More" sheet
+instead of the sidebar, and put the homepage header links in the menu sheet; `mainNav()` and the
+header checks choose by viewport width (never an instantaneous visibility check). *3D on
+non-reference engines:* in the test container Firefox has no WebGL and WebKit only software
+WebGL, so the hero correctly shows its poster (or never finishes compiling). Chromium remains the
+reference engine and must reach the live scene; on the others the test verifies the poster
+fallback and skips only the live-scene part, with the reason in the report (real devices use the
+GPU; the 60 fps check runs on the laptop GPU, D28). On phones the LCP element may be the hero's
+lead paragraph rather than the headline (both hero text, never the canvas); desktops still
+require the headline. *Also found by this run:* (1) after registering, the automatic sign-in sent no CAPTCHA,
+so a person on a shared IP with ≥ 3 recent failed sign-ins (an office or campus NAT; in the E2E
+container, another browser's throttling test) got "complete the verification check" although
+the account existed — the follow-up sign-in now solves the check and retries when the server
+answers `captcha_required`, like the login page (unit-tested, incl. no retry on other errors).
+(2) Sign-out navigates to "/" with `SIGNED_OUT_STATE`; the homepage skips its signed-in → role
+home redirect for that navigation, otherwise the lazily loaded homepage could render while the
+user data was still cached and bounce back to the role home, whose guard then sent the person to
+/login. (3) The plain hero headline has a space before each `<br>`, so its accessible name is
+"project. Hire…" in every engine (WebKit/Firefox joined the sentences).

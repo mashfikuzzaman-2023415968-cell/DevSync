@@ -12,6 +12,51 @@ async function heroMode(page: Page) {
   return page.locator("[data-hero-mode]").getAttribute("data-hero-mode");
 }
 
+/** Below this width the homepage header collapses into the "Open menu" sheet (Tailwind lg). */
+const PHONE_MAX = 1024;
+
+/** Phones load the 3D scene on the first scroll, touch or key press (D26); desktops load it on
+ * their own. A key press wakes it without clicking anything. */
+async function wakeHero(page: Page) {
+  await page.keyboard.press("Shift");
+}
+
+/** Expect the live 3D scene. Chromium is the reference engine and must reach it. Firefox and
+ * WebKit in this container have no hardware WebGL (software or none), so for them the page must
+ * still work — the poster is drawn and the fallback is the app's own — and the live-scene part
+ * is skipped with that reason (DECISIONS D53). Real devices use the GPU. */
+async function expectLiveScene(page: Page, browserName: string) {
+  await wakeHero(page);
+  if (browserName === "chromium") {
+    await expect.poll(() => heroMode(page), { timeout: 20_000 }).toBe("live");
+    return;
+  }
+  const live = await expect
+    .poll(() => heroMode(page), { timeout: 20_000 })
+    .toBe("live")
+    .then(() => true)
+    .catch(() => false);
+  if (live) return;
+  const mode = await heroMode(page);
+  const fallback = await page.locator("[data-hero-mode]").getAttribute("data-fallback");
+  await expect(page.locator("canvas[data-hero-poster]")).toHaveAttribute("data-drawn", "true");
+  expect(["poster", "poster-only"]).toContain(mode);
+  test.skip(
+    true,
+    `${browserName}: no hardware WebGL in the test container (mode ${String(mode)}, fallback ${fallback ?? "none"}); poster fallback verified`,
+  );
+}
+
+async function scrollBy(page: Page, dy: number, isMobile: boolean) {
+  if (isMobile) {
+    await page.evaluate((y) => {
+      window.scrollBy(0, y);
+    }, dy); // mobile WebKit has no wheel events
+  } else {
+    await page.mouse.wheel(0, dy);
+  }
+}
+
 test("a fresh visit to / shows the homepage, not login @e2e", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/$/);
@@ -40,11 +85,23 @@ test("navbar, hero, call-to-action and footer links reach the right pages @e2e",
         : area === "hero"
           ? page.locator("section[aria-labelledby=hero-title]")
           : page.locator("footer");
-    await scope.getByRole("link", { name, exact: true }).first().click();
+    let link = scope.getByRole("link", { name, exact: true }).first();
+    if (area === "header" && (page.viewportSize()?.width ?? 1280) < PHONE_MAX) {
+      // Phones: the header links sit in the menu sheet.
+      await page.getByRole("button", { name: "Open menu" }).click();
+      link = page.getByRole("dialog").getByRole("link", { name, exact: true }).first();
+    }
+    await link.click();
     await expect(page, `${area} → ${name}`).toHaveURL(url);
   }
   await page.goto("/");
-  await page.locator("header").first().getByRole("link", { name: "How it works" }).click();
+  const how = page.locator("header").first().getByRole("link", { name: "How it works" });
+  if ((page.viewportSize()?.width ?? 1280) >= PHONE_MAX) {
+    await how.click();
+  } else {
+    await page.getByRole("button", { name: "Open menu" }).click();
+    await page.getByRole("dialog").getByRole("link", { name: "How it works" }).click();
+  }
   await expect(page).toHaveURL(/#how-it-works$/);
 });
 
@@ -79,14 +136,17 @@ test("signed-in users opening / land on their role home; logout returns to / @e2
 
 test("poster shows first, the headline is the LCP element and the live scene follows @e2e", async ({
   page,
+  browserName,
+  isMobile,
 }) => {
   await page.addInitScript(() => {
     (window as unknown as { __lcp: string[] }).__lcp = [];
     new PerformanceObserver((list) => {
       for (const e of list.getEntries() as (PerformanceEntry & { element?: Element | null })[]) {
         const el = e.element;
+        const inHero = el?.closest("section[aria-labelledby=hero-title]") ? "@hero" : "";
         (window as unknown as { __lcp: string[] }).__lcp.push(
-          el ? `${el.tagName}#${el.id}` : "none",
+          el ? `${el.tagName}#${el.id}${inHero}` : "none",
         );
       }
     }).observe({ type: "largest-contentful-paint", buffered: true });
@@ -96,30 +156,37 @@ test("poster shows first, the headline is the LCP element and the live scene fol
   // The heading becomes one plain text block once its words have appeared.
   await expect(page.locator("#hero-title")).toBeVisible();
   await expect(page.locator("#hero-title span")).toHaveCount(0);
-  await expect.poll(() => heroMode(page), { timeout: 20_000 }).toBe("live");
+  await expectLiveScene(page, browserName);
   // Interacting finalizes LCP.
   await page.mouse.click(5, 300);
   const lcp = await page.evaluate(() => (window as unknown as { __lcp: string[] }).__lcp);
-  expect(lcp.at(-1)).toBe("H1#hero-title");
+  // Desktop: the headline. Phones: the hero's text either way (the lead paragraph's block can be
+  // larger than the headline on a narrow screen) — never the canvas or an image.
+  if (isMobile) expect(["H1#hero-title@hero", "P#@hero"]).toContain(lcp.at(-1));
+  else expect(lcp.at(-1)).toBe("H1#hero-title@hero");
 });
 
-test("scrolling snaps the constellation into a team with the chip @e2e", async ({ page }) => {
+test("scrolling snaps the constellation into a team with the chip @e2e", async ({
+  page,
+  isMobile,
+  browserName,
+}) => {
   await page.goto("/");
-  await expect.poll(() => heroMode(page), { timeout: 20_000 }).toBe("live");
+  await expectLiveScene(page, browserName);
   const chip = page.locator("[data-hero-chip]");
   const opacity = async () => Number(await chip.evaluate((el) => getComputedStyle(el).opacity));
   await expect(chip).toHaveCSS("opacity", "0");
-  await page.mouse.wheel(0, 650);
+  await scrollBy(page, 650, isMobile);
   await expect.poll(opacity, { timeout: 10_000 }).toBeGreaterThan(0.9);
   await expect(chip).toHaveText("✓ Balanced team");
   // Scrolling back up releases the team.
-  await page.mouse.wheel(0, -650);
+  await scrollBy(page, -650, isMobile);
   await expect.poll(opacity, { timeout: 10_000 }).toBeLessThan(0.1);
 });
 
-test("the render loop stops when the hero is off screen @e2e", async ({ page }) => {
+test("the render loop stops when the hero is off screen @e2e", async ({ page, browserName }) => {
   await page.goto("/");
-  await expect.poll(() => heroMode(page), { timeout: 20_000 }).toBe("live");
+  await expectLiveScene(page, browserName);
   const frames = () =>
     page.evaluate(() => (window as unknown as { __dsHeroFrames?: number }).__dsHeroFrames ?? 0);
   const a = await frames();
@@ -213,7 +280,7 @@ test("reduced motion shows final states with no movement @e2e", async ({ page })
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   // The headline is plain text straight away: no word-by-word reveal.
-  await expect(page.locator("#hero-title")).toHaveText(HEADLINE.replace(/\. /g, "."), {
+  await expect(page.locator("#hero-title")).toHaveText(HEADLINE, {
     useInnerText: false,
   });
   expect(await page.locator("#hero-title span").count()).toBe(0);
@@ -230,6 +297,7 @@ test("reduced motion shows final states with no movement @e2e", async ({ page })
 test("the 3D chunk is never requested off the homepage; nothing leaves the origin @e2e", async ({
   page,
   baseURL,
+  browserName,
 }) => {
   const origin = new URL(baseURL ?? "https://localhost").origin;
   const requested: string[] = [];
@@ -241,7 +309,7 @@ test("the 3D chunk is never requested off the homepage; nothing leaves the origi
   expect(requested.filter((u) => SCENE_CHUNK.test(u))).toEqual([]);
   requested.length = 0;
   await page.goto("/");
-  await expect.poll(() => heroMode(page), { timeout: 20_000 }).toBe("live");
+  await expectLiveScene(page, browserName);
   expect(requested.some((u) => SCENE_CHUNK.test(u))).toBe(true);
   expect(requested.filter((u) => u.startsWith("http") && new URL(u).origin !== origin)).toEqual([]);
 });
