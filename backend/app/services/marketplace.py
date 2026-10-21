@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import base64
 import binascii
+import re
+import unicodedata
 import uuid
 from datetime import datetime
 from typing import Any
@@ -85,6 +87,16 @@ def _card(project: Project, skills: list[str]) -> ProjectCard:
     )
 
 
+_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+MAX_SKILL_FILTERS = 20
+
+
+def _clean(value: str) -> str:
+    """Search text as profile one-line fields are cleaned: no control characters (PostgreSQL
+    rejects NUL in text, which was a 500), NFC, trimmed."""
+    return unicodedata.normalize("NFC", _CONTROL.sub("", value)).strip()
+
+
 async def search(
     db: AsyncSession,
     *,
@@ -103,6 +115,14 @@ async def search(
             f"Unknown sort '{sort}'.", code=ErrorCode.VALIDATION_ERROR, fields={"sort": "invalid"}
         )
     limit = max(1, min(limit, MAX_LIMIT))
+    q = _clean(q) if q else None
+    skills = [name for name in (_clean(s) for s in skills or []) if name] or None
+    if skills and len(skills) > MAX_SKILL_FILTERS:
+        raise DomainError(
+            f"Choose at most {MAX_SKILL_FILTERS} skills.",
+            code=ErrorCode.VALIDATION_ERROR,
+            fields={"skills": "too_many"},
+        )
 
     stmt = select(Project).where(Project.status == ProjectStatus.BIDDING)
     if q:

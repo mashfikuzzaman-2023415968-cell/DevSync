@@ -476,7 +476,11 @@ That alone was not enough: the app scrolls smoothly (`scroll-behavior: smooth`, 
 homepage anchors), so in Firefox the scroll Playwright starts to bring an element into view was
 still animating when it clicked (~1 in 10 runs). `clickSettled()` (e2e/test.ts) scrolls the
 element into view, waits until the page stops scrolling, then clicks; used for below-the-fold
-clicks in the profile and Settings tests (44/44 repeated runs on three engines). (6) gitleaks scans the working tree
+clicks in the profile and Settings tests (44/44 repeated runs on three engines). (7) Search input: schemathesis
+sent `q=\x00…` to `GET /public/projects` and got a 500 (PostgreSQL rejects NUL in text).
+`services/marketplace.search` now cleans `q` and each skill name like profile one-line fields
+(control characters removed, NFC, trimmed, empties dropped) and allows at most 20 skill filters
+(422 `skills: too_many`). (6) gitleaks scans the working tree
 (`--no-git`), so after any failed E2E run the next gate failed step 5 on Playwright traces in
 `frontend/test-results/` (115 `generic-api-key` hits, all session cookies of the throwaway test
 stack). That folder and `frontend/playwright-report/` are gitignored generated output, so they

@@ -161,3 +161,41 @@ def test_bid_on_unknown_project_is_404(api: Api) -> None:
         json=_bid_body("00000000-0000-4000-8000-000000000001"),
     )
     assert r.status_code == 404
+
+
+# --------------------------------------------------------------------------- search input
+
+
+@pytest.mark.parametrize("path", ["/api/v1/public/projects", "/api/v1/projects/search"])
+def test_search_ignores_control_characters(api: Api, path: str) -> None:
+    """A NUL byte reached PostgreSQL and became a 500 (schemathesis); it is stripped now."""
+    api.sign_in_as("CLIENT")
+    pid, _ = _publish_project(api)
+    skill = api.get("/api/v1/skills").json()[0]["name"]
+    api.sign_in_as("DEVELOPER")
+    for params in (
+        {"q": "\x00\x18ordering\x7f", "limit": 100},
+        {"q": "\x00", "limit": 100},  # nothing left: no text filter
+        {"skills": ["\x00", f"{skill}\x00"], "limit": 100},
+    ):
+        r = api.get(path, params=params)
+        assert r.status_code == 200, (params, r.text)
+        assert pid in [card["id"] for card in r.json()["items"]], params
+
+
+@pytest.mark.parametrize(
+    "q", ["'; DROP TABLE projects; --", "ordering & !system | (", "%_\\", "<script>x</script>"]
+)
+def test_search_text_is_inert(api: Api, q: str) -> None:
+    r = api.get("/api/v1/public/projects", params={"q": q})
+    assert r.status_code == 200, r.text
+    assert isinstance(r.json()["items"], list)
+
+
+def test_search_limits_skill_filters(api: Api) -> None:
+    api.sign_in_as("DEVELOPER")
+    r = api.get("/api/v1/projects/search", params={"skills": [f"s{i}" for i in range(21)]})
+    assert r.status_code == 422
+    assert r.json()["error"]["fields"] == {"skills": "too_many"}
+    ok = api.get("/api/v1/projects/search", params={"skills": [f"s{i}" for i in range(20)]})
+    assert ok.status_code == 200
