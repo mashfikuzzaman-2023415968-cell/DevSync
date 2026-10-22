@@ -10,7 +10,7 @@ from __future__ import annotations
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Header, Response, status
 
 from app.api.deps import acting, rate_limit
 from app.schemas.bids import (
@@ -20,8 +20,11 @@ from app.schemas.bids import (
     ClientBidsOut,
     EligibilityIn,
     EligibilityOut,
+    TermsChange,
+    TermsPreviewOut,
 )
 from app.schemas.common import error_responses
+from app.services import bidding_terms
 from app.services import bids as svc
 from app.services.context import Ctx
 
@@ -31,6 +34,8 @@ Bidder = Annotated[Ctx, Depends(acting("bid.create"))]
 Writer = Annotated[Ctx, Depends(acting("bid.write"))]
 Reader = Annotated[Ctx, Depends(acting("bid.read"))]
 ClientViewer = Annotated[Ctx, Depends(acting("bid.view"))]
+TermsWriter = Annotated[Ctx, Depends(acting("project.terms"))]
+IfMatch = Annotated[int | None, Header(alias="If-Match", description="Project version")]
 BID_LIMIT = [Depends(rate_limit("bid"))]
 
 _BID_ID = "9c8b7a6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d"
@@ -54,8 +59,18 @@ EX_ELIGIBILITY = {
     "eligible": False,
     "reason": "TOO_SLOW",
     "message": "Would be filtered out: needs more days than the deadline allows.",
-    "checks": [{"name": "days", "ok": False, "detail": "31 of 30 days"}],
+    "checks": [
+        {
+            "name": "days",
+            "ok": False,
+            "detail": "31 days (deadline 30 days)",
+            "required": 30,
+            "actual": 31,
+        }
+    ],
 }
+_COVERAGE = [{"slot_id": _SLOT, "slot_label": "React developer", "needed": 1, "eligible": 1}]
+_COST = {"total_paisa": 1_800_000, "budget_after_fee_paisa": 11_400_000, "complete": True}
 EX_CLIENT_BIDS = {
     "bids": [
         {
@@ -67,17 +82,61 @@ EX_CLIENT_BIDS = {
             "status": "ACTIVE",
             "price_paisa": 1_800_000,
             "days_needed": 20,
-            "competency": 0.53,
+            "hours_per_week": 20,
+            "competency": 0.31,
+            "teamwork": 0.50,
             "performance": 0.55,
             "is_newcomer": True,
             "seeded": False,
             "eligible": True,
+            "shortlisted": True,
             "reasons": [],
+            "checks": [
+                {
+                    "name": "skill_evidence",
+                    "ok": True,
+                    "detail": "React test 85% (newcomers need 60%)",
+                    "required": 0.6,
+                    "actual": 0.85,
+                }
+            ],
+            "newcomer_evidence": {"skill": "React", "score": 0.85},
+            "proposal": "I'll build the React front end with tests.",
+            "expected_contribution": "Front-end components and integration.",
+            "portfolio": [],
+            "submitted_at": "2026-10-21T06:00:00Z",
         }
     ],
-    "coverage": [{"slot_id": _SLOT, "slot_label": "React developer", "needed": 1, "eligible": 1}],
+    "coverage": _COVERAGE,
     "relaxations": [],
     "too_few": False,
+    "evaluated_at": "2026-10-22T06:00:00Z",
+    "thresholds": {
+        "p0": 0.45,
+        "c0": 0.40,
+        "default_p0": 0.45,
+        "default_c0": 0.40,
+        "floor_p0": 0.30,
+        "floor_c0": 0.25,
+        "used_p0": 0.45,
+        "used_c0": 0.40,
+    },
+    "team_cost": _COST,
+    "budget_paisa": 12_000_000,
+    "team_size": 1,
+    "bidding": {
+        "deadline": "2026-10-25T06:00:00Z",
+        "closed": False,
+        "extensions_used": 0,
+        "max_extensions": 2,
+        "extend_days": 3,
+    },
+}
+EX_TERMS_PREVIEW = {
+    "before": {"eligible": 9, "too_few": True, "coverage": _COVERAGE, "team_cost": _COST},
+    "after": {"eligible": 11, "too_few": False, "coverage": _COVERAGE, "team_cost": _COST},
+    "newly_eligible": 2,
+    "message": "2 more bids would be eligible; every slot would be covered.",
 }
 
 
@@ -149,3 +208,29 @@ async def withdraw_bid(ctx: Writer, bid_id: uuid.UUID) -> Response:
 )
 async def client_bids(ctx: ClientViewer, project_id: uuid.UUID) -> ClientBidsOut:
     return await svc.client_bids(ctx, project_id)
+
+
+@router.post(
+    "/projects/{project_id}/bidding-terms/preview",
+    summary="Preview a change to my project's bidding terms",
+    response_model=TermsPreviewOut,
+    responses={200: _ok(EX_TERMS_PREVIEW), **error_responses(401, 403, 404, 409, 422)},
+)
+async def preview_terms(
+    ctx: TermsWriter, project_id: uuid.UUID, body: TermsChange
+) -> TermsPreviewOut:
+    """Re-run eligibility under lower standards, a higher budget or a smaller team, unsaved."""
+    return await bidding_terms.preview(ctx, project_id, body)
+
+
+@router.patch(
+    "/projects/{project_id}/bidding-terms",
+    summary="Change my project's bidding terms",
+    response_model=ClientBidsOut,
+    responses={200: _ok(EX_CLIENT_BIDS), **error_responses(401, 403, 404, 409, 422)},
+)
+async def change_terms(
+    ctx: TermsWriter, project_id: uuid.UUID, body: TermsChange, if_match: IfMatch = None
+) -> ClientBidsOut:
+    """Lower the standards, raise the budget or reduce the team (spec §9.19); bidders are told."""
+    return await bidding_terms.apply(ctx, project_id, body, if_match)

@@ -8,10 +8,12 @@ SMS or email.
 
 from __future__ import annotations
 
+import uuid
+from decimal import Decimal
 from typing import Annotated, Literal
 
 import pyotp
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, EmailStr, Field
 from redis.asyncio import Redis
 
@@ -91,4 +93,37 @@ async def reset_rate_limits(redis: Annotated[Redis, Depends(redis_client)]) -> R
     for pattern in ("rl:*", "auth:delay:*"):
         async for key in redis.scan_iter(pattern):
             await redis.delete(key)
+    return Response(status_code=204)
+
+
+class EvidenceRequest(StrictRequest):
+    skill: str = Field(max_length=60)
+    score: Decimal = Field(ge=0, le=1, decimal_places=3)
+
+
+class ReputationRequest(StrictRequest):
+    p: Decimal = Field(ge=0, le=1, decimal_places=3)
+    c: Decimal = Field(ge=0, le=1, decimal_places=3)
+
+
+@router.post("/projects/{project_id}/close-bidding", status_code=204)
+async def close_bidding(project_id: uuid.UUID) -> Response:
+    """Put a project's bidding deadline in the past (E2E: closed bidding)."""
+    if not await seed.close_bidding(project_id):
+        raise HTTPException(status_code=404)
+    return Response(status_code=204)
+
+
+@router.post("/developers/{user_id}/skill-evidence", status_code=204)
+async def skill_evidence(user_id: uuid.UUID, body: EvidenceRequest) -> Response:
+    """List a skill for a developer with a TEST evidence score (E2E: newcomer rule)."""
+    if not await seed.add_skill_evidence(user_id, body.skill, body.score):
+        raise HTTPException(status_code=404)
+    return Response(status_code=204)
+
+
+@router.post("/developers/{user_id}/reputation", status_code=204)
+async def reputation(user_id: uuid.UUID, body: ReputationRequest) -> Response:
+    """Give a developer an experienced reputation snapshot (E2E: relaxation, eligibility)."""
+    await seed.set_reputation(user_id, body.p, body.c)
     return Response(status_code=204)

@@ -256,6 +256,13 @@ def _bid_view(p: Principal, _r: Any) -> None:
     _require_client_or_admin(p)
 
 
+@policy("project.terms")
+def _project_terms(p: Principal, _r: Any) -> None:
+    """The owning client changes a BIDDING project's terms through the too-few-bids actions
+    (§9.19); ownership and the BIDDING state are checked in the service (→ 404 / 409)."""
+    _require_role(p, "CLIENT")
+
+
 @policy("reputation.read")
 def _reputation_read(p: Principal, _r: Any) -> None:
     """Reputation snapshots are a public value for any active account (spec §14.15)."""

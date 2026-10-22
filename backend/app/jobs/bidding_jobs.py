@@ -10,42 +10,22 @@ standards, raise budget, reduce team, cancel). Runs as SYSTEM in a worker; re-ru
 from __future__ import annotations
 
 import asyncio
-import uuid
 
 import structlog
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.clock import get_clock
 from app.core.settings_cache import active_settings
 from app.db.context import DbContext
 from app.db.session import open_session
-from app.models.identity import Notification
 from app.models.projects import Project, ProjectStatus
 from app.services import bids as bids_svc
+from app.services.notifications import notify_once
 
 log = structlog.get_logger(__name__)
 
 _TOO_FEW = "TOO_FEW_BIDS"
 _CLOSED = "BIDDING_CLOSED"
-
-
-async def _notify_once(
-    db: AsyncSession, user_id: uuid.UUID, kind: str, *, title: str, body: str, link: str
-) -> bool:
-    """Create a notification unless an unread one of this kind for this link already exists."""
-    existing = await db.scalar(
-        select(Notification.id).where(
-            Notification.user_id == user_id,
-            Notification.type == kind,
-            Notification.link_path == link,
-            Notification.read_at.is_(None),
-        )
-    )
-    if existing is not None:
-        return False
-    db.add(Notification(user_id=user_id, type=kind, title=title, body=body, link_path=link))
-    return True
 
 
 async def close_due_bidding() -> dict[str, int]:
@@ -64,24 +44,29 @@ async def close_due_bidding() -> dict[str, int]:
             )
         ).all()
         for project in projects:
-            _bids, result, _reps = await bids_svc.evaluate_project(
-                db, project, settings, now.date()
-            )
+            ev = await bids_svc.evaluate(db, project, settings, now.date())
+            result = ev.result
             link = f"/client/projects/{project.id}/bids"
             if result.too_few:
-                if await _notify_once(
+                short = ", ".join(
+                    f"{c.slot_label or 'a slot'} needs {c.needed - c.eligible} more"
+                    for c in bids_svc.coverage(ev)
+                    if c.eligible < c.needed
+                )
+                if await notify_once(
                     db,
                     project.client_id,
                     _TOO_FEW,
                     title="Not enough eligible bids yet",
-                    body="Bidding closed without enough eligible bids. Extend bidding, lower the "
-                    "minimum standards, raise the budget, reduce the team, or cancel.",
+                    body=f"Bidding closed without enough eligible bids ({short or 'team short'}). "
+                    "Extend bidding, lower the minimum standards, raise the budget, reduce the "
+                    "team, or cancel.",
                     link=link,
                 ):
                     notified_too_few += 1
             else:
                 project.status = ProjectStatus.FORMING
-                await _notify_once(
+                await notify_once(
                     db,
                     project.client_id,
                     _CLOSED,

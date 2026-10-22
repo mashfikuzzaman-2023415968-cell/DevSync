@@ -8,6 +8,10 @@ other gates, relaxes P0/C0 to find enough candidates (reporting each step), orde
 survivors by the advancement choice and shortlists the top K_s, and returns every rejected bid
 with a stable reason code.
 
+Relaxation follows the mode: `devsync` relaxes while the team or any slot is short (spec §9.2
+step 4); `pcs_replication` relaxes only while **no** bid qualifies, exactly as [PCS] Algorithm 1
+lines 3–5 ("if |S'| == 0 then reinitialize P0, C0 … go to step 2"; DECISIONS D54).
+
 Scores (P, C, P0, C0, evidence) are on 0–1. Comparisons use a tiny epsilon so a score **equal**
 to the threshold passes (spec §9.2: "equal to the threshold passes"), and relaxed thresholds are
 rounded to two decimals so repeated −0.05 steps stay exact (0.45 → 0.40 → 0.35 → 0.30).
@@ -196,18 +200,20 @@ def _order_key(bid: BidInput, advancement: Advancement) -> float | int:
 
 def filter_bids(bids: list[BidInput], project: ProjectInput, params: FilterParams) -> FilterResult:
     """Run Algorithm 1 + the newcomer rule, relaxation, advancement ordering and shortlisting."""
-    relax_steps = 0 if params.mode is Mode.PCS_REPLICATION else params.relax_max_steps
     relaxations: list[Relaxation] = []
     p0, c0 = params.p0, params.c0
     eligible: list[BidInput] = []
 
-    for step in range(relax_steps + 1):
+    for step in range(params.relax_max_steps + 1):
         p0 = max(0.0, round(params.p0 - step * params.relax_step, 2))
         c0 = max(0.0, round(params.c0 - step * params.relax_step, 2))
         if step > 0:
             relaxations.append(Relaxation(step=step, p0=p0, c0=c0))
         eligible = [b for b in bids if classify_bid(b, project, params, p0, c0) is None]
-        if _sufficient(eligible, project, params.team_size):
+        if params.mode is Mode.PCS_REPLICATION:
+            if eligible or not bids:  # the paper re-initializes only when S' is empty
+                break
+        elif _sufficient(eligible, project, params.team_size):
             break
 
     # Final reasons at the thresholds we settled on.
@@ -246,4 +252,93 @@ def filter_bids(bids: list[BidInput], project: ProjectInput, params: FilterParam
         relaxations=tuple(relaxations),
         too_few=too_few,
         shortfall=shortfall,
+    )
+
+
+# --------------------------------------------------------------------------- explanations
+
+
+@dataclass(frozen=True)
+class Check:
+    """One Algorithm 1 test for one bid: what was required, what the bid had, and the outcome.
+
+    `required`/`actual` are on the constraint's own scale (0–1 scores, days, paisa) or None for
+    yes/no gates; the service turns them into human text. `name` is a stable key.
+    """
+
+    name: str
+    ok: bool
+    required: float | int | None = None
+    actual: float | int | None = None
+
+
+def explain_bid(
+    bid: BidInput, project: ProjectInput, params: FilterParams, p0: float, c0: float
+) -> tuple[Check, ...]:
+    """Every check `classify_bid` applies, in precedence order, with the values compared.
+
+    The verdict is the same as `classify_bid` (the first failing check's reason); this is the
+    step-by-step trace the client's bids view shows. Ranking against other bids
+    (NOT_SHORTLISTED) is deliberately not part of a single bid's trace.
+    """
+    newcomer = bid.is_newcomer and params.mode is Mode.DEVSYNC
+    checks = [
+        Check("account_active", bid.active),
+        Check("has_slot_skill", bid.has_slot_skill),
+        Check("no_conflict", not bid.self_dealing),
+        Check("available", bid.available),
+    ]
+    if newcomer:
+        score = bid.skill_evidence_score
+        checks.append(
+            Check(
+                "skill_evidence",
+                score is not None and _ge(score, params.newcomer_pass_mark),
+                params.newcomer_pass_mark,
+                score,
+            )
+        )
+    else:
+        checks.append(Check("performance", _ge(bid.p, p0), p0, bid.p))
+    if not newcomer or params.newcomer_competency_check:
+        checks.append(Check("competency", _ge(bid.c, c0), c0, bid.c))
+    checks.append(
+        Check("days", bid.t_days <= project.deadline_days, project.deadline_days, bid.t_days)
+    )
+    checks.append(
+        Check(
+            "price",
+            bid.c_paisa <= project.budget_after_fee_paisa,
+            project.budget_after_fee_paisa,
+            bid.c_paisa,
+        )
+    )
+    return tuple(checks)
+
+
+@dataclass(frozen=True)
+class TeamCost:
+    """Cheapest way to fill every slot from eligible bids (a budget sanity check, not PSO)."""
+
+    total_paisa: int  # sum over the slots that could be filled
+    complete: bool  # every slot has at least `count` eligible bids
+    budget_after_fee_paisa: int
+
+
+def cheapest_team_cost(
+    bids: list[BidInput], eligible_ids: set[str], project: ProjectInput
+) -> TeamCost:
+    """Σ over slots of the `count` cheapest eligible prices. One bid per developer per project
+    means the chosen bids are distinct developers. Integer paisa throughout."""
+    total = 0
+    complete = True
+    for slot_id, spec in project.slots.items():
+        prices = sorted(
+            b.c_paisa for b in bids if b.slot_id == slot_id and b.bid_id in eligible_ids
+        )
+        if len(prices) < spec.count:
+            complete = False
+        total += sum(prices[: spec.count])
+    return TeamCost(
+        total_paisa=total, complete=complete, budget_after_fee_paisa=project.budget_after_fee_paisa
     )

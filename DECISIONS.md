@@ -396,6 +396,9 @@ Not in the §10 table; added for screen 11. *Confirmed by Salwa.*
 **D47 · Too-few-bids actions in Phase 5.** The banner's "lower standards" stores client P0/C0
 overrides and "reduce team" edits slots while BIDDING; both reflect immediately in the eligibility
 counts. Formation (Phase 7) consumes them. Extend/cancel reuse the Phase 4 endpoints.
+*Correction (Taeen, 2026-10-22):* when the phase was first merged only extend/cancel existed (the
+banner offered a link); the stored overrides, reduce team and raise budget arrived with the
+follow-ups in D54, which is where their rules are recorded.
 
 **D48 · "Seeded" reputation marker.** `reputation_read` returns `seeded = (settings_version is
 None)`; the bid table and profile show the marker only outside production. Phase 6 sets
@@ -493,3 +496,61 @@ sent `q=\x00…` to `GET /public/projects` and got a 500 (PostgreSQL rejects NUL
 stack). That folder and `frontend/playwright-report/` are gitignored generated output, so they
 join the allowlist next to `frontend/dist/`, `frontend/coverage/` and `runs/`; tracked files are
 scanned exactly as before.
+
+**D54 · Phase 5 follow-ups (Taeen, 2026-10-22, after an external review of Phase 5).**
+*Bidding closes by time.* Placing, editing, withdrawing and previewing a bid also require
+`now < bidding_deadline` (409 `INVALID_STATE`), so a late deadline job can't let late bids in;
+search, the public list and recommendations hide projects past their deadline, and project cards
+carry a server-computed `open_for_bids`. Extending after the deadline counts from now.
+*Bids reference only the bidder's own portfolio items* (422 otherwise, duplicates refused).
+*Too-few-bids actions (§9.19).* `POST /projects/{id}/bidding-terms/preview` re-runs Algorithm 1
+under proposed terms without saving; `PATCH /projects/{id}/bidding-terms` applies them. Rules:
+standards per project (`projects.min_performance/min_competency`, NULL = platform default) within
+[default − relax_max_steps·relax_step, default] — P 30–45, C 25–40 by default — so a client
+can't switch the filter off (automatic relaxation still runs on top, as §9.2 says); the budget
+only goes up; slot counts only go down (≥ 1 per slot, ≥ 2 per team); at least one value must
+change; If-Match; audited with before/after; every active bidder is notified (SYSTEM session,
+like D50); when bidding already closed and the team is now covered the project moves to FORMING
+at once. Once bids exist these actions plus extend/cancel are the only ways to change budget,
+standards or team (the project is otherwise not editable after publishing, §8). Cancelling a
+bidding project notifies the bidders; the deadline job's too-few notification names the
+shortfall per slot.
+*Replication mode relaxes like the paper.* [PCS] Algorithm 1 lines 3–5 re-initialize P0/C0 only
+when S' is empty, so `pcs_replication` relaxes only while no bid qualifies (devsync keeps
+relaxing while any slot is short); the 0.05 step stays the documented default (A-list).
+*Explanations.* `explain_bid()` (pure) returns every Algorithm 1 check with required and actual
+values in precedence order; the client's bids view shows it per bid ("How the filter decided"),
+plus the thresholds used after relaxation, the cheapest eligible team against the budget after
+fee (`cheapest_team_cost()`, pure, verified by brute force in property tests), hours a week,
+teamwork, proposal, contribution, portfolio titles and the newcomer evidence ("React test 85%").
+Eligibility is evaluated **live** when the client opens the view (reputation as of now, shown as
+"Eligibility checked …"); Phase 7 formation snapshots the candidate set it uses. The developer's
+dry-run preview never ranks against other bids (no NOT_SHORTLISTED; tested).
+*Performance.* Bidder data (skills, evidence, hours, reservations) is read in batches: a project
+with 200 bids is evaluated with a fixed number of queries (≤ 25) in < 2 s (`tests/perf`).
+*Search.* Keyset pagination on (sort key, id) for every sort (a cursor names its sort; another
+sort's cursor is 422); text search also matches the slots' skill names.
+*Recommendations (§9.16).* A project is recommended when it needs one of the developer's skills
+with a deadline ≥ their typical days for that skill (median of their past bids; any deadline
+without history) and its period fits their free hours; ranked by matching skills then newest;
+cached 5 minutes per developer (fails open) and forgotten when they bid or withdraw.
+*Sign-in with reserved domains.* Login and forgot-password look an address up with a syntax-only
+`LookupEmail` (lower-cased; emails are citext): strict `EmailStr` refused `.local`, which locked
+the seeded demo accounts (`@devsync.local`, §18.4) out of the login form. Registration keeps
+`EmailStr`. `make demo-preflight` now signs in as the demo client.
+*Homepage hero on software WebGL.* The poster is shown when WebGL would run without a GPU
+(`failIfMajorPerformanceCaveat` or a software renderer name such as SwiftShader/llvmpipe): a
+software shader compile froze the page for seconds. In the gate's step 13 Chromium renders WebGL
+with SwiftShader, so its hero (correctly) shows the poster there; the live-scene tests are tagged
+`@gpu` and run on `chromium-gpu` with the real GPU in step 16 next to the frame-rate check (the
+gate now quotes Playwright arguments with `shlex.join`).
+*E2E fixtures.* Test-only routes (DEVSYNC_ENV=test only) close a project's bidding, give a
+developer a skill with test evidence and set a reputation snapshot, for the newcomer, relaxation
+and closed-bidding walkthroughs. The bid sheet also takes hours a week, expected contribution and
+up to three of the developer's own portfolio items (§13.5 #11).
+*Known limitations (documented, not changed):* TOO_SLOW compares a bid with the whole-project
+deadline, not the milestones the slot works on (the paper's simplification; future work);
+availability is checked at bidding and must be re-checked when invitations are accepted (Phase 8);
+the SYSTEM sessions of D50 stay limited to the listed read policies and are used only after the
+caller is confirmed as the project's owner.
+

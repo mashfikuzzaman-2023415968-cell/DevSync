@@ -230,3 +230,45 @@ export async function createOrderingProject(
   }
   return id;
 }
+
+/** Phase 5 states a browser can't reach quickly, through the test-only router (D54). */
+export async function closeBidding(
+  request: APIRequestContext,
+  baseURL: string,
+  projectId: string,
+): Promise<void> {
+  const r = await request.post(`/api/v1/__test__/projects/${projectId}/close-bidding`, {
+    headers: await csrfHeaders(request, baseURL),
+  });
+  if (r.status() !== 204) throw new Error(`close-bidding → ${String(r.status())}`);
+}
+
+/** List a skill for a developer with a TEST evidence score (0–1) — the newcomer rule's input. */
+export async function addSkillEvidence(
+  request: APIRequestContext,
+  baseURL: string,
+  userId: string,
+  skill: string,
+  score: number,
+): Promise<void> {
+  const r = await request.post(`/api/v1/__test__/developers/${userId}/skill-evidence`, {
+    headers: await csrfHeaders(request, baseURL),
+    data: { skill, score: score.toFixed(3) },
+  });
+  if (r.status() !== 204) throw new Error(`skill-evidence → ${String(r.status())}`);
+}
+
+/** Give a developer an experienced reputation snapshot (scores 0–1). */
+export async function setReputation(
+  request: APIRequestContext,
+  baseURL: string,
+  userId: string,
+  p: number,
+  c: number,
+): Promise<void> {
+  const r = await request.post(`/api/v1/__test__/developers/${userId}/reputation`, {
+    headers: await csrfHeaders(request, baseURL),
+    data: { p: p.toFixed(3), c: c.toFixed(3) },
+  });
+  if (r.status() !== 204) throw new Error(`reputation → ${String(r.status())}`);
+}

@@ -40,6 +40,7 @@ from app.models.projects import (
     ProjectStatus,
 )
 from app.repositories import projects as repo
+from app.repositories.bids import active_bidder_ids
 from app.repositories.profiles import existing_skill_ids
 from app.schemas.projects import (
     CpmNodeOut,
@@ -58,6 +59,7 @@ from app.schemas.projects import (
     SlotsReplace,
 )
 from app.services.context import Ctx
+from app.services.notifications import notify_users
 
 EDITABLE = ProjectStatus.DRAFT
 CANCELLABLE = {
@@ -541,7 +543,9 @@ async def extend_bidding(ctx: Ctx, project_id: uuid.UUID) -> ProjectOut:
             allowed_actions=["cancel"],
             message=f"Bidding has already been extended {bidding.max_extensions} times.",
         )
-    base = project.bidding_deadline or ctx.now
+    # From the current deadline, or from now when it already passed (too few bids), so an
+    # extension always gives bidders `extend_days` of real time.
+    base = max(project.bidding_deadline or ctx.now, ctx.now)
     project.bidding_deadline = base + timedelta(days=bidding.extend_days)
     project.bidding_extensions += 1
     project.version += 1
@@ -557,6 +561,7 @@ async def cancel(ctx: Ctx, project_id: uuid.UUID, reason: str) -> ProjectOut:
     if project is None or (project.client_id != ctx.uid and not ctx.principal.is_admin):
         raise NotFoundError
     _require_status(project, CANCELLABLE, "cancel")
+    was_bidding = project.status in {ProjectStatus.BIDDING, ProjectStatus.FORMING}
     project.status = ProjectStatus.CANCELLED
     project.cancel_reason = reason
     project.cancelled_at = ctx.now
@@ -564,6 +569,14 @@ async def cancel(ctx: Ctx, project_id: uuid.UUID, reason: str) -> ProjectOut:
     await _audit(ctx, "project.cancelled", project_id, {"by": ctx.principal.role})
     await ctx.db.commit()
     await ctx.db.refresh(project)
+    if was_bidding:
+        await notify_users(
+            await active_bidder_ids(ctx.db, project_id),
+            "PROJECT_CANCELLED",
+            title="A project you bid on was cancelled",
+            body=f"“{project.title}” was cancelled by its client. Your bid is closed.",
+            link="/dev/bids",
+        )
     return _project_out(project)
 
 

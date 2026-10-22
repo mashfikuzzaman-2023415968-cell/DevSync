@@ -24,6 +24,7 @@ const CARD = {
   bidding_deadline: null,
   skills: ["React", "FastAPI"],
   created_at: "2026-10-20T06:00:00Z",
+  open_for_bids: true,
 };
 const DETAIL = {
   ...CARD,
@@ -46,7 +47,14 @@ describe("FindProjectsPage", () => {
     server.use(
       http.get(`${API}/skills`, () => HttpResponse.json(SKILLS)),
       http.get(`${API}/projects/recommended`, () =>
-        HttpResponse.json([{ project: CARD, skill_match_count: 2 }]),
+        HttpResponse.json([
+          {
+            project: CARD,
+            skill_match_count: 2,
+            matched_skills: ["FastAPI", "React"],
+            typical_days: null,
+          },
+        ]),
       ),
       http.get(`${API}/projects/search`, () =>
         HttpResponse.json({ items: [CARD], next_cursor: null }),
@@ -92,8 +100,69 @@ describe("ProjectBidPage", () => {
       http.get(`${API}/auth/csrf`, () => new HttpResponse(null, { status: 204 })),
       http.get(`${API}/public/projects/${PID}`, () => HttpResponse.json(DETAIL)),
       http.get(`${API}/me/bids`, () => HttpResponse.json([])),
+      http.get(`${API}/me/portfolio`, () => HttpResponse.json([])),
     );
   }
+
+  it("says bidding has closed after the deadline and offers no form", async () => {
+    base();
+    server.use(
+      http.get(`${API}/public/projects/${PID}`, () =>
+        HttpResponse.json({
+          ...DETAIL,
+          open_for_bids: false,
+          bidding_deadline: "2026-10-20T06:00:00Z",
+        }),
+      ),
+    );
+    routes("/dev/projects/:id", <ProjectBidPage />, `/dev/projects/${PID}`);
+    expect(await screen.findByText("Bidding has closed")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Place sealed bid/ })).not.toBeInTheDocument();
+  });
+
+  it("sends hours, contribution and at most three of my portfolio items", async () => {
+    const user = userEvent.setup();
+    base();
+    let posted: Record<string, unknown> | null = null;
+    const items = ["Kitchen app", "Shop site", "Clinic queue", "Bus tracker"].map((title, i) => ({
+      id: `p${String(i)}`,
+      title,
+    }));
+    server.use(
+      http.get(`${API}/me/portfolio`, () => HttpResponse.json(items)),
+      http.post(`${API}/projects/${PID}/bids/eligibility`, () =>
+        HttpResponse.json({
+          eligible: true,
+          reason: null,
+          message: "You meet every requirement.",
+          checks: [],
+        }),
+      ),
+      http.post(`${API}/projects/${PID}/bids`, async ({ request }) => {
+        posted = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ id: "b1", status: "ACTIVE" });
+      }),
+    );
+    routes("/dev/projects/:id", <ProjectBidPage />, `/dev/projects/${PID}`);
+    await user.click(await screen.findByRole("combobox"));
+    await user.click(await screen.findByRole("option", { name: /React/ }));
+    await user.type(screen.getByLabelText(/Your price/), "18000");
+    await user.type(screen.getByLabelText(/Days you need/), "20");
+    await user.type(screen.getByLabelText("Hours a week"), "15");
+    await user.type(screen.getByLabelText("Expected contribution"), "Front end");
+    for (const title of ["Kitchen app", "Shop site", "Clinic queue"]) {
+      await user.click(await screen.findByRole("checkbox", { name: title }));
+    }
+    expect(screen.getByRole("checkbox", { name: "Bus tracker" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: /Place sealed bid/ }));
+    await waitFor(() => {
+      expect(posted).toMatchObject({
+        hours_per_week_committed: 15,
+        expected_contribution: "Front end",
+        portfolio_item_ids: ["p0", "p1", "p2"],
+      });
+    });
+  });
 
   it("shows the live eligibility preview and places a bid", async () => {
     const user = userEvent.setup();
@@ -135,6 +204,7 @@ describe("ProjectBidPage", () => {
     server.use(
       http.get(`${API}/auth/csrf`, () => new HttpResponse(null, { status: 204 })),
       http.get(`${API}/public/projects/${PID}`, () => HttpResponse.json(DETAIL)),
+      http.get(`${API}/me/portfolio`, () => HttpResponse.json([])),
       http.get(`${API}/me/bids`, () =>
         HttpResponse.json([
           {

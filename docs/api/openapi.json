@@ -493,6 +493,47 @@
         "title": "BidUpdate",
         "type": "object"
       },
+      "BiddingWindow": {
+        "properties": {
+          "closed": {
+            "title": "Closed",
+            "type": "boolean"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline"
+          },
+          "extend_days": {
+            "title": "Extend Days",
+            "type": "integer"
+          },
+          "extensions_used": {
+            "title": "Extensions Used",
+            "type": "integer"
+          },
+          "max_extensions": {
+            "title": "Max Extensions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deadline",
+          "closed",
+          "extensions_used",
+          "max_extensions",
+          "extend_days"
+        ],
+        "title": "BiddingWindow",
+        "type": "object"
+      },
       "Body_add_portfolio_image_api_v1_me_portfolio__item_id__images_post": {
         "properties": {
           "file": {
@@ -759,6 +800,13 @@
       "ClientBidOut": {
         "description": "A bid as its project's client sees it: reputation + the eligibility verdict (§9.2).",
         "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/ConstraintCheck"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
           "competency": {
             "title": "Competency",
             "type": "number"
@@ -780,6 +828,14 @@
             "title": "Eligible",
             "type": "boolean"
           },
+          "expected_contribution": {
+            "title": "Expected Contribution",
+            "type": "string"
+          },
+          "hours_per_week": {
+            "title": "Hours Per Week",
+            "type": "integer"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -789,13 +845,34 @@
             "title": "Is Newcomer",
             "type": "boolean"
           },
+          "newcomer_evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NewcomerEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "performance": {
             "title": "Performance",
             "type": "number"
           },
+          "portfolio": {
+            "items": {
+              "$ref": "#/components/schemas/PortfolioRef"
+            },
+            "title": "Portfolio",
+            "type": "array"
+          },
           "price_paisa": {
             "title": "Price Paisa",
             "type": "integer"
+          },
+          "proposal": {
+            "title": "Proposal",
+            "type": "string"
           },
           "reasons": {
             "items": {
@@ -806,6 +883,10 @@
           },
           "seeded": {
             "title": "Seeded",
+            "type": "boolean"
+          },
+          "shortlisted": {
+            "title": "Shortlisted",
             "type": "boolean"
           },
           "slot_id": {
@@ -820,6 +901,15 @@
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "title": "Submitted At",
+            "type": "string"
+          },
+          "teamwork": {
+            "title": "Teamwork",
+            "type": "number"
           }
         },
         "required": [
@@ -831,12 +921,21 @@
           "status",
           "price_paisa",
           "days_needed",
+          "hours_per_week",
           "competency",
+          "teamwork",
           "performance",
           "is_newcomer",
           "seeded",
           "eligible",
-          "reasons"
+          "shortlisted",
+          "reasons",
+          "checks",
+          "newcomer_evidence",
+          "proposal",
+          "expected_contribution",
+          "portfolio",
+          "submitted_at"
         ],
         "title": "ClientBidOut",
         "type": "object"
@@ -844,12 +943,19 @@
       "ClientBidsOut": {
         "description": "The client's bids view for a project: all bids + coverage + relaxations + too-few flag.",
         "properties": {
+          "bidding": {
+            "$ref": "#/components/schemas/BiddingWindow"
+          },
           "bids": {
             "items": {
               "$ref": "#/components/schemas/ClientBidOut"
             },
             "title": "Bids",
             "type": "array"
+          },
+          "budget_paisa": {
+            "title": "Budget Paisa",
+            "type": "integer"
           },
           "coverage": {
             "items": {
@@ -858,12 +964,27 @@
             "title": "Coverage",
             "type": "array"
           },
+          "evaluated_at": {
+            "format": "date-time",
+            "title": "Evaluated At",
+            "type": "string"
+          },
           "relaxations": {
             "items": {
               "$ref": "#/components/schemas/RelaxationOut"
             },
             "title": "Relaxations",
             "type": "array"
+          },
+          "team_cost": {
+            "$ref": "#/components/schemas/TeamCostOut"
+          },
+          "team_size": {
+            "title": "Team Size",
+            "type": "integer"
+          },
+          "thresholds": {
+            "$ref": "#/components/schemas/Thresholds"
           },
           "too_few": {
             "title": "Too Few",
@@ -874,7 +995,13 @@
           "bids",
           "coverage",
           "relaxations",
-          "too_few"
+          "too_few",
+          "evaluated_at",
+          "thresholds",
+          "team_cost",
+          "budget_paisa",
+          "team_size",
+          "bidding"
         ],
         "title": "ClientBidsOut",
         "type": "object"
@@ -1050,8 +1177,19 @@
         "type": "object"
       },
       "ConstraintCheck": {
-        "description": "One Algorithm 1 constraint and whether the draft bid meets it.",
+        "description": "One Algorithm 1 check and whether the bid meets it (§9.2), with the values compared.\n\n`required`/`actual` are on the check's own scale: scores 0–1 (shown ×100), days, or paisa;\nnull for yes/no gates. `detail` is ready-to-show text.",
         "properties": {
+          "actual": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual"
+          },
           "detail": {
             "title": "Detail",
             "type": "string"
@@ -1063,6 +1201,17 @@
           "ok": {
             "title": "Ok",
             "type": "boolean"
+          },
+          "required": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Required"
           }
         },
         "required": [
@@ -1842,7 +1991,6 @@
             "title": "Captcha"
           },
           "email": {
-            "format": "email",
             "maxLength": 254,
             "title": "Email",
             "type": "string"
@@ -1912,7 +2060,6 @@
             "title": "Captcha"
           },
           "email": {
-            "format": "email",
             "maxLength": 254,
             "title": "Email",
             "type": "string"
@@ -2243,6 +2390,25 @@
           "milestones"
         ],
         "title": "MilestonesReplace",
+        "type": "object"
+      },
+      "NewcomerEvidence": {
+        "description": "The skill test that lets a newcomer through the newcomer rule (§9.2 step 2).",
+        "properties": {
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "skill": {
+            "title": "Skill",
+            "type": "string"
+          }
+        },
+        "required": [
+          "skill",
+          "score"
+        ],
+        "title": "NewcomerEvidence",
         "type": "object"
       },
       "Page_ProjectCard_": {
@@ -2586,6 +2752,26 @@
         "title": "PortfolioItemUpdate",
         "type": "object"
       },
+      "PortfolioRef": {
+        "description": "A portfolio item attached to a bid (title only).",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "PortfolioRef",
+        "type": "object"
+      },
       "PortfolioReorder": {
         "additionalProperties": false,
         "description": "Every portfolio item id, in the new order.",
@@ -2685,6 +2871,10 @@
             "title": "Id",
             "type": "string"
           },
+          "open_for_bids": {
+            "title": "Open For Bids",
+            "type": "boolean"
+          },
           "skills": {
             "items": {
               "type": "string"
@@ -2719,7 +2909,8 @@
           "team_size",
           "bidding_deadline",
           "skills",
-          "created_at"
+          "created_at",
+          "open_for_bids"
         ],
         "title": "ProjectCard",
         "type": "object"
@@ -2844,6 +3035,10 @@
             "title": "Id",
             "type": "string"
           },
+          "open_for_bids": {
+            "title": "Open For Bids",
+            "type": "boolean"
+          },
           "requirements": {
             "title": "Requirements",
             "type": "string"
@@ -2890,6 +3085,7 @@
           "bidding_deadline",
           "skills",
           "created_at",
+          "open_for_bids",
           "requirements",
           "slots"
         ],
@@ -3411,17 +3607,37 @@
       "RecommendedProject": {
         "description": "A recommended project with why it matched (spec §9.16).",
         "properties": {
+          "matched_skills": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Matched Skills",
+            "type": "array"
+          },
           "project": {
             "$ref": "#/components/schemas/ProjectCard"
           },
           "skill_match_count": {
             "title": "Skill Match Count",
             "type": "integer"
+          },
+          "typical_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Typical Days"
           }
         },
         "required": [
           "project",
-          "skill_match_count"
+          "skill_match_count",
+          "matched_skills",
+          "typical_days"
         ],
         "title": "RecommendedProject",
         "type": "object"
@@ -3863,6 +4079,28 @@
         "title": "SlotCard",
         "type": "object"
       },
+      "SlotCount": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "slot_id": {
+            "format": "uuid",
+            "title": "Slot Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slot_id",
+          "count"
+        ],
+        "title": "SlotCount",
+        "type": "object"
+      },
       "SlotCoverage": {
         "properties": {
           "eligible": {
@@ -3968,6 +4206,207 @@
           "slots"
         ],
         "title": "SlotsReplace",
+        "type": "object"
+      },
+      "TeamCostOut": {
+        "description": "Cheapest eligible way to fill every slot, against the budget after the platform fee.",
+        "properties": {
+          "budget_after_fee_paisa": {
+            "title": "Budget After Fee Paisa",
+            "type": "integer"
+          },
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "total_paisa": {
+            "title": "Total Paisa",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_paisa",
+          "budget_after_fee_paisa",
+          "complete"
+        ],
+        "title": "TeamCostOut",
+        "type": "object"
+      },
+      "TermsChange": {
+        "additionalProperties": false,
+        "description": "Change a BIDDING project's terms (spec §9.19): lower the standards, raise the budget or\nreduce the team. Omitted fields stay as they are; at least one must change.",
+        "properties": {
+          "budget_paisa": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 10000000000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Paisa"
+          },
+          "min_competency": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Competency"
+          },
+          "min_performance": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Performance"
+          },
+          "slot_counts": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SlotCount"
+                },
+                "maxItems": 10,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slot Counts"
+          }
+        },
+        "title": "TermsChange",
+        "type": "object"
+      },
+      "TermsOutcome": {
+        "properties": {
+          "coverage": {
+            "items": {
+              "$ref": "#/components/schemas/SlotCoverage"
+            },
+            "title": "Coverage",
+            "type": "array"
+          },
+          "eligible": {
+            "title": "Eligible",
+            "type": "integer"
+          },
+          "team_cost": {
+            "$ref": "#/components/schemas/TeamCostOut"
+          },
+          "too_few": {
+            "title": "Too Few",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "eligible",
+          "too_few",
+          "coverage",
+          "team_cost"
+        ],
+        "title": "TermsOutcome",
+        "type": "object"
+      },
+      "TermsPreviewOut": {
+        "description": "What a terms change would do to the eligible set before the client confirms it.",
+        "properties": {
+          "after": {
+            "$ref": "#/components/schemas/TermsOutcome"
+          },
+          "before": {
+            "$ref": "#/components/schemas/TermsOutcome"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "newly_eligible": {
+            "title": "Newly Eligible",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "before",
+          "after",
+          "newly_eligible",
+          "message"
+        ],
+        "title": "TermsPreviewOut",
+        "type": "object"
+      },
+      "Thresholds": {
+        "description": "Minimum standards: the project's own, the platform default, the floor and the values\nfinally used after automatic relaxation (all 0–1).",
+        "properties": {
+          "c0": {
+            "title": "C0",
+            "type": "number"
+          },
+          "default_c0": {
+            "title": "Default C0",
+            "type": "number"
+          },
+          "default_p0": {
+            "title": "Default P0",
+            "type": "number"
+          },
+          "floor_c0": {
+            "title": "Floor C0",
+            "type": "number"
+          },
+          "floor_p0": {
+            "title": "Floor P0",
+            "type": "number"
+          },
+          "p0": {
+            "title": "P0",
+            "type": "number"
+          },
+          "used_c0": {
+            "title": "Used C0",
+            "type": "number"
+          },
+          "used_p0": {
+            "title": "Used P0",
+            "type": "number"
+          }
+        },
+        "required": [
+          "p0",
+          "c0",
+          "default_p0",
+          "default_c0",
+          "floor_p0",
+          "floor_c0",
+          "used_p0",
+          "used_c0"
+        ],
+        "title": "Thresholds",
         "type": "object"
       },
       "TotpLoginRequest": {
@@ -12409,6 +12848,463 @@
         ]
       }
     },
+    "/api/v1/projects/{project_id}/bidding-terms": {
+      "patch": {
+        "description": "Lower the standards, raise the budget or reduce the team (spec §9.19); bidders are told.",
+        "operationId": "change_terms_api_v1_projects__project_id__bidding_terms_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Project version",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Project version",
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TermsChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "bidding": {
+                    "closed": false,
+                    "deadline": "2026-10-25T06:00:00Z",
+                    "extend_days": 3,
+                    "extensions_used": 0,
+                    "max_extensions": 2
+                  },
+                  "bids": [
+                    {
+                      "checks": [
+                        {
+                          "actual": 0.85,
+                          "detail": "React test 85% (newcomers need 60%)",
+                          "name": "skill_evidence",
+                          "ok": true,
+                          "required": 0.6
+                        }
+                      ],
+                      "competency": 0.31,
+                      "days_needed": 20,
+                      "developer_id": "22222222-2222-4222-8222-222222222222",
+                      "developer_name": "Nadia Rahman",
+                      "eligible": true,
+                      "expected_contribution": "Front-end components and integration.",
+                      "hours_per_week": 20,
+                      "id": "9c8b7a6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+                      "is_newcomer": true,
+                      "newcomer_evidence": {
+                        "score": 0.85,
+                        "skill": "React"
+                      },
+                      "performance": 0.55,
+                      "portfolio": [],
+                      "price_paisa": 1800000,
+                      "proposal": "I'll build the React front end with tests.",
+                      "reasons": [],
+                      "seeded": false,
+                      "shortlisted": true,
+                      "slot_id": "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e",
+                      "slot_label": "React developer",
+                      "status": "ACTIVE",
+                      "submitted_at": "2026-10-21T06:00:00Z",
+                      "teamwork": 0.5
+                    }
+                  ],
+                  "budget_paisa": 12000000,
+                  "coverage": [
+                    {
+                      "eligible": 1,
+                      "needed": 1,
+                      "slot_id": "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e",
+                      "slot_label": "React developer"
+                    }
+                  ],
+                  "evaluated_at": "2026-10-22T06:00:00Z",
+                  "relaxations": [],
+                  "team_cost": {
+                    "budget_after_fee_paisa": 11400000,
+                    "complete": true,
+                    "total_paisa": 1800000
+                  },
+                  "team_size": 1,
+                  "thresholds": {
+                    "c0": 0.4,
+                    "default_c0": 0.4,
+                    "default_p0": 0.45,
+                    "floor_c0": 0.25,
+                    "floor_p0": 0.3,
+                    "p0": 0.45,
+                    "used_c0": 0.4,
+                    "used_p0": 0.45
+                  },
+                  "too_few": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBidsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Change my project's bidding terms",
+        "tags": [
+          "bids"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/bidding-terms/preview": {
+      "post": {
+        "description": "Re-run eligibility under lower standards, a higher budget or a smaller team, unsaved.",
+        "operationId": "preview_terms_api_v1_projects__project_id__bidding_terms_preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TermsChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "after": {
+                    "coverage": [
+                      {
+                        "eligible": 1,
+                        "needed": 1,
+                        "slot_id": "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e",
+                        "slot_label": "React developer"
+                      }
+                    ],
+                    "eligible": 11,
+                    "team_cost": {
+                      "budget_after_fee_paisa": 11400000,
+                      "complete": true,
+                      "total_paisa": 1800000
+                    },
+                    "too_few": false
+                  },
+                  "before": {
+                    "coverage": [
+                      {
+                        "eligible": 1,
+                        "needed": 1,
+                        "slot_id": "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e",
+                        "slot_label": "React developer"
+                      }
+                    ],
+                    "eligible": 9,
+                    "team_cost": {
+                      "budget_after_fee_paisa": 11400000,
+                      "complete": true,
+                      "total_paisa": 1800000
+                    },
+                    "too_few": true
+                  },
+                  "message": "2 more bids would be eligible; every slot would be covered.",
+                  "newly_eligible": 2
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/TermsPreviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Preview a change to my project's bidding terms",
+        "tags": [
+          "bids"
+        ]
+      }
+    },
     "/api/v1/projects/{project_id}/bids": {
       "get": {
         "operationId": "client_bids_api_v1_projects__project_id__bids_get",
@@ -12429,24 +13325,52 @@
             "content": {
               "application/json": {
                 "example": {
+                  "bidding": {
+                    "closed": false,
+                    "deadline": "2026-10-25T06:00:00Z",
+                    "extend_days": 3,
+                    "extensions_used": 0,
+                    "max_extensions": 2
+                  },
                   "bids": [
                     {
-                      "competency": 0.53,
+                      "checks": [
+                        {
+                          "actual": 0.85,
+                          "detail": "React test 85% (newcomers need 60%)",
+                          "name": "skill_evidence",
+                          "ok": true,
+                          "required": 0.6
+                        }
+                      ],
+                      "competency": 0.31,
                       "days_needed": 20,
                       "developer_id": "22222222-2222-4222-8222-222222222222",
                       "developer_name": "Nadia Rahman",
                       "eligible": true,
+                      "expected_contribution": "Front-end components and integration.",
+                      "hours_per_week": 20,
                       "id": "9c8b7a6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
                       "is_newcomer": true,
+                      "newcomer_evidence": {
+                        "score": 0.85,
+                        "skill": "React"
+                      },
                       "performance": 0.55,
+                      "portfolio": [],
                       "price_paisa": 1800000,
+                      "proposal": "I'll build the React front end with tests.",
                       "reasons": [],
                       "seeded": false,
+                      "shortlisted": true,
                       "slot_id": "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e",
                       "slot_label": "React developer",
-                      "status": "ACTIVE"
+                      "status": "ACTIVE",
+                      "submitted_at": "2026-10-21T06:00:00Z",
+                      "teamwork": 0.5
                     }
                   ],
+                  "budget_paisa": 12000000,
                   "coverage": [
                     {
                       "eligible": 1,
@@ -12455,7 +13379,24 @@
                       "slot_label": "React developer"
                     }
                   ],
+                  "evaluated_at": "2026-10-22T06:00:00Z",
                   "relaxations": [],
+                  "team_cost": {
+                    "budget_after_fee_paisa": 11400000,
+                    "complete": true,
+                    "total_paisa": 1800000
+                  },
+                  "team_size": 1,
+                  "thresholds": {
+                    "c0": 0.4,
+                    "default_c0": 0.4,
+                    "default_p0": 0.45,
+                    "floor_c0": 0.25,
+                    "floor_p0": 0.3,
+                    "p0": 0.45,
+                    "used_c0": 0.4,
+                    "used_p0": 0.45
+                  },
                   "too_few": false
                 },
                 "schema": {
@@ -12780,9 +13721,11 @@
                 "example": {
                   "checks": [
                     {
-                      "detail": "31 of 30 days",
+                      "actual": 31,
+                      "detail": "31 days (deadline 30 days)",
                       "name": "days",
-                      "ok": false
+                      "ok": false,
+                      "required": 30
                     }
                   ],
                   "eligible": false,

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
@@ -74,11 +75,17 @@ class EligibilityIn(StrictRequest):
 
 
 class ConstraintCheck(BaseModel):
-    """One Algorithm 1 constraint and whether the draft bid meets it."""
+    """One Algorithm 1 check and whether the bid meets it (§9.2), with the values compared.
+
+    `required`/`actual` are on the check's own scale: scores 0–1 (shown ×100), days, or paisa;
+    null for yes/no gates. `detail` is ready-to-show text.
+    """
 
     name: str
     ok: bool
     detail: str
+    required: float | None = None
+    actual: float | None = None
 
 
 class EligibilityOut(BaseModel):
@@ -88,6 +95,20 @@ class EligibilityOut(BaseModel):
     reason: str | None  # the first failing reason code, or null when eligible
     message: str  # human text, e.g. "Would be filtered out: needs 31 days (deadline 30)"
     checks: list[ConstraintCheck]
+
+
+class PortfolioRef(BaseModel):
+    """A portfolio item attached to a bid (title only)."""
+
+    id: uuid.UUID
+    title: str
+
+
+class NewcomerEvidence(BaseModel):
+    """The skill test that lets a newcomer through the newcomer rule (§9.2 step 2)."""
+
+    skill: str
+    score: float  # 0–1, shown as a percentage
 
 
 class ClientBidOut(BaseModel):
@@ -101,12 +122,21 @@ class ClientBidOut(BaseModel):
     status: str
     price_paisa: int
     days_needed: int
+    hours_per_week: int
     competency: float  # C ×100 is shown in the UI
+    teamwork: float  # X_m (team quality), 0–1
     performance: float  # P
     is_newcomer: bool
     seeded: bool  # reputation value is seeded (dev-only marker)
     eligible: bool
+    shortlisted: bool
     reasons: list[str]  # reason codes when not eligible or not shortlisted
+    checks: list[ConstraintCheck]  # Algorithm 1 trace at the thresholds used
+    newcomer_evidence: NewcomerEvidence | None
+    proposal: str
+    expected_contribution: str
+    portfolio: list[PortfolioRef]
+    submitted_at: datetime
 
 
 class SlotCoverage(BaseModel):
@@ -122,6 +152,36 @@ class RelaxationOut(BaseModel):
     c0: float
 
 
+class Thresholds(BaseModel):
+    """Minimum standards: the project's own, the platform default, the floor and the values
+    finally used after automatic relaxation (all 0–1)."""
+
+    p0: float
+    c0: float
+    default_p0: float
+    default_c0: float
+    floor_p0: float
+    floor_c0: float
+    used_p0: float
+    used_c0: float
+
+
+class TeamCostOut(BaseModel):
+    """Cheapest eligible way to fill every slot, against the budget after the platform fee."""
+
+    total_paisa: int
+    budget_after_fee_paisa: int
+    complete: bool
+
+
+class BiddingWindow(BaseModel):
+    deadline: datetime | None
+    closed: bool
+    extensions_used: int
+    max_extensions: int
+    extend_days: int
+
+
 class ClientBidsOut(BaseModel):
     """The client's bids view for a project: all bids + coverage + relaxations + too-few flag."""
 
@@ -129,3 +189,43 @@ class ClientBidsOut(BaseModel):
     coverage: list[SlotCoverage]
     relaxations: list[RelaxationOut]
     too_few: bool
+    evaluated_at: datetime
+    thresholds: Thresholds
+    team_cost: TeamCostOut
+    budget_paisa: int
+    team_size: int
+    bidding: BiddingWindow
+
+
+# --------------------------------------------------------------------------- too-few-bids actions
+
+
+class SlotCount(StrictRequest):
+    slot_id: uuid.UUID
+    count: int = Field(ge=1, le=10)
+
+
+class TermsChange(StrictRequest):
+    """Change a BIDDING project's terms (spec §9.19): lower the standards, raise the budget or
+    reduce the team. Omitted fields stay as they are; at least one must change."""
+
+    min_performance: Decimal | None = Field(default=None, ge=0, le=1, decimal_places=2)
+    min_competency: Decimal | None = Field(default=None, ge=0, le=1, decimal_places=2)
+    budget_paisa: int | None = Field(default=None, gt=0, le=10_000_000_000)
+    slot_counts: list[SlotCount] | None = Field(default=None, min_length=1, max_length=10)
+
+
+class TermsOutcome(BaseModel):
+    eligible: int
+    too_few: bool
+    coverage: list[SlotCoverage]
+    team_cost: TeamCostOut
+
+
+class TermsPreviewOut(BaseModel):
+    """What a terms change would do to the eligible set before the client confirms it."""
+
+    before: TermsOutcome
+    after: TermsOutcome
+    newly_eligible: int
+    message: str

@@ -115,6 +115,8 @@ MATRIX: dict[tuple[str, str], tuple[set[str], str, bool]] = {
     ("PATCH", "/api/v1/bids/{bid_id}"): ({DEV}, "auth", True),
     ("DELETE", "/api/v1/bids/{bid_id}"): ({DEV}, "auth", True),
     ("GET", "/api/v1/projects/{project_id}/bids"): ({CLIENT, ADMIN}, "auth", True),
+    ("POST", "/api/v1/projects/{project_id}/bidding-terms/preview"): ({CLIENT}, "auth", True),
+    ("PATCH", "/api/v1/projects/{project_id}/bidding-terms"): ({CLIENT}, "auth", True),
 }
 
 BODIES: dict[tuple[str, str], dict[str, Any]] = {
@@ -148,6 +150,8 @@ BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "days_needed": 20,
     },
     ("PATCH", "/api/v1/bids/{bid_id}"): {"price_paisa": 1_900_000},
+    ("POST", "/api/v1/projects/{project_id}/bidding-terms/preview"): {"budget_paisa": 13_000_000},
+    ("PATCH", "/api/v1/projects/{project_id}/bidding-terms"): {"budget_paisa": 13_000_000},
 }
 PATH_PARAM = re.compile(r"\{[a-z_]+\}")
 

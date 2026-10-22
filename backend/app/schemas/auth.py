@@ -10,15 +10,32 @@ import re
 import unicodedata
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import AfterValidator, BaseModel, EmailStr, Field, field_validator
 
 from app.schemas.common import StrictRequest
 
 E164 = re.compile(r"^\+[1-9]\d{7,14}$")
 OTP = re.compile(r"^\d{6}$")
 CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+LOOKUP_EMAIL = re.compile(r"^[^\s@]+@[^\s@]+$")
+
+
+def _lookup_email(value: str) -> str:
+    """An address to *look up*, not to register: syntax only, lowercased (emails are citext).
+
+    Strict `EmailStr` refuses reserved domains such as `.local`, which locked the seeded demo
+    accounts (`rahim@devsync.local`, spec §18.4) out of the sign-in form (D54). Registration
+    still uses `EmailStr`; a lookup of a malformed or unknown address simply finds nobody.
+    """
+    value = value.strip()
+    if CONTROL.search(value) or not LOOKUP_EMAIL.fullmatch(value):
+        raise ValueError("Enter an email address.")
+    return value.lower()
+
+
+LookupEmail = Annotated[str, Field(max_length=254), AfterValidator(_lookup_email)]
 
 
 def _clean_name(value: str) -> str:
@@ -66,7 +83,7 @@ class AcceptedResponse(BaseModel):
 class LoginRequest(BotCheck):
     """Email + password (+ CAPTCHA after repeated failures, and always for admins)."""
 
-    email: EmailStr = Field(max_length=254)
+    email: LookupEmail
     password: str = Field(min_length=1, max_length=128)
     return_to: str | None = Field(default=None, max_length=512)
 
@@ -103,7 +120,7 @@ class EmailTokenRequest(StrictRequest):
 class ForgotPasswordRequest(BotCheck):
     """Start a password reset (always answered uniformly)."""
 
-    email: EmailStr = Field(max_length=254)
+    email: LookupEmail
 
 
 class ResetPasswordRequest(StrictRequest):

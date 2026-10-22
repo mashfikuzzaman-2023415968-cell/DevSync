@@ -33,6 +33,8 @@ runs/gates/*
 
 # Uploads and editor files
 data/
+# ...but not the bundled breached-password list the password policy needs (spec §14.4, D54).
+!backend/app/core/data/
 .DS_Store
 .idea/
 .vscode/

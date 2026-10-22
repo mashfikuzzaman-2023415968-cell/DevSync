@@ -148,6 +148,22 @@ async def test_too_few_bids_stays_bidding_notifies_once() -> None:
 
 
 @pytest.mark.asyncio
+async def test_too_few_notification_names_the_shortfall_per_slot() -> None:
+    client = await make_user("CLIENT")
+    await make_project(client, PAST)  # one unlabelled slot needing 2, no bids
+    await close_due_bidding()
+    async with open_session(DbContext.system(), job=True) as db:
+        body = await db.scalar(
+            select(Notification.body).where(
+                Notification.user_id == client, Notification.type == "TOO_FEW_BIDS"
+            )
+        )
+    assert body is not None
+    assert "a slot needs 2 more" in body
+    assert "Extend bidding" in body
+
+
+@pytest.mark.asyncio
 async def test_enough_bids_moves_to_forming() -> None:
     client = await make_user("CLIENT")
     pid, sid, skid = await make_project(client, PAST)

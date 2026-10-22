@@ -8,7 +8,7 @@ import { Probe, renderRoutes } from "@/test/render";
 import { AudienceToggle } from "./Audience";
 import { FAQ, Faq } from "./Faq";
 import { FairnessSpotlight } from "./FairnessSpotlight";
-import { heroFallbackReason, whenIdle } from "./heroSupport";
+import { heroFallbackReason, webglIsSoftware, whenIdle } from "./heroSupport";
 import { HEADLINE } from "./Hero";
 import LandingPage from "./LandingPage";
 import { StatsStrip } from "./StatsStrip";
@@ -115,14 +115,44 @@ describe("interactive sections", () => {
 
 describe("3D hero fallbacks (spec §13.12)", () => {
   const webgl = () => true;
-  it("uses the poster only for reduced motion, data saver, few cores or no WebGL", () => {
-    expect(heroFallbackReason(true, { hardwareConcurrency: 8 }, webgl)).toBe("reduced-motion");
+  const gpu = () => false;
+  it("uses the poster only for reduced motion, data saver, few cores, no or software WebGL", () => {
+    expect(heroFallbackReason(true, { hardwareConcurrency: 8 }, webgl, gpu)).toBe("reduced-motion");
     expect(
-      heroFallbackReason(false, { connection: { saveData: true }, hardwareConcurrency: 8 }, webgl),
+      heroFallbackReason(
+        false,
+        { connection: { saveData: true }, hardwareConcurrency: 8 },
+        webgl,
+        gpu,
+      ),
     ).toBe("save-data");
-    expect(heroFallbackReason(false, { hardwareConcurrency: 2 }, webgl)).toBe("low-cores");
-    expect(heroFallbackReason(false, { hardwareConcurrency: 8 }, () => false)).toBe("no-webgl");
-    expect(heroFallbackReason(false, { hardwareConcurrency: 8 }, webgl)).toBeNull();
+    expect(heroFallbackReason(false, { hardwareConcurrency: 2 }, webgl, gpu)).toBe("low-cores");
+    expect(heroFallbackReason(false, { hardwareConcurrency: 8 }, () => false, gpu)).toBe(
+      "no-webgl",
+    );
+    expect(heroFallbackReason(false, { hardwareConcurrency: 8 }, webgl, () => true)).toBe(
+      "software-webgl",
+    );
+    expect(heroFallbackReason(false, { hardwareConcurrency: 8 }, webgl, gpu)).toBeNull();
+  });
+
+  function fakeDoc(renderer: string | null): Document {
+    const ctx = {
+      getExtension: (name: string) =>
+        name === "WEBGL_debug_renderer_info" ? { UNMASKED_RENDERER_WEBGL: 1 } : null,
+      getParameter: () => renderer,
+    };
+    return {
+      createElement: () => ({ getContext: () => (renderer === null ? null : ctx) }),
+    } as unknown as Document;
+  }
+
+  it("detects software rendering from the caveat probe and the renderer name", () => {
+    expect(webglIsSoftware(fakeDoc(null))).toBe(true); // failIfMajorPerformanceCaveat refused
+    expect(webglIsSoftware(fakeDoc("ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device)"))).toBe(true);
+    expect(webglIsSoftware(fakeDoc("llvmpipe (LLVM 15.0.7, 256 bits)"))).toBe(true);
+    expect(webglIsSoftware(fakeDoc("ANGLE (Intel, Vulkan 1.4 (Intel(R) Graphics))"))).toBe(false);
+    expect(webglIsSoftware(fakeDoc("Apple GPU"))).toBe(false);
   });
 
   it("never probes WebGL when an earlier reason already applies", () => {

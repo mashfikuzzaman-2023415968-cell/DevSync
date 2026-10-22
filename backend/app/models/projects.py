@@ -13,6 +13,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import (
@@ -25,6 +26,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    Numeric,
     SmallInteger,
     Text,
     UniqueConstraint,
@@ -108,6 +110,10 @@ class Project(UUIDPrimaryKey, Timestamps, Base):
         SmallInteger, nullable=False, server_default="0"
     )
     version: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+    # Minimum standards for this project's Algorithm 1 filter when the client lowered them
+    # through the too-few-bids actions (§9.19); NULL = platform `filter.P0` / `filter.C0`.
+    min_performance: Mapped[Decimal | None] = mapped_column(Numeric(3, 2))
+    min_competency: Mapped[Decimal | None] = mapped_column(Numeric(3, 2))
     # Full-text search over title + summary (Phase 5 marketplace, migration 0006); skills are a
     # structured filter joined at query time. Generated/persisted so it can't drift from the text.
     search_vector: Mapped[str | None] = mapped_column(
@@ -128,6 +134,14 @@ class Project(UUIDPrimaryKey, Timestamps, Base):
         CheckConstraint("deadline_days BETWEEN 1 AND 365", name="deadline_range"),
         CheckConstraint("team_size BETWEEN 2 AND 10", name="team_size_range"),
         CheckConstraint("bidding_extensions >= 0", name="extensions_nonneg"),
+        CheckConstraint(
+            "min_performance IS NULL OR (min_performance >= 0 AND min_performance <= 1)",
+            name="min_performance_range",
+        ),
+        CheckConstraint(
+            "min_competency IS NULL OR (min_competency >= 0 AND min_competency <= 1)",
+            name="min_competency_range",
+        ),
         Index("ix_projects_status_bidding_deadline", "status", "bidding_deadline"),
         Index("ix_projects_client_id", "client_id"),
         Index("ix_projects_search", "search_vector", postgresql_using="gin"),

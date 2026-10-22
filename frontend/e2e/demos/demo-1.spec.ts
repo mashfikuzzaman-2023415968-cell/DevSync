@@ -2,8 +2,10 @@
  * Demo 1 walkthrough (spec §17.0), run by `make demo-check DEMO=1` on chromium, firefox, webkit
  * and a mobile viewport (three times) to produce rehearsal screenshots and a report. It drives
  * the **seeded** Stage-1 data (`make seed-demo STAGE=1`), so it shows the real documented bids:
- * the client sees all 12 with eligibility and the two ineligible reasons, the too-few-bids banner
- * appears on the short project, and a newcomer sees the live eligibility preview on the bid sheet.
+ * the client sees all 12 with eligibility and the two ineligible reasons, opens "Why?" on the
+ * newcomer's bid (the newcomer rule, check by check), the too-few-bids banner and its "Fix the
+ * shortfall" dialog appear on the short project (opened, nothing applied, so repeats see the same
+ * seed), and a newcomer sees the live eligibility preview on the short project's bid sheet.
  *
  * Login uses the seeded demo accounts (printed by the seed). Registration, email/OTP verification
  * and admin TOTP are shown live in the demo and covered by the Phase 1 E2E; this spec focuses on
@@ -25,7 +27,8 @@ async function loginSeeded(page: Page, baseURL: string, email: string): Promise<
 }
 
 async function shot(page: Page, info: TestInfo, name: string): Promise<void> {
-  await page.screenshot({ path: info.outputPath(`${name}.png`), fullPage: true });
+  // CSS scale: a phone at 3× density would exceed the 32,767 px screenshot limit on long pages.
+  await page.screenshot({ path: info.outputPath(`${name}.png`), fullPage: true, scale: "css" });
 }
 
 test("Demo 1 — planning, sealed bidding and Algorithm 1 filtering @demo", async ({
@@ -47,11 +50,21 @@ test("Demo 1 — planning, sealed bidding and Algorithm 1 filtering @demo", asyn
   const href = await row.getAttribute("href");
   const projectId = (href ?? "").split("/")[3] ?? "";
   await page.goto(`/client/projects/${projectId}/bids`);
-  await expect(page.getByText("Shakib Hasan")).toBeVisible();
+  const visible = (text: string | RegExp) => page.getByText(text).filter({ visible: true }).first();
+  await expect(visible("Shakib Hasan")).toBeVisible();
   // The two documented ineligible reasons are shown.
-  await expect(page.getByText(/Too slow/i)).toBeVisible();
-  await expect(page.getByText(/No passing skill test/i)).toBeVisible();
+  await expect(visible("Can’t meet the deadline")).toBeVisible();
+  await expect(visible("No passing skill test")).toBeVisible();
+  await expect(page.getByText(/12 bids, 10 eligible/)).toBeVisible();
   await shot(page, info, "02-client-bids");
+  // Why is the newcomer eligible? The newcomer rule, check by check.
+  await page
+    .getByRole("button", { name: "Why eligible: Nadia Rahman" })
+    .filter({ visible: true })
+    .click();
+  await expect(page.getByText("Eligible through the newcomer rule: React test 85%.")).toBeVisible();
+  await shot(page, info, "02b-why-newcomer");
+  await page.keyboard.press("Escape");
 
   // 3. The too-few-bids banner on the short project.
   await page.goto("/client/projects");
@@ -61,6 +74,10 @@ test("Demo 1 — planning, sealed bidding and Algorithm 1 filtering @demo", asyn
   await page.goto(`/client/projects/${shortId}/bids`);
   await expect(page.getByText("Not enough eligible bids yet")).toBeVisible();
   await shot(page, info, "03-too-few");
+  await page.getByRole("button", { name: "Fix the shortfall" }).click();
+  await expect(page.getByRole("dialog", { name: "Fix the shortfall" })).toBeVisible();
+  await shot(page, info, "03b-fix-shortfall");
+  await page.keyboard.press("Escape");
 
   // 4. A newcomer searches, opens the project and sees the live eligibility preview.
   await loginSeeded(page, url, "nadia@devsync.local");
@@ -68,7 +85,8 @@ test("Demo 1 — planning, sealed bidding and Algorithm 1 filtering @demo", asyn
   await page.getByLabel("Search projects", { exact: true }).fill("ordering");
   await expect(page.getByRole("link", { name: ORDERING }).first()).toBeVisible();
   await shot(page, info, "04-find-work");
-  await page.goto(`/dev/projects/${projectId}`);
+  // Every seeded developer already bid on the ordering project; Nadia hasn't on the short one.
+  await page.goto(`/dev/projects/${shortId}`);
   await page.getByRole("combobox").click();
   await page.getByRole("option", { name: /React/ }).first().click();
   await page.getByLabel(/Your price/).fill("18000");

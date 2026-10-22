@@ -6,10 +6,13 @@ to insert users directly or create admins under row-level security).
 
 from __future__ import annotations
 
+import uuid
+from datetime import timedelta
+from decimal import Decimal
 from typing import Any
 
 import pyotp
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from app.core.audit import write_audit
 from app.core.clock import get_clock
@@ -25,6 +28,9 @@ from app.models.identity import (
     UserRole,
     UserStatus,
 )
+from app.models.profiles import DeveloperSkill, EvidenceSource, Skill, SkillEvidence
+from app.models.projects import Project
+from app.models.reputation import ReputationSnapshot
 from app.services.auth.common import totp_key
 
 
@@ -99,3 +105,69 @@ async def latest_email_link(to: str, template: str) -> str | None:
         ).scalar_one_or_none()
     link = row.get("link") if isinstance(row, dict) else None
     return str(link) if link else None
+
+
+# --------------------------------------------------------------------------- Phase 5 E2E state
+# Bidding scenarios need states a browser can't reach quickly: a passed bidding deadline, a
+# developer's skill with test evidence (the newcomer rule), an experienced reputation.
+
+
+async def close_bidding(project_id: uuid.UUID) -> bool:
+    """Move a project's bidding deadline one minute into the past (the job hasn't run yet)."""
+    async with open_session(DbContext.system(), job=True) as db:
+        project = await db.get(Project, project_id)
+        if project is None:
+            return False
+        project.bidding_deadline = get_clock().now() - timedelta(minutes=1)
+        await db.commit()
+    return True
+
+
+async def add_skill_evidence(user_id: uuid.UUID, skill_name: str, score: Decimal) -> bool:
+    """Give a developer a listed skill and a passing (or not) TEST evidence score for it."""
+    async with open_session(DbContext.system(), job=True) as db:
+        skill_id = await db.scalar(select(Skill.id).where(Skill.name == skill_name))
+        if skill_id is None:
+            return False
+        existing = await db.scalar(
+            select(DeveloperSkill.id).where(
+                DeveloperSkill.user_id == user_id, DeveloperSkill.skill_id == skill_id
+            )
+        )
+        if existing is None:
+            db.add(DeveloperSkill(user_id=user_id, skill_id=skill_id, self_level=3))
+        db.add(
+            SkillEvidence(
+                user_id=user_id,
+                skill_id=skill_id,
+                source=EvidenceSource.TEST,
+                score=score,
+                at=get_clock().now(),
+            )
+        )
+        await db.commit()
+    return True
+
+
+async def set_reputation(user_id: uuid.UUID, p: Decimal, c: Decimal) -> None:
+    """Store an experienced developer's reputation snapshot (Phase 5 reads snapshots only)."""
+    async with open_session(DbContext.system(), job=True) as db:
+        await db.execute(
+            delete(ReputationSnapshot).where(ReputationSnapshot.developer_id == user_id)
+        )
+        db.add(
+            ReputationSnapshot(
+                developer_id=user_id,
+                omega=Decimal("0.600"),
+                x=Decimal("0.700"),
+                xm=Decimal("0.660"),
+                beta=Decimal("0.800"),
+                mu=Decimal("0.700"),
+                t=Decimal("0.800"),
+                c=c,
+                p=p,
+                completed_projects=6,
+                distinct_clients=4,
+            )
+        )
+        await db.commit()

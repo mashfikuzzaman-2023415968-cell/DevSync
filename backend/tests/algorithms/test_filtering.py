@@ -18,7 +18,9 @@ from app.algorithms.filtering import (
     ProjectInput,
     ReasonCode,
     SlotSpec,
+    cheapest_team_cost,
     classify_bid,
+    explain_bid,
     filter_bids,
 )
 
@@ -201,13 +203,101 @@ def test_shortlist_caps_at_k_and_marks_not_shortlisted() -> None:
 # --------------------------------------------------------------- pcs_replication mode
 
 
-def test_pcs_replication_disables_newcomer_rule_and_relaxation() -> None:
+def test_pcs_replication_disables_newcomer_rule() -> None:
     params = FilterParams(p0=0.45, c0=0.40, team_size=1, mode=Mode.PCS_REPLICATION)
     # In replication mode a newcomer is judged by P like everyone else (no evidence shortcut).
     b = bid(is_newcomer=True, p=0.10, skill_evidence_score=0.99)
     assert classify_bid(b, PROJECT, params, params.p0, params.c0) is ReasonCode.LOW_PERFORMANCE
-    result = filter_bids([b], PROJECT, params)
-    assert result.relaxations == ()  # no relaxation in replication mode
+
+
+def test_pcs_replication_relaxes_only_when_nobody_qualifies() -> None:
+    # [PCS] Algorithm 1 lines 3–5: re-initialize P0/C0 only when S' is empty (D54).
+    params = FilterParams(p0=0.45, c0=0.40, team_size=2, mode=Mode.PCS_REPLICATION)
+    project = _slot_project(2)
+    # One bid qualifies, the slot needs two: devsync would relax, the paper does not.
+    bids = [bid("ok", developer_id="d1"), bid("low", developer_id="d2", p=0.41)]
+    result = filter_bids(bids, project, params)
+    assert result.relaxations == ()
+    assert result.eligible == ("ok",)
+    assert result.too_few
+    devsync = filter_bids(bids, project, FilterParams(p0=0.45, c0=0.40, team_size=2))
+    assert [r.p0 for r in devsync.relaxations] == [0.40]
+    assert set(devsync.eligible) == {"ok", "low"}
+
+
+def test_pcs_replication_relaxes_when_the_set_is_empty() -> None:
+    params = FilterParams(p0=0.45, c0=0.40, team_size=1, mode=Mode.PCS_REPLICATION)
+    result = filter_bids([bid("low", p=0.36)], PROJECT, params)
+    assert [r.p0 for r in result.relaxations] == [0.40, 0.35]  # stops once S' is non-empty
+    assert result.eligible == ("low",)
+
+
+def test_pcs_replication_without_bids_does_not_relax() -> None:
+    params = FilterParams(team_size=1, mode=Mode.PCS_REPLICATION)
+    result = filter_bids([], PROJECT, params)
+    assert result.relaxations == ()
+    assert result.too_few
+
+
+# --------------------------------------------------------------- explanation trace
+
+
+def test_explain_lists_every_check_with_values() -> None:
+    checks = {c.name: c for c in explain_bid(bid(), PROJECT, PARAMS, 0.45, 0.40)}
+    assert list(checks) == [
+        "account_active",
+        "has_slot_skill",
+        "no_conflict",
+        "available",
+        "performance",
+        "competency",
+        "days",
+        "price",
+    ]
+    assert all(c.ok for c in checks.values())
+    assert (checks["performance"].required, checks["performance"].actual) == (0.45, 0.80)
+    assert (checks["days"].required, checks["days"].actual) == (30, 20)
+    assert (checks["price"].required, checks["price"].actual) == (11_400_000, 1_800_000)
+
+
+def test_explain_newcomer_uses_skill_evidence_instead_of_performance() -> None:
+    b = bid(is_newcomer=True, p=0.0, c=0.0, skill_evidence_score=0.85)
+    checks = {c.name: c for c in explain_bid(b, PROJECT, PARAMS, 0.45, 0.40)}
+    assert "performance" not in checks
+    assert "competency" not in checks
+    assert checks["skill_evidence"].ok
+    assert (checks["skill_evidence"].required, checks["skill_evidence"].actual) == (0.60, 0.85)
+
+
+def test_explain_marks_the_failing_check() -> None:
+    checks = explain_bid(bid(t_days=31), PROJECT, PARAMS, 0.45, 0.40)
+    failing = [c.name for c in checks if not c.ok]
+    assert failing == ["days"]
+
+
+# --------------------------------------------------------------- team cost estimate
+
+
+def test_cheapest_team_cost_picks_the_cheapest_per_slot() -> None:
+    project = ProjectInput(30, 11_400_000, {"s1": SlotSpec("react", 2), "s2": SlotSpec("api", 1)})
+    bids = [
+        bid("a", slot_id="s1", c_paisa=2_000_000),
+        bid("b", slot_id="s1", c_paisa=1_500_000),
+        bid("c", slot_id="s1", c_paisa=1_000_000),
+        bid("d", slot_id="s2", c_paisa=3_000_000),
+        bid("e", slot_id="s2", c_paisa=500_000),  # cheapest overall but not eligible
+    ]
+    cost = cheapest_team_cost(bids, {"a", "b", "c", "d"}, project)
+    assert cost.total_paisa == 1_000_000 + 1_500_000 + 3_000_000
+    assert cost.complete
+    assert cost.budget_after_fee_paisa == 11_400_000
+
+
+def test_cheapest_team_cost_reports_an_incomplete_team() -> None:
+    project = ProjectInput(30, 11_400_000, {"s1": SlotSpec("react", 2)})
+    cost = cheapest_team_cost([bid("a", slot_id="s1")], {"a"}, project)
+    assert not cost.complete
+    assert cost.total_paisa == 1_800_000
 
 
 # --------------------------------------------------------------- reason precedence

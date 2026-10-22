@@ -26,6 +26,7 @@ class ProjectCard(BaseModel):
     bidding_deadline: datetime | None
     skills: list[str]
     created_at: datetime
+    open_for_bids: bool  # BIDDING and before the bidding deadline (server time)
 
 
 class RecommendedProject(BaseModel):
@@ -33,6 +34,8 @@ class RecommendedProject(BaseModel):
 
     project: ProjectCard
     skill_match_count: int
+    matched_skills: list[str]  # your skills this project needs (deadline fits your usual pace)
+    typical_days: int | None  # your median days on those skills, when you have past bids
 
 
 class SlotCard(BaseModel):

@@ -117,7 +117,7 @@ export default function FindProjectsPage() {
             <Card>
               <CardHeader
                 title="Recommended for you"
-                description="Projects matching your skills."
+                description="Open projects needing your skills, with deadlines that fit your usual pace and hours you have free."
               />
               <ul className="mt-3 flex flex-wrap gap-2">
                 {recommended.data.slice(0, 6).map((r) => (
@@ -126,9 +126,11 @@ export default function FindProjectsPage() {
                       <Link to={`/dev/projects/${r.project.id}`}>
                         {r.project.title}
                         <span className="text-text-muted">
-                          {r.skill_match_count === 1
-                            ? "1 matching skill"
-                            : `${String(r.skill_match_count)} matching skills`}
+                          {r.matched_skills.length > 0
+                            ? `Needs ${r.matched_skills.join(", ")}`
+                            : r.skill_match_count === 1
+                              ? "1 matching skill"
+                              : `${String(r.skill_match_count)} matching skills`}
                         </span>
                       </Link>
                     </Button>

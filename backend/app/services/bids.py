@@ -2,15 +2,23 @@
 
 Algorithm 1 (`algorithms/filtering.py`) decides eligibility; this service builds its inputs from
 the bids, the project and the developers' reputation snapshots (via `reputation_read`), and never
-lets one developer see another's bid (§14.5 — enforced again by RLS). Bids may be placed or edited
-only while the project is `BIDDING` (§8); an invalid state is a 409 `INVALID_STATE`.
+lets one developer see another's bid (§14.5 — enforced again by RLS). Bids may be placed, edited
+or withdrawn only while the project is `BIDDING` **and** its bidding deadline has not passed (§8,
+§13.5 #11 "edit/withdraw until deadline"); otherwise 409 `INVALID_STATE`. The deadline job moves
+the project on later, so the time check does not depend on when the job runs (D54).
+
+A project's minimum standards are its own `min_performance`/`min_competency` when the client
+lowered them (too-few-bids actions, `services/bidding_terms.py`), else the platform `filter.P0`/
+`filter.C0`. Bidders' skills, evidence, hours and reservations are read in batches, so the
+client's view costs a fixed number of queries however many bids a project has.
 """
 
 from __future__ import annotations
 
 import uuid
 from collections.abc import Sequence
-from datetime import date, timedelta
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,28 +27,33 @@ from app.algorithms import availability as avail
 from app.algorithms.filtering import (
     Advancement,
     BidInput,
+    Check,
     FilterParams,
     FilterResult,
     Mode,
     ProjectInput,
     ReasonCode,
     SlotSpec,
+    cheapest_team_cost,
     classify_bid,
+    explain_bid,
     filter_bids,
 )
 from app.core.audit import write_audit
 from app.core.errors import DomainError, ErrorCode, NotFoundError
+from app.core.money import format_taka
 from app.core.settings_cache import active_settings
 from app.db.context import DbContext
 from app.db.session import open_session
 from app.models.bidding import Bid, BidStatus
 from app.models.identity import User
-from app.models.profiles import DeveloperProfile, SkillEvidence
+from app.models.profiles import DeveloperProfile, Skill
 from app.models.projects import Project, ProjectSlot, ProjectStatus
 from app.repositories import bids as repo
 from app.repositories import projects as projrepo
 from app.schemas.bids import (
     BidCreate,
+    BiddingWindow,
     BidOut,
     BidUpdate,
     ClientBidOut,
@@ -48,11 +61,15 @@ from app.schemas.bids import (
     ConstraintCheck,
     EligibilityIn,
     EligibilityOut,
+    NewcomerEvidence,
+    PortfolioRef,
     RelaxationOut,
     SlotCoverage,
+    TeamCostOut,
+    Thresholds,
 )
 from app.schemas.platform_settings import PlatformSettingsValues
-from app.services import reputation_read
+from app.services import marketplace, reputation_read
 from app.services.context import Ctx
 
 _ADVANCEMENT = Advancement.C  # Balanced default until the client picks a preset at formation.
@@ -71,6 +88,47 @@ _REASON_TEXT = {
 }
 
 
+# --------------------------------------------------------------------------- terms
+
+
+@dataclass(frozen=True)
+class Terms:
+    """The parts of a project Algorithm 1 depends on; a what-if evaluation overrides them."""
+
+    p0: float
+    c0: float
+    budget_paisa: int
+    slot_counts: dict[uuid.UUID, int]
+
+
+def default_thresholds(settings: PlatformSettingsValues) -> tuple[float, float]:
+    return float(settings.filter.P0), float(settings.filter.C0)
+
+
+def threshold_floor(settings: PlatformSettingsValues) -> tuple[float, float]:
+    """How far a client may lower the standards: the default minus the full automatic
+    relaxation (3 × 0.05 by default → P 45 → 30, C 40 → 25; DECISIONS D54)."""
+    f = settings.filter
+    span = float(f.relax_step) * f.relax_max_steps
+    return max(0.0, round(float(f.P0) - span, 2)), max(0.0, round(float(f.C0) - span, 2))
+
+
+def project_terms(
+    project: Project, slots: Sequence[ProjectSlot], settings: PlatformSettingsValues
+) -> Terms:
+    p0, c0 = default_thresholds(settings)
+    return Terms(
+        p0=float(project.min_performance) if project.min_performance is not None else p0,
+        c0=float(project.min_competency) if project.min_competency is not None else c0,
+        budget_paisa=project.budget_paisa,
+        slot_counts={s.id: s.count for s in slots},
+    )
+
+
+def bidding_closed(project: Project, now: datetime) -> bool:
+    return project.bidding_deadline is not None and now >= project.bidding_deadline
+
+
 # --------------------------------------------------------------------------- loading
 
 
@@ -80,6 +138,8 @@ async def _bidding_project(ctx: Ctx, project_id: uuid.UUID) -> Project:
         raise NotFoundError
     if project.status != ProjectStatus.BIDDING:
         raise DomainError("This project is not open for bids.", code=ErrorCode.INVALID_STATE)
+    if bidding_closed(project, ctx.now):
+        raise DomainError("Bidding for this project has closed.", code=ErrorCode.INVALID_STATE)
     return project
 
 
@@ -95,50 +155,29 @@ def _period(project: Project, today: date) -> avail.Period:
     return avail.Period(from_=start, to=start + timedelta(days=project.deadline_days))
 
 
-async def _evidence_scores(db: AsyncSession, developer_id: uuid.UUID) -> dict[uuid.UUID, float]:
-    """Best skill-evidence score per skill for a developer (for the newcomer rule)."""
-    rows = await db.execute(
-        select(SkillEvidence.skill_id, SkillEvidence.score).where(
-            SkillEvidence.user_id == developer_id
-        )
-    )
-    best: dict[uuid.UUID, float] = {}
-    for skill_id, score in rows:
-        best[skill_id] = max(best.get(skill_id, 0.0), float(score))
-    return best
-
-
-async def _available(
-    db: AsyncSession, developer_id: uuid.UUID, project: Project, commitment: int, today: date
-) -> bool:
-    reservations = [
-        avail.Reservation(avail.Period(r.from_date, r.to_date), r.hours_per_week)
-        for r in await repo.confirmed_reservations(db, developer_id)
-        if r.project_id != project.id
-    ]
-    profile = await db.scalar(
-        select(DeveloperProfile).where(DeveloperProfile.user_id == developer_id)
-    )
-    profile_hours = profile.hours_per_week if profile else 20
-    return avail.is_feasible(reservations, _period(project, today), commitment, profile_hours)
-
-
-def _project_input(project: Project, slots: Sequence[ProjectSlot], fee_bp: int) -> ProjectInput:
-    after_fee = project.budget_paisa * (10_000 - fee_bp) // 10_000
+def _project_input(
+    terms: Terms, project: Project, slots: Sequence[ProjectSlot], fee_bp: int
+) -> ProjectInput:
+    after_fee = terms.budget_paisa * (10_000 - fee_bp) // 10_000
     return ProjectInput(
         deadline_days=project.deadline_days,
         budget_after_fee_paisa=after_fee,
-        slots={str(s.id): SlotSpec(skill_id=str(s.skill_id), count=s.count) for s in slots},
+        slots={
+            str(s.id): SlotSpec(
+                skill_id=str(s.skill_id), count=terms.slot_counts.get(s.id, s.count)
+            )
+            for s in slots
+        },
     )
 
 
-def _params(settings: PlatformSettingsValues, team_size: int) -> FilterParams:
+def _params(settings: PlatformSettingsValues, terms: Terms) -> FilterParams:
     f = settings.filter
     return FilterParams(
-        p0=float(f.P0),
-        c0=float(f.C0),
+        p0=terms.p0,
+        c0=terms.c0,
         advancement=_ADVANCEMENT,
-        team_size=team_size,
+        team_size=sum(terms.slot_counts.values()),
         newcomer_pass_mark=float(settings.newcomer.pass_mark),
         newcomer_competency_check=f.newcomer_competency_check,
         relax_step=float(f.relax_step),
@@ -146,6 +185,70 @@ def _params(settings: PlatformSettingsValues, team_size: int) -> FilterParams:
         shortlist_factor=f.shortlist_factor,
         shortlist_min=f.shortlist_min,
         mode=Mode(settings.algorithm.mode),
+    )
+
+
+@dataclass(frozen=True)
+class _BidderData:
+    skills: dict[uuid.UUID, set[uuid.UUID]]
+    evidence: dict[uuid.UUID, dict[uuid.UUID, float]]
+    hours: dict[uuid.UUID, int]
+    reservations: dict[uuid.UUID, list[avail.Reservation]]
+
+
+async def _bidder_data(
+    db: AsyncSession, developer_ids: Sequence[uuid.UUID], project_id: uuid.UUID
+) -> _BidderData:
+    raw = await repo.confirmed_reservations_by_developer(db, developer_ids)
+    return _BidderData(
+        skills=await repo.skills_by_developer(db, developer_ids),
+        evidence=await repo.best_evidence_by_developer(db, developer_ids),
+        hours=await repo.profile_hours_by_developer(db, developer_ids),
+        reservations={
+            dev: [
+                avail.Reservation(avail.Period(r.from_date, r.to_date), r.hours_per_week)
+                for r in rows
+                if r.project_id != project_id
+            ]
+            for dev, rows in raw.items()
+        },
+    )
+
+
+def _bid_input(
+    *,
+    bid_id: str,
+    developer_id: uuid.UUID,
+    slot: ProjectSlot | None,
+    rep: reputation_read.ReputationView,
+    data: _BidderData,
+    days: int,
+    price: int,
+    commitment: int,
+    period: avail.Period,
+    active: bool,
+) -> BidInput:
+    evidence = data.evidence.get(developer_id, {})
+    return BidInput(
+        bid_id=bid_id,
+        slot_id=str(slot.id) if slot else "",
+        skill_id=str(slot.skill_id) if slot else "",
+        developer_id=str(developer_id),
+        is_newcomer=rep.is_newcomer,
+        p=rep.p,
+        c=rep.c,
+        t_days=days,
+        c_paisa=price,
+        skill_evidence_score=evidence.get(slot.skill_id) if slot is not None else None,
+        has_slot_skill=slot is not None and slot.skill_id in data.skills.get(developer_id, set()),
+        active=active,
+        available=avail.is_feasible(
+            data.reservations.get(developer_id, []),
+            period,
+            commitment,
+            data.hours.get(developer_id, 20),
+        ),
+        self_dealing=False,
     )
 
 
@@ -159,6 +262,24 @@ async def _default_hours(ctx: Ctx, override: int | None) -> int:
         select(DeveloperProfile).where(DeveloperProfile.user_id == ctx.uid)
     )
     return min(20, profile.hours_per_week if profile else 20)
+
+
+async def _check_portfolio(ctx: Ctx, item_ids: Sequence[uuid.UUID]) -> list[str]:
+    """A bid may only point at the bidder's own portfolio items (no duplicates)."""
+    if len(set(item_ids)) != len(item_ids):
+        raise DomainError(
+            "Each portfolio item can be attached once.",
+            code=ErrorCode.VALIDATION_ERROR,
+            fields={"portfolio_item_ids": "duplicate item"},
+        )
+    owned = await repo.owned_portfolio_ids(ctx.db, ctx.uid, item_ids)
+    if owned != set(item_ids):
+        raise DomainError(
+            "Attach items from your own portfolio.",
+            code=ErrorCode.VALIDATION_ERROR,
+            fields={"portfolio_item_ids": "not one of your portfolio items"},
+        )
+    return [str(x) for x in item_ids]
 
 
 def _bid_out(bid: Bid) -> BidOut:
@@ -187,6 +308,7 @@ async def create_bid(ctx: Ctx, project_id: uuid.UUID, body: BidCreate) -> BidOut
             code=ErrorCode.VALIDATION_ERROR,
             fields={"slot_id": "unknown slot"},
         )
+    portfolio = await _check_portfolio(ctx, body.portfolio_item_ids)
     if await repo.active_bid(ctx.db, project_id, ctx.uid) is not None:
         raise DomainError(
             "You already have an active bid on this project.", code=ErrorCode.INVALID_STATE
@@ -199,7 +321,7 @@ async def create_bid(ctx: Ctx, project_id: uuid.UUID, body: BidCreate) -> BidOut
         days_needed=body.days_needed,
         proposal=body.proposal.strip(),
         expected_contribution=body.expected_contribution.strip(),
-        portfolio_item_ids=[str(x) for x in body.portfolio_item_ids],
+        portfolio_item_ids=portfolio,
         hours_per_week_committed=await _default_hours(ctx, body.hours_per_week_committed),
         status=BidStatus.ACTIVE,
     )
@@ -210,6 +332,7 @@ async def create_bid(ctx: Ctx, project_id: uuid.UUID, body: BidCreate) -> BidOut
     )
     await ctx.db.commit()
     await ctx.db.refresh(bid)
+    await marketplace.forget_recommendations(ctx.uid)
     return _bid_out(bid)
 
 
@@ -241,8 +364,8 @@ async def update_bid(ctx: Ctx, bid_id: uuid.UUID, body: BidUpdate) -> BidOut:
         bid.proposal = data["proposal"].strip()
     if data.get("expected_contribution") is not None:
         bid.expected_contribution = data["expected_contribution"].strip()
-    if data.get("portfolio_item_ids") is not None:
-        bid.portfolio_item_ids = [str(x) for x in data["portfolio_item_ids"]]
+    if body.portfolio_item_ids is not None:
+        bid.portfolio_item_ids = await _check_portfolio(ctx, body.portfolio_item_ids)
     await write_audit(
         ctx.db, action="bid.update", entity_type="bid", entity_id=bid.id, actor_id=ctx.uid
     )
@@ -261,10 +384,66 @@ async def withdraw_bid(ctx: Ctx, bid_id: uuid.UUID) -> None:
         ctx.db, action="bid.withdraw", entity_type="bid", entity_id=bid.id, actor_id=ctx.uid
     )
     await ctx.db.commit()
+    await marketplace.forget_recommendations(ctx.uid)
 
 
 async def my_bids(ctx: Ctx) -> list[BidOut]:
     return [_bid_out(b) for b in await repo.list_for_developer(ctx.db, ctx.uid)]
+
+
+# --------------------------------------------------------------------------- check text
+
+
+def _pct(score: float) -> str:
+    return f"{score * 100:.0f}"
+
+
+def _check_out(check: Check, skill: str) -> ConstraintCheck:
+    """Human text for one Algorithm 1 check (scores shown ×100, money as ৳)."""
+    req, act = check.required, check.actual
+    match check.name:
+        case "account_active":
+            detail = "Account active" if check.ok else "Account not active"
+        case "has_slot_skill":
+            detail = f"Lists {skill}" if check.ok else f"Doesn't list {skill}"
+        case "no_conflict":
+            detail = "No conflict of interest" if check.ok else "Conflict of interest"
+        case "available":
+            detail = (
+                "Enough free hours over the project period"
+                if check.ok
+                else "Not enough free hours over the project period"
+            )
+        case "skill_evidence":
+            detail = (
+                f"No {skill} test result (newcomers need {_pct(float(req or 0))}%)"
+                if act is None
+                else f"{skill} test {_pct(float(act))}% (newcomers need {_pct(float(req or 0))}%)"
+            )
+        case "performance":
+            detail = f"Performance {_pct(float(act or 0))} (minimum {_pct(float(req or 0))})"
+        case "competency":
+            detail = f"Competency {_pct(float(act or 0))} (minimum {_pct(float(req or 0))})"
+        case "days":
+            detail = f"{act} days (deadline {req} days)"
+        case "price":
+            detail = f"{format_taka(int(act or 0))} (budget after fee {format_taka(int(req or 0))})"
+        case _:
+            detail = check.name
+    return ConstraintCheck(
+        name=check.name,
+        ok=check.ok,
+        detail=detail,
+        required=float(req) if req is not None else None,
+        actual=float(act) if act is not None else None,
+    )
+
+
+async def _skill_names(db: AsyncSession, skill_ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, str]:
+    if not skill_ids:
+        return {}
+    rows = await db.execute(select(Skill.id, Skill.name).where(Skill.id.in_(skill_ids)))
+    return dict(rows.tuples().all())
 
 
 # --------------------------------------------------------------------------- eligibility preview
@@ -273,6 +452,8 @@ async def my_bids(ctx: Ctx) -> list[BidOut]:
 async def eligibility_preview(
     ctx: Ctx, project_id: uuid.UUID, body: EligibilityIn
 ) -> EligibilityOut:
+    """Dry-run one draft bid against the project's own constraints. It never ranks the bid
+    against other (sealed) bids, so NOT_SHORTLISTED can't appear here (§14.5)."""
     project = await _bidding_project(ctx, project_id)
     settings = await active_settings(ctx.db)
     slots = {s.id: s for s in await projrepo.load_slots(ctx.db, project_id)}
@@ -283,30 +464,26 @@ async def eligibility_preview(
             code=ErrorCode.VALIDATION_ERROR,
             fields={"slot_id": "unknown slot"},
         )
+    terms = project_terms(project, list(slots.values()), settings)
     rep = await reputation_read.read_one(ctx.db, ctx.uid, settings)
-    dev_skills = await repo.developer_skill_ids(ctx.db, ctx.uid)
-    evidence = await _evidence_scores(ctx.db, ctx.uid)
-    commitment = await _default_hours(ctx, body.hours_per_week_committed)
-    bid = BidInput(
+    data = await _bidder_data(ctx.db, [ctx.uid], project.id)
+    bid = _bid_input(
         bid_id="preview",
-        slot_id=str(slot.id),
-        skill_id=str(slot.skill_id),
-        developer_id=str(ctx.uid),
-        is_newcomer=rep.is_newcomer,
-        p=rep.p,
-        c=rep.c,
-        t_days=body.days_needed,
-        c_paisa=body.price_paisa,
-        skill_evidence_score=evidence.get(slot.skill_id),
-        has_slot_skill=slot.skill_id in dev_skills,
+        developer_id=ctx.uid,
+        slot=slot,
+        rep=rep,
+        data=data,
+        days=body.days_needed,
+        price=body.price_paisa,
+        commitment=await _default_hours(ctx, body.hours_per_week_committed),
+        period=_period(project, ctx.now.date()),
         active=ctx.principal.is_active,
-        available=await _available(ctx.db, ctx.uid, project, commitment, ctx.now.date()),
-        self_dealing=False,
     )
-    proj = _project_input(project, list(slots.values()), settings.pay.platform_fee_bp)
-    params = _params(settings, project.team_size)
+    proj = _project_input(terms, project, list(slots.values()), settings.pay.platform_fee_bp)
+    params = _params(settings, terms)
     reason = classify_bid(bid, proj, params, params.p0, params.c0)
-    checks = _preview_checks(bid, proj, params)
+    skill = (await _skill_names(ctx.db, [slot.skill_id])).get(slot.skill_id, "this skill")
+    checks = [_check_out(c, skill) for c in explain_bid(bid, proj, params, params.p0, params.c0)]
     message = (
         "You meet every requirement."
         if reason is None
@@ -320,145 +497,223 @@ async def eligibility_preview(
     )
 
 
-def _preview_checks(
-    bid: BidInput, proj: ProjectInput, params: FilterParams
-) -> list[ConstraintCheck]:
-    newcomer = bid.is_newcomer and params.mode is Mode.DEVSYNC
-    checks = [
-        ConstraintCheck(
-            name="days",
-            ok=bid.t_days <= proj.deadline_days,
-            detail=f"{bid.t_days} of {proj.deadline_days} days",
-        ),
-        ConstraintCheck(
-            name="price",
-            ok=bid.c_paisa <= proj.budget_after_fee_paisa,
-            detail="within budget" if bid.c_paisa <= proj.budget_after_fee_paisa else "over budget",
-        ),
-        ConstraintCheck(name="skill", ok=bid.has_slot_skill, detail="skill listed"),
-        ConstraintCheck(name="available", ok=bid.available, detail="hours available"),
+# --------------------------------------------------------------------------- evaluation
+
+
+@dataclass(frozen=True)
+class Evaluation:
+    """Algorithm 1 over a project's active bids, with everything the views need."""
+
+    project: Project
+    terms: Terms
+    slots: list[ProjectSlot]
+    bids: list[Bid]
+    inputs: list[BidInput]
+    result: FilterResult
+    reps: dict[uuid.UUID, reputation_read.ReputationView]
+    params: FilterParams
+    proj: ProjectInput
+
+
+async def evaluate(
+    db: AsyncSession,
+    project: Project,
+    settings: PlatformSettingsValues,
+    today: date,
+    terms: Terms | None = None,
+) -> Evaluation:
+    """Run Algorithm 1 over a project's active bids, optionally under changed `terms` (a
+    what-if for the too-few-bids actions). Ctx-free so the deadline job can reuse it."""
+    bids = list(await repo.list_active_for_project(db, project.id))
+    slots = list(await projrepo.load_slots(db, project.id))
+    terms = terms or project_terms(project, slots, settings)
+    dev_ids = [b.developer_id for b in bids]
+    reps = await reputation_read.read_many(db, dev_ids, settings)
+    data = await _bidder_data(db, dev_ids, project.id)
+    by_slot = {s.id: s for s in slots}
+    period = _period(project, today)
+    inputs = [
+        _bid_input(
+            bid_id=str(b.id),
+            developer_id=b.developer_id,
+            slot=by_slot.get(b.slot_id),
+            rep=reps[b.developer_id],
+            data=data,
+            days=b.days_needed,
+            price=b.price_paisa,
+            commitment=b.hours_per_week_committed,
+            period=period,
+            active=True,
+        )
+        for b in bids
     ]
-    if newcomer:
-        has = (
-            bid.skill_evidence_score is not None
-            and bid.skill_evidence_score >= params.newcomer_pass_mark
-        )
-        checks.append(ConstraintCheck(name="skill_evidence", ok=has, detail="passing skill test"))
-    else:
-        checks.append(
-            ConstraintCheck(
-                name="performance",
-                ok=bid.p >= params.p0 - 1e-9,
-                detail=f"P {bid.p:.2f} ≥ {params.p0:.2f}",
-            )
-        )
-        checks.append(
-            ConstraintCheck(
-                name="competency",
-                ok=bid.c >= params.c0 - 1e-9,
-                detail=f"C {bid.c:.2f} ≥ {params.c0:.2f}",
-            )
-        )
-    return checks
-
-
-# --------------------------------------------------------------------------- client bids view
+    proj = _project_input(terms, project, slots, settings.pay.platform_fee_bp)
+    params = _params(settings, terms)
+    return Evaluation(
+        project=project,
+        terms=terms,
+        slots=slots,
+        bids=bids,
+        inputs=inputs,
+        result=filter_bids(inputs, proj, params),
+        reps=reps,
+        params=params,
+        proj=proj,
+    )
 
 
 async def evaluate_project(
     db: AsyncSession, project: Project, settings: PlatformSettingsValues, today: date
 ) -> tuple[list[Bid], FilterResult, dict[uuid.UUID, reputation_read.ReputationView]]:
-    """Run Algorithm 1 over a project's active bids. Ctx-free so the deadline job can reuse it."""
-    bids = list(await repo.list_active_for_project(db, project.id))
-    slots = list(await projrepo.load_slots(db, project.id))
-    reps = await reputation_read.read_many(db, [b.developer_id for b in bids], settings)
-    inputs: list[BidInput] = []
-    for b in bids:
-        rep = reps[b.developer_id]
-        dev_skills = await repo.developer_skill_ids(db, b.developer_id)
-        evidence = await _evidence_scores(db, b.developer_id)
-        slot = next((s for s in slots if s.id == b.slot_id), None)
-        inputs.append(
-            BidInput(
-                bid_id=str(b.id),
-                slot_id=str(b.slot_id),
-                skill_id=str(slot.skill_id) if slot else "",
-                developer_id=str(b.developer_id),
-                is_newcomer=rep.is_newcomer,
-                p=rep.p,
-                c=rep.c,
-                t_days=b.days_needed,
-                c_paisa=b.price_paisa,
-                skill_evidence_score=(evidence.get(slot.skill_id) if slot is not None else None),
-                has_slot_skill=slot is not None and slot.skill_id in dev_skills,
-                active=True,
-                available=await _available(
-                    db, b.developer_id, project, b.hours_per_week_committed, today
-                ),
-                self_dealing=False,
-            )
+    """Run Algorithm 1 over a project's active bids (deadline job and seed entry point)."""
+    ev = await evaluate(db, project, settings, today)
+    return ev.bids, ev.result, ev.reps
+
+
+def coverage(ev: Evaluation) -> list[SlotCoverage]:
+    eligible = set(ev.result.eligible)
+    return [
+        SlotCoverage(
+            slot_id=s.id,
+            slot_label=s.label,
+            needed=ev.terms.slot_counts.get(s.id, s.count),
+            eligible=sum(1 for b in ev.bids if b.slot_id == s.id and str(b.id) in eligible),
         )
-    proj = _project_input(project, slots, settings.pay.platform_fee_bp)
-    result = filter_bids(inputs, proj, _params(settings, project.team_size))
-    return bids, result, reps
+        for s in ev.slots
+    ]
+
+
+def team_cost(ev: Evaluation) -> TeamCostOut:
+    cost = cheapest_team_cost(ev.inputs, set(ev.result.eligible), ev.proj)
+    return TeamCostOut(
+        total_paisa=cost.total_paisa,
+        budget_after_fee_paisa=cost.budget_after_fee_paisa,
+        complete=cost.complete,
+    )
+
+
+# --------------------------------------------------------------------------- client bids view
 
 
 async def client_bids(ctx: Ctx, project_id: uuid.UUID) -> ClientBidsOut:
     project = await _own_project(ctx, project_id)
+    return await bids_view(ctx, project)
+
+
+async def bids_view(ctx: Ctx, project: Project) -> ClientBidsOut:
+    """The client's view of every active bid with the Algorithm 1 verdict and its trace."""
     settings = await active_settings(ctx.db)
     # Eligibility needs each bidder's skills/evidence, which the client can't read directly;
     # evaluate in a SYSTEM session (the caller is already confirmed as the project's owner, and
-    # only the verdict — not raw developer data — is returned). See migration 0006.
+    # only the verdict and its trace — not raw developer data — are returned). See D50. The view
+    # is built inside the session: its ORM rows can't be read once it closes.
     async with open_session(DbContext.system(), job=True) as sysdb:
-        bids, result, reps = await evaluate_project(sysdb, project, settings, ctx.now.date())
-        slots = {s.id: s for s in await projrepo.load_slots(sysdb, project_id)}
+        ev = await evaluate(sysdb, project, settings, ctx.now.date())
+        dev_ids = [b.developer_id for b in ev.bids]
         names = {
             u.id: u.display_name
-            for u in await sysdb.scalars(
-                select(User).where(User.id.in_([b.developer_id for b in bids]))
-            )
+            for u in await sysdb.scalars(select(User).where(User.id.in_(dev_ids)))
         }
-        rejected = dict(result.rejected)
-        rows: list[ClientBidOut] = []
-        for b in bids:
-            bid_id = str(b.id)
-            reasons: list[str] = []
-            if bid_id in rejected:
-                reasons = [rejected[bid_id].value]
-            elif bid_id in result.not_shortlisted:
-                reasons = [ReasonCode.NOT_SHORTLISTED.value]
-            rep = reps[b.developer_id]
-            slot = slots.get(b.slot_id)
-            rows.append(
-                ClientBidOut(
-                    id=b.id,
-                    developer_id=b.developer_id,
-                    developer_name=names.get(b.developer_id, "Developer"),
-                    slot_id=b.slot_id,
-                    slot_label=slot.label if slot else "",
-                    status=b.status.value,
-                    price_paisa=b.price_paisa,
-                    days_needed=b.days_needed,
-                    competency=rep.c,
-                    performance=rep.p,
-                    is_newcomer=rep.is_newcomer,
-                    seeded=rep.seeded,
-                    eligible=bid_id in result.eligible,
-                    reasons=reasons,
-                )
-            )
-        coverage = [
-            SlotCoverage(
-                slot_id=s.id,
-                slot_label=s.label,
-                needed=s.count,
-                eligible=sum(1 for b in bids if b.slot_id == s.id and str(b.id) in result.eligible),
-            )
-            for s in slots.values()
-        ]
+        skill_names = await _skill_names(sysdb, [s.skill_id for s in ev.slots])
+        titles = await repo.portfolio_titles(
+            sysdb, [uuid.UUID(str(x)) for b in ev.bids for x in b.portfolio_item_ids]
+        )
+        rows = _client_rows(ev, names, skill_names, titles)
+        coverage_out = coverage(ev)
+        cost = team_cost(ev)
+    result = ev.result
+    used_p0 = result.relaxations[-1].p0 if result.relaxations else ev.params.p0
+    used_c0 = result.relaxations[-1].c0 if result.relaxations else ev.params.c0
+    default_p0, default_c0 = default_thresholds(settings)
+    floor_p0, floor_c0 = threshold_floor(settings)
     return ClientBidsOut(
         bids=rows,
-        coverage=coverage,
+        coverage=coverage_out,
         relaxations=[RelaxationOut(step=r.step, p0=r.p0, c0=r.c0) for r in result.relaxations],
         too_few=result.too_few,
+        evaluated_at=ctx.now,
+        thresholds=Thresholds(
+            p0=ev.params.p0,
+            c0=ev.params.c0,
+            default_p0=default_p0,
+            default_c0=default_c0,
+            floor_p0=floor_p0,
+            floor_c0=floor_c0,
+            used_p0=used_p0,
+            used_c0=used_c0,
+        ),
+        team_cost=cost,
+        budget_paisa=project.budget_paisa,
+        team_size=project.team_size,
+        bidding=BiddingWindow(
+            deadline=project.bidding_deadline,
+            closed=bidding_closed(project, ctx.now),
+            extensions_used=project.bidding_extensions,
+            max_extensions=settings.bidding.max_extensions,
+            extend_days=settings.bidding.extend_days,
+        ),
     )
+
+
+def _client_rows(
+    ev: Evaluation,
+    names: dict[uuid.UUID, str],
+    skill_names: dict[uuid.UUID, str],
+    titles: dict[uuid.UUID, str],
+) -> list[ClientBidOut]:
+    result = ev.result
+    rejected = dict(result.rejected)
+    eligible = set(result.eligible)
+    not_shortlisted = set(result.not_shortlisted)
+    used_p0 = result.relaxations[-1].p0 if result.relaxations else ev.params.p0
+    used_c0 = result.relaxations[-1].c0 if result.relaxations else ev.params.c0
+    slots = {s.id: s for s in ev.slots}
+    newcomer_rule = ev.params.mode is Mode.DEVSYNC
+    rows: list[ClientBidOut] = []
+    for b, inp in zip(ev.bids, ev.inputs, strict=True):
+        bid_id = str(b.id)
+        reasons: list[str] = []
+        if bid_id in rejected:
+            reasons = [rejected[bid_id].value]
+        elif bid_id in not_shortlisted:
+            reasons = [ReasonCode.NOT_SHORTLISTED.value]
+        rep = ev.reps[b.developer_id]
+        slot = slots.get(b.slot_id)
+        skill = skill_names.get(slot.skill_id, "this skill") if slot else "this skill"
+        evidence = (
+            NewcomerEvidence(skill=skill, score=inp.skill_evidence_score)
+            if newcomer_rule and rep.is_newcomer and inp.skill_evidence_score is not None
+            else None
+        )
+        item_ids = [uuid.UUID(str(x)) for x in b.portfolio_item_ids]
+        rows.append(
+            ClientBidOut(
+                id=b.id,
+                developer_id=b.developer_id,
+                developer_name=names.get(b.developer_id, "Developer"),
+                slot_id=b.slot_id,
+                slot_label=slot.label if slot else "",
+                status=b.status.value,
+                price_paisa=b.price_paisa,
+                days_needed=b.days_needed,
+                hours_per_week=b.hours_per_week_committed,
+                competency=rep.c,
+                teamwork=rep.xm,
+                performance=rep.p,
+                is_newcomer=rep.is_newcomer,
+                seeded=rep.seeded,
+                eligible=bid_id in eligible,
+                shortlisted=bid_id in eligible and bid_id not in not_shortlisted,
+                reasons=reasons,
+                checks=[
+                    _check_out(c, skill)
+                    for c in explain_bid(inp, ev.proj, ev.params, used_p0, used_c0)
+                ],
+                newcomer_evidence=evidence,
+                proposal=b.proposal,
+                expected_contribution=b.expected_contribution,
+                portfolio=[PortfolioRef(id=i, title=titles[i]) for i in item_ids if i in titles],
+                submitted_at=b.created_at,
+            )
+        )
+    return rows

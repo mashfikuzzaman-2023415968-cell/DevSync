@@ -1,7 +1,9 @@
 """Demo readiness check (spec §17.0): `make demo-check DEMO=N`.
 
 For a demo group it (1) runs the phase gate for the group's last phase (which chains the earlier
-phases), (2) resets and loads that stage's seed, (3) runs the scripted walkthrough
+phases), (2) resets and loads that stage's seed — on the demo stack (`make demo-reset`) **and** on
+the test stack the walkthrough drives (the gate only seeds it in a late step, so a gate that
+stops early used to leave it empty), (3) runs the scripted walkthrough
 `e2e/demos/demo-N.spec.ts` on chromium, firefox, webkit and a mobile viewport, three times, with
 video on, and (4) writes `runs/demos/demo-N.md` (gate result, captured artifacts, known
 limitations) for the student to rehearse with. Run from the repo root with the demo stack up.
@@ -25,6 +27,22 @@ REPEATS = 3
 def _run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
     print(f"$ {' '.join(cmd)}")
     return subprocess.run(cmd, cwd=ROOT, text=True, check=False)
+
+
+TEST_COMPOSE = [
+    "docker", "compose", "-p", "devsync-test",
+    "-f", "docker-compose.yml", "-f", "docker-compose.test.yml",
+]  # fmt: skip
+
+
+def _seed_test_stack(stage: int) -> subprocess.CompletedProcess[str]:
+    """Wipe users and load the stage seed on the test stack (the walkthrough's backend)."""
+    return _run(
+        [
+            *TEST_COMPOSE, "run", "--rm", "-T", "tests", "sh", "-c",
+            f"python scripts/demo_reset.py && python scripts/seed_demo.py --stage {stage}",
+        ]
+    )  # fmt: skip
 
 
 def _playwright_cmd(demo: int) -> list[str]:
@@ -98,13 +116,13 @@ def main() -> int:
 
     gate = _run(["python3", "backend/scripts/phase_gate.py", "--phase", str(phase)])
     reset = _run(["make", "demo-reset", f"STAGE={stage}"])
+    seeded = _seed_test_stack(stage)
     walk = _run(_playwright_cmd(args.demo))
 
-    report = _write_report(
-        args.demo, stage, gate.returncode == 0 and reset.returncode == 0, walk.returncode == 0
-    )
+    ready = gate.returncode == 0 and reset.returncode == 0 and seeded.returncode == 0
+    report = _write_report(args.demo, stage, ready, walk.returncode == 0)
     print(f"demo-check: wrote {report.relative_to(ROOT)}")
-    return 0 if gate.returncode == 0 and reset.returncode == 0 and walk.returncode == 0 else 1
+    return 0 if ready and walk.returncode == 0 else 1
 
 
 if __name__ == "__main__":

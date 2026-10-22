@@ -8,6 +8,8 @@ import type {
   ClientBids,
   EligibilityIn,
   EligibilityOut,
+  TermsChange,
+  TermsPreview,
 } from "@/api/types";
 
 export const keys = {
@@ -60,5 +62,28 @@ export function useClientBids(projectId: string) {
   return useQuery({
     queryKey: keys.clientBids(projectId),
     queryFn: () => api<ClientBids>(`/projects/${projectId}/bids`),
+  });
+}
+
+/** What a too-few-bids action would do (§9.19) — nothing is saved. */
+export function useTermsPreview(projectId: string) {
+  return useMutation({
+    meta: { inlineErrors: true },
+    mutationFn: (body: TermsChange) =>
+      api<TermsPreview>(`/projects/${projectId}/bidding-terms/preview`, { method: "POST", body }),
+  });
+}
+
+/** Lower the standards, raise the budget or reduce the team; returns the fresh bids view. */
+export function useChangeTerms(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    meta: { inlineErrors: true },
+    mutationFn: (body: TermsChange) =>
+      api<ClientBids>(`/projects/${projectId}/bidding-terms`, { method: "PATCH", body }),
+    onSuccess: (view) => {
+      qc.setQueryData(keys.clientBids(projectId), view);
+      void qc.invalidateQueries({ queryKey: ["projects"] });
+    },
   });
 }

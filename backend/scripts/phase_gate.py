@@ -22,6 +22,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -538,7 +539,7 @@ def _playwright(
     args = ["npx", "playwright", "test", "--grep", grep, "--reporter=list"]
     for p in projects:
         args += ["--project", p]
-    script = f"{before}{command or ' '.join(args)}"
+    script = f"{before}{command or shlex.join(args)}"
     env_args: list[str] = []
     # HOME inside the throwaway Playwright container (not a host temp file).
     container_env = {"E2E_BASE_URL": "https://localhost:8443", "HOME": "/tmp", **(env or {})}  # noqa: S108
@@ -679,10 +680,12 @@ def step_performance(g: Gate) -> str:
         command="node scripts/lighthouse.mjs",
     )
     notes.append(lighthouse)
+    # The frame-rate check and the live-3D hero tests need a real GPU: in step 13 Chromium renders
+    # WebGL with SwiftShader, so the hero (correctly) shows its poster there (D54).
     fps = _playwright(
-        g, "@perf", ["chromium-gpu"], image=_gpu_image(), docker_args=_gpu_device_args()
+        g, "@perf|@gpu", ["chromium-gpu"], image=_gpu_image(), docker_args=_gpu_device_args()
     )
-    notes.append(f"frame rate on the GPU: {fps}")
+    notes.append(f"frame rate and live 3D on the GPU: {fps}")
     if g.phase >= 4:
         in_tests(["pytest", "-q", "-p", "no:cacheprovider", "-m", "perf"])
         notes.append("algorithm budgets met")

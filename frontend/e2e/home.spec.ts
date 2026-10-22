@@ -21,30 +21,40 @@ async function wakeHero(page: Page) {
   await page.keyboard.press("Shift");
 }
 
-/** Expect the live 3D scene. Chromium is the reference engine and must reach it. Firefox and
- * WebKit in this container have no hardware WebGL (software or none), so for them the page must
- * still work — the poster is drawn and the fallback is the app's own — and the live-scene part
- * is skipped with that reason (DECISIONS D53). Real devices use the GPU. */
-async function expectLiveScene(page: Page, browserName: string) {
+/** Expect the live 3D scene. It needs a real GPU: the `chromium-gpu` project (gate step 16, with
+ * /dev/dri) must reach it. Everywhere else in the test container WebGL is software (Chromium's
+ * SwiftShader, WebKit) or missing (Firefox), so the page must fall back to its poster — drawn,
+ * with the app's own reason — and the live-scene part is skipped with that reason (D53, D54).
+ * WebKit hides its renderer name, so it may still go live; that is accepted too. */
+async function expectLiveScene(page: Page) {
+  const outcome = await liveOrPoster(page);
+  if (outcome.live) return;
+  test.skip(
+    true,
+    `${outcome.project}: no hardware WebGL in the test container (mode ${outcome.mode}, fallback ${outcome.fallback}); poster fallback verified, live scene checked on chromium-gpu`,
+  );
+}
+
+/** The scene goes live (required on chromium-gpu), or the poster fallback is verified. */
+async function liveOrPoster(page: Page) {
   await wakeHero(page);
-  if (browserName === "chromium") {
+  const project = test.info().project.name;
+  if (project === "chromium-gpu") {
     await expect.poll(() => heroMode(page), { timeout: 20_000 }).toBe("live");
-    return;
+    return { live: true, project, mode: "live", fallback: "none" };
   }
   const live = await expect
-    .poll(() => heroMode(page), { timeout: 20_000 })
+    .poll(() => heroMode(page), { timeout: 8_000 })
     .toBe("live")
     .then(() => true)
     .catch(() => false);
-  if (live) return;
-  const mode = await heroMode(page);
-  const fallback = await page.locator("[data-hero-mode]").getAttribute("data-fallback");
+  if (live) return { live: true, project, mode: "live", fallback: "none" };
+  const mode = String(await heroMode(page));
+  const fallback = (await page.locator("[data-hero-mode]").getAttribute("data-fallback")) ?? "none";
   await expect(page.locator("canvas[data-hero-poster]")).toHaveAttribute("data-drawn", "true");
   expect(["poster", "poster-only"]).toContain(mode);
-  test.skip(
-    true,
-    `${browserName}: no hardware WebGL in the test container (mode ${String(mode)}, fallback ${fallback ?? "none"}); poster fallback verified`,
-  );
+  if (project === "chromium") expect(fallback).toBe("software-webgl");
+  return { live: false, project, mode, fallback };
 }
 
 async function scrollBy(page: Page, dy: number, isMobile: boolean) {
@@ -142,9 +152,8 @@ test("signed-in users opening / land on their role home; logout returns to / @e2
   await expect(page.getByRole("heading", { level: 1, name: HEADLINE })).toBeVisible();
 });
 
-test("poster shows first, the headline is the LCP element and the live scene follows @e2e", async ({
+test("poster shows first, the headline is the LCP element and the live scene follows @e2e @gpu", async ({
   page,
-  browserName,
   isMobile,
 }) => {
   await page.addInitScript(() => {
@@ -164,7 +173,7 @@ test("poster shows first, the headline is the LCP element and the live scene fol
   // The heading becomes one plain text block once its words have appeared.
   await expect(page.locator("#hero-title")).toBeVisible();
   await expect(page.locator("#hero-title span")).toHaveCount(0);
-  await expectLiveScene(page, browserName);
+  await expectLiveScene(page);
   // Interacting finalizes LCP.
   await page.mouse.click(5, 300);
   const lcp = await page.evaluate(() => (window as unknown as { __lcp: string[] }).__lcp);
@@ -174,13 +183,12 @@ test("poster shows first, the headline is the LCP element and the live scene fol
   else expect(lcp.at(-1)).toBe("H1#hero-title@hero");
 });
 
-test("scrolling snaps the constellation into a team with the chip @e2e", async ({
+test("scrolling snaps the constellation into a team with the chip @e2e @gpu", async ({
   page,
   isMobile,
-  browserName,
 }) => {
   await page.goto("/");
-  await expectLiveScene(page, browserName);
+  await expectLiveScene(page);
   const chip = page.locator("[data-hero-chip]");
   const opacity = async () => Number(await chip.evaluate((el) => getComputedStyle(el).opacity));
   await expect(chip).toHaveCSS("opacity", "0");
@@ -192,9 +200,9 @@ test("scrolling snaps the constellation into a team with the chip @e2e", async (
   await expect.poll(opacity, { timeout: 10_000 }).toBeLessThan(0.1);
 });
 
-test("the render loop stops when the hero is off screen @e2e", async ({ page, browserName }) => {
+test("the render loop stops when the hero is off screen @e2e @gpu", async ({ page }) => {
   await page.goto("/");
-  await expectLiveScene(page, browserName);
+  await expectLiveScene(page);
   const frames = () =>
     page.evaluate(() => (window as unknown as { __dsHeroFrames?: number }).__dsHeroFrames ?? 0);
   const a = await frames();
@@ -302,10 +310,9 @@ test("reduced motion shows final states with no movement @e2e", async ({ page })
   ).toBeVisible();
 });
 
-test("the 3D chunk is never requested off the homepage; nothing leaves the origin @e2e", async ({
+test("the 3D chunk is never requested off the homepage; nothing leaves the origin @e2e @gpu", async ({
   page,
   baseURL,
-  browserName,
 }) => {
   const origin = new URL(baseURL ?? "https://localhost").origin;
   const requested: string[] = [];
@@ -317,7 +324,10 @@ test("the 3D chunk is never requested off the homepage; nothing leaves the origi
   expect(requested.filter((u) => SCENE_CHUNK.test(u))).toEqual([]);
   requested.length = 0;
   await page.goto("/");
-  await expectLiveScene(page, browserName);
-  expect(requested.some((u) => SCENE_CHUNK.test(u))).toBe(true);
+  const { live, fallback } = await liveOrPoster(page);
+  // The chunk loads when the scene runs, and never when a fallback was decided up front (WebKit
+  // may still be compiling in software: then neither is asserted).
+  if (live) expect(requested.some((u) => SCENE_CHUNK.test(u))).toBe(true);
+  else if (fallback !== "none") expect(requested.some((u) => SCENE_CHUNK.test(u))).toBe(false);
   expect(requested.filter((u) => u.startsWith("http") && new URL(u).origin !== origin)).toEqual([]);
 });

@@ -64,3 +64,6 @@ export type EligibilityIn = Schemas["EligibilityIn"];
 export type EligibilityOut = Schemas["EligibilityOut"];
 export type ClientBids = Schemas["ClientBidsOut"];
 export type ClientBid = Schemas["ClientBidOut"];
+export type ConstraintCheck = Schemas["ConstraintCheck"];
+export type TermsChange = Schemas["TermsChange"];
+export type TermsPreview = Schemas["TermsPreviewOut"];
