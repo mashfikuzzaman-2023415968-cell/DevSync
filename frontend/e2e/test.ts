@@ -3,7 +3,13 @@
  * test-only router (DEVSYNC_ENV=test). All E2E traffic comes from one container IP, so without
  * this, independent tests would throttle each other under the real per-IP limits (§14.8).
  */
-import { test as base, type APIRequestContext, type Locator, type Page } from "@playwright/test";
+import {
+  test as base,
+  expect,
+  type APIRequestContext,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 
 export async function resetLimits(request: APIRequestContext): Promise<void> {
   const r = await request.get("/api/v1/__test__/ratelimits/reset");
@@ -48,4 +54,12 @@ export async function mainNav(page: Page): Promise<Locator> {
     .getByRole("button", { name: "More" })
     .click();
   return page.getByRole("dialog", { name: "More" });
+}
+
+/** Close a dialog or sheet with its own Close button and wait until it has gone. Escape depends
+ * on where focus is, and in WebKit it was sometimes lost after the window was resized. */
+export async function closeDialog(page: Page, name: string): Promise<void> {
+  const dialog = page.getByRole("dialog", { name });
+  await dialog.getByRole("button", { name: "Close" }).click();
+  await expect(dialog).toBeHidden();
 }

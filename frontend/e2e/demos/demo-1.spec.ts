@@ -12,7 +12,7 @@
  * the Phase 4–5 highlights (the CPM plan and sealed bidding with Algorithm 1 filtering).
  */
 import type { Page, TestInfo } from "@playwright/test";
-import { expect, test } from "../test";
+import { closeDialog, expect, test } from "../test";
 import { csrfHeaders } from "../fixtures";
 
 const PW = "demo password strong 1!";
@@ -66,7 +66,7 @@ test("Demo 1 — planning, sealed bidding and Algorithm 1 filtering @demo", asyn
     .click();
   await expect(page.getByText("Eligible through the newcomer rule: React test 85%.")).toBeVisible();
   await shot(page, info, "02b-why-newcomer");
-  await page.keyboard.press("Escape");
+  await closeDialog(page, "Nadia Rahman");
 
   // 3. The too-few-bids banner on the short project.
   await page.goto("/client/projects");
@@ -79,7 +79,7 @@ test("Demo 1 — planning, sealed bidding and Algorithm 1 filtering @demo", asyn
   await page.getByRole("button", { name: "Fix the shortfall" }).click();
   await expect(page.getByRole("dialog", { name: "Fix the shortfall" })).toBeVisible();
   await shot(page, info, "03b-fix-shortfall");
-  await page.keyboard.press("Escape");
+  await closeDialog(page, "Fix the shortfall");
 
   // 4. A newcomer searches, opens the project and sees the live eligibility preview.
   await loginSeeded(page, url, "nadia@devsync.local");

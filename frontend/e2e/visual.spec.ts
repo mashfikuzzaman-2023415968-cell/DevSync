@@ -150,6 +150,11 @@ for (const scheme of ["light", "dark"] as const) {
       await sheet.getByLabel(/Your price/).fill("22000");
       await sheet.getByLabel(/Days you need/).fill("18");
       await sheet.getByText("You meet every requirement.").waitFor();
+      // No focus ring: the Role select restores focus to itself a moment after it closes, so
+      // which field shows a ring depends on timing.
+      await sheet.evaluate(() => {
+        (document.activeElement as HTMLElement | null)?.blur();
+      });
       await snap(sheet, `bid-sheet-${scheme}-${String(width)}`);
       await ctx.close();
 

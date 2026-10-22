@@ -11,7 +11,7 @@
  */
 import AxeBuilder from "@axe-core/playwright";
 import type { Locator, Page } from "@playwright/test";
-import { expect, test } from "./test";
+import { closeDialog, expect, test } from "./test";
 import {
   addSkillEvidence,
   apiSignIn,
@@ -272,7 +272,7 @@ test("the client sees why each bid is eligible: newcomer rule and relaxation @e2
   await expect(sheet.getByText("How the filter decided")).toBeVisible();
   await expect(sheet.getByText("React test 85% (newcomers need 60%)")).toBeVisible();
   const issues = await checkScreen(page, "client-bids-why");
-  await page.keyboard.press("Escape");
+  await closeDialog(page, "Nadia Rahman");
 
   // Why not Lamia? The first failing check is named.
   await page
@@ -282,7 +282,7 @@ test("the client sees why each bid is eligible: newcomer rule and relaxation @e2
   await expect(
     page.getByRole("dialog", { name: "Lamia Akter" }).getByText(/Filtered out: FastAPI test 40%/),
   ).toBeVisible();
-  await page.keyboard.press("Escape");
+  await closeDialog(page, "Lamia Akter");
 
   // Filters: only the ineligible bid, then a slot with no bids matching.
   await page.getByRole("radio", { name: "Not eligible" }).click();
@@ -345,7 +345,7 @@ test("the client previews a fix for the shortfall, raises the budget and extends
   await page.getByRole("button", { name: "Fix the shortfall" }).click();
   await page.getByRole("tab", { name: "Lower standards" }).click();
   await expect(page.getByText(/down to 30 for performance and 25 for competency/)).toBeVisible();
-  await page.keyboard.press("Escape");
+  await closeDialog(page, "Fix the shortfall");
   expect(issues).toEqual([]);
 });
 
