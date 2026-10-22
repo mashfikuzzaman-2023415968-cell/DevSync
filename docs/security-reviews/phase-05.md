@@ -59,3 +59,9 @@ New surfaces reviewed (no new high or medium findings):
 | Search and recommendations | Skill-name matching adds an ORM subquery under `plainto_tsquery`; cursors name their sort and are validated (another sort's cursor → 422). The recommendation cache is keyed per developer, so one developer's list is never served to another; it fails open without Redis. |
 | Test-only routes (close bidding, skill evidence, reputation) | Mounted only when `DEVSYNC_ENV=test` (create_app refuses otherwise) and not in the OpenAPI schema, like the Phase 1 seed routes. |
 | Hero software-WebGL probe | Reads only the renderer string of a throwaway context and releases it; no data leaves the page. |
+
+A full `/security-review` of `main...phase-5-followups` (2026-10-22) found no high-confidence
+vulnerabilities. Its one low-confidence note was applied anyway: the client's bids view now shows
+only portfolio items owned by the bid's own developer, so a bid placed before finding 6 was fixed
+can't surface another developer's item title.
+

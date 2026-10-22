@@ -144,13 +144,18 @@ async def owned_portfolio_ids(
     return set(rows.all())
 
 
-async def portfolio_titles(db: AsyncSession, item_ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, str]:
+async def portfolio_titles(
+    db: AsyncSession, item_ids: Sequence[uuid.UUID]
+) -> dict[uuid.UUID, tuple[str, uuid.UUID]]:
+    """(title, owner) per portfolio item, so callers can keep only the bidder's own items."""
     if not item_ids:
         return {}
     rows = await db.execute(
-        select(PortfolioItem.id, PortfolioItem.title).where(PortfolioItem.id.in_(item_ids))
+        select(PortfolioItem.id, PortfolioItem.title, PortfolioItem.user_id).where(
+            PortfolioItem.id.in_(item_ids)
+        )
     )
-    return dict(rows.tuples().all())
+    return {item_id: (title, owner) for item_id, title, owner in rows}
 
 
 async def active_bidder_ids(db: AsyncSession, project_id: uuid.UUID) -> list[uuid.UUID]:

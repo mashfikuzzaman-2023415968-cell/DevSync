@@ -61,7 +61,7 @@ def _can_sign_in(email: str, password: str) -> tuple[bool, str]:
         urllib.request.HTTPCookieProcessor(jar), urllib.request.HTTPSHandler(context=_tls())
     )
     opener.open(f"{EDGE}/api/v1/auth/csrf", timeout=5)
-    token = next((c.value for c in jar if c.name == "__Host-ds_csrf"), "")
+    token = next((c.value or "" for c in jar if c.name == "__Host-ds_csrf"), "")
     headers = {"Content-Type": "application/json", "X-CSRF-Token": token, "Origin": EDGE}
     body = json.dumps(
         {"email": email, "password": password, "started_at_ms": int(time.time() * 1000) - 5000}
@@ -75,7 +75,7 @@ def _can_sign_in(email: str, password: str) -> tuple[bool, str]:
     except urllib.error.HTTPError as exc:
         return False, f"HTTP {exc.code} for {email}"
     # Signing in rotates the session and re-issues the CSRF cookie; sign out with the new one.
-    headers["X-CSRF-Token"] = next((c.value for c in jar if c.name == "__Host-ds_csrf"), "")
+    headers["X-CSRF-Token"] = next((c.value or "" for c in jar if c.name == "__Host-ds_csrf"), "")
     opener.open(
         urllib.request.Request(  # noqa: S310 - fixed https URL
             f"{EDGE}/api/v1/auth/logout", data=b"", headers=headers, method="POST"

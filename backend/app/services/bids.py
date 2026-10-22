@@ -706,7 +706,9 @@ async def bids_view(ctx: Ctx, project: Project) -> ClientBidsOut:
 
 
 def _client_rows(
-    ev: Evaluation, names: dict[uuid.UUID, str], titles: dict[uuid.UUID, str]
+    ev: Evaluation,
+    names: dict[uuid.UUID, str],
+    titles: dict[uuid.UUID, tuple[str, uuid.UUID]],
 ) -> list[ClientBidOut]:
     result = ev.result
     rejected = dict(result.rejected)
@@ -759,7 +761,12 @@ def _client_rows(
                 newcomer_evidence=evidence,
                 proposal=b.proposal,
                 expected_contribution=b.expected_contribution,
-                portfolio=[PortfolioRef(id=i, title=titles[i]) for i in item_ids if i in titles],
+                # Only the bidder's own items (bids placed before D54 could name anyone's).
+                portfolio=[
+                    PortfolioRef(id=i, title=titles[i][0])
+                    for i in item_ids
+                    if i in titles and titles[i][1] == b.developer_id
+                ],
                 submitted_at=b.created_at,
             )
         )
