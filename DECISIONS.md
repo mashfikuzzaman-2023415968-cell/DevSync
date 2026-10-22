@@ -546,7 +546,10 @@ the seeded demo accounts (`@devsync.local`, §18.4) out of the login form. Regis
 software shader compile froze the page for seconds. In the gate's step 13 Chromium renders WebGL
 with SwiftShader, so its hero (correctly) shows the poster there; the live-scene tests are tagged
 `@gpu` and run on `chromium-gpu` with the real GPU in step 16 next to the frame-rate check (the
-gate now quotes Playwright arguments with `shlex.join`).
+gate now quotes Playwright arguments with `shlex.join`). The headline must be the LCP element on Chromium (the
+engine Lighthouse uses); WebKit's LCP can name the hero's lead paragraph once the headline is
+swapped in after its reveal, so other engines accept either hero text block (never the canvas).
+The gate keeps a failed E2E pass's screenshots and traces in `runs/gates/e2e-failures/`.
 *E2E fixtures.* Test-only routes (DEVSYNC_ENV=test only) close a project's bidding, give a
 developer a skill with test evidence and set a reputation snapshot, for the newcomer, relaxation
 and closed-bidding walkthroughs. The bid sheet also takes hours a week, expected contribution and

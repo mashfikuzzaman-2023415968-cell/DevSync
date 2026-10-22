@@ -155,6 +155,7 @@ test("signed-in users opening / land on their role home; logout returns to / @e2
 test("poster shows first, the headline is the LCP element and the live scene follows @e2e @gpu", async ({
   page,
   isMobile,
+  browserName,
 }) => {
   await page.addInitScript(() => {
     (window as unknown as { __lcp: string[] }).__lcp = [];
@@ -169,18 +170,28 @@ test("poster shows first, the headline is the LCP element and the live scene fol
     }).observe({ type: "largest-contentful-paint", buffered: true });
   });
   await page.goto("/");
-  await expect(page.locator("canvas[data-hero-poster]")).toHaveAttribute("data-drawn", "true");
+  // Generous waits: where WebGL runs in software (WebKit in the container) compiling the scene
+  // can freeze the page for seconds under a full test run. Speed is Lighthouse's job (step 16);
+  // these lines check what appears, not how fast.
+  await expect(page.locator("canvas[data-hero-poster]")).toHaveAttribute("data-drawn", "true", {
+    timeout: 20_000,
+  });
   // The heading becomes one plain text block once its words have appeared.
-  await expect(page.locator("#hero-title")).toBeVisible();
-  await expect(page.locator("#hero-title span")).toHaveCount(0);
+  await expect(page.locator("#hero-title")).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator("#hero-title span")).toHaveCount(0, { timeout: 20_000 });
   await expectLiveScene(page);
   // Interacting finalizes LCP.
   await page.mouse.click(5, 300);
   const lcp = await page.evaluate(() => (window as unknown as { __lcp: string[] }).__lcp);
-  // Desktop: the headline. Phones: the hero's text either way (the lead paragraph's block can be
-  // larger than the headline on a narrow screen) — never the canvas or an image.
-  if (isMobile) expect(["H1#hero-title@hero", "P#@hero"]).toContain(lcp.at(-1));
-  else expect(lcp.at(-1)).toBe("H1#hero-title@hero");
+  // Chromium desktop (the reference engine, as in Lighthouse): the headline. Phones and the other
+  // engines: the hero's text either way — the lead paragraph's block can be larger on a narrow
+  // screen, and WebKit's LCP picks it when the headline is swapped in after its reveal (D54) —
+  // never the canvas or an image.
+  if (isMobile || browserName !== "chromium") {
+    expect(["H1#hero-title@hero", "P#@hero"]).toContain(lcp.at(-1));
+  } else {
+    expect(lcp.at(-1)).toBe("H1#hero-title@hero");
+  }
 });
 
 test("scrolling snaps the constellation into a team with the chip @e2e @gpu", async ({

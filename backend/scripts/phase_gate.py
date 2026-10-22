@@ -596,8 +596,16 @@ def step_e2e(g: Gate) -> str:
     )
     repeats = 3 if g.phase in DEMO_PHASES else 1
     notes = []
-    for _ in range(repeats):
-        notes.append(_playwright(g, "@e2e", projects))
+    for n in range(1, repeats + 1):
+        try:
+            notes.append(_playwright(g, "@e2e", projects))
+        except StepFailed:
+            # Later steps run Playwright again and clear test-results; keep this pass's
+            # screenshots and traces for diagnosis.
+            keep = RUNS / "e2e-failures" / f"pass-{n}"
+            shutil.rmtree(keep, ignore_errors=True)
+            shutil.copytree(FRONTEND / "test-results", keep, dirs_exist_ok=True)
+            raise
     # Edge behaviour (HTTPS redirect, headers, limits) is checked from inside the network.
     edge = in_tests(["pytest", "-q", "-p", "no:cacheprovider", "-m", "edge"])
     notes.append("edge: " + edge.stdout.strip().splitlines()[-1])
