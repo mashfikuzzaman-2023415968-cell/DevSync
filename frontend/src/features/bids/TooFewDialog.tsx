@@ -331,12 +331,11 @@ function TeamPanel({ project, view, onDone }: PanelProps) {
         {view.coverage.map((c) => (
           <li key={c.slot_id} className="flex flex-wrap items-center justify-between gap-3">
             <span className="text-body-sm text-text">
-              {c.slot_label || "Slot"}{" "}
-              <span className="text-text-muted">({c.eligible} eligible)</span>
+              {c.slot_label} <span className="text-text-muted">({c.eligible} eligible)</span>
             </span>
             <span className="w-32">
               <Select
-                aria-label={`People for ${c.slot_label || "this slot"}`}
+                aria-label={`People for ${c.slot_label}`}
                 value={String(counts[c.slot_id] ?? c.needed)}
                 onChange={(v) => {
                   setCounts((prev) => ({ ...prev, [c.slot_id]: Number(v) }));

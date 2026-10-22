@@ -4,7 +4,7 @@
  * against the budget, any automatic relaxation of the minimums, filters by slot and
  * eligibility, and for each bid a "How the filter decided" panel with every check and its
  * values. When eligible bids fall short, "Fix the shortfall" opens the five §9.19 actions.
- * Phones get a card list instead of the table. Reputation is shown ×100; "seeded" marks the
+ * Phones, tablets and small laptops get a card list; the table appears from 1280 px. Reputation is shown ×100; "seeded" marks the
  * Phase 5 fixture values outside production.
  */
 import { useMemo, useState } from "react";
@@ -17,7 +17,7 @@ import { Alert, EmptyState, ErrorState, PageHeader, Progress } from "@/component
 import { Sheet } from "@/components/ui/Overlay";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Select } from "@/components/ui/Select";
-import { formatDateTime, formatMoney, formatRelative, formatScore } from "@/lib/format";
+import { formatDate, formatDateTime, formatMoney, formatRelative, formatScore } from "@/lib/format";
 import { useProject } from "@/features/projects/api";
 import { useClientBids } from "./api";
 import { BidExplanation, Verdict } from "./BidExplanation";
@@ -123,6 +123,12 @@ function BidsView({
         <Alert tone="warning" title="Not enough eligible bids yet" className="mb-6">
           {shortfallText(view)} You can extend bidding, lower the minimum standards, raise the
           budget, reduce the team, or cancel.
+          {view.bidding.closes_automatically_at ? (
+            <span className="mt-1 block" data-volatile>
+              If nothing changes, the project closes on its own on{" "}
+              {formatDate(view.bidding.closes_automatically_at)}.
+            </span>
+          ) : null}
         </Alert>
       ) : null}
       {view.relaxations.length > 0 ? (
@@ -132,22 +138,30 @@ function BidsView({
       ) : null}
 
       <div className="mb-6 grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card className="p-5">
           <h2 className="text-body font-semibold text-text">Places covered</h2>
           <ul className="mt-3 space-y-3">
-            {view.coverage.map((c) => (
-              <li key={c.slot_id}>
-                <Progress
-                  label={`${c.slot_label || "Slot"}: ${String(Math.min(c.eligible, c.needed))} of ${String(c.needed)} ${c.needed === 1 ? "place" : "places"} covered`}
-                  value={Math.min(c.eligible, c.needed)}
-                  max={c.needed}
-                  tone={c.eligible >= c.needed ? "success" : "warning"}
-                />
-              </li>
-            ))}
+            {view.coverage.map((c) => {
+              const covered = Math.min(c.eligible, c.needed);
+              const text = `${String(covered)} of ${String(c.needed)} ${c.needed === 1 ? "place" : "places"}`;
+              return (
+                <li key={c.slot_id}>
+                  <div className="mb-1.5 flex justify-between gap-3 text-body-sm">
+                    <span className="text-text">{c.slot_label}</span>
+                    <span className="tabular text-text-muted">{text}</span>
+                  </div>
+                  <Progress
+                    label={`${c.slot_label}: ${text} covered`}
+                    value={covered}
+                    max={c.needed}
+                    tone={c.eligible >= c.needed ? "success" : "warning"}
+                  />
+                </li>
+              );
+            })}
           </ul>
         </Card>
-        <Card>
+        <Card className="p-5">
           <h2 className="text-body font-semibold text-text">Cheapest eligible team</h2>
           {view.team_cost.complete ? (
             <p className="mt-3 text-h3 font-semibold tabular text-text">
@@ -160,7 +174,7 @@ function BidsView({
             Of {formatMoney(view.team_cost.budget_after_fee_paisa)} budget after the platform fee.
             Team formation weighs quality, speed and cost, so the final team may cost more.
           </p>
-          <p className="mt-3 text-body-sm text-text-muted">
+          <p className="mt-3 text-body-sm text-text-muted" data-volatile>
             {view.bidding.deadline
               ? `Bidding ${view.bidding.closed ? "closed" : "closes"} ${formatRelative(view.bidding.deadline)}.`
               : "Bidding is open."}
@@ -176,7 +190,7 @@ function BidsView({
           />
         </Card>
       ) : (
-        <Card>
+        <Card className="p-5">
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
             <div className="flex flex-wrap items-center gap-3">
               <span className="w-48">
@@ -188,7 +202,7 @@ function BidsView({
                     { value: ALL_SLOTS, label: "All slots" },
                     ...view.coverage.map((c) => ({
                       value: c.slot_id,
-                      label: c.slot_label || "Slot",
+                      label: c.slot_label,
                     })),
                   ]}
                 />
@@ -233,6 +247,7 @@ function BidsView({
           <p
             className="mt-4 text-caption text-text-muted"
             title={formatDateTime(view.evaluated_at)}
+            data-volatile
           >
             Eligibility checked {formatRelative(view.evaluated_at)} with minimum performance{" "}
             {formatScore(view.thresholds.used_p0)} and competency{" "}
@@ -247,7 +262,7 @@ function BidsView({
           if (!o) setOpenBid(null);
         }}
         title={openBid ? openBid.developer_name : "Bid"}
-        description={openBid ? `${openBid.slot_label || "Slot"} bid` : undefined}
+        description={openBid ? `Bid for ${openBid.slot_label}` : undefined}
       >
         {openBid ? <BidExplanation bid={openBid} /> : null}
       </Sheet>
@@ -273,7 +288,7 @@ function shortfallText(view: ClientBids): string {
     .filter((c) => c.eligible < c.needed)
     .map(
       (c) =>
-        `${c.slot_label || "A slot"} needs ${String(c.needed - c.eligible)} more eligible ${c.needed - c.eligible === 1 ? "bid" : "bids"}`,
+        `${c.slot_label} needs ${String(c.needed - c.eligible)} more eligible ${c.needed - c.eligible === 1 ? "bid" : "bids"}`,
     );
   return short.length > 0 ? `${short.join("; ")}.` : "The team is still short.";
 }
@@ -296,7 +311,8 @@ function DeveloperCell({ bid }: { bid: ClientBid }) {
 
 function BidTable({ bids, onOpen }: { bids: ClientBid[]; onOpen: (bid: ClientBid) => void }) {
   return (
-    <div className="hidden overflow-x-auto md:block">
+    // From 1280 px the table fits its card without scrolling; narrower screens get cards.
+    <div className="hidden xl:block">
       <table className="w-full text-body-sm">
         <caption className="sr-only">
           Bids with price, days, hours, reputation and the eligibility verdict.
@@ -375,7 +391,7 @@ function BidTable({ bids, onOpen }: { bids: ClientBid[]; onOpen: (bid: ClientBid
 
 function BidCards({ bids, onOpen }: { bids: ClientBid[]; onOpen: (bid: ClientBid) => void }) {
   return (
-    <ul className="space-y-3 md:hidden" aria-label="Bids">
+    <ul className="space-y-3 xl:hidden" aria-label="Bids">
       {bids.map((b) => (
         <li key={b.id} className="rounded-lg border border-border bg-surface p-4">
           <DeveloperCell bid={b} />

@@ -10,7 +10,7 @@
  * layout on the new screens.
  */
 import AxeBuilder from "@axe-core/playwright";
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./test";
 import {
   addSkillEvidence,
@@ -44,6 +44,20 @@ async function checkScreen(page: Page, name: string): Promise<string[]> {
   }
   found.push(...(await serious(page)).map((v) => `${name} axe: ${v}`));
   return found;
+}
+
+/** Click a button near the bottom of a phone screen: toasts and the tab bar float over it, and a
+ * toast pauses while the pointer hovers it. Move the pointer away, let the toasts leave and bring
+ * the button to the middle of the screen first. */
+async function clickClear(page: Page, button: Locator): Promise<void> {
+  await page.mouse.move(1, 1);
+  await expect(page.locator('[aria-label^="Notifications"] li')).toHaveCount(0, {
+    timeout: 15_000,
+  });
+  await button.evaluate((el) => {
+    el.scrollIntoView({ block: "center" });
+  });
+  await button.click();
 }
 
 test("a developer searches, previews eligibility, bids and withdraws @e2e", async ({
@@ -80,19 +94,19 @@ test("a developer searches, previews eligibility, bids and withdraws @e2e", asyn
   await expect(page.getByText("Bid placed").first()).toBeVisible();
 
   // Withdraw it, then bid again: the sheet opens fresh and the new bid is placed.
-  await page.getByRole("button", { name: "Withdraw bid" }).click();
+  await clickClear(page, page.getByRole("button", { name: "Withdraw bid" }));
   await expect(page.getByText("Bid withdrawn").first()).toBeVisible();
   await page.getByRole("combobox").click();
   await page.getByRole("option", { name: /React/ }).first().click();
   await page.getByLabel(/Your price/).fill("17500");
   await page.getByLabel(/Days you need/).fill("21");
-  await page.getByRole("button", { name: "Place sealed bid" }).click();
+  await clickClear(page, page.getByRole("button", { name: "Place sealed bid" }));
   await expect(page.getByText("Bid placed").first()).toBeVisible();
   await expect(page.getByText(/You bid ৳17,500/)).toBeVisible();
 
   // It shows up in My Bids.
   await page.goto("/dev/bids");
-  await expect(page.getByText("View project").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Online ordering system" }).first()).toBeVisible();
 
   expect(await checkScreen(page, "my-bids")).toEqual([]);
   expect(watch.consoleErrors, watch.consoleErrors.join("\n")).toEqual([]);
@@ -248,6 +262,10 @@ test("the client sees why each bid is eligible: newcomer rule and relaxation @e2
     .filter({ visible: true })
     .click();
   const sheet = page.getByRole("dialog", { name: "Nadia Rahman" });
+  await expect(sheet).toBeVisible();
+  await sheet.evaluate((el) =>
+    Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)),
+  );
   await expect(
     sheet.getByText("Eligible through the newcomer rule: React test 85%."),
   ).toBeVisible();
@@ -303,6 +321,10 @@ test("the client previews a fix for the shortfall, raises the budget and extends
   await page.getByRole("button", { name: "Fix the shortfall" }).click();
   const dialog = page.getByRole("dialog", { name: "Fix the shortfall" });
   await expect(dialog).toBeVisible();
+  // Measure once the opening animation (a slight scale-in) has finished.
+  await dialog.evaluate((el) =>
+    Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)),
+  );
   const issues = await checkScreen(page, "fix-shortfall");
 
   // Raise the budget: the effect shows before confirming.

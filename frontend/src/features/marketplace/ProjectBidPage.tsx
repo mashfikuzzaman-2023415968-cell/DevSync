@@ -146,39 +146,41 @@ export default function ProjectBidPage() {
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <Card>
           <CardHeader title="About this project" />
-          <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 text-body-sm">
-            <div>
-              <dt className="text-text-muted">Budget</dt>
-              <dd className="font-medium tabular text-text">{formatMoney(p.budget_paisa)}</dd>
-            </div>
-            <div>
-              <dt className="text-text-muted">Deadline</dt>
-              <dd className="font-medium text-text">{formatDays(p.deadline_days)}</dd>
-            </div>
-            <div>
-              <dt className="text-text-muted">Team size</dt>
-              <dd className="font-medium text-text">{p.team_size}</dd>
-            </div>
-          </dl>
-          {p.requirements ? (
+          <div className="px-5 pb-5">
+            <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 text-body-sm">
+              <div>
+                <dt className="text-text-muted">Budget</dt>
+                <dd className="font-medium tabular text-text">{formatMoney(p.budget_paisa)}</dd>
+              </div>
+              <div>
+                <dt className="text-text-muted">Deadline</dt>
+                <dd className="font-medium text-text">{formatDays(p.deadline_days)}</dd>
+              </div>
+              <div>
+                <dt className="text-text-muted">Team size</dt>
+                <dd className="font-medium text-text">{p.team_size}</dd>
+              </div>
+            </dl>
+            {p.requirements ? (
+              <div className="mt-4">
+                <h3 className="text-body-sm font-semibold text-text">Requirements</h3>
+                <p className="mt-1 whitespace-pre-wrap text-body-sm text-text-muted">
+                  {p.requirements}
+                </p>
+              </div>
+            ) : null}
             <div className="mt-4">
-              <h3 className="text-body-sm font-semibold text-text">Requirements</h3>
-              <p className="mt-1 whitespace-pre-wrap text-body-sm text-text-muted">
-                {p.requirements}
-              </p>
+              <h3 className="text-body-sm font-semibold text-text">Roles</h3>
+              <ul className="mt-2 flex flex-wrap gap-1.5">
+                {slots.map((s) => (
+                  <li key={s.id}>
+                    <Badge tone="neutral">
+                      {s.skill} ×{s.count}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
             </div>
-          ) : null}
-          <div className="mt-4">
-            <h3 className="text-body-sm font-semibold text-text">Roles</h3>
-            <ul className="mt-2 flex flex-wrap gap-1.5">
-              {slots.map((s) => (
-                <li key={s.id}>
-                  <Badge tone="neutral">
-                    {s.skill} ×{s.count}
-                  </Badge>
-                </li>
-              ))}
-            </ul>
           </div>
         </Card>
 
@@ -187,151 +189,160 @@ export default function ProjectBidPage() {
             title={existing ? "Your bid" : "Place a sealed bid"}
             description="Sealed: only the client sees your price and proposal."
           />
-          {existing ? (
-            <div className="mt-4">
-              <p className="text-body-sm text-text">
-                You bid {formatMoney(existing.price_paisa)} over {formatDays(existing.days_needed)}.
-              </p>
-              <Badge tone={existing.status === "ACTIVE" ? "info" : "neutral"} className="mt-2">
-                {existing.status}
-              </Badge>
-              {p.open_for_bids ? (
-                <div className="mt-4">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    loading={withdraw.isPending}
-                    onClick={() => {
-                      withdraw.mutate(existing.id, {
-                        onSuccess: () => {
-                          toast({ tone: "success", title: "Bid withdrawn" });
-                        },
-                      });
-                    }}
-                  >
-                    Withdraw bid
-                  </Button>
-                </div>
-              ) : (
-                <p className="mt-4 text-body-sm text-text-muted">
-                  Bidding has closed, so this bid can no longer be changed.
+          <div className="px-5 pb-5">
+            {existing ? (
+              <div className="mt-4">
+                <p className="text-body-sm text-text">
+                  You bid {formatMoney(existing.price_paisa)} over{" "}
+                  {formatDays(existing.days_needed)}.
                 </p>
-              )}
-            </div>
-          ) : !p.open_for_bids ? (
-            <Alert tone="info" title="Bidding has closed" className="mt-4">
-              {p.bidding_deadline
-                ? `This project stopped taking bids on ${formatDate(p.bidding_deadline)}.`
-                : "This project isn’t taking bids."}
-            </Alert>
-          ) : slots.length === 0 ? (
-            <EmptyState title="No open roles" description="This project has no slots to bid on." />
-          ) : (
-            <div className="mt-4 flex flex-col gap-4">
-              <FormField label="Role">
-                {(a11y) => (
-                  <Select
-                    {...a11y}
-                    value={slotId || undefined}
-                    onChange={setSlotId}
-                    options={slots.map((s) => ({ value: s.id, label: `${s.skill} — ${s.label}` }))}
-                    placeholder="Choose a role"
-                  />
-                )}
-              </FormField>
-              <div className="grid grid-cols-2 gap-4">
-                <Field
-                  label="Your price (৳)"
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  value={priceTaka}
-                  onChange={(e) => {
-                    setPriceTaka(e.target.value);
-                  }}
-                />
-                <Field
-                  label="Days you need"
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  max={365}
-                  value={days}
-                  onChange={(e) => {
-                    setDays(e.target.value);
-                  }}
-                />
-              </div>
-              <FormField label="Proposal">
-                {(a11y) => (
-                  <Textarea
-                    {...a11y}
-                    value={proposal}
-                    onChange={(e) => {
-                      setProposal(e.target.value);
-                    }}
-                    rows={3}
-                    maxLength={3000}
-                    placeholder="How you'll approach the work."
-                  />
-                )}
-              </FormField>
-
-              <div className="grid grid-cols-2 gap-4">
-                <Field
-                  label="Hours a week"
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  max={168}
-                  hint="Defaults to 20 or your profile hours."
-                  value={hours}
-                  onChange={(e) => {
-                    setHours(e.target.value);
-                  }}
-                />
-                <Field
-                  label="Expected contribution"
-                  maxLength={500}
-                  value={contribution}
-                  onChange={(e) => {
-                    setContribution(e.target.value);
-                  }}
-                />
-              </div>
-              {portfolio.data && portfolio.data.length > 0 ? (
-                <fieldset>
-                  <legend className="text-body-sm font-medium text-text">
-                    Portfolio items (up to {MAX_PORTFOLIO})
-                  </legend>
-                  <div className="mt-2 flex flex-col gap-1">
-                    {portfolio.data.map((item) => {
-                      const checked = portfolioIds.includes(item.id);
-                      return (
-                        <Checkbox
-                          key={item.id}
-                          label={item.title}
-                          checked={checked}
-                          disabled={!checked && portfolioIds.length >= MAX_PORTFOLIO}
-                          onCheckedChange={(on) => {
-                            setPortfolioIds((ids) =>
-                              on === true ? [...ids, item.id] : ids.filter((x) => x !== item.id),
-                            );
-                          }}
-                        />
-                      );
-                    })}
+                <Badge tone={existing.status === "ACTIVE" ? "info" : "neutral"} className="mt-2">
+                  {existing.status.charAt(0) + existing.status.slice(1).toLowerCase()}
+                </Badge>
+                {p.open_for_bids ? (
+                  <div className="mt-4">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      loading={withdraw.isPending}
+                      onClick={() => {
+                        withdraw.mutate(existing.id, {
+                          onSuccess: () => {
+                            toast({ tone: "success", title: "Bid withdrawn" });
+                          },
+                        });
+                      }}
+                    >
+                      Withdraw bid
+                    </Button>
                   </div>
-                </fieldset>
-              ) : null}
+                ) : (
+                  <p className="mt-4 text-body-sm text-text-muted">
+                    Bidding has closed, so this bid can no longer be changed.
+                  </p>
+                )}
+              </div>
+            ) : !p.open_for_bids ? (
+              <Alert tone="info" title="Bidding has closed" className="mt-4">
+                {p.bidding_deadline
+                  ? `This project stopped taking bids on ${formatDate(p.bidding_deadline)}.`
+                  : "This project isn’t taking bids."}
+              </Alert>
+            ) : slots.length === 0 ? (
+              <EmptyState
+                title="No open roles"
+                description="This project has no slots to bid on."
+              />
+            ) : (
+              <div className="mt-4 flex flex-col gap-4">
+                <FormField label="Role">
+                  {(a11y) => (
+                    <Select
+                      {...a11y}
+                      value={slotId || undefined}
+                      onChange={setSlotId}
+                      options={slots.map((s) => ({
+                        value: s.id,
+                        label: s.label ? `${s.skill}: ${s.label}` : s.skill,
+                      }))}
+                      placeholder="Choose a role"
+                    />
+                  )}
+                </FormField>
+                <div className="grid grid-cols-2 gap-4">
+                  <Field
+                    label="Your price (৳)"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    value={priceTaka}
+                    onChange={(e) => {
+                      setPriceTaka(e.target.value);
+                    }}
+                  />
+                  <Field
+                    label="Days you need"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={365}
+                    value={days}
+                    onChange={(e) => {
+                      setDays(e.target.value);
+                    }}
+                  />
+                </div>
+                <FormField label="Proposal">
+                  {(a11y) => (
+                    <Textarea
+                      {...a11y}
+                      value={proposal}
+                      onChange={(e) => {
+                        setProposal(e.target.value);
+                      }}
+                      rows={3}
+                      maxLength={3000}
+                      placeholder="How you'll approach the work."
+                    />
+                  )}
+                </FormField>
 
-              {verdict ? <EligibilityPreview verdict={verdict} /> : null}
+                <div className="grid grid-cols-2 gap-4">
+                  <Field
+                    label="Hours a week"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={168}
+                    hint="Defaults to 20 or your profile hours."
+                    value={hours}
+                    onChange={(e) => {
+                      setHours(e.target.value);
+                    }}
+                  />
+                  <Field
+                    label="Expected contribution"
+                    maxLength={500}
+                    value={contribution}
+                    onChange={(e) => {
+                      setContribution(e.target.value);
+                    }}
+                  />
+                </div>
+                {portfolio.data && portfolio.data.length > 0 ? (
+                  <fieldset>
+                    <legend className="text-body-sm font-medium text-text">
+                      Portfolio items (up to {MAX_PORTFOLIO})
+                    </legend>
+                    <div className="mt-2 flex flex-col gap-1">
+                      {portfolio.data.map((item) => {
+                        const checked = portfolioIds.includes(item.id);
+                        return (
+                          <Checkbox
+                            key={item.id}
+                            label={item.title}
+                            checked={checked}
+                            disabled={!checked && portfolioIds.length >= MAX_PORTFOLIO}
+                            onCheckedChange={(on) => {
+                              setPortfolioIds((ids) =>
+                                on === true ? [...ids, item.id] : ids.filter((x) => x !== item.id),
+                              );
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+                ) : null}
 
-              <Button loading={create.isPending} disabled={!ready} onClick={placeBid}>
-                Place sealed bid
-              </Button>
-            </div>
-          )}
+                {verdict ? <EligibilityPreview verdict={verdict} /> : null}
+
+                <Button loading={create.isPending} disabled={!ready} onClick={placeBid}>
+                  Place sealed bid
+                </Button>
+              </div>
+            )}
+          </div>
         </Card>
       </div>
     </>

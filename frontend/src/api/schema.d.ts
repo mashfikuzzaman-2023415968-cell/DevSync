@@ -1581,6 +1581,8 @@ export interface components {
        * Format: uuid
        */
       project_id: string;
+      /** Project Title */
+      project_title: string;
       /** Proposal */
       proposal: string;
       /**
@@ -1588,6 +1590,8 @@ export interface components {
        * Format: uuid
        */
       slot_id: string;
+      /** Slot Label */
+      slot_label: string;
       /** Status */
       status: string;
       /**
@@ -1620,6 +1624,8 @@ export interface components {
     BiddingWindow: {
       /** Closed */
       closed: boolean;
+      /** Closes Automatically At */
+      closes_automatically_at?: string | null;
       /** Deadline */
       deadline: string | null;
       /** Extend Days */
@@ -6374,8 +6380,10 @@ export interface operations {
            *       "portfolio_item_ids": [],
            *       "price_paisa": 1800000,
            *       "project_id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+           *       "project_title": "Online ordering system",
            *       "proposal": "I'll build the React front end with tests.",
            *       "slot_id": "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e",
+           *       "slot_label": "React developer",
            *       "status": "ACTIVE",
            *       "updated_at": "2026-10-21T06:00:00Z"
            *     }
@@ -7412,8 +7420,10 @@ export interface operations {
            *         "portfolio_item_ids": [],
            *         "price_paisa": 1800000,
            *         "project_id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+           *         "project_title": "Online ordering system",
            *         "proposal": "I'll build the React front end with tests.",
            *         "slot_id": "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e",
+           *         "slot_label": "React developer",
            *         "status": "ACTIVE",
            *         "updated_at": "2026-10-21T06:00:00Z"
            *       }
@@ -12117,8 +12127,10 @@ export interface operations {
            *       "portfolio_item_ids": [],
            *       "price_paisa": 1800000,
            *       "project_id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+           *       "project_title": "Online ordering system",
            *       "proposal": "I'll build the React front end with tests.",
            *       "slot_id": "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e",
+           *       "slot_label": "React developer",
            *       "status": "ACTIVE",
            *       "updated_at": "2026-10-21T06:00:00Z"
            *     }

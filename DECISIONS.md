@@ -514,7 +514,10 @@ like D50); when bidding already closed and the team is now covered the project m
 at once. Once bids exist these actions plus extend/cancel are the only ways to change budget,
 standards or team (the project is otherwise not editable after publishing, §8). Cancelling a
 bidding project notifies the bidders; the deadline job's too-few notification names the
-shortfall per slot.
+shortfall per slot. *A shortfall left alone* (the spec says what to offer, not when to stop): one
+reminder 7 days after bidding closed, and the project closes on its own after 14 days
+(CANCELLED, free before a team forms; client and bidders told; audited as SYSTEM). The Bids page
+shows that date in the too-few banner from the start, so it is never a surprise.
 *Replication mode relaxes like the paper.* [PCS] Algorithm 1 lines 3–5 re-initialize P0/C0 only
 when S' is empty, so `pcs_replication` relaxes only while no bid qualifies (devsync keeps
 relaxing while any slot is short); the 0.05 step stays the documented default (A-list).

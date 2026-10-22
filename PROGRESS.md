@@ -4,9 +4,9 @@
 - **Current owner:** Salwa Baki (backend developer), Phases 4–5, from 2026-10-18 (hand-off from Mashfikuzzaman Taeen: `docs/handoffs/handoff-01-taeen-to-salwa.md`); Phase 5 gate finished by Taeen.
 - **Current phase:** 5 done (merged into `main`, tagged `phase-5` on 2026-10-22 by Taeen; push to GitHub pending a token). Next: Phase 5 follow-ups before Demo 1, then Phase 6.
 - **Last gate result:** `PHASE 5 GATE: PASS` (2026-10-21 20:00 UTC, Taeen's laptop, branch `phase-5`): backend 785 tests (95.4% coverage), security suite 246, frontend 283, E2E 177 × 3 on chromium/firefox/webkit/mobile, visual 112 baselines, Lighthouse desktop 97 / mobile 94.
-- **In progress:** nothing building. Gate fixes are in D51–D53 and security-review findings 3–5 (CSRF token echo for WebKit, CAPTCHA retry after sign-up, search control characters → 500, sign-out full page load, cross-browser E2E robustness).
-- **Very next step:** `make demo-check DEMO=1`; then the Phase 5 follow-ups listed under Known issues (too-few-bids actions, client Bids columns, portfolio ownership on bids, search pagination for every sort, recommendations per §9.16, time-enforced bidding deadline). Demo 1 is Mon 2 Nov 2026 (Phases 0–5).
-- **Open human tasks:** decide whether clients see bid prices live during bidding (spec) or only after it closes; decide the software-rendering hero fallback (D53 follow-up); review the 128 drafted test questions (D34); tester's human check of the Phase 3, 4 and 5 security reviews; sanity-check D39 (simulated payment-method verification).
+- **In progress:** Phase 5 follow-ups (D54) on branch `phase-5-followups` (worktree `../DevSync-p5f`): bidding closes by time, bids reference only the bidder's portfolio, the client Bids screen explains every verdict (Algorithm 1 trace, newcomer rule, relaxation, cheapest team, filters, phone cards), the five too-few-bids actions with previews, replication-mode relaxation as in the paper, search pagination for every sort and skill-name search, recommendations per §9.16, reserved-domain sign-in for the demo accounts, the bundled breached-password list committed (it was gitignored), hero poster on software WebGL. Being tested end to end before merging into `main`.
+- **Very next step:** full `make gate PHASE=5` on the branch, `/security-review`, `make demo-check DEMO=1`; then merge into `main`, re-tag, push (token from Taeen). Demo 1 is Mon 2 Nov 2026 (Phases 0–5).
+- **Open human tasks:** review the 128 drafted test questions (D34); tester's human check of the Phase 3, 4 and 5 security reviews; sanity-check D39 (simulated payment-method verification).
 
 ## Phase table
 | Phase | Owner | Status | Gate | Date | Tag |
@@ -65,17 +65,14 @@
 - The gate's frame-rate step needs a GPU (`/dev/dri`); run the gate on a laptop (D28). Long gate runs are best started with `systemd-run --user` so closing a terminal or chat doesn't kill them.
 - The 2021 STI paper is cited without a link (no DOI found); add the IEEE Xplore URL when known.
 - Existing dev databases: run `make migrate` (migration 0002); create an admin with `make create-admin`.
-- Phase 5 follow-ups (gate passes; product gaps against the spec, to fix before Demo 1 where possible):
-  - too-few-bids banner offers only a link; the spec's five actions (extend, lower standards, raise budget, reduce team, cancel) need UI (extend has an endpoint) — D47 overstates this;
-  - client Bids screen lacks hours/week, teamwork, proposal preview, slot/eligibility filters and a phone card list;
-  - a bid's `portfolio_item_ids` are not checked to belong to the bidder;
-  - search pagination works only for the `newest` sort; search does not include skill names;
-  - recommended projects lack typical days, hours fit and the 5-minute cache (§9.16);
-  - `pcs_replication` mode disables relaxation (check against [PCS]);
-  - bidding deadline enforced by project status only, not also by time; changes to a project after bids exist need defined handling;
-  - possible additions: team-cost estimate; auto-cancel when the client ignores the too-few banner; wider E2E for bidding.
+- Phase 5 known limitations (D54): TOO_SLOW compares with the whole-project deadline, not the slot's milestones (the paper's simplification); availability must be re-checked when invitations are accepted (Phase 8); bid prices stay visible to the client during bidding (spec), sealed from other developers.
 
 ## Session log (newest first)
+### 2026-10-22 — Taeen (with Claude Code), Phase 5 merged; follow-ups
+- Merged `phase-5` into `main` (fast-forward) and tagged `phase-5`; `make demo-check DEMO=1` exposed that the seeded demo accounts (`@devsync.local`) could not sign in and that the walkthrough expected screens it never reached.
+- Built every item of the external Phase 5 review on `phase-5-followups` (D54, security review findings 6–8) with property, API, job, perf, unit and cross-browser E2E tests and visual baselines for the bidding screens.
+- Found and fixed on the way: the bundled breached-password list was never committed (`data/` ignore rule); the client view read ORM rows after its SYSTEM session closed (500); the shared dialog close button shrank on phones; `demo-check` left the test stack unseeded when the gate stopped early.
+
 ### 2026-10-21 — Taeen (with Claude Code), Phase 5 review and gate
 - Reviewed Salwa's Phase 5 and ran the gate until `PHASE 5 GATE: PASS` (run 9 of the day; runs 4–6 were cut short by a battery that would not charge).
 - Real defects fixed: vulnerable Pillow/certifi (D51); `/projects/{id}` shadowing search routes, query bounds, float-free ordering (D52); WebKit could send an empty CSRF header after `GET /auth/csrf` (token now echoed in a header); sign-up's automatic sign-in now solves the CAPTCHA when asked; NUL/control characters in search → 500 (now cleaned, skill filters capped at 20); sign-out does a full page load; hero headline accessible name; 44 px touch targets (D53, security review findings 3–5).

@@ -60,7 +60,7 @@ export default function FindProjectsPage() {
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,9fr)]">
         <Card className="h-fit">
           <CardHeader title="Filters" />
-          <div className="mt-4 flex flex-col gap-4">
+          <div className="mt-4 flex flex-col gap-4 px-5 pb-5">
             <Field
               label="Search projects"
               type="search"
@@ -183,7 +183,7 @@ export default function FindProjectsPage() {
 
 function ProjectResult({ project }: { project: Card_ }) {
   return (
-    <Card interactive className="transition-shadow">
+    <Card interactive className="p-5 transition-shadow">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <Link

@@ -129,6 +129,17 @@ def bidding_closed(project: Project, now: datetime) -> bool:
     return project.bidding_deadline is not None and now >= project.bidding_deadline
 
 
+# A shortfall the client leaves alone (§9.19 says what to offer, not when to stop): a reminder a
+# week after bidding closed, and the project closes on its own a week later (D54). Cancelling is
+# free before a team is formed, and the date is shown on the Bids page from the start.
+REMIND_AFTER = timedelta(days=7)
+AUTO_CLOSE_AFTER = timedelta(days=14)
+
+
+def auto_close_at(project: Project) -> datetime | None:
+    return project.bidding_deadline + AUTO_CLOSE_AFTER if project.bidding_deadline else None
+
+
 # --------------------------------------------------------------------------- loading
 
 
@@ -282,11 +293,28 @@ async def _check_portfolio(ctx: Ctx, item_ids: Sequence[uuid.UUID]) -> list[str]
     return [str(x) for x in item_ids]
 
 
-def _bid_out(bid: Bid) -> BidOut:
+async def _bid_context(db: AsyncSession, bids: Sequence[Bid]) -> dict[uuid.UUID, tuple[str, str]]:
+    """(project title, slot name) per bid id, in one query (the developer can read both)."""
+    if not bids:
+        return {}
+    rows = await db.execute(
+        select(Bid.id, Project.title, ProjectSlot.label, Skill.name)
+        .join(Project, Project.id == Bid.project_id)
+        .join(ProjectSlot, ProjectSlot.id == Bid.slot_id)
+        .join(Skill, Skill.id == ProjectSlot.skill_id)
+        .where(Bid.id.in_([b.id for b in bids]))
+    )
+    return {bid_id: (title, label or skill) for bid_id, title, label, skill in rows}
+
+
+def _bid_out(bid: Bid, context: dict[uuid.UUID, tuple[str, str]]) -> BidOut:
+    title, slot_name = context.get(bid.id, ("Project", "Slot"))
     return BidOut(
         id=bid.id,
         project_id=bid.project_id,
+        project_title=title,
         slot_id=bid.slot_id,
+        slot_label=slot_name,
         status=bid.status.value,
         price_paisa=bid.price_paisa,
         days_needed=bid.days_needed,
@@ -333,7 +361,7 @@ async def create_bid(ctx: Ctx, project_id: uuid.UUID, body: BidCreate) -> BidOut
     await ctx.db.commit()
     await ctx.db.refresh(bid)
     await marketplace.forget_recommendations(ctx.uid)
-    return _bid_out(bid)
+    return _bid_out(bid, await _bid_context(ctx.db, [bid]))
 
 
 async def _own_bid(ctx: Ctx, bid_id: uuid.UUID) -> Bid:
@@ -371,7 +399,7 @@ async def update_bid(ctx: Ctx, bid_id: uuid.UUID, body: BidUpdate) -> BidOut:
     )
     await ctx.db.commit()
     await ctx.db.refresh(bid)
-    return _bid_out(bid)
+    return _bid_out(bid, await _bid_context(ctx.db, [bid]))
 
 
 async def withdraw_bid(ctx: Ctx, bid_id: uuid.UUID) -> None:
@@ -388,7 +416,9 @@ async def withdraw_bid(ctx: Ctx, bid_id: uuid.UUID) -> None:
 
 
 async def my_bids(ctx: Ctx) -> list[BidOut]:
-    return [_bid_out(b) for b in await repo.list_for_developer(ctx.db, ctx.uid)]
+    bids = list(await repo.list_for_developer(ctx.db, ctx.uid))
+    context = await _bid_context(ctx.db, bids)
+    return [_bid_out(b, context) for b in bids]
 
 
 # --------------------------------------------------------------------------- check text
@@ -513,6 +543,13 @@ class Evaluation:
     reps: dict[uuid.UUID, reputation_read.ReputationView]
     params: FilterParams
     proj: ProjectInput
+    skill_names: dict[uuid.UUID, str]
+
+    def slot_name(self, slot: ProjectSlot | None) -> str:
+        """A slot's own label, or its skill's name when the client gave none."""
+        if slot is None:
+            return "Slot"
+        return slot.label or self.skill_names.get(slot.skill_id, "Slot")
 
 
 async def evaluate(
@@ -559,6 +596,7 @@ async def evaluate(
         reps=reps,
         params=params,
         proj=proj,
+        skill_names=await _skill_names(db, [s.skill_id for s in slots]),
     )
 
 
@@ -571,16 +609,18 @@ async def evaluate_project(
 
 
 def coverage(ev: Evaluation) -> list[SlotCoverage]:
+    """Places covered per slot, in slot-name order (stable for people and screenshots)."""
     eligible = set(ev.result.eligible)
-    return [
+    rows = [
         SlotCoverage(
             slot_id=s.id,
-            slot_label=s.label,
+            slot_label=ev.slot_name(s),
             needed=ev.terms.slot_counts.get(s.id, s.count),
             eligible=sum(1 for b in ev.bids if b.slot_id == s.id and str(b.id) in eligible),
         )
         for s in ev.slots
     ]
+    return sorted(rows, key=lambda c: (c.slot_label.casefold(), str(c.slot_id)))
 
 
 def team_cost(ev: Evaluation) -> TeamCostOut:
@@ -614,11 +654,20 @@ async def bids_view(ctx: Ctx, project: Project) -> ClientBidsOut:
             u.id: u.display_name
             for u in await sysdb.scalars(select(User).where(User.id.in_(dev_ids)))
         }
-        skill_names = await _skill_names(sysdb, [s.skill_id for s in ev.slots])
         titles = await repo.portfolio_titles(
             sysdb, [uuid.UUID(str(x)) for b in ev.bids for x in b.portfolio_item_ids]
         )
-        rows = _client_rows(ev, names, skill_names, titles)
+        # Slot by slot; within a slot eligible bids first, then cheapest (stable order).
+        rows = sorted(
+            _client_rows(ev, names, titles),
+            key=lambda r: (
+                r.slot_label.casefold(),
+                not r.eligible,
+                r.price_paisa,
+                r.developer_name,
+                str(r.id),
+            ),
+        )
         coverage_out = coverage(ev)
         cost = team_cost(ev)
     result = ev.result
@@ -651,15 +700,13 @@ async def bids_view(ctx: Ctx, project: Project) -> ClientBidsOut:
             extensions_used=project.bidding_extensions,
             max_extensions=settings.bidding.max_extensions,
             extend_days=settings.bidding.extend_days,
+            closes_automatically_at=auto_close_at(project) if result.too_few else None,
         ),
     )
 
 
 def _client_rows(
-    ev: Evaluation,
-    names: dict[uuid.UUID, str],
-    skill_names: dict[uuid.UUID, str],
-    titles: dict[uuid.UUID, str],
+    ev: Evaluation, names: dict[uuid.UUID, str], titles: dict[uuid.UUID, str]
 ) -> list[ClientBidOut]:
     result = ev.result
     rejected = dict(result.rejected)
@@ -679,7 +726,7 @@ def _client_rows(
             reasons = [ReasonCode.NOT_SHORTLISTED.value]
         rep = ev.reps[b.developer_id]
         slot = slots.get(b.slot_id)
-        skill = skill_names.get(slot.skill_id, "this skill") if slot else "this skill"
+        skill = ev.skill_names.get(slot.skill_id, "this skill") if slot else "this skill"
         evidence = (
             NewcomerEvidence(skill=skill, score=inp.skill_evidence_score)
             if newcomer_rule and rep.is_newcomer and inp.skill_evidence_score is not None
@@ -692,7 +739,7 @@ def _client_rows(
                 developer_id=b.developer_id,
                 developer_name=names.get(b.developer_id, "Developer"),
                 slot_id=b.slot_id,
-                slot_label=slot.label if slot else "",
+                slot_label=ev.slot_name(slot),
                 status=b.status.value,
                 price_paisa=b.price_paisa,
                 days_needed=b.days_needed,

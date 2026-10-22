@@ -4,7 +4,9 @@
  * what was required and what the bid had. The first failing check decides the verdict.
  */
 import { CircleCheck, CircleX } from "lucide-react";
+import { Link } from "react-router";
 import type { ClientBid } from "@/api/types";
+import { Button } from "@/components/ui/Button";
 import { Badge, NewcomerBadge } from "@/components/ui/Display";
 import { formatDate, formatMoney, formatPercent, formatScore } from "@/lib/format";
 import { CHECK_LABEL, reasonText } from "./bidText";
@@ -36,6 +38,9 @@ export function BidExplanation({ bid }: { bid: ClientBid }) {
           {bid.is_newcomer ? <NewcomerBadge /> : null}
         </div>
         <p className="text-body-sm text-text">{verdictSentence(bid)}</p>
+        <Button asChild variant="outline">
+          <Link to={`/d/${bid.developer_id}`}>View {bid.developer_name}’s profile</Link>
+        </Button>
       </div>
 
       <section aria-labelledby="checks-title" className="space-y-3">
@@ -80,7 +85,9 @@ export function BidExplanation({ bid }: { bid: ClientBid }) {
         </div>
         <div>
           <dt className="text-text-muted">Submitted</dt>
-          <dd className="text-text">{formatDate(bid.submitted_at)}</dd>
+          <dd className="text-text" data-volatile>
+            {formatDate(bid.submitted_at)}
+          </dd>
         </div>
         <div>
           <dt className="text-text-muted">Competency</dt>

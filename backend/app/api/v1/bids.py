@@ -44,7 +44,9 @@ _SLOT = "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
 EX_BID = {
     "id": _BID_ID,
     "project_id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+    "project_title": "Online ordering system",
     "slot_id": _SLOT,
+    "slot_label": "React developer",
     "status": "ACTIVE",
     "price_paisa": 1_800_000,
     "days_needed": 20,

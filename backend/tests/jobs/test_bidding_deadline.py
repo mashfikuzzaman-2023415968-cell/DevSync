@@ -24,7 +24,10 @@ from tests.helpers import stack_available, unique_email, unique_phone
 
 pytestmark = [pytest.mark.jobs, pytest.mark.integration]
 
-PAST = datetime(2026, 1, 1, tzinfo=UTC)
+
+def just_closed() -> datetime:
+    """A deadline that passed an hour ago (before the reminder and auto-close windows)."""
+    return datetime.now(UTC) - timedelta(hours=1)
 
 
 @pytest.fixture(autouse=True)
@@ -135,7 +138,7 @@ async def _status(project_id: uuid.UUID) -> ProjectStatus:
 @pytest.mark.asyncio
 async def test_too_few_bids_stays_bidding_notifies_once() -> None:
     client = await make_user("CLIENT")
-    pid, _sid, _sk = await make_project(client, PAST)  # no bids
+    pid, _sid, _sk = await make_project(client, just_closed())  # no bids
 
     first = await close_due_bidding()
     assert first["too_few"] >= 1
@@ -150,7 +153,7 @@ async def test_too_few_bids_stays_bidding_notifies_once() -> None:
 @pytest.mark.asyncio
 async def test_too_few_notification_names_the_shortfall_per_slot() -> None:
     client = await make_user("CLIENT")
-    await make_project(client, PAST)  # one unlabelled slot needing 2, no bids
+    await make_project(client, just_closed())  # one unlabelled slot needing 2, no bids
     await close_due_bidding()
     async with open_session(DbContext.system(), job=True) as db:
         body = await db.scalar(
@@ -159,14 +162,14 @@ async def test_too_few_notification_names_the_shortfall_per_slot() -> None:
             )
         )
     assert body is not None
-    assert "a slot needs 2 more" in body
+    assert "needs 2 more" in body  # the slot is named by its skill when it has no label
     assert "Extend bidding" in body
 
 
 @pytest.mark.asyncio
 async def test_enough_bids_moves_to_forming() -> None:
     client = await make_user("CLIENT")
-    pid, sid, skid = await make_project(client, PAST)
+    pid, sid, skid = await make_project(client, just_closed())
     await make_eligible_bidder(pid, sid, skid)
     await make_eligible_bidder(pid, sid, skid)
 
@@ -183,3 +186,54 @@ async def test_future_deadline_is_left_alone() -> None:
     pid, _sid, _sk = await make_project(client, future)
     await close_due_bidding()
     assert await _status(pid) == ProjectStatus.BIDDING
+
+
+@pytest.mark.asyncio
+async def test_a_shortfall_left_alone_gets_one_reminder_after_a_week() -> None:
+    client = await make_user("CLIENT")
+    pid, _sid, _sk = await make_project(client, datetime.now(UTC) - timedelta(days=8))
+    await close_due_bidding()
+    await close_due_bidding()
+    assert await _status(pid) == ProjectStatus.BIDDING
+    assert await _notifications(client, "TOO_FEW_BIDS_REMINDER") == 1
+    async with open_session(DbContext.system(), job=True) as db:
+        body = await db.scalar(
+            select(Notification.body).where(
+                Notification.user_id == client, Notification.type == "TOO_FEW_BIDS_REMINDER"
+            )
+        )
+    assert body is not None
+    assert "closes automatically on" in body
+
+
+@pytest.mark.asyncio
+async def test_a_shortfall_left_alone_for_two_weeks_closes_and_tells_everyone() -> None:
+    client = await make_user("CLIENT")
+    pid, sid, skid = await make_project(client, datetime.now(UTC) - timedelta(days=15))
+    dev = await make_eligible_bidder(pid, sid, skid)  # one of the two places
+
+    first = await close_due_bidding()
+    assert first["auto_closed"] >= 1
+    assert await _status(pid) == ProjectStatus.CANCELLED
+    async with open_session(DbContext.system(), job=True) as db:
+        project = await db.get(Project, pid)
+        assert project is not None
+        assert project.cancel_reason is not None
+        assert project.cancel_reason.startswith("Closed automatically")
+        assert project.cancelled_at is not None
+    assert await _notifications(client, "PROJECT_CANCELLED") == 1
+    assert await _notifications(dev, "PROJECT_CANCELLED") == 1
+
+    # A cancelled project is no longer BIDDING: a re-run changes nothing.
+    await close_due_bidding()
+    assert await _notifications(client, "PROJECT_CANCELLED") == 1
+
+
+@pytest.mark.asyncio
+async def test_a_covered_team_is_formed_however_late_the_job_runs() -> None:
+    client = await make_user("CLIENT")
+    pid, sid, skid = await make_project(client, datetime.now(UTC) - timedelta(days=30))
+    await make_eligible_bidder(pid, sid, skid)
+    await make_eligible_bidder(pid, sid, skid)
+    await close_due_bidding()
+    assert await _status(pid) == ProjectStatus.FORMING

@@ -62,10 +62,10 @@ export default function MyBidsPage() {
                     to={`/dev/projects/${b.project_id}`}
                     className="inline-flex min-h-11 items-center font-medium text-text hover:text-primary hover:underline"
                   >
-                    View project
+                    {b.project_title}
                   </Link>
                   <p className="mt-1 text-body-sm text-text-muted">
-                    {formatMoney(b.price_paisa)} · {formatDays(b.days_needed)}
+                    {b.slot_label}, {formatMoney(b.price_paisa)} for {formatDays(b.days_needed)}
                   </p>
                 </div>
                 <Badge tone={TONE[b.status] ?? "neutral"}>{label(b.status)}</Badge>

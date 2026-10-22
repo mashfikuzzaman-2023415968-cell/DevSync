@@ -70,7 +70,7 @@ export function Dialog({
               ) : null}
             </div>
             <DialogPrimitive.Close
-              className="-mr-2 -mt-2 inline-flex size-11 items-center justify-center rounded-full text-text-muted transition-colors duration-fast hover:bg-surface-2 hover:text-text"
+              className="-mr-2 -mt-2 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-text-muted transition-colors duration-fast hover:bg-surface-2 hover:text-text"
               aria-label="Close"
             >
               <X className="size-5" aria-hidden="true" />
@@ -231,7 +231,7 @@ export function Sheet({
               ) : null}
             </div>
             <DialogPrimitive.Close
-              className="ml-auto inline-flex size-11 items-center justify-center rounded-full text-text-muted transition-colors duration-fast hover:bg-surface-2 hover:text-text"
+              className="ml-auto inline-flex size-11 shrink-0 items-center justify-center rounded-full text-text-muted transition-colors duration-fast hover:bg-surface-2 hover:text-text"
               aria-label="Close"
             >
               <X className="size-5" aria-hidden="true" />

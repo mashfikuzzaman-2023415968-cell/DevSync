@@ -35,7 +35,9 @@ describe("MyBidsPage", () => {
           {
             id: "b1",
             project_id: PID,
+            project_title: "Online ordering system",
             slot_id: "s",
+            slot_label: "React",
             status: "ACTIVE",
             price_paisa: 1_800_000,
             days_needed: 20,
@@ -51,7 +53,8 @@ describe("MyBidsPage", () => {
     );
     render("/dev/bids", <MyBidsPage />, "/dev/bids");
     expect(await screen.findByText("Active")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View project" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Online ordering system" })).toBeInTheDocument();
+    expect(screen.getByText("React, ৳18,000 for 20 days")).toBeInTheDocument();
   });
 });
 
@@ -140,6 +143,7 @@ describe("ClientBidsPage", () => {
       extensions_used: 0,
       max_extensions: 2,
       extend_days: 3,
+      closes_automatically_at: "2026-11-08T06:00:00Z",
     },
     ...over,
   });
@@ -163,6 +167,7 @@ describe("ClientBidsPage", () => {
     expect(screen.getByText(/React developer needs 1 more eligible bid/)).toBeInTheDocument();
     expect(screen.getByText(/lowered from 45 to 40.*step 1 of 3/)).toBeInTheDocument();
     expect(screen.getByText("Not every place can be filled yet.")).toBeInTheDocument();
+    expect(screen.getByText(/closes on its own on 8 Nov 2026/)).toBeInTheDocument();
     expect(screen.getByText(/2 bids, 1 eligible/)).toBeInTheDocument();
     const nadia = screen.getByRole("row", { name: /Nadia Rahman/ });
     expect(within(nadia).getByText("Eligible")).toBeInTheDocument();

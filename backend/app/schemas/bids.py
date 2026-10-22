@@ -53,7 +53,9 @@ class BidOut(BaseModel):
 
     id: uuid.UUID
     project_id: uuid.UUID
+    project_title: str
     slot_id: uuid.UUID
+    slot_label: str  # the slot's label, or its skill's name when it has none
     status: str
     price_paisa: int
     days_needed: int
@@ -180,6 +182,8 @@ class BiddingWindow(BaseModel):
     extensions_used: int
     max_extensions: int
     extend_days: int
+    # While the team is short: when the project closes on its own if nothing changes (D54).
+    closes_automatically_at: datetime | None = None
 
 
 class ClientBidsOut(BaseModel):
