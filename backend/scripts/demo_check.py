@@ -12,6 +12,7 @@ limitations) for the student to rehearse with. Run from the repo root with the d
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from datetime import UTC, datetime
@@ -69,6 +70,8 @@ def _playwright_cmd(demo: int) -> list[str]:
     projects = [a for b in BROWSERS for a in ("--project", b)]
     return [
         "docker", "run", "--rm", f"--network=container:{nginx}", "--ipc=host",
+        # As the current user, so test-results stay removable (the gate's E2E step clears it).
+        "--user", f"{os.getuid()}:{os.getgid()}",
         "-v", f"{ROOT}/frontend:/web", "-w", "/web", "-e", "HOME=/tmp",
         "-e", "E2E_BASE_URL=https://localhost:8443",
         "mcr.microsoft.com/playwright:v1.63.0-noble",
