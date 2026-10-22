@@ -2,10 +2,10 @@
 
 ## Current state
 - **Current owner:** Salwa Baki (backend developer), Phases 4–5, from 2026-10-18 (hand-off from Mashfikuzzaman Taeen: `docs/handoffs/handoff-01-taeen-to-salwa.md`); Phase 5 gate finished by Taeen.
-- **Current phase:** 5 done (merged into `main`, tagged `phase-5` on 2026-10-22 by Taeen; push to GitHub pending a token). Next: Phase 5 follow-ups before Demo 1, then Phase 6.
-- **Last gate result:** `PHASE 5 GATE: PASS` (2026-10-21 20:00 UTC, Taeen's laptop, branch `phase-5`): backend 785 tests (95.4% coverage), security suite 246, frontend 283, E2E 177 × 3 on chromium/firefox/webkit/mobile, visual 112 baselines, Lighthouse desktop 97 / mobile 94.
-- **In progress:** Phase 5 follow-ups (D54) on branch `phase-5-followups` (worktree `../DevSync-p5f`): bidding closes by time, bids reference only the bidder's portfolio, the client Bids screen explains every verdict (Algorithm 1 trace, newcomer rule, relaxation, cheapest team, filters, phone cards), the five too-few-bids actions with previews, replication-mode relaxation as in the paper, search pagination for every sort and skill-name search, recommendations per §9.16, reserved-domain sign-in for the demo accounts, the bundled breached-password list committed (it was gitignored), hero poster on software WebGL. Being tested end to end before merging into `main`.
-- **Very next step:** full `make gate PHASE=5` on the branch, `/security-review`, `make demo-check DEMO=1`; then merge into `main`, re-tag, push (token from Taeen). Demo 1 is Mon 2 Nov 2026 (Phases 0–5).
+- **Current phase:** 5 done, follow-ups (D54) merged into `main` and `phase-5` re-tagged on 2026-10-23 by Taeen (local; push to GitHub pending a token). Next: push, then Phase 6.
+- **Last gate result:** `PHASE 5 GATE: PASS` (2026-10-22 20:01 UTC, Taeen's laptop, branch `phase-5-followups`, inside `make demo-check DEMO=1`): backend 839 tests (95.3% coverage), security suite 278, frontend 291, E2E 184 × 3 on chromium/firefox/webkit/mobile, visual 130 baselines, Lighthouse desktop 100 / mobile 94; Demo 1 walkthrough 12/12 (4 browsers × 3).
+- **In progress:** nothing; the Phase 5 follow-ups (D54) are done: bidding closes by time, bids reference only the bidder's portfolio, the client Bids screen explains every verdict, the too-few-bids actions with previews, replication-mode relaxation as in the paper, keyset search for every sort, recommendations per §9.16, reserved-domain sign-in for the demo accounts, the breached-password list committed.
+- **Very next step:** push `main`, `phase-5-followups` and the tags (token from Taeen); `make demo-up` before Demo 1 (Mon 2 Nov 2026, Phases 0–5); then Phase 6.
 - **Open human tasks:** review the 128 drafted test questions (D34); tester's human check of the Phase 3, 4 and 5 security reviews; sanity-check D39 (simulated payment-method verification).
 
 ## Phase table
@@ -23,6 +23,8 @@
 | Finished (UTC) | Phase | Result | Tests |
 |---|---|---|---|
 <!-- gate-log -->
+| 2026-10-22T20:01:35+00:00 | phase 5 | PASS | backend 839 / frontend 291 tests |
+| 2026-10-22T18:24:59+00:00 | phase 5 | FAIL (step 12) | backend 839 / frontend - tests |
 | 2026-10-22T18:06:59+00:00 | phase 5 | PASS | backend 839 / frontend 291 tests |
 | 2026-10-22T14:17:43+00:00 | phase 5 | FAIL (step 13) | backend 839 / frontend 291 tests |
 | 2026-10-22T12:36:38+00:00 | phase 5 | PASS | backend 839 / frontend 291 tests |
@@ -77,6 +79,7 @@
 ### 2026-10-22 — Taeen (with Claude Code), Phase 5 merged; follow-ups
 - Merged `phase-5` into `main` (fast-forward) and tagged `phase-5`; `make demo-check DEMO=1` exposed that the seeded demo accounts (`@devsync.local`) could not sign in and that the walkthrough expected screens it never reached.
 - Built every item of the external Phase 5 review on `phase-5-followups` (D54, security review findings 6–8) with property, API, job, perf, unit and cross-browser E2E tests and visual baselines for the bidding screens.
+- `make demo-check DEMO=1` passed on the branch (gate PASS + walkthrough 12/12) once the laptop had free memory (an earlier run lost step 12 to swap exhaustion with Chrome open); merged into `main` (fast-forward), `phase-5` tag moved to the merge.
 - Found and fixed on the way: the bundled breached-password list was never committed (`data/` ignore rule); the client view read ORM rows after its SYSTEM session closed (500); the shared dialog close button shrank on phones; `demo-check` left the test stack unseeded when the gate stopped early.
 
 ### 2026-10-21 — Taeen (with Claude Code), Phase 5 review and gate
