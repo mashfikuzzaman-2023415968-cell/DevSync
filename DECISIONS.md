@@ -549,7 +549,14 @@ with SwiftShader, so its hero (correctly) shows the poster there; the live-scene
 gate now quotes Playwright arguments with `shlex.join`). The headline must be the LCP element on Chromium (the
 engine Lighthouse uses); WebKit's LCP can name the hero's lead paragraph once the headline is
 swapped in after its reveal, so other engines accept either hero text block (never the canvas).
-The gate keeps a failed E2E pass's screenshots and traces in `runs/gates/e2e-failures/`.
+The gate keeps a failed E2E pass's screenshots and traces in `runs/gates/e2e-failures/`. WebKit in the container renders
+WebGL in software but reports "Apple GPU", so its hero starts the live scene and the compile once
+froze a page past a full test run's timeout; on WebKit the `@gpu` tests therefore start with
+reduced motion (poster, headline and LCP still checked), Chromium (software WebGL detected) and
+Firefox (no WebGL) fall back on their own, and the live scene is checked on `chromium-gpu`.
+*No upstream keepalive in nginx.* Gunicorn recycles each worker after ~1,000 requests; a POST sent
+on a kept-alive connection the exiting worker had just closed came back as a 502 (nginx rightly
+won't retry a POST). nginx now opens a fresh local connection per API request.
 *E2E fixtures.* Test-only routes (DEVSYNC_ENV=test only) close a project's bidding, give a
 developer a skill with test evidence and set a reputation snapshot, for the newcomer, relaxation
 and closed-bidding walkthroughs. The bid sheet also takes hours a week, expected contribution and

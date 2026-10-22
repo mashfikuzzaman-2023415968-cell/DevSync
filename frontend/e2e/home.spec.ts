@@ -43,18 +43,30 @@ async function liveOrPoster(page: Page) {
     await expect.poll(() => heroMode(page), { timeout: 20_000 }).toBe("live");
     return { live: true, project, mode: "live", fallback: "none" };
   }
-  const live = await expect
-    .poll(() => heroMode(page), { timeout: 8_000 })
-    .toBe("live")
-    .then(() => true)
-    .catch(() => false);
-  if (live) return { live: true, project, mode: "live", fallback: "none" };
+  // Every other test engine falls back up front (see posterOnSoftware3d): no waiting for "live".
+  await expect(page.locator("canvas[data-hero-poster]")).toHaveAttribute("data-drawn", "true", {
+    timeout: 20_000,
+  });
   const mode = String(await heroMode(page));
   const fallback = (await page.locator("[data-hero-mode]").getAttribute("data-fallback")) ?? "none";
-  await expect(page.locator("canvas[data-hero-poster]")).toHaveAttribute("data-drawn", "true");
-  expect(["poster", "poster-only"]).toContain(mode);
-  if (project === "chromium") expect(fallback).toBe("software-webgl");
+  expect(mode).toBe("poster-only");
+  const expected: Record<string, string> = {
+    chromium: "software-webgl", // SwiftShader, detected by the renderer name
+    firefox: "no-webgl",
+    webkit: "reduced-motion", // see posterOnSoftware3d
+    mobile: "reduced-motion",
+  };
+  expect(fallback).toBe(expected[project] ?? fallback);
   return { live: false, project, mode, fallback };
+}
+
+/** WebKit in the test container renders WebGL in software but reports "Apple GPU", so the hero
+ * can't tell and starts the live scene; compiling it in software froze the page for long enough
+ * to time a full test run out (D54). The live scene is checked on real hardware (chromium-gpu,
+ * step 16), so WebKit pages start with reduced motion: they still check the poster, the headline
+ * and the LCP rule, deterministically. */
+async function posterOnSoftware3d(page: Page, browserName: string): Promise<void> {
+  if (browserName === "webkit") await page.emulateMedia({ reducedMotion: "reduce" });
 }
 
 async function scrollBy(page: Page, dy: number, isMobile: boolean) {
@@ -157,6 +169,7 @@ test("poster shows first, the headline is the LCP element and the live scene fol
   isMobile,
   browserName,
 }) => {
+  await posterOnSoftware3d(page, browserName);
   await page.addInitScript(() => {
     (window as unknown as { __lcp: string[] }).__lcp = [];
     new PerformanceObserver((list) => {
@@ -197,7 +210,9 @@ test("poster shows first, the headline is the LCP element and the live scene fol
 test("scrolling snaps the constellation into a team with the chip @e2e @gpu", async ({
   page,
   isMobile,
+  browserName,
 }) => {
+  await posterOnSoftware3d(page, browserName);
   await page.goto("/");
   await expectLiveScene(page);
   const chip = page.locator("[data-hero-chip]");
@@ -211,7 +226,11 @@ test("scrolling snaps the constellation into a team with the chip @e2e @gpu", as
   await expect.poll(opacity, { timeout: 10_000 }).toBeLessThan(0.1);
 });
 
-test("the render loop stops when the hero is off screen @e2e @gpu", async ({ page }) => {
+test("the render loop stops when the hero is off screen @e2e @gpu", async ({
+  page,
+  browserName,
+}) => {
+  await posterOnSoftware3d(page, browserName);
   await page.goto("/");
   await expectLiveScene(page);
   const frames = () =>
@@ -324,7 +343,9 @@ test("reduced motion shows final states with no movement @e2e", async ({ page })
 test("the 3D chunk is never requested off the homepage; nothing leaves the origin @e2e @gpu", async ({
   page,
   baseURL,
+  browserName,
 }) => {
+  await posterOnSoftware3d(page, browserName);
   const origin = new URL(baseURL ?? "https://localhost").origin;
   const requested: string[] = [];
   page.on("request", (r) => requested.push(r.url()));
