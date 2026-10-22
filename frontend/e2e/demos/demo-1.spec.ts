@@ -35,6 +35,8 @@ test("Demo 1 — planning, sealed bidding and Algorithm 1 filtering @demo", asyn
   page,
   baseURL,
 }, info) => {
+  // The whole Demo 1 story in one test, with full-page screenshots at every step.
+  test.setTimeout(180_000);
   const url = baseURL ?? "";
 
   // 1. Landing page.
@@ -89,8 +91,17 @@ test("Demo 1 — planning, sealed bidding and Algorithm 1 filtering @demo", asyn
   await page.goto(`/dev/projects/${shortId}`);
   await page.getByRole("combobox").click();
   await page.getByRole("option", { name: /React/ }).first().click();
-  await page.getByLabel(/Your price/).fill("18000");
-  await page.getByLabel(/Days you need/).fill("20");
+  // Fill and confirm each value (Firefox once dropped a fill that raced the form's first render).
+  for (const [label, value] of [
+    [/Your price/, "18000"],
+    [/Days you need/, "20"],
+  ] as const) {
+    const field = page.getByLabel(label);
+    await expect(async () => {
+      await field.fill(value);
+      await expect(field).toHaveValue(value, { timeout: 1000 });
+    }).toPass({ timeout: 10_000 });
+  }
   await expect(page.getByText(/meet every requirement|would be filtered out/i)).toBeVisible({
     timeout: 5000,
   });
