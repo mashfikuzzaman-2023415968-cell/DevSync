@@ -12,6 +12,9 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.ts"],
     // Coverage instrumentation in the gate slows rendering-heavy tests well past the 5 s default.
     testTimeout: 20_000,
+    // Four workers, not one per core: on a 16-thread laptop with 7 GB RAM, sixteen jsdom
+    // workers with coverage pushed it into swap and the pool timed out starting workers.
+    maxWorkers: 4,
     include: ["src/**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"],
     coverage: {
       provider: "v8",
