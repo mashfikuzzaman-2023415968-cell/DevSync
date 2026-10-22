@@ -2,10 +2,10 @@
 
 ## Current state
 - **Current owner:** Salwa Baki (backend developer), Phases 4–5, from 2026-10-18 (hand-off from Mashfikuzzaman Taeen: `docs/handoffs/handoff-01-taeen-to-salwa.md`); Phase 5 gate finished by Taeen.
-- **Current phase:** 5 — Marketplace, sealed bidding, Algorithm 1 filtering — **gate passed, not yet merged or tagged**.
+- **Current phase:** 5 done (merged into `main`, tagged `phase-5` on 2026-10-22 by Taeen; push to GitHub pending a token). Next: Phase 5 follow-ups before Demo 1, then Phase 6.
 - **Last gate result:** `PHASE 5 GATE: PASS` (2026-10-21 20:00 UTC, Taeen's laptop, branch `phase-5`): backend 785 tests (95.4% coverage), security suite 246, frontend 283, E2E 177 × 3 on chromium/firefox/webkit/mobile, visual 112 baselines, Lighthouse desktop 97 / mobile 94.
 - **In progress:** nothing building. Gate fixes are in D51–D53 and security-review findings 3–5 (CSRF token echo for WebKit, CAPTCHA retry after sign-up, search control characters → 500, sign-out full page load, cross-browser E2E robustness).
-- **Very next step:** push `phase-5`; merge (fast-forward) into `main` and tag `phase-5` (owner decides who); `make demo-check DEMO=1`. Then the Phase 5 follow-ups listed under Known issues (too-few-bids actions, client Bids columns, portfolio ownership on bids, search pagination for every sort, recommendations per §9.16, time-enforced bidding deadline). Demo 1 is Mon 2 Nov 2026 (Phases 0–5).
+- **Very next step:** `make demo-check DEMO=1`; then the Phase 5 follow-ups listed under Known issues (too-few-bids actions, client Bids columns, portfolio ownership on bids, search pagination for every sort, recommendations per §9.16, time-enforced bidding deadline). Demo 1 is Mon 2 Nov 2026 (Phases 0–5).
 - **Open human tasks:** decide whether clients see bid prices live during bidding (spec) or only after it closes; decide the software-rendering hero fallback (D53 follow-up); review the 128 drafted test questions (D34); tester's human check of the Phase 3, 4 and 5 security reviews; sanity-check D39 (simulated payment-method verification).
 
 ## Phase table
@@ -16,7 +16,7 @@
 | 2 Design system & landing | Taeen | done | PASS | 2026-10-17 | phase-2 |
 | 3 Profiles & skill tests | Taeen | done | PASS | 2026-10-18 | phase-3 |
 | 4 Projects & CPM | Salwa (review fixes: Taeen) | done | PASS | 2026-10-20 | phase-4 |
-| 5 Marketplace & filtering | Salwa (gate fixes: Taeen) | gate passed (merge + tag pending) | PASS | 2026-10-21 | — |
+| 5 Marketplace & filtering | Salwa (gate fixes: Taeen) | done | PASS | 2026-10-21 | phase-5 |
 | 6–15 | — | not started | — | — | — |
 
 ## Gate log (newest first, appended by `make gate`)
