@@ -19,7 +19,9 @@ export function PlanIllustration() {
   const t = useTiming();
   const total = orderingSystem.cpm.durationDays;
   const critical = new Set<string>(orderingSystem.cpm.critical);
-  const width = 300;
+  // Names sit in a 96-unit column with a clear gap before the bars (no name touches a bar).
+  const left = 104;
+  const width = 266;
   return (
     <svg
       viewBox="0 0 380 230"
@@ -29,7 +31,7 @@ export function PlanIllustration() {
     >
       {orderingSystem.milestones.map((m, i) => {
         const s = orderingSystem.cpm.schedule[m.id] ?? { es: 0, ef: 0, slack: 0 };
-        const x = 70 + (s.es / total) * width;
+        const x = left + (s.es / total) * width;
         const w = ((s.ef - s.es) / total) * width;
         const y = 18 + i * 34;
         const isCritical = critical.has(m.id);
@@ -75,7 +77,7 @@ export function PlanIllustration() {
           </g>
         );
       })}
-      <text x="70" y="226" className="fill-text-muted text-[11px]">
+      <text x={left} y="226" className="fill-text-muted text-[11px]">
         {`${String(total)} days; the critical path is in rose`}
       </text>
     </svg>
@@ -150,7 +152,8 @@ export function TeamIllustration() {
           />
         );
       })}
-      <text x="160" y="185" className="fill-text-muted text-[11px]">
+      {/* Centred under the team, clear of the scattered dots on either side. */}
+      <text x="190" y="182" textAnchor="middle" className="fill-text-muted text-[11px]">
         One newcomer included
       </text>
     </svg>

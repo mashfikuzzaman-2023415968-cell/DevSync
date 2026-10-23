@@ -29,7 +29,7 @@ function TeamPreview({ newcomers }: { newcomers: number }) {
   const isNewcomer = (slot: number) => slot >= POS.length - newcomers;
   return (
     <div className="relative">
-      <svg viewBox="0 0 300 230" className="h-auto w-full" aria-hidden="true">
+      <svg viewBox="0 0 300 248" className="h-auto w-full" aria-hidden="true">
         <path
           d="M70 60 210 50 230 170 80 180Z M70 60 230 170 M210 50 80 180"
           fill="none"
