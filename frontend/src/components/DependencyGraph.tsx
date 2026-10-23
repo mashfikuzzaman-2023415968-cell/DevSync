@@ -129,8 +129,16 @@ export function DependencyGraph({
             );
           })}
         </g>
+        {/* Each milestone is a focus stop, so keyboard users can also reach (and scroll to) the
+            parts of a wide graph that sit off screen. */}
         {placed.map((n) => (
-          <g key={n.key}>
+          <g
+            key={n.key}
+            tabIndex={0}
+            role="group"
+            aria-label={n.critical ? `${n.name}, on the critical path` : n.name}
+            className="group outline-none"
+          >
             <rect
               x={n.x}
               y={n.y}
@@ -140,6 +148,16 @@ export function DependencyGraph({
               className={cn("fill-surface", n.critical ? "stroke-danger" : "stroke-border")}
               strokeWidth={n.critical ? "2" : "1"}
             />
+            <rect
+              x={n.x - 3}
+              y={n.y - 3}
+              width={NODE_W + 6}
+              height={NODE_H + 6}
+              rx="10"
+              fill="none"
+              strokeWidth="2"
+              className="stroke-primary opacity-0 group-focus-visible:opacity-100"
+            />
             <title>{n.name}</title>
             <text
               x={n.x + NODE_W / 2}
@@ -148,7 +166,11 @@ export function DependencyGraph({
               className={cn("text-body-sm", n.critical ? "fill-danger" : "fill-text")}
             >
               {nameLines(n.name).map((line, i, all) => (
-                <tspan key={line} x={n.x + NODE_W / 2} dy={i === 0 ? (all.length - 1) * -8 : 16}>
+                <tspan
+                  key={String(i)}
+                  x={n.x + NODE_W / 2}
+                  dy={i === 0 ? (all.length - 1) * -8 : 16}
+                >
                   {line}
                 </tspan>
               ))}

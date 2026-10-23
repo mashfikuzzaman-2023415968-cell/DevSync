@@ -212,6 +212,19 @@ describe("DependencyGraph", () => {
     expect(screen.getByText("Testing", { selector: "tspan" })).toBeInTheDocument();
   });
 
+  it("makes every milestone a keyboard stop so a wide graph can be scrolled", async () => {
+    const user = userEvent.setup();
+    render(
+      <DependencyGraph
+        nodes={NODES.map((n) => ({ key: n.key, name: n.name, critical: n.critical }))}
+        edges={EDGES}
+      />,
+    );
+    await user.tab();
+    expect(document.activeElement).toHaveAccessibleName("Requirements, on the critical path");
+    expect(screen.getByLabelText("Frontend")).toHaveAttribute("tabindex", "0");
+  });
+
   it("wraps long names onto two lines and keeps the full name as a title", () => {
     const long = "Payment gateway integration and reconciliation";
     const { container } = render(
