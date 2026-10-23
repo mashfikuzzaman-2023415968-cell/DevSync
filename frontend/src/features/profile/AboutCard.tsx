@@ -107,7 +107,16 @@ export function AboutCard({ profile }: { profile: DeveloperProfile }) {
     },
     [update, form.setError],
   );
-  const { state, retry } = useAutosave(values, saved, save, form.formState.isValid);
+  const { state, retry } = useAutosave(
+    values,
+    saved,
+    save,
+    form.formState.isValid,
+    (key, value) => {
+      form.setValue(key, value, { shouldValidate: true });
+    },
+    form.getValues,
+  );
   const errors = form.formState.errors;
 
   return (
@@ -163,7 +172,7 @@ export function AboutCard({ profile }: { profile: DeveloperProfile }) {
           max={80}
           hint="How much time you can give a project (1–80)."
           error={errors.hours_per_week?.message}
-          {...form.register("hours_per_week")}
+          {...form.register("hours_per_week", { valueAsNumber: true })}
         />
         <Field
           label="GitHub username"

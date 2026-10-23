@@ -11,7 +11,7 @@ import { Probe, renderRoutes } from "@/test/render";
 import ProfilePage from "./ProfilePage";
 import PublicProfilePage from "./PublicProfilePage";
 import { aboutSchema, isGithubUsername, isHttpsUrl, itemSchema, reviewSchema } from "./schemas";
-import { changedFields } from "./useAutosave";
+import { changedFields, sameValue } from "./useAutosave";
 
 const ME = {
   id: "dev-1",
@@ -144,6 +144,18 @@ describe("profile schemas", () => {
     expect(changedFields({ a: 1, b: "x" }, { a: 1, b: "y" })).toEqual({ b: "x" });
     expect(changedFields({ a: 1 }, { a: 1 })).toEqual({});
   });
+
+  it("compares values the way the server stores them", () => {
+    expect(sameValue("30", 30)).toBe(true);
+    expect(sameValue(30, 30)).toBe(true);
+    expect(sameValue("31", 30)).toBe(false);
+    expect(sameValue("", 0)).toBe(false);
+    expect(sameValue("Hello ", "Hello")).toBe(true);
+    expect(sameValue(" a b ", "a b")).toBe(true);
+    expect(sameValue("a  b", "a b")).toBe(false);
+    expect(sameValue(null, "")).toBe(false);
+    expect(changedFields({ h: "30", t: "x " }, { h: 30, t: "x" })).toEqual({});
+  });
 });
 
 describe("ProfilePage", () => {
@@ -172,6 +184,65 @@ describe("ProfilePage", () => {
       "href",
       "/d/dev-1",
     );
+  });
+
+  it("saves hours and a headline with a trailing space once, not over and over", async () => {
+    const bodies: Record<string, unknown>[] = [];
+    let profile = { ...PROFILE };
+    server.use(
+      ...base(),
+      http.get("*/api/v1/me/developer-profile", () => HttpResponse.json(profile)),
+      http.patch("*/api/v1/me/developer-profile", async ({ request }) => {
+        const body = (await request.json()) as Record<string, unknown>;
+        bodies.push(body);
+        // The server trims text, like StrictRequest's str_strip_whitespace.
+        const stored = Object.fromEntries(
+          Object.entries(body).map(([k, v]) => [k, typeof v === "string" ? v.trim() : v]),
+        );
+        profile = { ...profile, ...stored, updated_at: "2026-10-18T05:00:00Z" };
+        return HttpResponse.json(profile);
+      }),
+    );
+    renderRoutes([{ path: "/dev/profile", element: <ProfilePage /> }], "/dev/profile");
+    const user = userEvent.setup();
+    const hours = await screen.findByLabelText("Hours per week");
+    await user.clear(hours);
+    await user.type(hours, "30");
+    await user.type(screen.getByLabelText("Headline"), " ok ");
+    await waitFor(
+      () => {
+        expect(screen.getByText("Saved")).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+    // Wait well past a few autosave delays: nothing more is sent.
+    await new Promise((r) => setTimeout(r, 2500));
+    expect(bodies).toEqual([{ hours_per_week: 30, headline: "React developer ok " }]);
+  }, 10_000);
+
+  it("saves an edit still waiting when the page is left", async () => {
+    const bodies: unknown[] = [];
+    server.use(
+      ...base(),
+      http.patch("*/api/v1/me/developer-profile", async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json({ ...PROFILE, bio: "Hi", updated_at: "2026-10-18T05:00:00Z" });
+      }),
+    );
+    const { router } = renderRoutes(
+      [
+        { path: "/dev/profile", element: <ProfilePage /> },
+        { path: "/dev", element: <Probe label="dashboard" /> },
+      ],
+      "/dev/profile",
+    );
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("About"), "Hi");
+    await router.navigate("/dev"); // well within the autosave delay
+    expect(await screen.findByText("dashboard")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(bodies).toEqual([{ bio: "Hi" }]);
+    });
   });
 
   it("shows the server's field error and Not saved", async () => {
