@@ -3,9 +3,9 @@
 ## Current state
 - **Current owner:** Salwa Baki (backend developer), Phases 4–5, from 2026-10-18 (hand-off from Mashfikuzzaman Taeen: `docs/handoffs/handoff-01-taeen-to-salwa.md`); Phase 5 gate finished by Taeen.
 - **Current phase:** 5 done, follow-ups (D54) merged into `main` and `phase-5` re-tagged on 2026-10-23 by Taeen (local; push to GitHub pending a token). Next: push, then Phase 6.
-- **Last gate result:** `PHASE 5 GATE: PASS` (2026-10-22 20:01 UTC, Taeen's laptop, branch `phase-5-followups`, inside `make demo-check DEMO=1`): backend 839 tests (95.3% coverage), security suite 278, frontend 291, E2E 184 × 3 on chromium/firefox/webkit/mobile, visual 130 baselines, Lighthouse desktop 100 / mobile 94; Demo 1 walkthrough 12/12 (4 browsers × 3).
-- **In progress:** nothing; the Phase 5 follow-ups (D54) are done: bidding closes by time, bids reference only the bidder's portfolio, the client Bids screen explains every verdict, the too-few-bids actions with previews, replication-mode relaxation as in the paper, keyset search for every sort, recommendations per §9.16, reserved-domain sign-in for the demo accounts, the breached-password list committed.
-- **Very next step:** push `main`, `phase-5-followups` and the tags (token from Taeen); `make demo-up` before Demo 1 (Mon 2 Nov 2026, Phases 0–5); then Phase 6.
+- **Last gate result:** `PHASE 5 GATE: PASS` (2026-10-23 12:15 UTC, Taeen's laptop, branch `gantt-polish`): backend 839 tests (95.3% coverage), security suite 278, frontend 306, E2E 184 × 3 on chromium/firefox/webkit/mobile, visual 130 baselines, Lighthouse desktop 100 / mobile 94.
+- **In progress:** Gantt polish on branch `gantt-polish` (gate PASS, awaiting Taeen's approval to merge and push): real dates on the axis, dependency arrows, legend, day/week zoom, a today line once work is under way, full milestone names (no 20-character cut) and a details line; the dependency graph wraps names and its nodes are keyboard stops.
+- **Very next step:** merge `gantt-polish` into `main` and push (token from Taeen); `make demo-up` before Demo 1 (Mon 2 Nov 2026, Phases 0–5); then Phase 6 (start by moving to Node 22 LTS, see Known issues).
 - **Open human tasks:** review the 128 drafted test questions (D34); tester's human check of the Phase 3, 4 and 5 security reviews; sanity-check D39 (simulated payment-method verification).
 
 ## Phase table
@@ -23,6 +23,9 @@
 | Finished (UTC) | Phase | Result | Tests |
 |---|---|---|---|
 <!-- gate-log -->
+| 2026-10-23T12:15:25+00:00 | phase 5 | PASS | backend 839 / frontend 306 tests |
+| 2026-10-23T10:36:53+00:00 | phase 5 | FAIL (step 13) | backend 839 / frontend 306 tests |
+| 2026-10-23T08:19:31+00:00 | phase 5 | FAIL (step 5) | backend 839 / frontend 305 tests |
 | 2026-10-22T20:01:35+00:00 | phase 5 | PASS | backend 839 / frontend 291 tests |
 | 2026-10-22T18:24:59+00:00 | phase 5 | FAIL (step 12) | backend 839 / frontend - tests |
 | 2026-10-22T18:06:59+00:00 | phase 5 | PASS | backend 839 / frontend 291 tests |
@@ -67,7 +70,7 @@
 ## Known issues
 - This laptop runs Apache on port 80: for `make up`, set `HTTP_PORT=8080` in `.env` or stop Apache.
 - `make certs` produced a self-signed certificate; install mkcert before Demo 1 (D3).
-- Node 20 is end-of-life; move the team to Node 22 LTS before Demo 1 (D15).
+- Node 20 is end-of-life and unpatched for CVE-2026-111497 ("Node2Shell", Brotli); not exposed at runtime (no Node in the served images, Nginx builds only the Brotli encoder), but move the laptops and the edge build stage to Node 22 LTS at the start of Phase 6 (D15).
 - Tester's human check of `docs/security-reviews/phase-00.md` to `phase-03.md` is pending (Sara).
 - The 128 skill-test questions need a human accuracy review (D34).
 - The gate's frame-rate step needs a GPU (`/dev/dri`); run the gate on a laptop (D28). Long gate runs are best started with `systemd-run --user` so closing a terminal or chat doesn't kill them.
@@ -76,6 +79,12 @@
 - Phase 5 known limitations (D54): TOO_SLOW compares with the whole-project deadline, not the slot's milestones (the paper's simplification); availability must be re-checked when invitations are accepted (Phase 8); bid prices stay visible to the client during bidding (spec), sealed from other developers.
 
 ## Session log (newest first)
+### 2026-10-23 — Taeen (with Claude Code), Gantt polish
+- Pushed `main`, `phase-5`, `phase-5-followups` and the `phase-5` tag after the Demo 1 readiness check passed.
+- Gantt (`components/Gantt.tsx`): date axis (months over days, week starts when zoomed out; days from start without a start date), finish-to-start arrows, legend, Days/Weeks zoom (weeks for long plans and phones), today line for IN_PROGRESS/ON_HOLD/REVIEW_WINDOW, names in an HTML column wrapped to two lines, a live details line on hover/focus/tap. Dependency graph names wrap to two lines; nodes are focus stops (axe `scrollable-region-focusable` once the graph scrolls). 15 new unit tests; 6 plan-page visual baselines regenerated.
+- The gate's secret scanners caught a GitHub token file in the working tree (`ptoken.txt`, untracked); moved out of the repo. One gate run lost step 13 to memory pressure (Chrome open); the isolated test passed 6/6 and the rerun passed.
+- Seen but not changed: WebKit/mobile axe colour-contrast checks occasionally fire mid fade-in on the developer home and homepage glow (not part of the gate, which runs axe on Chromium).
+
 ### 2026-10-22 — Taeen (with Claude Code), Phase 5 merged; follow-ups
 - Merged `phase-5` into `main` (fast-forward) and tagged `phase-5`; `make demo-check DEMO=1` exposed that the seeded demo accounts (`@devsync.local`) could not sign in and that the walkthrough expected screens it never reached.
 - Built every item of the external Phase 5 review on `phase-5-followups` (D54, security review findings 6–8) with property, API, job, perf, unit and cross-browser E2E tests and visual baselines for the bidding screens.
