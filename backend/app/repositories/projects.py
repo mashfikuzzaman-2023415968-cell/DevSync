@@ -23,9 +23,20 @@ from app.models.projects import (
 )
 
 
-async def get_project(db: AsyncSession, project_id: uuid.UUID) -> Project | None:
-    """Load a project visible to the caller (RLS), or None."""
-    return await db.get(Project, project_id)
+async def get_project(
+    db: AsyncSession, project_id: uuid.UUID, *, for_update: bool = False
+) -> Project | None:
+    """Load a project visible to the caller (RLS), or None. `for_update` locks the row until the
+    transaction ends, so a change can't interleave with the deadline job's (or another tab's)."""
+    if not for_update:
+        return await db.get(Project, project_id)
+    stmt = (
+        select(Project)
+        .where(Project.id == project_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    return await db.scalar(stmt)
 
 
 async def list_mine(db: AsyncSession, client_id: uuid.UUID) -> Sequence[Project]:

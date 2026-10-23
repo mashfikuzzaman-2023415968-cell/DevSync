@@ -99,8 +99,8 @@ async def _load_for_read(ctx: Ctx, project_id: uuid.UUID) -> Project:
 
 
 async def _load_for_write(ctx: Ctx, project_id: uuid.UUID, if_match: int | None) -> Project:
-    """A project the caller owns and may change; checks the optimistic-concurrency version."""
-    project = await repo.get_project(ctx.db, project_id)
+    """A project the caller owns and may change (row locked); checks the version."""
+    project = await repo.get_project(ctx.db, project_id, for_update=True)
     if project is None or project.client_id != ctx.uid:
         raise NotFoundError
     if if_match is not None and project.version != if_match:
@@ -621,7 +621,7 @@ async def extend_bidding(ctx: Ctx, project_id: uuid.UUID) -> ProjectOut:
 
 async def cancel(ctx: Ctx, project_id: uuid.UUID, reason: str) -> ProjectOut:
     """Cancel a project before work starts (free; no escrow yet in Phase 4)."""
-    project = await repo.get_project(ctx.db, project_id)
+    project = await repo.get_project(ctx.db, project_id, for_update=True)
     if project is None or (project.client_id != ctx.uid and not ctx.principal.is_admin):
         raise NotFoundError
     _require_status(project, CANCELLABLE, "cancel")

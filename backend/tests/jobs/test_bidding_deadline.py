@@ -276,3 +276,37 @@ async def test_a_covered_team_is_formed_however_late_the_job_runs() -> None:
     await make_eligible_bidder(pid, sid, skid)
     await close_due_bidding()
     assert await _status(pid) == ProjectStatus.FORMING
+
+
+@pytest.mark.asyncio
+async def test_a_project_the_client_is_changing_is_left_alone() -> None:
+    # The client's cancel holds the row (not committed yet) when the job runs.
+    client = await make_user("CLIENT")
+    pid, _sid, _sk = await make_project(client, just_closed())
+    async with open_session(DbContext.system(), job=True) as db:
+        project = await db.scalar(select(Project).where(Project.id == pid).with_for_update())
+        assert project is not None
+        project.status = ProjectStatus.CANCELLED
+        await close_due_bidding()  # other connections: must skip the locked row
+        await db.commit()
+    assert await _status(pid) == ProjectStatus.CANCELLED
+    assert await _notifications(client, "TOO_FEW_BIDS") == 0  # no notice for a cancelled project
+
+
+@pytest.mark.asyncio
+async def test_the_reminder_gives_the_auto_close_date_in_dhaka_time() -> None:
+    client = await make_user("CLIENT")
+    # Closed 8 days ago at 20:00 UTC, i.e. 02:00 the next day in Dhaka.
+    day = (datetime.now(UTC) - timedelta(days=8)).date()
+    closed = datetime(day.year, day.month, day.day, 20, 0, tzinfo=UTC)
+    await make_project(client, closed)
+    await close_due_bidding()
+    async with open_session(DbContext.system(), job=True) as db:
+        body = await db.scalar(
+            select(Notification.body).where(
+                Notification.user_id == client, Notification.type == "TOO_FEW_BIDS_REMINDER"
+            )
+        )
+    dhaka_day = (closed + timedelta(days=14, hours=6)).strftime("%d %b %Y")
+    assert body is not None
+    assert dhaka_day in body

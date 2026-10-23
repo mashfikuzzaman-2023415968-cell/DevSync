@@ -13,13 +13,14 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
+from typing import Any
 
 import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import write_audit
-from app.core.clock import get_clock
+from app.core.clock import get_clock, to_display
 from app.core.settings_cache import active_settings
 from app.db.context import DbContext
 from app.db.session import open_session
@@ -37,22 +38,36 @@ _AUTO_CLOSED = "PROJECT_CANCELLED"
 AUTO_CLOSE_REASON = "Closed automatically: not enough eligible bids two weeks after bidding closed."
 
 
+def _due(now: datetime) -> tuple[Any, ...]:
+    return (
+        Project.status == ProjectStatus.BIDDING,
+        Project.bidding_deadline.is_not(None),
+        Project.bidding_deadline <= now,
+    )
+
+
 async def close_due_bidding() -> dict[str, int]:
     """Process every BIDDING project whose deadline has passed."""
     moved_to_forming = notified_too_few = auto_closed = 0
+    now = get_clock().now()
     async with open_session(DbContext.system(), job=True) as db:
         settings = await active_settings(db)
-        now = get_clock().now()
-        projects = (
+        due = (
             await db.scalars(
-                select(Project).where(
-                    Project.status == ProjectStatus.BIDDING,
-                    Project.bidding_deadline.is_not(None),
-                    Project.bidding_deadline <= now,
-                )
+                select(Project.id).where(*_due(now)).order_by(Project.bidding_deadline)
             )
         ).all()
-        for project in projects:
+    for project_id in due:
+        # One project per transaction, its row locked and re-checked: a client who cancels or
+        # extends meanwhile wins, and the job never writes over their change.
+        async with open_session(DbContext.system(), job=True) as db:
+            project = await db.scalar(
+                select(Project)
+                .where(Project.id == project_id, *_due(now))
+                .with_for_update(skip_locked=True)
+            )
+            if project is None:
+                continue  # changed (or being changed) since the list was read
             ev = await bids_svc.evaluate(db, project, settings, now.date())
             result = ev.result
             link = f"/client/projects/{project.id}/bids"
@@ -79,7 +94,9 @@ async def close_due_bidding() -> dict[str, int]:
                     await _auto_close(db, project, now)
                     auto_closed += 1
                 elif overdue >= bids_svc.REMIND_AFTER:
-                    closes = bids_svc.auto_close_at(project)
+                    deadline = project.bidding_deadline or now  # the query excludes None
+                    # Shown as people here read dates (Asia/Dhaka), like the Bids page.
+                    closes = to_display(deadline + bids_svc.AUTO_CLOSE_AFTER)
                     await notify_once(
                         db,
                         project.client_id,
@@ -93,6 +110,7 @@ async def close_due_bidding() -> dict[str, int]:
                     )
             else:
                 project.status = ProjectStatus.FORMING
+                project.version += 1  # a tab holding the old version gets a conflict
                 await notify_once(
                     db,
                     project.client_id,
@@ -103,7 +121,7 @@ async def close_due_bidding() -> dict[str, int]:
                     since=project.bidding_deadline,
                 )
                 moved_to_forming += 1
-        await db.commit()
+            await db.commit()
     log.info(
         "bidding_deadline_processed",
         formed=moved_to_forming,

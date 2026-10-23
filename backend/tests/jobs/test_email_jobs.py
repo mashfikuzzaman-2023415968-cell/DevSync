@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
-from sqlalchemy import insert, select
+from sqlalchemy import insert, select, update
 
 from app.db.context import DbContext
 from app.db.session import open_session
@@ -21,6 +22,19 @@ pytestmark = pytest.mark.jobs
 def _stack(migrated: str) -> None:
     if not stack_available():
         pytest.skip("needs the test compose stack")
+
+
+@pytest.fixture(autouse=True)
+async def _empty_queue(_stack: None) -> None:
+    """Start each test with no email waiting: earlier suites (sign-ups in E2E runs) leave
+    hundreds queued, and a batch takes the oldest first, so a test's own email might not run."""
+    async with open_session(DbContext.system(), job=True) as db:
+        await db.execute(
+            update(EmailOutbox)
+            .where(EmailOutbox.status == OutboxStatus.PENDING)
+            .values(status=OutboxStatus.FAILED, last_error="cleared by test")
+        )
+        await db.commit()
 
 
 async def _enqueue(to: str) -> None:
@@ -86,6 +100,32 @@ async def test_failures_back_off_then_give_up(monkeypatch: pytest.MonkeyPatch) -
             await db.commit()
         await email_jobs.send_due_emails()
     assert (await _row(to))["status"] == OutboxStatus.FAILED
+
+
+async def test_no_transaction_is_held_open_while_smtp_runs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A slow SMTP server used to outlast the worker's idle-in-transaction timeout, losing the
+    # batch's results so the same emails went out again on every run.
+    to = unique_email()
+    seen_during_send: list[dict[str, Any]] = []
+
+    def slow_send(_s: Any, message: Any) -> None:
+        if message["To"] == to:
+            # Another connection already sees the claim: it was committed before sending.
+            seen_during_send.append(asyncio.run(_row(to)))
+
+    monkeypatch.setattr(email_jobs, "send_via_smtp", slow_send)
+    await _enqueue(to)
+    await email_jobs.send_due_emails()
+    assert seen_during_send
+    claim = seen_during_send[0]
+    assert claim["attempts"] == 1
+    assert claim["status"] == OutboxStatus.PENDING
+    assert claim["next_attempt_at"] > datetime.now(UTC)  # leased, so no other run takes it
+    done = await _row(to)
+    assert done["status"] == OutboxStatus.SENT
+    assert done["attempts"] == 1
 
 
 async def test_expire_records_runs() -> None:

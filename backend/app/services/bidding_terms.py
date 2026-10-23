@@ -47,7 +47,7 @@ TERMS_CHANGED = "PROJECT_TERMS_CHANGED"
 async def _own_bidding_project(
     ctx: Ctx, project_id: uuid.UUID, if_match: int | None = None
 ) -> Project:
-    project = await projrepo.get_project(ctx.db, project_id)
+    project = await projrepo.get_project(ctx.db, project_id, for_update=True)
     if project is None or project.client_id != ctx.uid:
         raise NotFoundError
     if project.status != ProjectStatus.BIDDING:
