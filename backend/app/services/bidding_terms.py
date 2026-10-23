@@ -217,6 +217,7 @@ async def apply(
         body=f"The client updated the budget, minimum standards or team size of "
         f"“{project.title}”. Your bid's eligibility may have changed.",
         link="/dev/bids",
+        once=False,  # each change (and each project) is its own event
     )
     view = await bids_svc.bids_view(ctx, project)
     if view.bidding.closed and not view.too_few:

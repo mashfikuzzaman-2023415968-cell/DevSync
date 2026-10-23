@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Iterable
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,34 +21,63 @@ from app.db.session import open_session
 from app.models.identity import Notification
 
 
-async def notify_once(
+def notify(
     db: AsyncSession, user_id: uuid.UUID, kind: str, *, title: str, body: str, link: str
+) -> None:
+    """Create a notification for a one-off event (no de-duplication)."""
+    db.add(Notification(user_id=user_id, type=kind, title=title, body=body, link_path=link))
+
+
+async def notify_once(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    kind: str,
+    *,
+    title: str,
+    body: str,
+    link: str,
+    since: datetime | None = None,
 ) -> bool:
-    """Create a notification unless an unread one of this kind for this link already exists."""
-    existing = await db.scalar(
-        select(Notification.id).where(
-            Notification.user_id == user_id,
-            Notification.type == kind,
-            Notification.link_path == link,
-            Notification.read_at.is_(None),
-        )
-    )
+    """Create a notification unless one of this kind for this link already exists: since
+    `since` (read or not) when given, so a repeating job sends it once per occasion; otherwise
+    an unread one."""
+    conditions = [
+        Notification.user_id == user_id,
+        Notification.type == kind,
+        Notification.link_path == link,
+    ]
+    if since is not None:
+        conditions.append(Notification.created_at >= since)
+    else:
+        conditions.append(Notification.read_at.is_(None))
+    existing = await db.scalar(select(Notification.id).where(*conditions).limit(1))
     if existing is not None:
         return False
-    db.add(Notification(user_id=user_id, type=kind, title=title, body=body, link_path=link))
+    notify(db, user_id, kind, title=title, body=body, link=link)
     return True
 
 
 async def notify_users(
-    user_ids: Iterable[uuid.UUID], kind: str, *, title: str, body: str, link: str
+    user_ids: Iterable[uuid.UUID],
+    kind: str,
+    *,
+    title: str,
+    body: str,
+    link: str,
+    once: bool = True,
 ) -> int:
-    """Notify several users (deduplicated, at most one unread per kind and link) as SYSTEM."""
+    """Notify several users as SYSTEM: at most one unread per kind and link, or (`once=False`)
+    every time, for distinct events such as one project being cancelled after another."""
     unique = list(dict.fromkeys(user_ids))
     if not unique:
         return 0
     created = 0
     async with open_session(DbContext.system(), job=True) as db:
         for user_id in unique:
-            created += await notify_once(db, user_id, kind, title=title, body=body, link=link)
+            if once:
+                created += await notify_once(db, user_id, kind, title=title, body=body, link=link)
+            else:
+                notify(db, user_id, kind, title=title, body=body, link=link)
+                created += 1
         await db.commit()
     return created

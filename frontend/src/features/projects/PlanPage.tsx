@@ -69,7 +69,8 @@ export default function PlanPage() {
   const nodes = p?.nodes ?? [];
   const criticalCount = nodes.filter((n) => n.critical).length;
   const startDate = project.data?.start_date ?? null;
-  const finish = startDate && p ? dayToDate(startDate, p.duration) : null;
+  // The last working day, matching the Gantt's "6 Nov – 14 Nov" ranges (offsets are [es, ef)).
+  const finish = startDate && p ? dayToDate(startDate, Math.max(0, p.duration - 1)) : null;
   const today =
     startDate && STARTED.has(project.data?.status ?? "")
       ? Math.floor((Date.now() - new Date(startDate).getTime()) / DAY_MS)

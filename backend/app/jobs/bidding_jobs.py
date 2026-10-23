@@ -26,7 +26,7 @@ from app.db.session import open_session
 from app.models.projects import Project, ProjectStatus
 from app.repositories import bids as bidrepo
 from app.services import bids as bids_svc
-from app.services.notifications import notify_once
+from app.services.notifications import notify, notify_once
 
 log = structlog.get_logger(__name__)
 
@@ -71,6 +71,7 @@ async def close_due_bidding() -> dict[str, int]:
                     "Extend bidding, lower the minimum standards, raise the budget, reduce the "
                     "team, or cancel.",
                     link=link,
+                    since=project.bidding_deadline,
                 ):
                     notified_too_few += 1
                 overdue = now - (project.bidding_deadline or now)  # the query excludes None
@@ -88,6 +89,7 @@ async def close_due_bidding() -> dict[str, int]:
                         f"{closes:%d %b %Y} unless you extend bidding, lower the standards, "
                         "raise the budget or reduce the team.",
                         link=link,
+                        since=project.bidding_deadline,
                     )
             else:
                 project.status = ProjectStatus.FORMING
@@ -98,6 +100,7 @@ async def close_due_bidding() -> dict[str, int]:
                     title="Bidding closed — ready to form your team",
                     body="You have enough eligible bids. Start team formation to build your team.",
                     link=link,
+                    since=project.bidding_deadline,
                 )
                 moved_to_forming += 1
         await db.commit()
@@ -133,7 +136,7 @@ async def _auto_close(db: AsyncSession, project: Project, now: datetime) -> None
         (project.client_id, f"/client/projects/{project.id}/bids"),
         *[(dev, "/dev/bids") for dev in await bidrepo.active_bidder_ids(db, project.id)],
     ]:
-        await notify_once(db, user_id, _AUTO_CLOSED, title=title, body=body, link=link)
+        notify(db, user_id, _AUTO_CLOSED, title=title, body=body, link=link)  # happens once
 
 
 def bidding_deadline() -> dict[str, int]:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -148,6 +149,44 @@ async def test_too_few_bids_stays_bidding_notifies_once() -> None:
     # Idempotent: a second run does not create a duplicate notification.
     await close_due_bidding()
     assert await _notifications(client, "TOO_FEW_BIDS") == 1
+
+
+async def _read_all(user_id: uuid.UUID) -> None:
+    async with open_session(DbContext.system(), job=True) as db:
+        for n in (
+            await db.scalars(select(Notification).where(Notification.user_id == user_id))
+        ).all():
+            n.read_at = datetime.now(UTC)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_reading_the_notices_does_not_bring_them_back() -> None:
+    # The job runs every 5 minutes; a client who reads the notice must not get it again.
+    client = await make_user("CLIENT")
+    await make_project(client, datetime.now(UTC) - timedelta(days=8))
+    await close_due_bidding()
+    await _read_all(client)
+    await close_due_bidding()
+    await close_due_bidding()
+    assert await _notifications(client, "TOO_FEW_BIDS") == 1
+    assert await _notifications(client, "TOO_FEW_BIDS_REMINDER") == 1
+
+
+@pytest.mark.asyncio
+async def test_a_new_closing_after_an_extension_notifies_again() -> None:
+    client = await make_user("CLIENT")
+    pid, _sid, _sk = await make_project(client, datetime.now(UTC) - timedelta(hours=2))
+    await close_due_bidding()
+    await _read_all(client)
+    async with open_session(DbContext.system(), job=True) as db:
+        project = await db.get(Project, pid)
+        assert project is not None
+        project.bidding_deadline = datetime.now(UTC) + timedelta(seconds=1)  # extended
+        await db.commit()
+    await asyncio.sleep(1.5)  # ... and the new close time passes
+    await close_due_bidding()
+    assert await _notifications(client, "TOO_FEW_BIDS") == 2
 
 
 @pytest.mark.asyncio

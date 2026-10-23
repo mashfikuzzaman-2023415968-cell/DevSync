@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Sequence
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, select
@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.algorithms.cpm import (
     CpmCycleError,
     CpmResult,
+    CpmValidationError,
     MilestoneInput,
     compute_cpm,
 )
@@ -133,6 +134,17 @@ async def _validate_skill_ids(ctx: Ctx, ids: Sequence[uuid.UUID], field: str) ->
         )
 
 
+def _require_future_bidding_deadline(deadline: datetime | None, now: datetime) -> None:
+    """A bidding close time must be ahead: one in the past would close bidding the moment the
+    project is published (and the too-few-bids job could cancel it straight away)."""
+    if deadline is not None and deadline <= now:
+        raise DomainError(
+            "Choose a bidding close time in the future.",
+            code=ErrorCode.VALIDATION_ERROR,
+            fields={"bidding_deadline": "must be in the future"},
+        )
+
+
 def _project_out(project: Project) -> ProjectOut:
     return ProjectOut.model_validate(project, from_attributes=True)
 
@@ -196,6 +208,7 @@ def _cpm_to_json(result: CpmResult, names: dict[str, str]) -> dict[str, Any]:
 
 async def create_draft(ctx: Ctx, data: ProjectCreate) -> ProjectOut:
     """Create a DRAFT project owned by the caller."""
+    _require_future_bidding_deadline(data.bidding_deadline, ctx.now)
     project = Project(
         client_id=ctx.uid,
         title=data.title,
@@ -233,6 +246,8 @@ async def update_draft(
     project = await _load_for_write(ctx, project_id, if_match)
     _require_status(project, {EDITABLE}, "edit")
     changes = data.model_dump(exclude_unset=True)
+    if "bidding_deadline" in changes:
+        _require_future_bidding_deadline(changes["bidding_deadline"], ctx.now)
     for field, value in changes.items():
         setattr(project, field, value)
     project.version += 1
@@ -433,6 +448,14 @@ async def plan_preview(ctx: Ctx, project_id: uuid.UUID, data: PlanPreviewIn) -> 
             total_share_bp=total_share,
             warnings=[f"Dependency cycle: {' → '.join(cycle)}."],
         )
+    except CpmValidationError as exc:
+        # Duplicate keys, a milestone after itself, an unknown predecessor: the request is
+        # malformed (the wizard never sends these), so say so instead of a 500.
+        raise DomainError(
+            "This plan can't be scheduled as sent.",
+            code=ErrorCode.VALIDATION_ERROR,
+            fields={"milestones": str(exc)},
+        ) from exc
     if data.milestones and total_share != 10_000:  # noqa: PLR2004 - 100% in basis points
         warnings.append(f"Milestone shares total {total_share / 100:.0f}%, not 100%.")
     if result.duration > project.deadline_days:
@@ -496,12 +519,32 @@ async def publish(
             fields={"payment_method": "a verified payment method is required"},
         )
 
+    if project.budget_paisa < 1:
+        raise DomainError(
+            "Set a budget before publishing.",
+            code=ErrorCode.VALIDATION_ERROR,
+            fields={"budget_paisa": "a budget is required"},
+        )
+    if project.bidding_deadline is not None and project.bidding_deadline <= ctx.now:
+        raise DomainError(
+            "The bidding close time has passed. Choose a new one before publishing.",
+            code=ErrorCode.VALIDATION_ERROR,
+            fields={"bidding_deadline": "must be in the future"},
+        )
     slots = await repo.load_slots(ctx.db, project_id)
     if not slots:
         raise DomainError(
             "Add at least one skill slot before publishing.",
             code=ErrorCode.VALIDATION_ERROR,
             fields={"slots": "at least one slot is required"},
+        )
+    places = sum(s.count for s in slots)
+    if places != project.team_size:
+        raise DomainError(
+            f"The skill slots add up to {places} people but the team size is "
+            f"{project.team_size}. Make them match before publishing.",
+            code=ErrorCode.VALIDATION_ERROR,
+            fields={"slots": f"slot counts total {places}; team size is {project.team_size}"},
         )
     milestones = await repo.load_milestones(ctx.db, project_id)
     if not milestones:
@@ -597,6 +640,7 @@ async def cancel(ctx: Ctx, project_id: uuid.UUID, reason: str) -> ProjectOut:
             title="A project you bid on was cancelled",
             body=f"“{project.title}” was cancelled by its client. Your bid is closed.",
             link="/dev/bids",
+            once=False,  # each cancellation is its own event
         )
     return _project_out(project)
 

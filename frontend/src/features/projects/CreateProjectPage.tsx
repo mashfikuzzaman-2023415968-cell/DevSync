@@ -12,7 +12,7 @@
 import { ArrowLeft, ArrowRight, CircleCheck, CreditCard, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useBlocker, useLocation, useNavigate, useSearchParams } from "react-router";
-import type { CpmPreview, Project, ProjectDraft } from "@/api/types";
+import type { CpmPreview, PlanPreviewIn, Project, ProjectDraft } from "@/api/types";
 import { api, ApiError } from "@/api/client";
 import { Button, IconButton } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Choice";
@@ -166,6 +166,27 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
     setBiddingDeadline(p.bidding_deadline ? toLocalInput(p.bidding_deadline) : "");
     setStep(resumeIndex(d, resumeStep));
     setHydrated(true);
+    // The schedule check (deadline warning, planned duration) normally comes from the
+    // Milestones step; a draft reopened past it needs it too.
+    if (d.milestones.length > 0) {
+      const body: PlanPreviewIn = {
+        milestones: d.milestones.map((m) => ({
+          key: m.id,
+          name: m.name,
+          duration_days: m.duration_days,
+          share_bp: m.share_bp,
+          predecessor_keys: d.dependencies
+            .filter((x) => x.successor_id === m.id)
+            .map((x) => x.predecessor_id),
+        })),
+        team_size: p.team_size,
+        slot_count: p.team_size,
+      };
+      api<CpmPreview>(`/projects/${p.id}/plan/preview`, { method: "POST", body }).then(
+        setCpm,
+        () => undefined,
+      );
+    }
   }, [hydrated, resume.data, resumeStep]);
 
   // Keep the address in step with the wizard, so leaving and coming back resumes here.
@@ -318,6 +339,8 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
     setStep((s) => Math.max(0, s - 1));
   }
 
+  const biddingInPast = biddingDeadline !== "" && new Date(biddingDeadline).getTime() <= Date.now();
+
   // Step-local validity gates "Continue".
   const canContinue = (() => {
     if (step === 0) return title.trim().length >= 5;
@@ -329,7 +352,7 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
         totalShareBp === 10_000 &&
         !cpm?.cycle?.length
       );
-    if (step === 4) return Number(budgetTaka) >= 1;
+    if (step === 4) return Number(budgetTaka) >= 1 && !biddingInPast;
     return true;
   })();
 
@@ -576,7 +599,7 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
           onChange={edit(setMilestones)}
           skills={skills.data ?? []}
           teamSize={teamSize}
-          slotCount={slots.length}
+          slotCount={teamSize}
           deadlineDays={deadlineDays}
           startDate={startDate || null}
           onResult={setCpm}
@@ -615,6 +638,9 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
             <Field
               label="Bidding closes (optional)"
               type="datetime-local"
+              min={toLocalInput(new Date().toISOString())}
+              hint="Leave empty to close bidding a few days after publishing."
+              error={biddingInPast ? "Choose a time in the future." : undefined}
               value={biddingDeadline}
               onChange={(e) => {
                 edit(setBiddingDeadline)(e.target.value);

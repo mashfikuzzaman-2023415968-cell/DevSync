@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from sqlalchemy import create_engine, text
 
 from tests.helpers import Api
 
@@ -509,3 +510,92 @@ def test_get_draft_requires_sign_in(api: Api) -> None:
     pid = _create_draft(api)["id"]
     api.client.cookies.clear()
     assert api.get(f"/api/v1/projects/{pid}/draft").status_code == 401
+
+
+# --------------------------------------------------------------------------- publish guards (audit)
+
+
+def test_a_bidding_close_time_in_the_past_is_refused(api: Api) -> None:
+    api.sign_in_as("CLIENT")
+    past = "2020-01-01T00:00:00Z"
+    created = api.post(
+        "/api/v1/projects",
+        json={
+            "title": "Online ordering system",
+            "budget_paisa": 12_000_000,
+            "deadline_days": 30,
+            "team_size": 2,
+            "bidding_deadline": past,
+        },
+    )
+    assert created.status_code == 422
+    assert "bidding_deadline" in created.json()["error"]["fields"]
+    draft = _create_draft(api)
+    r = api.patch(f"/api/v1/projects/{draft['id']}", json={"bidding_deadline": past})
+    assert r.status_code == 422
+    assert "bidding_deadline" in r.json()["error"]["fields"]
+
+
+def test_publish_refuses_a_close_time_that_has_passed_since_saving(
+    api: Api, migration_url: str
+) -> None:
+    api.sign_in_as("CLIENT")
+    api.post("/api/v1/me/payment-method/verify")
+    pid = _ready_to_publish(api)
+    # Saved in the future, then the draft sat until the time passed.
+    engine = create_engine(migration_url)
+    with engine.begin() as conn:
+        conn.execute(
+            text("UPDATE projects SET bidding_deadline = now() - interval '1 hour' WHERE id = :id"),
+            {"id": pid},
+        )
+    engine.dispose()
+    r = api.post(f"/api/v1/projects/{pid}/publish", json={})
+    assert r.status_code == 422
+    assert "bidding_deadline" in r.json()["error"]["fields"]
+
+
+def test_publish_refuses_slots_that_do_not_total_the_team_size(api: Api) -> None:
+    api.sign_in_as("CLIENT")
+    api.post("/api/v1/me/payment-method/verify")
+    pid = _ready_to_publish(api)  # slots total 2
+    project = api.get(f"/api/v1/projects/{pid}").json()
+    r = api.patch(
+        f"/api/v1/projects/{pid}",
+        json={"team_size": 5},
+        headers={"If-Match": str(project["version"])},
+    )
+    assert r.status_code == 200, r.text
+    published = api.post(f"/api/v1/projects/{pid}/publish", json={})
+    assert published.status_code == 422  # used to be a 500 from the database trigger
+    assert "slots" in published.json()["error"]["fields"]
+
+
+def test_publish_refuses_a_project_without_a_budget(api: Api) -> None:
+    api.sign_in_as("CLIENT")
+    api.post("/api/v1/me/payment-method/verify")
+    pid = _ready_to_publish(api)
+    project = api.get(f"/api/v1/projects/{pid}").json()
+    api.patch(
+        f"/api/v1/projects/{pid}",
+        json={"budget_paisa": 0},
+        headers={"If-Match": str(project["version"])},
+    )
+    r = api.post(f"/api/v1/projects/{pid}/publish", json={})
+    assert r.status_code == 422
+    assert "budget_paisa" in r.json()["error"]["fields"]
+
+
+def test_preview_of_a_malformed_plan_is_a_422_not_a_500(api: Api) -> None:
+    api.sign_in_as("CLIENT")
+    pid = _create_draft(api)["id"]
+    r = api.post(
+        f"/api/v1/projects/{pid}/plan/preview",
+        json={"milestones": [_pm("a", "One", 3, 5000), _pm("a", "Two", 3, 5000)]},
+    )
+    assert r.status_code == 422, r.text
+    selfdep = api.post(
+        f"/api/v1/projects/{pid}/plan/preview",
+        json={"milestones": [_pm("a", "One", 3, 10_000, "a")]},
+    )
+    assert selfdep.status_code == 422

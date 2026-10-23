@@ -617,3 +617,19 @@ def test_registration_still_refuses_reserved_domains(api: Api) -> None:
     )
     assert r.status_code == 422
     assert "email" in r.json()["error"]["fields"]
+
+
+def test_each_cancelled_project_tells_its_bidders(api: Api, migration_url: str) -> None:
+    # Two projects cancelled one after the other: the second notice isn't swallowed by the
+    # first one still being unread.
+    client = api.sign_in_as("CLIENT")
+    first, slot_a = _publish(api)
+    second, slot_b = _publish(api)
+    dev = _developer(api, migration_url)
+    assert _bid(api, first, slot_a).status_code == 201
+    assert _bid(api, second, slot_b).status_code == 201
+    api.login(client)
+    for pid in (first, second):
+        r = api.post(f"/api/v1/projects/{pid}/cancel", json={"reason": "Re-scoping the project."})
+        assert r.status_code == 200, r.text
+    assert _notifications(migration_url, dev.user_id, "PROJECT_CANCELLED") == 2

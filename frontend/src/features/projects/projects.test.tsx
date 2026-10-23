@@ -62,6 +62,7 @@ const SKILLS: Skill[] = [
 // CPM "duration" values live in named constants so the motion-lint rule (which forbids numeric
 // `duration:` literals) doesn't mistake schedule data for an animation timing.
 const DURATION_24 = 24;
+const DURATION_40 = 40;
 const NO_DURATION = 0;
 
 describe("schemas", () => {
@@ -476,6 +477,13 @@ describe("PlanPage", () => {
     expect(await screen.findByRole("table")).toBeInTheDocument();
   });
 
+  it("gives the last working day as the finish date, like the Gantt", async () => {
+    planHandlers(); // starts 1 Nov; the plan takes 24 days (offsets 0–24)
+    server.use(http.get(`${API}/projects/p1/plan`, () => HttpResponse.json(plan)));
+    renderRoutes(routes("/client/projects/:id/plan", <PlanPage />), "/client/projects/p1/plan");
+    expect(await screen.findByText("Finish 24 Nov 2026")).toBeInTheDocument();
+  });
+
   it("says “1 critical milestone” in the singular", async () => {
     planHandlers();
     const one = { ...plan, nodes: [NODES[0]], edges: [] };
@@ -818,6 +826,48 @@ describe("CreateProjectPage — resuming a draft (D55)", () => {
     expect(screen.getByLabelText(/Preferred start/)).toHaveValue("2026-11-02");
     await user.click(screen.getByRole("button", { name: /Back/ }));
     expect(screen.getByLabelText(/Project title/)).toHaveValue("Ordering system");
+  });
+
+  it("runs the schedule check when a finished draft reopens on Review", async () => {
+    let previewed: unknown = null;
+    wizardAt("/client/projects/new?draft=p1&step=6", {
+      project: { ...draftProject, budget_paisa: 12_000_000, team_size: 2 },
+      slots: [{ id: "s1", skill_id: "s-react", count: 2, label: "" }],
+      milestones: [milestone("m1", "Design", 0, 4000), milestone("m2", "Build", 1, 6000)],
+      dependencies: [{ id: "d1", predecessor_id: "m1", successor_id: "m2" }],
+    });
+    // Registered after the helper's handlers, so this preview answer wins.
+    server.use(
+      http.post(`${API}/projects/p1/plan/preview`, async ({ request }) => {
+        previewed = await request.json();
+        return HttpResponse.json({ ...PREVIEW, duration: DURATION_40 });
+      }),
+    );
+    expect(await screen.findByText("Review and publish")).toBeInTheDocument();
+    expect(await screen.findByText("The plan runs past your deadline")).toBeInTheDocument();
+    expect(screen.getByText("40 days")).toBeInTheDocument();
+    expect(previewed).toMatchObject({
+      team_size: 2,
+      slot_count: 2,
+      milestones: [
+        { key: "m1", predecessor_keys: [] },
+        { key: "m2", predecessor_keys: ["m1"] },
+      ],
+    });
+  });
+
+  it("won't continue with a bidding close time in the past", async () => {
+    const user = userEvent.setup();
+    wizardAt("/client/projects/new?draft=p1&step=5", {
+      project: { ...draftProject, budget_paisa: 12_000_000 },
+      slots: [{ id: "s1", skill_id: "s-react", count: 2, label: "" }],
+      milestones: [milestone("m1", "Design", 0, 10_000)],
+      dependencies: [],
+    });
+    const closes = await screen.findByLabelText(/Bidding closes/);
+    await user.type(closes, "2020-01-01T10:00");
+    expect(await screen.findByText("Choose a time in the future.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Continue/ })).toBeDisabled();
   });
 
   it("explains a draft that no longer exists", async () => {
