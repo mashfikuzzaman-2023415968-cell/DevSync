@@ -16,8 +16,10 @@ export interface GraphNode {
 }
 export type GraphEdge = readonly [from: string, to: string];
 
-const NODE_W = 128;
-const NODE_H = 36;
+const NODE_W = 152;
+const NODE_H = 48;
+/** About 20 characters of 14 px Inter fit on one line of a node. */
+const LINE_CHARS = 20;
 const COL_GAP = 56;
 const ROW_GAP = 16;
 const PAD = 16;
@@ -138,13 +140,18 @@ export function DependencyGraph({
               className={cn("fill-surface", n.critical ? "stroke-danger" : "stroke-border")}
               strokeWidth={n.critical ? "2" : "1"}
             />
+            <title>{n.name}</title>
             <text
               x={n.x + NODE_W / 2}
               y={n.y + NODE_H / 2 + 4}
               textAnchor="middle"
               className={cn("text-body-sm", n.critical ? "fill-danger" : "fill-text")}
             >
-              {truncate(n.name)}
+              {nameLines(n.name).map((line, i, all) => (
+                <tspan key={line} x={n.x + NODE_W / 2} dy={i === 0 ? (all.length - 1) * -8 : 16}>
+                  {line}
+                </tspan>
+              ))}
             </text>
           </g>
         ))}
@@ -153,6 +160,27 @@ export function DependencyGraph({
   );
 }
 
-function truncate(s: string, max = 16): string {
-  return s.length > max ? `${s.slice(0, max - 1)}…` : s;
+/** A name on at most two lines, split at spaces; only text beyond two lines is elided. */
+export function nameLines(name: string, max = LINE_CHARS): string[] {
+  const lines: string[] = [];
+  let current = "";
+  for (const word of name.trim().split(/\s+/)) {
+    for (let rest = word; rest;) {
+      const room = current ? max - current.length - 1 : max;
+      if (rest.length <= room) {
+        current = current ? `${current} ${rest}` : rest;
+        rest = "";
+      } else if (current) {
+        lines.push(current);
+        current = "";
+      } else {
+        lines.push(rest.slice(0, max));
+        rest = rest.slice(max);
+      }
+    }
+  }
+  if (current) lines.push(current);
+  if (lines.length <= 2) return lines;
+  const second = lines[1] ?? "";
+  return [lines[0] ?? "", `${second.slice(0, max - 1).trimEnd()}…`];
 }

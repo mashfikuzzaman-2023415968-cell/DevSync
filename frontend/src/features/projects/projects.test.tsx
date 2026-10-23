@@ -7,7 +7,7 @@ import { useState, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { CpmNode, Skill } from "@/api/types";
 import { CpmTable } from "@/components/CpmTable";
-import { DependencyGraph } from "@/components/DependencyGraph";
+import { DependencyGraph, nameLines } from "@/components/DependencyGraph";
 import { Gantt } from "@/components/Gantt";
 import { server } from "@/test/server";
 import { Probe, renderRoutes } from "@/test/render";
@@ -102,9 +102,100 @@ describe("Gantt", () => {
     expect(screen.getByLabelText(/Frontend: days 4–13, slack 4 days/i)).toBeInTheDocument();
   });
 
-  it("renders without a today or deadline line and at a tighter zoom", () => {
-    render(<Gantt nodes={NODES} dayWidth={10} />);
+  it("renders without a today or deadline line and counts days without a start date", () => {
+    const { container } = render(<Gantt nodes={NODES} />);
     expect(screen.getByRole("img")).toHaveAccessibleName(/24 days/i);
+    expect(screen.getByText("Days from start")).toBeInTheDocument();
+    expect(screen.queryByText("Today")).not.toBeInTheDocument();
+    expect(screen.queryByText("Deadline")).not.toBeInTheDocument();
+    expect(container.querySelector("line.stroke-warning")).toBeNull();
+    expect(container.querySelector("line.stroke-primary")).toBeNull();
+  });
+
+  it("shows the deadline and today lines with legend entries", () => {
+    const { container } = render(<Gantt nodes={NODES} today={10} deadlineDays={30} />);
+    expect(screen.getByText("Deadline")).toBeInTheDocument();
+    expect(screen.getByText("Today")).toBeInTheDocument();
+    expect(container.querySelector("line.stroke-warning")).not.toBeNull();
+    expect(container.querySelector("line.stroke-primary")).not.toBeNull();
+  });
+
+  it("hides a today line that falls outside the plan", () => {
+    const { container } = render(<Gantt nodes={NODES} today={-3} />);
+    expect(screen.queryByText("Today")).not.toBeInTheDocument();
+    expect(container.querySelector("line.stroke-primary")).toBeNull();
+    render(<Gantt nodes={NODES} today={99} />);
+    expect(screen.queryByText("Today")).not.toBeInTheDocument();
+  });
+
+  it("puts real dates on the axis and in the bar labels when the start date is known", () => {
+    render(<Gantt nodes={NODES} startDate="2026-11-02" />);
+    expect(screen.getByText("Nov 2026")).toBeInTheDocument();
+    // Frontend runs offsets [4, 13): 6 Nov to 14 Nov inclusive.
+    expect(
+      screen.getByLabelText("Frontend: days 4–13, slack 4 days, 6 Nov 2026 – 14 Nov 2026"),
+    ).toBeInTheDocument();
+  });
+
+  it("starts a new month label when the plan crosses into the next month", () => {
+    render(<Gantt nodes={NODES} startDate="2026-11-20" />);
+    expect(screen.getByText("Nov 2026")).toBeInTheDocument();
+    expect(screen.getByText("Dec 2026")).toBeInTheDocument();
+  });
+
+  it("draws one arrow per known dependency and ignores unknown keys", () => {
+    const { container } = render(
+      <Gantt nodes={NODES} edges={[...EDGES, ["a", "missing"], ["ghost", "b"]]} />,
+    );
+    expect(container.querySelectorAll("path[marker-end]")).toHaveLength(EDGES.length);
+    // Critical links (critical → critical, back to back) use the rose arrow.
+    expect(container.querySelectorAll("path.stroke-danger[marker-end]")).toHaveLength(4);
+  });
+
+  it("explains a milestone when its bar is focused", async () => {
+    const user = userEvent.setup();
+    render(<Gantt nodes={NODES} edges={EDGES} startDate="2026-11-02" />);
+    expect(screen.getByText(/Hover, focus or tap a bar/)).toBeInTheDocument();
+    await user.tab(); // the zoom control (one tab stop)
+    await user.tab(); // the first bar
+    expect(document.activeElement).toHaveAccessibleName(/^Requirements: days 0–4/);
+    const details = screen.getByText((_, el) => el?.tagName === "FIGCAPTION");
+    expect(details).toHaveTextContent(
+      "Requirements: 2 Nov 2026 – 5 Nov 2026 (4 days). On the critical path",
+    );
+    await user.click(screen.getByLabelText(/^Frontend: days 4–13/));
+    expect(details).toHaveTextContent("Can slip 4 days without delaying the finish.");
+    expect(details).toHaveTextContent("Starts after Requirements.");
+  });
+
+  it("keeps long names whole instead of cutting them off", () => {
+    const long = "Payment gateway integration and reconciliation reports";
+    const node: CpmNode = {
+      key: "x",
+      name: long,
+      es: 0,
+      ef: 4,
+      ls: 0,
+      lf: 4,
+      slack: 0,
+      critical: true,
+    };
+    render(<Gantt nodes={[node]} />);
+    expect(screen.getByTitle(long)).toHaveTextContent(long);
+  });
+
+  it("switches between day and week zoom", async () => {
+    const user = userEvent.setup();
+    render(<Gantt nodes={NODES} />);
+    expect(screen.getByRole("radio", { name: "Days" })).toBeChecked();
+    await user.click(screen.getByRole("radio", { name: "Weeks" }));
+    expect(screen.getByText("Week 1")).toBeInTheDocument();
+    expect(screen.getByText("Week 4")).toBeInTheDocument();
+  });
+
+  it("starts long plans zoomed out to weeks", () => {
+    render(<Gantt nodes={NODES} deadlineDays={120} />);
+    expect(screen.getByRole("radio", { name: "Weeks" })).toBeChecked();
   });
 });
 
@@ -117,8 +208,39 @@ describe("DependencyGraph", () => {
       />,
     );
     expect(screen.getByRole("img")).toHaveAccessibleName(/critical path/i);
-    expect(screen.getByText("Requirements")).toBeInTheDocument();
-    expect(screen.getByText("Testing")).toBeInTheDocument();
+    expect(screen.getByText("Requirements", { selector: "tspan" })).toBeInTheDocument();
+    expect(screen.getByText("Testing", { selector: "tspan" })).toBeInTheDocument();
+  });
+
+  it("wraps long names onto two lines and keeps the full name as a title", () => {
+    const long = "Payment gateway integration and reconciliation";
+    const { container } = render(
+      <DependencyGraph nodes={[{ key: "p", name: long, critical: false }]} edges={[]} />,
+    );
+    expect(container.querySelector("title + text")?.textContent).toBe(
+      "Payment gatewayintegration and…",
+    );
+    expect(container.querySelectorAll("tspan")).toHaveLength(2);
+    expect(within(container).getByText(long, { selector: "title" })).toBeInTheDocument();
+  });
+});
+
+describe("nameLines", () => {
+  it("keeps short names on one line", () => {
+    expect(nameLines("Database")).toEqual(["Database"]);
+    expect(nameLines("  Testing   & launch ")).toEqual(["Testing & launch"]);
+  });
+
+  it("splits at spaces and fills each line up to the limit", () => {
+    expect(nameLines("Requirements & design")).toEqual(["Requirements &", "design"]);
+    expect(nameLines("12345 67890", 11)).toEqual(["12345 67890"]);
+    expect(nameLines("12345 678901", 11)).toEqual(["12345", "678901"]);
+  });
+
+  it("breaks a word longer than a line and elides only past two lines", () => {
+    expect(nameLines("Internationalisation", 10)).toEqual(["Internatio", "nalisation"]);
+    expect(nameLines("aaaa bbbb cccc dddd", 9)).toEqual(["aaaa bbbb", "cccc dddd"]);
+    expect(nameLines("aaaa bbbb cccc dddd eeee", 9)).toEqual(["aaaa bbbb", "cccc ddd…"]);
   });
 });
 
@@ -258,13 +380,13 @@ describe("PlanPage", () => {
     edges: EDGES.map(([p, s]) => ({ predecessor: p, successor: s })),
   };
 
-  function planHandlers() {
+  function planHandlers(status = "BIDDING") {
     server.use(
       http.get(`${API}/projects/p1`, () =>
         HttpResponse.json({
           id: "p1",
           title: "Ordering system",
-          status: "BIDDING",
+          status,
           start_date: "2026-11-01T00:00:00Z",
           deadline_days: 30,
           version: 1,
@@ -298,9 +420,23 @@ describe("PlanPage", () => {
     // The dependency graph draws one arrow per edge from the plan response.
     const graph = screen.getByRole("img", { name: /depend/i });
     expect(graph.querySelectorAll("path")).toHaveLength(EDGES.length);
+    // The Gantt draws the same dependencies, real dates and no today line before work starts.
+    const gantt = screen.getByRole("img", { name: /Gantt chart/i });
+    expect(gantt.querySelectorAll("path[marker-end]")).toHaveLength(EDGES.length);
+    expect(screen.getByText("Nov 2026")).toBeInTheDocument();
+    expect(screen.queryByText("Today")).not.toBeInTheDocument();
     // Toggle to the table alternative.
     await user.click(screen.getByRole("radio", { name: "Table" }));
     expect(await screen.findByRole("table")).toBeInTheDocument();
+  });
+
+  it("marks today on the Gantt once work is under way", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-11-11T06:00:00Z"));
+    planHandlers("IN_PROGRESS");
+    server.use(http.get(`${API}/projects/p1/plan`, () => HttpResponse.json(plan)));
+    renderRoutes(routes("/client/projects/:id/plan", <PlanPage />), "/client/projects/p1/plan");
+    expect(await screen.findByText("Today")).toBeInTheDocument();
+    vi.restoreAllMocks();
   });
 
   it("shows the empty state when the project has no milestones", async () => {

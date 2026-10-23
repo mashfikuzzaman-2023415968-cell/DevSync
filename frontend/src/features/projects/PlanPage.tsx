@@ -10,7 +10,7 @@ import { ApiError } from "@/api/client";
 import type { GraphEdge } from "@/components/DependencyGraph";
 import { CpmTable } from "@/components/CpmTable";
 import { DependencyGraph } from "@/components/DependencyGraph";
-import { Gantt } from "@/components/Gantt";
+import { dayToDate, Gantt } from "@/components/Gantt";
 import { Badge, Card, CardHeader, Skeleton } from "@/components/ui/Display";
 import { EmptyState, ErrorState, PageHeader } from "@/components/ui/Feedback";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -18,6 +18,10 @@ import { formatDate, formatDays } from "@/lib/format";
 import { useProject, useProjectPlan } from "./api";
 
 type View = "gantt" | "table";
+
+/** Statuses in which work is under way, so the Gantt shows a "today" line. */
+const STARTED = new Set(["IN_PROGRESS", "ON_HOLD", "REVIEW_WINDOW"]);
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export default function PlanPage() {
   const { id = "" } = useParams();
@@ -65,7 +69,11 @@ export default function PlanPage() {
   const nodes = p?.nodes ?? [];
   const criticalCount = nodes.filter((n) => n.critical).length;
   const startDate = project.data?.start_date ?? null;
-  const finish = startDate && p ? addDays(startDate, p.duration) : null;
+  const finish = startDate && p ? dayToDate(startDate, p.duration) : null;
+  const today =
+    startDate && STARTED.has(project.data?.status ?? "")
+      ? Math.floor((Date.now() - new Date(startDate).getTime()) / DAY_MS)
+      : null;
   const graphNodes = nodes.map((n) => ({ key: n.key, name: n.name, critical: n.critical }));
 
   return (
@@ -112,7 +120,13 @@ export default function PlanPage() {
             </div>
             <div className="mt-4">
               {view === "gantt" ? (
-                <Gantt nodes={nodes} deadlineDays={p?.deadline_days ?? null} />
+                <Gantt
+                  nodes={nodes}
+                  edges={edges}
+                  startDate={startDate}
+                  today={today}
+                  deadlineDays={p?.deadline_days ?? null}
+                />
               ) : (
                 <CpmTable nodes={nodes} />
               )}
@@ -132,11 +146,4 @@ export default function PlanPage() {
       )}
     </>
   );
-}
-
-/** A finish date `days` after an ISO start date, kept in UTC to match the stored day offsets. */
-function addDays(startIso: string, days: number): Date {
-  const d = new Date(startIso);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d;
 }

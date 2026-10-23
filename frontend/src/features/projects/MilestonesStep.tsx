@@ -36,6 +36,7 @@ export function MilestonesStep({
   teamSize,
   slotCount,
   deadlineDays = null,
+  startDate = null,
   onResult,
 }: {
   projectId: string;
@@ -45,6 +46,8 @@ export function MilestonesStep({
   teamSize: number;
   slotCount: number;
   deadlineDays?: number | null;
+  /** The project's start date (ISO), when chosen, so the preview shows real dates. */
+  startDate?: string | null;
   onResult?: (result: CpmPreview | null) => void;
 }) {
   const preview = usePlanPreview(projectId);
@@ -272,6 +275,7 @@ export function MilestonesStep({
             edges={edges}
             view={view}
             deadlineDays={deadlineDays}
+            startDate={startDate}
           />
         </div>
       </Card>
@@ -285,12 +289,14 @@ function PreviewBody({
   edges,
   view,
   deadlineDays,
+  startDate,
 }: {
   ready: boolean;
   result: CpmPreview | null;
   edges: GraphEdge[];
   view: PreviewView;
   deadlineDays: number | null;
+  startDate: string | null;
 }) {
   if (!ready || !result) {
     return (
@@ -321,7 +327,14 @@ function PreviewBody({
           {w}
         </Alert>
       ))}
-      {view === "gantt" && <Gantt nodes={result.nodes} deadlineDays={deadlineDays} />}
+      {view === "gantt" && (
+        <Gantt
+          nodes={result.nodes}
+          edges={edges}
+          startDate={startDate}
+          deadlineDays={deadlineDays}
+        />
+      )}
       {view === "graph" && <DependencyGraph nodes={graphNodes} edges={edges} />}
       {view === "table" && <CpmTable nodes={result.nodes} />}
     </div>

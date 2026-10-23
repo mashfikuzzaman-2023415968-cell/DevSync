@@ -438,6 +438,7 @@ export default function CreateProjectPage() {
           teamSize={teamSize}
           slotCount={slots.length}
           deadlineDays={deadlineDays}
+          startDate={startDate || null}
           onResult={setCpm}
         />
       )}
