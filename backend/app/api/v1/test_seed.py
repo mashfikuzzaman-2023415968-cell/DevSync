@@ -87,10 +87,11 @@ async def totp_now(secret: Annotated[str, Query(max_length=64)]) -> dict[str, st
 
 @router.get("/ratelimits/reset", status_code=204)
 async def reset_rate_limits(redis: Annotated[Redis, Depends(redis_client)]) -> Response:
-    """Clear rate-limit counters so independent E2E tests from one IP don't throttle each other.
+    """Clear rate-limit and failed-sign-in counters so independent E2E tests from one IP don't
+    throttle each other (every browser shares the test runner's address).
 
     A GET so it works even while CSRF cookies are rate limited; test environment only."""
-    for pattern in ("rl:*", "auth:delay:*"):
+    for pattern in ("rl:*", "auth:delay:*", "auth:fail:*"):
         async for key in redis.scan_iter(pattern):
             await redis.delete(key)
     return Response(status_code=204)

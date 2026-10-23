@@ -4,6 +4,7 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { server } from "@/test/server";
 import { Probe, renderRoutes } from "@/test/render";
+import { RequireAuth } from "@/app/guards";
 import LoginPage from "./LoginPage";
 
 const routes = [
@@ -126,5 +127,70 @@ describe("LoginPage", () => {
     renderRoutes(routes, "/login");
     await fill("not-an-email", "x");
     expect(await screen.findByText("Enter a valid email address.")).toBeInTheDocument();
+  });
+
+  it("lands on the protected page after one correct sign-in, even after a wrong one", async () => {
+    // The guard on /client/projects first learns "nobody is signed in"; a successful sign-in
+    // must replace that answer before the guard reads it again (it used to bounce to /login).
+    let signedIn = false;
+    server.use(
+      csrf(),
+      http.get("*/api/v1/me", () =>
+        signedIn
+          ? HttpResponse.json({
+              id: "u1",
+              email: "rahim@example.com",
+              phone_e164: null,
+              display_name: "Rahim",
+              role: "CLIENT",
+              status: "ACTIVE",
+              email_verified: true,
+              phone_verified: true,
+              totp_enabled: false,
+              totp_verified: false,
+              created_at: "2026-10-17T00:00:00Z",
+            })
+          : HttpResponse.json({ error: { code: "UNAUTHENTICATED" } }, { status: 401 }),
+      ),
+      http.post("*/api/v1/auth/login", async ({ request }) => {
+        const body = (await request.json()) as { password: string };
+        if (body.password !== "a good password 1") {
+          return HttpResponse.json(
+            { error: { code: "INVALID_CREDENTIALS", message: "Email or password is incorrect." } },
+            { status: 401 },
+          );
+        }
+        signedIn = true;
+        return HttpResponse.json({
+          status: "SIGNED_IN",
+          redirect_to: "/client/projects",
+          pre_auth: null,
+        });
+      }),
+    );
+    const { router } = renderRoutes(
+      [
+        { path: "/login", element: <LoginPage /> },
+        {
+          path: "/client/projects",
+          element: (
+            <RequireAuth roles={["CLIENT"]}>
+              <Probe label="projects" />
+            </RequireAuth>
+          ),
+        },
+      ],
+      "/client/projects",
+    );
+    expect(await screen.findByRole("button", { name: "Sign in" })).toBeInTheDocument();
+    await fill("rahim@example.com", "not the password 1");
+    expect(await screen.findByText("Email or password is incorrect.")).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.clear(screen.getByLabelText("Password"));
+    await user.type(screen.getByLabelText("Password"), "a good password 1");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByText("projects")).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/client/projects");
   });
 });

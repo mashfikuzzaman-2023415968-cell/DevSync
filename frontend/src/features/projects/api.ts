@@ -1,7 +1,7 @@
 /** Project and CPM-planner data hooks (spec §7.3, §9.10, §10.2 Projects). */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
-import { meKey } from "@/features/auth/api";
+import { refreshMe } from "@/features/auth/api";
 import type {
   CancelIn,
   CpmPreview,
@@ -203,6 +203,6 @@ export function useVerifyPaymentMethod() {
   return useMutation({
     meta: { inlineErrors: true },
     mutationFn: () => api<undefined>("/me/payment-method/verify", { method: "POST" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: meKey }),
+    onSuccess: () => refreshMe(qc),
   });
 }

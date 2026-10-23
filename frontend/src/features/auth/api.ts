@@ -1,6 +1,6 @@
 /** Auth and account data hooks. The session lives in an HttpOnly cookie; the
  * browser never sees tokens. `useMe` is the single source of "who am I". */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { ApiError, api } from "@/api/client";
 import type {
   CaptchaChallenge,
@@ -14,6 +14,13 @@ import { solveChallenge } from "@/lib/captcha";
 import { pageLoad } from "@/lib/redirects";
 
 export const meKey = ["me"] as const;
+
+/** Re-read the signed-in user now, even while no screen is showing it. After signing in (or a
+ * verification that changes the account) the next page's guard must not act on the answer
+ * cached before: it held "signed out" and bounced a successful sign-in back to /login. */
+export function refreshMe(qc: QueryClient): Promise<void> {
+  return qc.invalidateQueries({ queryKey: meKey, refetchType: "all" });
+}
 
 export function useMe() {
   return useQuery<Me | null>({
@@ -64,7 +71,7 @@ export function useLogin() {
       body: { email: string; password: string; return_to?: string | null } & Partial<BotFields>,
     ) => api<LoginResult>("/auth/login", { method: "POST", body }),
     onSuccess: async (result) => {
-      if (result.status !== "TOTP_REQUIRED") await qc.invalidateQueries({ queryKey: meKey });
+      if (result.status !== "TOTP_REQUIRED") await refreshMe(qc);
     },
   });
 }
@@ -79,7 +86,7 @@ export function useTotpLogin() {
       recovery_code?: string;
       return_to?: string | null;
     }) => api<LoginResult>("/auth/login/totp", { method: "POST", body }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: meKey }),
+    onSuccess: () => refreshMe(qc),
   });
 }
 
@@ -114,7 +121,7 @@ export function useVerifyOtp() {
     meta: { inlineErrors: true },
     mutationFn: (code: string) =>
       api<undefined>("/auth/otp/verify", { method: "POST", body: { code } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: meKey }),
+    onSuccess: () => refreshMe(qc),
   });
 }
 
@@ -131,7 +138,7 @@ export function useVerifyEmail() {
     meta: { inlineErrors: true },
     mutationFn: (token: string) =>
       api<undefined>("/auth/email/verify", { method: "POST", body: { token } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: meKey }),
+    onSuccess: () => refreshMe(qc),
   });
 }
 
@@ -185,7 +192,7 @@ export function useTotpConfirm() {
     meta: { inlineErrors: true },
     mutationFn: (code: string) =>
       api<RecoveryCodes>("/auth/totp/confirm", { method: "POST", body: { code } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: meKey }),
+    onSuccess: () => refreshMe(qc),
   });
 }
 

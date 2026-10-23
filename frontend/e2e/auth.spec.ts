@@ -80,6 +80,26 @@ test("admin sign-in requires TOTP @e2e", async ({ page, request, baseURL }) => {
   await expect(page.getByRole("heading", { name: "Administration" })).toBeVisible();
 });
 
+test("one correct sign-in is enough after a wrong password, even from a protected page @e2e", async ({
+  page,
+  request,
+  baseURL,
+}) => {
+  // Opening a protected page signed out caches "nobody is signed in"; the sign-in must replace
+  // that before the next page's guard reads it (it used to bounce back to /login once).
+  const user = await seedUser(request, baseURL ?? "", "DEVELOPER");
+  await page.goto("/dev/bids");
+  await expect(page).toHaveURL(/\/login\?return_to=%2Fdev%2Fbids$/);
+  await page.getByLabel("Email").fill(user.email);
+  await page.getByLabel("Password", { exact: true }).fill("not the right password 1!");
+  await page.getByRole("button", { name: /Sign in|Checking/ }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "incorrect" })).toBeVisible();
+  await page.getByLabel("Password", { exact: true }).fill(user.password);
+  await page.getByRole("button", { name: /Sign in|Checking/ }).click();
+  await expect(page).toHaveURL(/\/dev\/bids$/);
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+});
+
 test("signing out of every device ends the other browser's session @e2e", async ({
   browser,
   request,
