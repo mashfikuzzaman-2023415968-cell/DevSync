@@ -54,6 +54,18 @@ def csrf_cookie(token: str) -> str:
     return f"{csrf.CSRF_COOKIE}={token}; Path=/; Secure; SameSite=Strict"
 
 
+def anonymous_csrf_key(settings: Settings) -> bytes:
+    """The key CSRF tokens are bound to when nobody is signed in (public forms)."""
+    return derive_key(settings.SECRET_KEY, "csrf-anonymous")
+
+
+def signed_out_cookies(settings: Settings) -> list[str]:
+    """`Set-Cookie` values for a browser that is no longer signed in: the session cookie goes
+    and the CSRF cookie is replaced by an anonymous one. A token bound to the ended session
+    would otherwise stay in the browser and fail every sign-in until it was closed."""
+    return [clear_session_cookie(), csrf_cookie(csrf.issue_token(anonymous_csrf_key(settings)))]
+
+
 def _cookies(scope: Scope) -> dict[str, str]:
     jar: SimpleCookie = SimpleCookie()
     for name, value in scope.get("headers", []):
@@ -111,6 +123,7 @@ class SessionMiddleware:
     def __init__(self, app: ASGIApp, settings: Settings) -> None:
         self.app = app
         self.policy = SessionPolicy(settings)
+        self.settings = settings
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http" or not scope.get("path", "").startswith(API_PREFIX):
@@ -130,11 +143,16 @@ class SessionMiddleware:
         async with open_session(DbContext.guest()) as db:
             data = await store.load(db, token, now)
             if data is None or data.status in INACTIVE_STATUSES:
-                cookies.append(clear_session_cookie())
+                cookies.extend(signed_out_cookies(self.settings))
                 return
             await set_context(db, DbContext(user_id=data.user_id, role=data.role))
-            if self.policy.needs_rotation(data, now):
-                token, data = await store.rotate(db, token, data, now)
+            rotated = (
+                await store.try_rotate(db, token, data, now)
+                if self.policy.needs_rotation(data, now)
+                else None
+            )
+            if rotated is not None:
+                token, data = rotated
                 max_age = int((data.expires_at - now).total_seconds())
                 cookies.append(session_cookie(token, max_age))
                 cookies.append(csrf_cookie(csrf.issue_token(data.csrf_secret)))
@@ -170,7 +188,7 @@ class CsrfMiddleware:
     def __init__(self, app: ASGIApp, settings: Settings) -> None:
         self.app = app
         self.public_origin = settings.PUBLIC_ORIGIN
-        self.anon_key = derive_key(settings.SECRET_KEY, "csrf-anonymous")
+        self.anon_key = anonymous_csrf_key(settings)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if (

@@ -176,7 +176,15 @@ function DevicesCard() {
                   size="sm"
                   loading={revoke.isPending && revoke.variables === s.id}
                   onClick={() => {
-                    revoke.mutate(s.id);
+                    revoke.mutate(s.id, {
+                      onError: (e) => {
+                        toast({
+                          tone: "danger",
+                          title: "That device wasn’t signed out",
+                          description: messageFor(e),
+                        });
+                      },
+                    });
                   }}
                 >
                   Sign out

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import cast, column, func, select, update
@@ -186,11 +186,18 @@ async def last_otp_sent_at(
     return value
 
 
-async def list_sessions(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> list[Session]:
-    """Live sessions of the user, newest activity first."""
+async def list_sessions(
+    db: AsyncSession, user_id: uuid.UUID, now: datetime, *, idle: timedelta
+) -> list[Session]:
+    """Live sessions of the user (active within `idle`), newest activity first."""
     stmt = (
         select(Session)
-        .where(Session.user_id == user_id, Session.revoked_at.is_(None), Session.expires_at > now)
+        .where(
+            Session.user_id == user_id,
+            Session.revoked_at.is_(None),
+            Session.expires_at > now,
+            Session.last_seen_at > now - idle,
+        )
         .order_by(Session.last_seen_at.desc())
     )
     return list((await db.execute(stmt)).scalars().all())

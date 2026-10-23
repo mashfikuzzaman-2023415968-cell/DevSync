@@ -44,6 +44,45 @@ describe("api client", () => {
     expect(seen).toEqual(["late.sig", "late.sig"]);
   });
 
+  it("replaces a stale CSRF token and retries once when the server rejects it", async () => {
+    // A token bound to an ended session is still in the browser (sign out, then sign in).
+    document.cookie = "__Host-ds_csrf=stale.sig; path=/; secure";
+    const seen: (string | null)[] = [];
+    server.use(
+      http.get("*/api/v1/auth/csrf", () => {
+        document.cookie = "__Host-ds_csrf=fresh.sig; path=/; secure";
+        return new HttpResponse(null, { status: 204, headers: { "X-CSRF-Token": "fresh.sig" } });
+      }),
+      http.post("*/api/v1/auth/login", ({ request }) => {
+        const token = request.headers.get("X-CSRF-Token");
+        seen.push(token);
+        return token === "fresh.sig"
+          ? HttpResponse.json({ status: "SIGNED_IN" })
+          : HttpResponse.json({ error: { code: "CSRF_FAILED" } }, { status: 403 });
+      }),
+    );
+    await expect(api("/auth/login", { method: "POST", body: {} })).resolves.toEqual({
+      status: "SIGNED_IN",
+    });
+    expect(seen).toEqual(["stale.sig", "fresh.sig"]);
+  });
+
+  it("retries a CSRF rejection only once", async () => {
+    document.cookie = "__Host-ds_csrf=stale.sig; path=/; secure";
+    let posts = 0;
+    server.use(
+      http.get("*/api/v1/auth/csrf", () => new HttpResponse(null, { status: 204 })),
+      http.post("*/api/v1/things", () => {
+        posts += 1;
+        return HttpResponse.json({ error: { code: "CSRF_FAILED" } }, { status: 403 });
+      }),
+    );
+    await expect(api("/things", { method: "POST", body: {} })).rejects.toMatchObject({
+      code: "CSRF_FAILED",
+    });
+    expect(posts).toBe(2);
+  });
+
   it("does not send CSRF on GET and returns undefined for 204", async () => {
     let header: string | null = "unset";
     server.use(

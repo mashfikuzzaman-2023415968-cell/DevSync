@@ -19,15 +19,15 @@ from app.api.deps import (
 )
 from app.core import captcha, csrf
 from app.core.auth_middleware import (
-    clear_session_cookie,
+    anonymous_csrf_key,
     client_ip,
     csrf_cookie,
     session_cookie,
+    signed_out_cookies,
 )
 from app.core.authz import Principal
 from app.core.config import Settings
 from app.core.errors import AuthError
-from app.core.security import derive_key
 from app.core.sessions import SessionData
 from app.schemas.auth import (
     AcceptedResponse,
@@ -113,7 +113,7 @@ async def get_csrf(request: Request, settings: SettingsDep) -> Response:
     response to `document.cookie` only a moment later; the client would then send an empty
     header. The cookie is still required and must match (double submit, D53)."""
     found = session_of(request)
-    key = found[1].csrf_secret if found else derive_key(settings.SECRET_KEY, "csrf-anonymous")
+    key = found[1].csrf_secret if found else anonymous_csrf_key(settings)
     token = csrf.issue_token(key)
     response = Response(status_code=204)
     response.headers.append("set-cookie", csrf_cookie(token))
@@ -230,7 +230,8 @@ async def logout(
     """Ends the server-side session and clears the cookie."""
     await account.logout(_deps(db, settings), principal, _require_session(request), now())
     response = Response(status_code=204)
-    response.headers.append("set-cookie", clear_session_cookie())
+    for cookie in signed_out_cookies(settings):
+        response.headers.append("set-cookie", cookie)
     return response
 
 
@@ -248,7 +249,8 @@ async def logout_all(
     """Revokes all sessions, including this one."""
     await account.logout_all(_deps(db, settings), principal, now())
     response = Response(status_code=204)
-    response.headers.append("set-cookie", clear_session_cookie())
+    for cookie in signed_out_cookies(settings):
+        response.headers.append("set-cookie", cookie)
     return response
 
 
@@ -415,7 +417,8 @@ async def password_reset(
     """Signs the user out of every device."""
     await credentials.reset_password(_deps(db, settings), body.token, body.new_password, now())
     response = Response(status_code=204)
-    response.headers.append("set-cookie", clear_session_cookie())
+    for cookie in signed_out_cookies(settings):
+        response.headers.append("set-cookie", cookie)
     return response
 
 

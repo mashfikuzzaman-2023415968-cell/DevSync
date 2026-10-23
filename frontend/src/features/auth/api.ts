@@ -159,10 +159,13 @@ export function useResetPassword() {
 }
 
 export function useChangePassword() {
+  const qc = useQueryClient();
   return useMutation({
     meta: { inlineErrors: true },
     mutationFn: (body: { current_password: string; new_password: string }) =>
       api<undefined>("/auth/password/change", { method: "POST", body }),
+    // The other devices were signed out: the device list must say so straight away.
+    onSuccess: () => qc.invalidateQueries({ queryKey: sessionsKey, refetchType: "all" }),
   });
 }
 

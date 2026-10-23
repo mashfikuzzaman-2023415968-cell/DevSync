@@ -126,6 +126,60 @@ async def test_rotation_keeps_old_token_for_grace_then_expires() -> None:
         assert await store.load(db, new_token, now) is not None
 
 
+async def test_parallel_requests_rotate_a_token_only_once() -> None:
+    # A page fires several API calls with the same token once it is due for rotation.
+    uid = await _user()
+    token, data = await _create(uid)
+    store = _store()
+    now = get_clock().now()
+    async with open_session(DbContext(user_id=uid, role="CLIENT")) as db:
+        first = await store.try_rotate(db, token, data, now)  # type: ignore[arg-type]
+        second = await store.try_rotate(db, token, data, now)  # type: ignore[arg-type]
+        await db.commit()
+        assert first is not None
+        assert second is None
+        # The old token, still in its grace, no longer asks to be rotated again.
+        old = await store.load(db, token, now)
+        assert old is not None
+        assert not store.policy.needs_rotation(old, now)
+
+
+@pytest.mark.parametrize("how", ["revoke_all", "revoke_by_id"])
+async def test_revoking_a_session_ends_its_tokens_still_in_grace(how: str) -> None:
+    uid = await _user()
+    token, data = await _create(uid)
+    store = _store()
+    now = get_clock().now()
+    async with open_session(DbContext(user_id=uid, role="CLIENT")) as db:
+        # Two rotations (e.g. a rotation, then a password change) leave two older tokens in
+        # their grace; the browser may hold any of them.
+        t1, d1 = await store.rotate(db, token, data, now)  # type: ignore[arg-type]
+        t2, _d2 = await store.rotate(db, t1, d1, now)
+        await db.commit()
+        if how == "revoke_all":
+            assert await store.revoke_all(db, uid, now) == 1
+        else:
+            assert await store.revoke_by_id(db, uid, data.session_id, now)  # type: ignore[attr-defined]
+        await db.commit()
+        for t in (token, t1, t2):
+            assert await store.load(db, t, now) is None
+
+
+async def test_activity_on_a_token_in_grace_does_not_extend_it() -> None:
+    uid = await _user()
+    token, data = await _create(uid)
+    store = _store()
+    now = get_clock().now()
+    async with open_session(DbContext(user_id=uid, role="CLIENT")) as db:
+        await store.rotate(db, token, data, now)  # type: ignore[arg-type]
+        await db.commit()
+        old = await store.load(db, token, now)
+        assert old is not None
+        await store.touch(db, token, old, now + timedelta(seconds=5))
+        ttl = await get_redis().ttl("sess:" + hashlib.sha256(token.encode()).hexdigest())
+        assert 0 < ttl <= 30
+
+
 async def test_rate_limiter_blocks_and_window_resets() -> None:
     limiter = RateLimiter(get_redis())
     key = uuid.uuid4().hex

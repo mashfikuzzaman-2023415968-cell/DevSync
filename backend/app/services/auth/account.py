@@ -63,8 +63,10 @@ async def update_me(deps: AuthDeps, principal: Principal, display_name: str) -> 
 
 
 async def list_sessions(deps: AuthDeps, principal: Principal, now: datetime) -> list[Session]:
-    """Live sessions (devices) of the caller."""
-    return await repo.list_sessions(deps.db, principal.user_id, now)
+    """Live sessions (devices) of the caller: not revoked, not past the absolute limit and not
+    idle for longer than the role's timeout (those can no longer be used)."""
+    idle = SessionPolicy(deps.settings).idle_for(principal.role)
+    return await repo.list_sessions(deps.db, principal.user_id, now, idle=idle)
 
 
 async def revoke_session(

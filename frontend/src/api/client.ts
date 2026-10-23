@@ -63,8 +63,8 @@ let csrfFetch: Promise<string> | null = null;
  * concurrent callers. The token comes from the response header, because WebKit may expose the
  * new cookie to `document.cookie` only a moment later (the cookie itself is still sent and
  * must match, D53). */
-async function ensureCsrf(): Promise<string> {
-  const existing = readCookie(CSRF_COOKIE);
+async function ensureCsrf(fresh = false): Promise<string> {
+  const existing = fresh ? null : readCookie(CSRF_COOKIE);
   if (existing) return existing;
   csrfFetch ??= fetch(`${API_BASE}/auth/csrf`, { credentials: "same-origin" })
     .then((r) => r.headers.get("X-CSRF-Token") ?? readCookie(CSRF_COOKIE) ?? "")
@@ -86,11 +86,29 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const method = options.method ?? "GET";
+  try {
+    return await withRetries<T>(path, method, options, false);
+  } catch (error) {
+    // A CSRF cookie left from an ended session (or a server key change) no longer matches:
+    // fetch a fresh token once and retry, instead of telling the person to reload.
+    if (error instanceof ApiError && error.code === "CSRF_FAILED" && UNSAFE.has(method)) {
+      return withRetries<T>(path, method, options, true);
+    }
+    throw error;
+  }
+}
+
+async function withRetries<T>(
+  path: string,
+  method: string,
+  options: RequestOptions,
+  freshCsrf: boolean,
+): Promise<T> {
   const attempts = method === "GET" ? 3 : 1;
   let lastError: ApiError | null = null;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
-      return await send<T>(path, method, options);
+      return await send<T>(path, method, options, freshCsrf);
     } catch (error) {
       if (!(error instanceof ApiError) || error.status !== 0) throw error;
       lastError = error;
@@ -100,10 +118,15 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   throw lastError ?? new ApiError(0, null, null);
 }
 
-async function send<T>(path: string, method: string, options: RequestOptions): Promise<T> {
+async function send<T>(
+  path: string,
+  method: string,
+  options: RequestOptions,
+  freshCsrf = false,
+): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json" };
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
-  if (UNSAFE.has(method)) headers["X-CSRF-Token"] = await ensureCsrf();
+  if (UNSAFE.has(method)) headers["X-CSRF-Token"] = await ensureCsrf(freshCsrf);
   if (options.headers) Object.assign(headers, options.headers);
 
   const controller = new AbortController();

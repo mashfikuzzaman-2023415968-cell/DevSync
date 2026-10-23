@@ -37,6 +37,12 @@ ADMIN_IDLE_MINUTES = 15
 LAST_SEEN_DB_WRITE_SECONDS = 60
 REDIS_PREFIX = "sess:"
 USER_INDEX_PREFIX = "usersess:"
+# Every token of one session (the current one and any still in its rotation grace), so ending
+# the session ends all of them.
+SESSION_TOKENS_PREFIX = "sesstok:"
+# One rotation per token: parallel requests carrying the same old token must not each mint a
+# new token (the extras would outlive "sign out of every device").
+ROTATION_LOCK_PREFIX = "sessrot:"
 
 
 @dataclass(frozen=True)
@@ -120,6 +126,10 @@ def _key(token_hash: bytes) -> str:
     return REDIS_PREFIX + token_hash.hex()
 
 
+def _tokens_key(session_id: uuid.UUID) -> str:
+    return SESSION_TOKENS_PREFIX + str(session_id)
+
+
 class SessionStore:
     """Create, load, rotate and revoke sessions (Redis + database)."""
 
@@ -130,6 +140,24 @@ class SessionStore:
     async def _cache(self, token_hash: bytes, data: SessionData, now: datetime) -> None:
         await self.redis.set(_key(token_hash), data.to_json(), ex=self.policy.redis_ttl(data, now))
         await self.redis.sadd(USER_INDEX_PREFIX + str(data.user_id), token_hash.hex())
+        tokens = _tokens_key(data.session_id)
+        await self.redis.sadd(tokens, token_hash.hex())
+        await self.redis.expire(tokens, max(1, int((data.expires_at - now).total_seconds())))
+
+    async def _forget_tokens(
+        self, user_id: uuid.UUID, session_id: uuid.UUID, current: bytes | None
+    ) -> None:
+        """Drop every cached token of a session: the current one and any in rotation grace."""
+        tokens = _tokens_key(session_id)
+        hexes = {
+            h.decode() if isinstance(h, bytes) else h for h in await self.redis.smembers(tokens)
+        }
+        if current is not None:
+            hexes.add(current.hex())
+        for hx in hexes:
+            await self.redis.delete(REDIS_PREFIX + hx)
+            await self.redis.srem(USER_INDEX_PREFIX + str(user_id), hx)
+        await self.redis.delete(tokens)
 
     async def create(
         self,
@@ -226,8 +254,13 @@ class SessionStore:
     async def touch(
         self, db: AsyncSession, token: str, data: SessionData, now: datetime
     ) -> SessionData:
-        """Record activity; writes `last_seen_at` to the DB at most once a minute."""
+        """Record activity; writes `last_seen_at` to the DB at most once a minute. A token in
+        its rotation grace (just replaced, at most 30 s left) is not extended."""
         token_hash = token_digest(token)
+        if (now - data.rotated_at).total_seconds() < ROTATION_GRACE_SECONDS:
+            ttl = await self.redis.ttl(_key(token_hash))
+            if 0 <= ttl <= ROTATION_GRACE_SECONDS:
+                return data
         updated = replace(data, last_seen_at=now)
         if (now - data.last_db_write).total_seconds() >= LAST_SEEN_DB_WRITE_SECONDS:
             await db.execute(
@@ -257,9 +290,23 @@ class SessionStore:
             update(SessionRow).where(SessionRow.id == data.session_id).values(**db_changes)
         )
         await self._cache(new_hash, new_data, now)
-        await self.redis.expire(_key(old_hash), ROTATION_GRACE_SECONDS)
+        # The old token stays usable for the grace period, marked as just rotated so a late
+        # request carrying it doesn't rotate the session again.
+        await self.redis.set(
+            _key(old_hash), replace(data, rotated_at=now).to_json(), ex=ROTATION_GRACE_SECONDS
+        )
         await self.redis.srem(USER_INDEX_PREFIX + str(data.user_id), old_hash.hex())
         return new_token, new_data
+
+    async def try_rotate(
+        self, db: AsyncSession, old_token: str, data: SessionData, now: datetime
+    ) -> tuple[str, SessionData] | None:
+        """Routine rotation (middleware): only the first of several parallel requests with the
+        same token rotates; the others carry on with the old token during its grace."""
+        lock = ROTATION_LOCK_PREFIX + token_digest(old_token).hex()
+        if not await self.redis.set(lock, b"1", nx=True, ex=ROTATION_GRACE_SECONDS):
+            return None
+        return await self.rotate(db, old_token, data, now)
 
     async def revoke(self, db: AsyncSession, token: str, data: SessionData, now: datetime) -> None:
         """End one session everywhere."""
@@ -283,8 +330,7 @@ class SessionStore:
         token_hash = result.scalar_one_or_none()
         if token_hash is None:
             return False
-        await self.redis.delete(_key(bytes(token_hash)))
-        await self.redis.srem(USER_INDEX_PREFIX + str(user_id), bytes(token_hash).hex())
+        await self._forget_tokens(user_id, session_id, bytes(token_hash))
         return True
 
     async def refresh_status(self, user_id: uuid.UUID, status: str) -> int:
@@ -315,12 +361,11 @@ class SessionStore:
             update(SessionRow)
             .where(SessionRow.user_id == user_id, SessionRow.revoked_at.is_(None))
             .values(revoked_at=now)
-            .returning(SessionRow.token_hash)
+            .returning(SessionRow.id, SessionRow.token_hash)
         )
         if except_id is not None:
             stmt = stmt.where(SessionRow.id != except_id)
-        hashes = [bytes(h) for h in (await db.execute(stmt)).scalars().all()]
-        for h in hashes:
-            await self.redis.delete(_key(h))
-            await self.redis.srem(USER_INDEX_PREFIX + str(user_id), h.hex())
-        return len(hashes)
+        rows = (await db.execute(stmt)).all()
+        for session_id, token_hash in rows:
+            await self._forget_tokens(user_id, session_id, bytes(token_hash))
+        return len(rows)

@@ -278,6 +278,20 @@ def test_sessions_list_and_revoke(api: Api, api2: Api) -> None:
     assert api.delete(f"/api/v1/auth/sessions/{other['id']}").status_code == 404
 
 
+def test_sessions_list_hides_idle_expired_devices(
+    api: Api, api2: Api, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    user = api.sign_in_as("DEVELOPER")
+    assert api2.login(user).status_code == 200  # a second device, then left idle
+    start = clock.get_clock().now()
+    monkeypatch.setattr(clock, "_clock", clock.FrozenClock(start + timedelta(minutes=20)))
+    assert api.get("/api/v1/me").status_code == 200  # this device stays active
+    monkeypatch.setattr(clock, "_clock", clock.FrozenClock(start + timedelta(minutes=35)))
+    items = api.get("/api/v1/auth/sessions").json()["items"]
+    assert [i["current"] for i in items] == [True]  # the idle device can't be used any more
+    assert api2.get("/api/v1/me").status_code == 401
+
+
 def test_idor_other_users_session_is_404(api: Api, api2: Api) -> None:
     api.sign_in_as("CLIENT")
     api2.sign_in_as("DEVELOPER")
@@ -416,3 +430,36 @@ def test_strong_password_constant_is_valid() -> None:
     from app.core.security import password_problems  # noqa: PLC0415
 
     assert password_problems(STRONG_PASSWORD) == []
+
+
+def _post_with_cookie_token(api: Api, path: str, body: dict[str, object]) -> object:
+    """An unsafe request with exactly what the browser holds: the CSRF cookie as the header,
+    no fresh `/auth/csrf` first (the test client's default would hide a stale cookie)."""
+    token = api.client.cookies.get("__Host-ds_csrf") or ""
+    return api.post(path, json=body, csrf=False, headers={"X-CSRF-Token": token})
+
+
+@pytest.mark.parametrize("ending", ["logout", "logout-all"])
+def test_signing_in_again_after_signing_out_works(api: Api, ending: str) -> None:
+    user = api.sign_in_as("DEVELOPER")
+    bound = api.client.cookies.get("__Host-ds_csrf")
+    assert api.post(f"/api/v1/auth/{ending}").status_code == 204
+    # The ended session's CSRF token was replaced by an anonymous one.
+    fresh = api.client.cookies.get("__Host-ds_csrf")
+    assert fresh
+    assert fresh != bound
+    r = _post_with_cookie_token(
+        api, "/api/v1/auth/login", {"email": user.email, "password": user.password}
+    )
+    assert r.status_code == 200, r.text  # type: ignore[attr-defined]
+
+
+def test_an_ended_session_cookie_gets_an_anonymous_csrf_token(api: Api) -> None:
+    api.sign_in_as("DEVELOPER")
+    bound = api.client.cookies.get("__Host-ds_csrf")
+    api.replace_cookie("__Host-ds_session", "x" * 43)  # unknown or expired session
+    assert api.get("/api/v1/me").status_code == 401
+    assert api.client.cookies.get("__Host-ds_session") is None
+    fresh = api.client.cookies.get("__Host-ds_csrf")
+    assert fresh
+    assert fresh != bound

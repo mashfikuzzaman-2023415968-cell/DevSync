@@ -2,6 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
+import { Toaster } from "@/components/ui/Toaster";
 import SettingsPage from "@/features/account/SettingsPage";
 import SetupTwoFactorPage from "@/features/admin/SetupTwoFactorPage";
 import DeveloperHome from "@/features/home/DeveloperHome";
@@ -267,6 +268,69 @@ describe("Signed-in pages", () => {
     await user.type(screen.getByLabelText("New password"), "another phrase 31!");
     await user.click(screen.getByRole("button", { name: "Change password" }));
     expect(await screen.findByText("Email or password is incorrect.")).toBeInTheDocument();
+  });
+
+  it("settings refreshes the device list after a password change and reports a failed sign-out", async () => {
+    let listed = 0;
+    const sessions = [
+      {
+        id: "s1",
+        current: true,
+        ip: "203.0.113.1",
+        user_agent: "Firefox",
+        created_at: "2026-10-17T00:00:00Z",
+        last_seen_at: "2026-10-17T00:00:00Z",
+      },
+      {
+        id: "s2",
+        current: false,
+        ip: null,
+        user_agent: "Phone",
+        created_at: "2026-10-16T00:00:00Z",
+        last_seen_at: "2026-10-16T08:00:00Z",
+      },
+    ];
+    server.use(
+      csrf(),
+      me({ status: "ACTIVE" }),
+      http.get("*/api/v1/auth/sessions", () => {
+        listed += 1;
+        // After the password change only this device is left.
+        return HttpResponse.json({ items: listed === 1 ? sessions : sessions.slice(0, 1) });
+      }),
+      http.delete("*/api/v1/auth/sessions/:id", () =>
+        HttpResponse.json(
+          { error: { code: "RATE_LIMITED", message: "Slow down." } },
+          { status: 429 },
+        ),
+      ),
+      http.post("*/api/v1/auth/password/change", () => new HttpResponse(null, { status: 204 })),
+    );
+    renderRoutes(
+      [
+        {
+          path: "/settings",
+          element: (
+            <>
+              <SettingsPage />
+              <Toaster />
+            </>
+          ),
+        },
+      ],
+      "/settings",
+    );
+    const user = userEvent.setup();
+    const phoneRow = (await screen.findByText("Phone")).closest("li") as HTMLElement;
+    await user.click(within(phoneRow).getByRole("button", { name: "Sign out" }));
+    expect(await screen.findByText("That device wasn’t signed out")).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Current password"), "the old phrase 12!");
+    await user.type(screen.getByLabelText("New password"), "another phrase 31!");
+    await user.click(screen.getByRole("button", { name: "Change password" }));
+    await waitFor(() => {
+      expect(screen.queryByText("Phone")).not.toBeInTheDocument();
+    });
   });
 
   it("admin 2FA setup shows the key, confirms and lists recovery codes", async () => {
