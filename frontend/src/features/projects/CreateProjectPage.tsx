@@ -405,7 +405,7 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
       {step === 0 && (
         <Card className="max-w-2xl">
           <CardHeader title="What are you building?" />
-          <div className="mt-4 flex flex-col gap-4">
+          <div className="flex flex-col gap-4 p-5">
             <Field
               label="Project title"
               required
@@ -436,7 +436,7 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
       {step === 1 && (
         <Card className="max-w-2xl">
           <CardHeader title="Requirements and deadline" />
-          <div className="mt-4 flex flex-col gap-4">
+          <div className="flex flex-col gap-4 p-5">
             <FormField label="Requirements" hint="What done looks like, constraints, must-haves.">
               {(a11y) => (
                 <Textarea
@@ -495,73 +495,77 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
             title="Skills and team"
             description="Add a slot per role. The team size is the total of the slot counts (2–10)."
           />
-          <ul className="mt-4 flex flex-col gap-3">
-            {slots.map((r, i) => (
-              <li key={i} className="flex items-end gap-3 rounded-lg border border-border p-3">
-                <div className="flex-1">
-                  <FormField label="Skill" id={`slot-skill-${String(i)}`}>
-                    {(a11y) => (
-                      <Select
-                        {...a11y}
-                        value={r.skill_id || undefined}
-                        onChange={(v) => {
-                          setDirty(true);
-                          setSlots((xs) => xs.map((x, j) => (j === i ? { ...x, skill_id: v } : x)));
-                        }}
-                        options={skillOptions}
-                        placeholder="Choose a skill"
-                      />
-                    )}
-                  </FormField>
-                </div>
-                <div className="w-24">
-                  <Field
-                    label="How many"
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    max={10}
-                    value={r.count}
-                    onChange={(e) => {
+          <div className="p-5">
+            <ul className="flex flex-col gap-3">
+              {slots.map((r, i) => (
+                <li key={i} className="flex items-end gap-3 rounded-lg border border-border p-3">
+                  <div className="flex-1">
+                    <FormField label="Skill" id={`slot-skill-${String(i)}`}>
+                      {(a11y) => (
+                        <Select
+                          {...a11y}
+                          value={r.skill_id || undefined}
+                          onChange={(v) => {
+                            setDirty(true);
+                            setSlots((xs) =>
+                              xs.map((x, j) => (j === i ? { ...x, skill_id: v } : x)),
+                            );
+                          }}
+                          options={skillOptions}
+                          placeholder="Choose a skill"
+                        />
+                      )}
+                    </FormField>
+                  </div>
+                  <div className="w-24">
+                    <Field
+                      label="How many"
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      max={10}
+                      value={r.count}
+                      onChange={(e) => {
+                        setDirty(true);
+                        setSlots((xs) =>
+                          xs.map((x, j) => (j === i ? { ...x, count: Number(e.target.value) } : x)),
+                        );
+                      }}
+                    />
+                  </div>
+                  <IconButton
+                    aria-label="Remove slot"
+                    disabled={slots.length <= 1}
+                    onClick={() => {
                       setDirty(true);
-                      setSlots((xs) =>
-                        xs.map((x, j) => (j === i ? { ...x, count: Number(e.target.value) } : x)),
-                      );
+                      setSlots((xs) => xs.filter((_, j) => j !== i));
                     }}
-                  />
-                </div>
-                <IconButton
-                  aria-label="Remove slot"
-                  disabled={slots.length <= 1}
-                  onClick={() => {
-                    setDirty(true);
-                    setSlots((xs) => xs.filter((_, j) => j !== i));
-                  }}
-                >
-                  <Trash2 aria-hidden="true" />
-                </IconButton>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-4 flex items-center justify-between">
-            <Button
-              variant="outline"
-              disabled={slots.length >= 20}
-              onClick={() => {
-                setDirty(true);
-                setSlots((xs) => [...xs, { skill_id: "", count: 1, label: "" }]);
-              }}
-            >
-              <Plus aria-hidden="true" />
-              Add slot
-            </Button>
-            <p className="text-body-sm tabular text-text-muted">
-              Team size: <span className="font-semibold text-text">{teamSize}</span>
-            </p>
+                  >
+                    <Trash2 aria-hidden="true" />
+                  </IconButton>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 flex items-center justify-between">
+              <Button
+                variant="outline"
+                disabled={slots.length >= 20}
+                onClick={() => {
+                  setDirty(true);
+                  setSlots((xs) => [...xs, { skill_id: "", count: 1, label: "" }]);
+                }}
+              >
+                <Plus aria-hidden="true" />
+                Add slot
+              </Button>
+              <p className="text-body-sm tabular text-text-muted">
+                Team size: <span className="font-semibold text-text">{teamSize}</span>
+              </p>
+            </div>
+            {(teamSize < 2 || teamSize > 10) && (
+              <p className="mt-2 text-body-sm text-danger">A team needs between 2 and 10 people.</p>
+            )}
           </div>
-          {(teamSize < 2 || teamSize > 10) && (
-            <p className="mt-2 text-body-sm text-danger">A team needs between 2 and 10 people.</p>
-          )}
         </Card>
       )}
 
@@ -585,7 +589,7 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
             title="Budget"
             description="The budget is held in escrow and released by milestone."
           />
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
             <Field
               label="Budget (৳)"
               type="number"
@@ -626,34 +630,36 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
             title="Review and publish"
             description="Publishing opens the project for bids. You can still cancel later."
           />
-          <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-body-sm">
-            <Summary label="Title" value={title || "—"} />
-            <Summary label="Team size" value={String(teamSize)} />
-            <Summary label="Milestones" value={String(milestones.length)} />
-            <Summary label="Deadline" value={formatDays(deadlineDays)} />
-            <Summary label="Planned duration" value={cpm ? formatDays(cpm.duration) : "—"} />
-            <Summary
-              label="Budget"
-              value={budgetTaka ? formatMoney(toPaisa(Number(budgetTaka))) : "—"}
-            />
-          </dl>
-          {exceeds && (
-            <Alert tone="warning" title="The plan runs past your deadline" className="mt-5">
-              The critical path is {formatDays(cpm.duration)}, longer than your{" "}
-              {formatDays(deadlineDays)} deadline. You can still publish, but developers may not be
-              able to meet it.
-              <div className="mt-3">
-                <Checkbox
-                  checked={ack}
-                  onCheckedChange={(v) => {
-                    setAck(v === true);
-                  }}
-                  label="I understand the schedule risk and want to publish anyway"
-                />
-              </div>
-            </Alert>
-          )}
-          <PaymentMethod verified={paymentVerified} />
+          <div className="p-5">
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-body-sm">
+              <Summary label="Title" value={title || "—"} />
+              <Summary label="Team size" value={String(teamSize)} />
+              <Summary label="Milestones" value={String(milestones.length)} />
+              <Summary label="Deadline" value={formatDays(deadlineDays)} />
+              <Summary label="Planned duration" value={cpm ? formatDays(cpm.duration) : "—"} />
+              <Summary
+                label="Budget"
+                value={budgetTaka ? formatMoney(toPaisa(Number(budgetTaka))) : "—"}
+              />
+            </dl>
+            {exceeds && (
+              <Alert tone="warning" title="The plan runs past your deadline" className="mt-5">
+                The critical path is {formatDays(cpm.duration)}, longer than your{" "}
+                {formatDays(deadlineDays)} deadline. You can still publish, but developers may not
+                be able to meet it.
+                <div className="mt-3">
+                  <Checkbox
+                    checked={ack}
+                    onCheckedChange={(v) => {
+                      setAck(v === true);
+                    }}
+                    label="I understand the schedule risk and want to publish anyway"
+                  />
+                </div>
+              </Alert>
+            )}
+            <PaymentMethod verified={paymentVerified} />
+          </div>
         </Card>
       )}
 

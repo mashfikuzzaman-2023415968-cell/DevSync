@@ -1,7 +1,9 @@
 /**
  * Layout checks run inside the page (spec §13.14 "How responsiveness is verified"):
  * horizontal overflow, overlapping interactive elements, touch targets ≥ 44 × 44 px on touch
- * viewports, and text clipped by its container. Returns human-readable problems.
+ * viewports, text clipped by its container, and text or fields pressed against a card's edge
+ * (cards have no padding of their own; their content must keep at least 12 px clear).
+ * Returns human-readable problems.
  */
 export interface LayoutOptions {
   touch: boolean;
@@ -122,5 +124,82 @@ export function layoutProblems({ touch }: LayoutOptions): string[] {
     if (!clips || style.textOverflow === "ellipsis") continue;
     if (el.scrollWidth > el.clientWidth + 1) problems.push(`clipped text ${describe(el)}`);
   }
+  // Card insets: nothing drawn inside a card (text, fields, icons, swatches, charts) comes
+  // within 12 px of its edges; a scroll area is judged by its own box. Decorative pieces count
+  // too, so this looks past aria-hidden. Full-width rows and dividers (as wide as the card) are
+  // deliberate and skipped.
+  const INSET = 12;
+  const shown = (el: Element) => {
+    const r = el.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1) return false;
+    const st = getComputedStyle(el);
+    if (st.visibility === "hidden" || Number(st.opacity) === 0) return false;
+    if (el.closest(".sr-only")) return false;
+    return r.bottom > 0 && r.top < window.innerHeight * 3;
+  };
+  const clipsX = (el: Element) => {
+    const o = getComputedStyle(el).overflowX;
+    return o === "auto" || o === "scroll" || o === "hidden" || o === "clip";
+  };
+  const painted = (el: Element) => {
+    const st = getComputedStyle(el);
+    return (
+      el instanceof SVGSVGElement ||
+      el instanceof HTMLImageElement ||
+      el instanceof HTMLCanvasElement ||
+      ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName) ||
+      el.getAttribute("role") === "combobox" ||
+      (st.backgroundColor !== "rgba(0, 0, 0, 0)" && st.backgroundColor !== "transparent") ||
+      Number.parseFloat(st.borderLeftWidth) > 0 ||
+      Number.parseFloat(st.borderTopWidth) > 0
+    );
+  };
+  for (const card of Array.from(document.querySelectorAll("[data-card]"))) {
+    if (!shown(card) || card.parentElement?.closest("[data-card]")) continue;
+    const c = card.getBoundingClientRect();
+    const boxes: [Element, DOMRect][] = [];
+    const tooWide = (r: DOMRect) => r.width >= c.width - 4;
+    const clipper = (node: Element): Element | null => {
+      let found: Element | null = null;
+      for (let el: Element | null = node; el && el !== card; el = el.parentElement) {
+        if (clipsX(el)) found = el;
+      }
+      return found;
+    };
+    const seen = new Set<Element>();
+    const add = (el: Element, r: DOMRect) => {
+      const clip = clipper(el);
+      if (clip) {
+        const cr = clip.getBoundingClientRect();
+        if (!seen.has(clip) && !tooWide(cr)) boxes.push([clip, cr]);
+        seen.add(clip);
+        return;
+      }
+      if (!tooWide(r)) boxes.push([el, r]);
+    };
+    const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      const parent = n.parentElement;
+      if (!parent || !n.textContent?.trim() || !shown(parent) || parent.closest("svg")) continue;
+      const range = document.createRange();
+      range.selectNodeContents(n);
+      const r = range.getBoundingClientRect();
+      if (r.width > 1 && r.height > 1) add(parent, r);
+    }
+    for (const el of Array.from(card.querySelectorAll("*"))) {
+      if (el.closest("svg") !== null && !(el instanceof SVGSVGElement)) continue;
+      if (!painted(el) || !shown(el)) continue;
+      add(el, el.getBoundingClientRect());
+    }
+    for (const [el, r] of boxes) {
+      const gap = Math.min(r.left - c.left, c.right - r.right, r.top - c.top, c.bottom - r.bottom);
+      if (gap < INSET) {
+        problems.push(
+          `too close to its card's edge (${String(Math.round(gap))} px) ${describe(el)}`,
+        );
+      }
+    }
+  }
+
   return Array.from(new Set(problems));
 }

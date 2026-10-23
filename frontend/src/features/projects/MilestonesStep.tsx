@@ -138,137 +138,139 @@ export function MilestonesStep({
           title="Milestones"
           description="Split the work into milestones. Shares must add up to 100%."
         />
-        <ul className="mt-4 flex flex-col gap-4">
-          {milestones.map((m, i) => {
-            // Any other milestone may come first. A loop is allowed here on purpose so the plan
-            // preview can show it and the client can fix it (Demo 1: "a circular dependency is
-            // rejected"); "Continue" stays disabled and the server rejects it too.
-            const others = milestones.filter((x) => x.key !== m.key);
-            return (
-              <li key={m.key} className="rounded-lg border border-border p-4">
-                <div className="flex items-start gap-3">
-                  <span className="mt-2.5 text-caption font-semibold tabular text-text-muted">
-                    {i + 1}
-                  </span>
-                  <div className="grid flex-1 grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-6">
-                    <div className="sm:col-span-4">
-                      <Field
-                        label="Name"
-                        value={m.name}
-                        onChange={(e) => {
-                          update(m.key, { name: e.target.value });
-                        }}
-                        placeholder="e.g. Database schema"
-                        maxLength={160}
-                      />
+        <div className="p-5">
+          <ul className="flex flex-col gap-4">
+            {milestones.map((m, i) => {
+              // Any other milestone may come first. A loop is allowed here on purpose so the plan
+              // preview can show it and the client can fix it (Demo 1: "a circular dependency is
+              // rejected"); "Continue" stays disabled and the server rejects it too.
+              const others = milestones.filter((x) => x.key !== m.key);
+              return (
+                <li key={m.key} className="rounded-lg border border-border p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="mt-2.5 text-caption font-semibold tabular text-text-muted">
+                      {i + 1}
+                    </span>
+                    <div className="grid flex-1 grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-6">
+                      <div className="sm:col-span-4">
+                        <Field
+                          label="Name"
+                          value={m.name}
+                          onChange={(e) => {
+                            update(m.key, { name: e.target.value });
+                          }}
+                          placeholder="e.g. Database schema"
+                          maxLength={160}
+                        />
+                      </div>
+                      <div className="sm:col-span-1">
+                        <Field
+                          label="Days"
+                          type="number"
+                          inputMode="numeric"
+                          min={1}
+                          max={365}
+                          value={m.duration_days}
+                          onChange={(e) => {
+                            update(m.key, { duration_days: Number(e.target.value) });
+                          }}
+                        />
+                      </div>
+                      <div className="sm:col-span-1">
+                        <Field
+                          label="Share %"
+                          type="number"
+                          inputMode="numeric"
+                          min={0}
+                          max={100}
+                          value={bpToPct(m.share_bp)}
+                          onChange={(e) => {
+                            update(m.key, { share_bp: pctToBp(Number(e.target.value)) });
+                          }}
+                        />
+                      </div>
+                      <div className="sm:col-span-3">
+                        <FormField label="Skills">
+                          {(a11y) => (
+                            <TagPicker
+                              id={a11y.id}
+                              aria-describedby={a11y["aria-describedby"]}
+                              options={skillOptions}
+                              value={m.skill_ids}
+                              onChange={(v) => {
+                                update(m.key, { skill_ids: v });
+                              }}
+                              empty="Add skills in the earlier step."
+                            />
+                          )}
+                        </FormField>
+                      </div>
+                      <div className="sm:col-span-3">
+                        <FormField
+                          label="Must finish after"
+                          hint={others.length ? undefined : "Add another milestone to link them."}
+                        >
+                          {(a11y) => (
+                            <TagPicker
+                              id={a11y.id}
+                              aria-describedby={a11y["aria-describedby"]}
+                              options={others.map((p) => ({
+                                value: p.key,
+                                label: p.name || "Untitled",
+                              }))}
+                              value={m.predecessor_keys}
+                              onChange={(v) => {
+                                update(m.key, { predecessor_keys: v });
+                              }}
+                              empty="Add another milestone first."
+                            />
+                          )}
+                        </FormField>
+                      </div>
                     </div>
-                    <div className="sm:col-span-1">
-                      <Field
-                        label="Days"
-                        type="number"
-                        inputMode="numeric"
-                        min={1}
-                        max={365}
-                        value={m.duration_days}
-                        onChange={(e) => {
-                          update(m.key, { duration_days: Number(e.target.value) });
-                        }}
-                      />
-                    </div>
-                    <div className="sm:col-span-1">
-                      <Field
-                        label="Share %"
-                        type="number"
-                        inputMode="numeric"
-                        min={0}
-                        max={100}
-                        value={bpToPct(m.share_bp)}
-                        onChange={(e) => {
-                          update(m.key, { share_bp: pctToBp(Number(e.target.value)) });
-                        }}
-                      />
-                    </div>
-                    <div className="sm:col-span-3">
-                      <FormField label="Skills">
-                        {(a11y) => (
-                          <TagPicker
-                            id={a11y.id}
-                            aria-describedby={a11y["aria-describedby"]}
-                            options={skillOptions}
-                            value={m.skill_ids}
-                            onChange={(v) => {
-                              update(m.key, { skill_ids: v });
-                            }}
-                            empty="Add skills in the earlier step."
-                          />
-                        )}
-                      </FormField>
-                    </div>
-                    <div className="sm:col-span-3">
-                      <FormField
-                        label="Must finish after"
-                        hint={others.length ? undefined : "Add another milestone to link them."}
-                      >
-                        {(a11y) => (
-                          <TagPicker
-                            id={a11y.id}
-                            aria-describedby={a11y["aria-describedby"]}
-                            options={others.map((p) => ({
-                              value: p.key,
-                              label: p.name || "Untitled",
-                            }))}
-                            value={m.predecessor_keys}
-                            onChange={(v) => {
-                              update(m.key, { predecessor_keys: v });
-                            }}
-                            empty="Add another milestone first."
-                          />
-                        )}
-                      </FormField>
-                    </div>
+                    <IconButton
+                      onClick={() => {
+                        remove(m.key);
+                      }}
+                      aria-label={`Remove ${m.name || "milestone"}`}
+                      className="mt-5"
+                    >
+                      <Trash2 aria-hidden="true" />
+                    </IconButton>
                   </div>
-                  <IconButton
-                    onClick={() => {
-                      remove(m.key);
-                    }}
-                    aria-label={`Remove ${m.name || "milestone"}`}
-                    className="mt-5"
-                  >
-                    <Trash2 aria-hidden="true" />
-                  </IconButton>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-        <div className="mt-4 flex items-center justify-between gap-4">
-          <Button variant="outline" onClick={add} disabled={milestones.length >= 300}>
-            <Plus aria-hidden="true" />
-            Add milestone
-          </Button>
-          <ShareMeter totalBp={totalBp} />
+                </li>
+              );
+            })}
+          </ul>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+            <Button variant="outline" onClick={add} disabled={milestones.length >= 300}>
+              <Plus aria-hidden="true" />
+              Add milestone
+            </Button>
+            <ShareMeter totalBp={totalBp} />
+          </div>
         </div>
       </Card>
 
       <Card>
-        <div className="flex items-center justify-between gap-3">
-          <CardHeader
-            title="Plan preview"
-            description="Runs the critical-path method as you edit."
-          />
-          <SegmentedControl<PreviewView>
-            label="Plan view"
-            size="sm"
-            value={view}
-            onChange={setView}
-            segments={[
-              { value: "gantt", label: "Gantt" },
-              { value: "graph", label: "Graph" },
-              { value: "table", label: "Table" },
-            ]}
-          />
-        </div>
-        <div className="mt-4">
+        <CardHeader
+          title="Plan preview"
+          description="Runs the critical-path method as you edit."
+          action={
+            <SegmentedControl<PreviewView>
+              label="Plan view"
+              size="sm"
+              value={view}
+              onChange={setView}
+              segments={[
+                { value: "gantt", label: "Gantt" },
+                { value: "graph", label: "Graph" },
+                { value: "table", label: "Table" },
+              ]}
+            />
+          }
+        />
+        <div className="p-5">
           <PreviewBody
             ready={ready}
             result={result}
@@ -313,11 +315,14 @@ function PreviewBody({
     );
   }
   const graphNodes = result.nodes.map((n) => ({ key: n.key, name: n.name, critical: n.critical }));
+  const critical = result.nodes.filter((n) => n.critical).length;
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap gap-2 text-body-sm">
         <Chip>Duration {formatDays(result.duration)}</Chip>
-        <Chip>{result.nodes.filter((n) => n.critical).length} critical milestones</Chip>
+        <Chip>
+          {critical} critical {critical === 1 ? "milestone" : "milestones"}
+        </Chip>
         <Chip tone={result.total_share_bp === SHARE_TOTAL_BP ? "ok" : "warn"}>
           Shares {bpToPct(result.total_share_bp)}%
         </Chip>

@@ -98,6 +98,8 @@ export default function FindProjectsPage() {
               <SegmentedControl<Sort>
                 label="Sort projects"
                 size="sm"
+                // Fill the narrow filter column instead of poking out of its card.
+                className="flex w-full [&>button]:px-2"
                 value={(filters.sort ?? "newest") as Sort}
                 onChange={(v) => {
                   patch({ sort: v });
@@ -119,7 +121,7 @@ export default function FindProjectsPage() {
                 title="Recommended for you"
                 description="Open projects needing your skills, with deadlines that fit your usual pace and hours you have free."
               />
-              <ul className="mt-3 flex flex-wrap gap-2">
+              <ul className="flex flex-wrap gap-2 p-5 pt-3">
                 {recommended.data.slice(0, 6).map((r) => (
                   <li key={r.project.id}>
                     <Button asChild variant="outline">

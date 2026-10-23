@@ -94,7 +94,9 @@ export default function PlanPage() {
         <div className="flex flex-col gap-6">
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone="neutral">Duration {formatDays(p?.duration ?? 0)}</Badge>
-            <Badge tone="danger">{criticalCount} critical milestones</Badge>
+            <Badge tone="danger">
+              {criticalCount} critical {criticalCount === 1 ? "milestone" : "milestones"}
+            </Badge>
             {p?.baseline_version != null && (
               <Badge tone="info">Baseline v{p.baseline_version}</Badge>
             )}
@@ -105,20 +107,22 @@ export default function PlanPage() {
           </div>
 
           <Card>
-            <div className="flex items-center justify-between gap-3">
-              <CardHeader title="Schedule" />
-              <SegmentedControl<View>
-                label="Schedule view"
-                size="sm"
-                value={view}
-                onChange={setView}
-                segments={[
-                  { value: "gantt", label: "Gantt" },
-                  { value: "table", label: "Table" },
-                ]}
-              />
-            </div>
-            <div className="mt-4">
+            <CardHeader
+              title="Schedule"
+              action={
+                <SegmentedControl<View>
+                  label="Schedule view"
+                  size="sm"
+                  value={view}
+                  onChange={setView}
+                  segments={[
+                    { value: "gantt", label: "Gantt" },
+                    { value: "table", label: "Table" },
+                  ]}
+                />
+              }
+            />
+            <div className="p-5">
               {view === "gantt" ? (
                 <Gantt
                   nodes={nodes}
@@ -138,7 +142,7 @@ export default function PlanPage() {
               title="Dependencies"
               description="How the milestones depend on one another."
             />
-            <div className="mt-4">
+            <div className="p-5">
               <DependencyGraph nodes={graphNodes} edges={edges} />
             </div>
           </Card>

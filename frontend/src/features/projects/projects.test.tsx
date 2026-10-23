@@ -476,6 +476,14 @@ describe("PlanPage", () => {
     expect(await screen.findByRole("table")).toBeInTheDocument();
   });
 
+  it("says “1 critical milestone” in the singular", async () => {
+    planHandlers();
+    const one = { ...plan, nodes: [NODES[0]], edges: [] };
+    server.use(http.get(`${API}/projects/p1/plan`, () => HttpResponse.json(one)));
+    renderRoutes(routes("/client/projects/:id/plan", <PlanPage />), "/client/projects/p1/plan");
+    expect(await screen.findByText("1 critical milestone")).toBeInTheDocument();
+  });
+
   it("marks today on the Gantt once work is under way", async () => {
     vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-11-11T06:00:00Z"));
     planHandlers("IN_PROGRESS");

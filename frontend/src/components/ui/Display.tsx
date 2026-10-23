@@ -21,6 +21,7 @@ export function Card({
 }: HTMLAttributes<HTMLDivElement> & { interactive?: boolean }) {
   return (
     <div
+      data-card=""
       {...rest}
       className={cn(
         "rounded-lg border border-border bg-surface shadow-xs",
