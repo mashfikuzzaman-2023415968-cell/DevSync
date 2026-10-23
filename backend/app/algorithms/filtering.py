@@ -213,8 +213,8 @@ def filter_bids(bids: list[BidInput], project: ProjectInput, params: FilterParam
         if params.mode is Mode.PCS_REPLICATION:
             if eligible or not bids:  # the paper re-initializes only when S' is empty
                 break
-        elif _sufficient(eligible, project, params.team_size):
-            break
+        elif not bids or _sufficient(eligible, project, params.team_size):
+            break  # nobody to relax for: no "minimums relaxed" on a project without bids
 
     # Final reasons at the thresholds we settled on.
     eligible_ids = {b.bid_id for b in eligible}

@@ -249,9 +249,9 @@ function StandardsPanel({ project, view, onDone }: PanelProps) {
   return (
     <div className="space-y-5 pt-4">
       <p className="text-body-sm text-text-muted">
-        DevSync already relaxes the minimums by up to {pct(t.p0 - t.floor_p0)} points when bids are
-        short. You can lower your project’s own minimum down to {pct(t.floor_p0)} for performance
-        and {pct(t.floor_c0)} for competency.
+        DevSync already relaxes the minimums by up to {pct(t.default_p0 - t.floor_p0)} points when
+        bids are short. You can lower your project’s own minimum down to {pct(t.floor_p0)} for
+        performance and {pct(t.floor_c0)} for competency.
       </p>
       <Slider
         label="Minimum performance"

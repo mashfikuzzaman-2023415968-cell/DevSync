@@ -24,6 +24,7 @@ import {
   useCreateBid,
   useEligibilityPreview,
   useMyBids,
+  useUpdateBid,
   useWithdrawBid,
 } from "@/features/bids/api";
 import { CHECK_LABEL } from "@/features/bids/bidText";
@@ -39,6 +40,8 @@ export default function ProjectBidPage() {
   const myBids = useMyBids();
   const create = useCreateBid(id);
   const withdraw = useWithdrawBid();
+  const update = useUpdateBid();
+  const [editing, setEditing] = useState(false);
   const preview = useEligibilityPreview(id);
 
   const [slotId, setSlotId] = useState("");
@@ -109,6 +112,54 @@ export default function ProjectBidPage() {
   }
 
   const p = project.data;
+
+  /** Open the sheet on the existing bid, filled in with what was sent. */
+  function startEditing() {
+    if (!existing) return;
+    setSlotId(existing.slot_id);
+    setPriceTaka(String(existing.price_paisa / 100));
+    setDays(String(existing.days_needed));
+    setProposal(existing.proposal);
+    setHours(String(existing.hours_per_week_committed));
+    setContribution(existing.expected_contribution);
+    setPortfolioIds(existing.portfolio_item_ids);
+    setEditing(true);
+  }
+
+  function saveChanges() {
+    if (!existing) return;
+    update.mutate(
+      {
+        bidId: existing.id,
+        body: {
+          slot_id: slotId,
+          price_paisa: Math.round(Number(priceTaka) * 100),
+          days_needed: Number(days),
+          proposal: proposal.trim(),
+          expected_contribution: contribution.trim(),
+          portfolio_item_ids: portfolioIds,
+          ...(hoursValue ? { hours_per_week_committed: hoursValue } : {}),
+        },
+      },
+      {
+        onSuccess: () => {
+          setEditing(false);
+          toast({
+            tone: "success",
+            title: "Bid updated",
+            description: "Only the client can see it.",
+          });
+        },
+        onError: (e) => {
+          toast({
+            tone: "danger",
+            title: "Could not update the bid",
+            description: e instanceof ApiError ? e.message : "Please try again.",
+          });
+        },
+      },
+    );
+  }
 
   function placeBid() {
     create.mutate(
@@ -186,11 +237,26 @@ export default function ProjectBidPage() {
 
         <Card>
           <CardHeader
-            title={existing ? "Your bid" : "Place a sealed bid"}
+            title={existing ? (editing ? "Edit your bid" : "Your bid") : "Place a sealed bid"}
             description="Sealed: only the client sees your price and proposal."
           />
           <div className="px-5 pb-5">
-            {existing ? (
+            {myBids.isPending ? (
+              <div
+                className="mt-4 flex flex-col gap-3"
+                aria-busy="true"
+                aria-label="Loading your bid"
+              >
+                <Skeleton className="h-5 w-48" />
+                <Skeleton className="h-11 w-full" />
+              </div>
+            ) : myBids.isError ? (
+              <ErrorState
+                title="We couldn’t check whether you’ve bid"
+                requestId={myBids.error instanceof ApiError ? myBids.error.requestId : null}
+                onRetry={() => void myBids.refetch()}
+              />
+            ) : existing && !(editing && p.open_for_bids) ? (
               <div className="mt-4">
                 <p className="text-body-sm text-text">
                   You bid {formatMoney(existing.price_paisa)} over{" "}
@@ -200,7 +266,10 @@ export default function ProjectBidPage() {
                   {existing.status.charAt(0) + existing.status.slice(1).toLowerCase()}
                 </Badge>
                 {p.open_for_bids ? (
-                  <div className="mt-4">
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={startEditing}>
+                      Edit bid
+                    </Button>
                     <Button
                       variant="destructive"
                       size="sm"
@@ -337,9 +406,25 @@ export default function ProjectBidPage() {
 
                 {verdict ? <EligibilityPreview verdict={verdict} /> : null}
 
-                <Button loading={create.isPending} disabled={!ready} onClick={placeBid}>
-                  Place sealed bid
-                </Button>
+                {existing ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Button loading={update.isPending} disabled={!ready} onClick={saveChanges}>
+                      Save changes
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setEditing(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Button loading={create.isPending} disabled={!ready} onClick={placeBid}>
+                    Place sealed bid
+                  </Button>
+                )}
               </div>
             )}
           </div>

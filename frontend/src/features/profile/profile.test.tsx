@@ -2,7 +2,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import ChallengesPage from "@/features/challenges/ChallengesPage";
 import TestPage from "@/features/challenges/TestPage";
 import SettingsPage from "@/features/account/SettingsPage";
@@ -10,7 +10,14 @@ import { server } from "@/test/server";
 import { Probe, renderRoutes } from "@/test/render";
 import ProfilePage from "./ProfilePage";
 import PublicProfilePage from "./PublicProfilePage";
-import { aboutSchema, isGithubUsername, isHttpsUrl, itemSchema, reviewSchema } from "./schemas";
+import {
+  aboutSchema,
+  isGithubUsername,
+  isHttpsUrl,
+  itemSchema,
+  reviewSchema,
+  todayInDhaka,
+} from "./schemas";
 import { changedFields, sameValue } from "./useAutosave";
 
 const ME = {
@@ -145,6 +152,11 @@ describe("profile schemas", () => {
     expect(changedFields({ a: 1 }, { a: 1 })).toEqual({});
   });
 
+  it("uses the Dhaka calendar date for 'today' (02:00 Dhaka is still yesterday in UTC)", () => {
+    expect(todayInDhaka(new Date("2026-10-23T20:00:00Z"))).toBe("2026-10-24");
+    expect(todayInDhaka(new Date("2026-10-23T17:59:00Z"))).toBe("2026-10-23");
+  });
+
   it("compares values the way the server stores them", () => {
     expect(sameValue("30", 30)).toBe(true);
     expect(sameValue(30, 30)).toBe(true);
@@ -188,7 +200,7 @@ describe("ProfilePage", () => {
 
   it("saves hours and a headline with a trailing space once, not over and over", async () => {
     const bodies: Record<string, unknown>[] = [];
-    let profile = { ...PROFILE };
+    let profile: Record<string, unknown> = { ...PROFILE };
     server.use(
       ...base(),
       http.get("*/api/v1/me/developer-profile", () => HttpResponse.json(profile)),
@@ -353,6 +365,45 @@ describe("Challenges and the timed test", () => {
       "80",
     );
     expect(screen.queryByRole("button", { name: "Start test" })).toBeNull();
+  });
+
+  it("shows the real time left when a cached test is reopened later", async () => {
+    // The browser's clock runs 2 minutes behind the server's; the test started just now.
+    const serverNow = Date.parse("2026-10-18T05:00:00Z");
+    let clientNow = serverNow - 120_000;
+    vi.spyOn(Date, "now").mockImplementation(() => clientNow);
+    const attempt = {
+      ...ATTEMPT,
+      started_at: new Date(serverNow).toISOString(),
+      server_now: new Date(serverNow).toISOString(),
+      deadline_at: new Date(serverNow + 600_000).toISOString(),
+    };
+    let fetches = 0;
+    server.use(
+      csrf(),
+      http.get("*/api/v1/attempts/a-1", () => {
+        fetches += 1;
+        // The server's clock moves with the browser's (still 2 minutes ahead of it).
+        const now = new Date(clientNow + 120_000).toISOString();
+        return HttpResponse.json({ ...attempt, server_now: now });
+      }),
+    );
+    const { router } = renderRoutes(
+      [
+        { path: "/t/:attemptId", element: <TestPage /> },
+        { path: "/challenges", element: <Probe label="challenges" /> },
+      ],
+      "/t/a-1",
+    );
+    expect(await screen.findByRole("timer")).toHaveAccessibleName("Time left 10:00");
+    // Leave for 4 minutes, then reopen it from the cache.
+    await router.navigate("/challenges");
+    expect(await screen.findByText("challenges")).toBeInTheDocument();
+    clientNow += 240_000;
+    await router.navigate("/t/a-1");
+    expect(await screen.findByRole("timer")).toHaveAccessibleName("Time left 6:00");
+    expect(fetches).toBe(1); // shown from the cache, not fetched again
+    vi.restoreAllMocks();
   });
 
   it("saves each answer, then submits and shows the score without the answers", async () => {

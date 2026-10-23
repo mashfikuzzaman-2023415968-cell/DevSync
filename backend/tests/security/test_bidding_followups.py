@@ -17,6 +17,7 @@ from typing import Any
 import pytest
 from sqlalchemy import create_engine, text
 
+from app.repositories import bids as bids_repository
 from tests.helpers import Api, SeededUser
 
 pytestmark = [pytest.mark.security, pytest.mark.api]
@@ -633,3 +634,21 @@ def test_each_cancelled_project_tells_its_bidders(api: Api, migration_url: str) 
         r = api.post(f"/api/v1/projects/{pid}/cancel", json={"reason": "Re-scoping the project."})
         assert r.status_code == 200, r.text
     assert _notifications(migration_url, dev.user_id, "PROJECT_CANCELLED") == 2
+
+
+def test_a_second_bid_racing_the_first_is_a_409_not_a_500(
+    api: Api, migration_url: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    api.sign_in_as("CLIENT")
+    pid, slot_id = _publish(api)
+    _developer(api, migration_url)
+    assert _bid(api, pid, slot_id).status_code == 201
+
+    # Simulate the race: the second request's "already bid?" check ran before the first saved.
+    async def no_active_bid(*_args: object) -> None:
+        return None
+
+    monkeypatch.setattr(bids_repository, "active_bid", no_active_bid)
+    second = _bid(api, pid, slot_id)
+    assert second.status_code == 409, second.text
+    assert second.json()["error"]["code"] == "INVALID_STATE"

@@ -228,4 +228,71 @@ describe("ProjectBidPage", () => {
     expect(await screen.findByText("Your bid")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Withdraw bid/ })).toBeInTheDocument();
   });
+
+  it("edits an existing bid with the form filled in from it", async () => {
+    const user = userEvent.setup();
+    let patched: unknown = null;
+    const bid = {
+      id: "b1",
+      project_id: PID,
+      slot_id: SLOT,
+      status: "ACTIVE",
+      price_paisa: 1_800_000,
+      days_needed: 20,
+      proposal: "React and tests.",
+      expected_contribution: "Front end",
+      portfolio_item_ids: [],
+      hours_per_week_committed: 25,
+      created_at: "2026-10-21T06:00:00Z",
+      updated_at: "2026-10-21T06:00:00Z",
+    };
+    base();
+    server.use(
+      http.get(`${API}/me/bids`, () => HttpResponse.json([bid])),
+      http.post(`${API}/projects/${PID}/bids/eligibility`, () =>
+        HttpResponse.json({
+          eligible: true,
+          reason: null,
+          message: "You meet every requirement.",
+          checks: [],
+        }),
+      ),
+      http.patch(`${API}/bids/b1`, async ({ request }) => {
+        patched = await request.json();
+        return HttpResponse.json({ ...bid, price_paisa: 1_500_000 });
+      }),
+    );
+    routes("/dev/projects/:id", <ProjectBidPage />, `/dev/projects/${PID}`);
+    await user.click(await screen.findByRole("button", { name: "Edit bid" }));
+    expect(screen.getByText("Edit your bid")).toBeInTheDocument();
+    const price = screen.getByLabelText("Your price (৳)");
+    expect(price).toHaveValue(18_000);
+    expect(screen.getByLabelText("Days you need")).toHaveValue(20);
+    expect(screen.getByLabelText("Hours a week")).toHaveValue(25);
+    await user.clear(price);
+    await user.type(price, "15000");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => {
+      expect(patched).toMatchObject({
+        slot_id: SLOT,
+        price_paisa: 1_500_000,
+        days_needed: 20,
+        hours_per_week_committed: 25,
+        proposal: "React and tests.",
+        expected_contribution: "Front end",
+      });
+    });
+  });
+
+  it("doesn't offer an empty bid form while my bids are loading or failed", async () => {
+    base();
+    server.use(
+      http.get(`${API}/me/bids`, () =>
+        HttpResponse.json({ error: { code: "INTERNAL_ERROR" } }, { status: 500 }),
+      ),
+    );
+    routes("/dev/projects/:id", <ProjectBidPage />, `/dev/projects/${PID}`);
+    expect(await screen.findByText("We couldn’t check whether you’ve bid")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Place sealed bid/ })).not.toBeInTheDocument();
+  });
 });

@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import write_audit
+from app.core.clock import to_display
 from app.core.errors import DomainError, ErrorCode, InvalidStateTransition, NotFoundError
 from app.models.profiles import (
     Certificate,
@@ -482,7 +483,7 @@ async def create_external_review(
     source: Readable,
     filename: str | None,
 ) -> ExternalReviewOut:
-    if project_date > ctx.now.date():
+    if project_date > to_display(ctx.now).date():  # "today" as people here see it (Dhaka)
         raise DomainError(
             code=ErrorCode.VALIDATION_ERROR, fields={"project_date": "Use a date in the past."}
         )

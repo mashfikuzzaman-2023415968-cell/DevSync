@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { useMe } from "@/features/auth/api";
 import { PageSkeleton } from "@/components/shell/PageSkeleton";
+import { ErrorState } from "@/components/ui/Feedback";
 import { roleHome } from "@/lib/redirects";
 
 const Loading = PageSkeleton;
@@ -23,6 +24,9 @@ export function RequireAuth({
   const me = useMe();
   const location = useLocation();
   if (me.isPending) return <Loading />;
+  // The server couldn't say who is signed in (outage, timeout): that isn't "signed out".
+  if (me.isError && me.data === undefined)
+    return <AccountError onRetry={() => void me.refetch()} />;
   if (!me.data) {
     const returnTo = encodeURIComponent(location.pathname + location.search);
     return <Navigate to={`/login?return_to=${returnTo}`} replace />;
@@ -39,6 +43,18 @@ export function RequireAuth({
   return <>{children}</>;
 }
 
+function AccountError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <main id="main" className="mx-auto max-w-lg px-4 py-24">
+      <ErrorState
+        title="We couldn’t check your account"
+        description="DevSync didn’t answer just now. Try again in a moment; you’re still signed in."
+        onRetry={onRetry}
+      />
+    </main>
+  );
+}
+
 const AdminApp = lazy(() => import("@/features/admin/AdminApp"));
 
 /** The admin bundle is requested only after the server confirms an admin session
@@ -52,6 +68,8 @@ export function AdminArea() {
     queryFn: () => api<{ totp_verified: boolean }>("/admin/session"),
   });
   if (me.isPending || (check.isPending && check.fetchStatus !== "idle")) return <Loading />;
+  if (me.isError && me.data === undefined)
+    return <AccountError onRetry={() => void me.refetch()} />;
   if (!me.data || me.data.role !== "ADMIN")
     return <Navigate to={me.data ? roleHome(me.data.role, me.data.status) : "/login"} replace />;
   if (!me.data.totp_verified) return <Navigate to="/admin/setup-2fa" replace />;

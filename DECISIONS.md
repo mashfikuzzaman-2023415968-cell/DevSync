@@ -581,3 +581,29 @@ new read, `GET /projects/{id}/draft` (project + slots + milestones with shares a
 dependencies), under `project.write`: only the owning client (others, admins included, get 404 or
 403), only while the project is a DRAFT (409 otherwise). The sidebar now marks only the most
 specific matching item, so "Create project" no longer also lights up "My projects".
+
+**D56 · Fixes from the Phase 0–5 logic audit (Taeen, 2026-10-24).**
+A read-through of every non-visual flow (accounts, projects, bidding, profiles, client caching)
+found these, each now covered by a test that failed before the fix:
+*Sessions.* Signing out (one device or all), a password reset or an ended session now also
+replace the CSRF cookie with an anonymous one, and the client fetches a fresh token and retries
+once after `CSRF_FAILED` — a stale token blocked every later sign-in until the browser closed.
+Routine rotation happens once per token (a Redis lock), the old token's 30 s grace entry no longer
+asks to rotate again and is never extended, and ending a session deletes every token it had in
+grace (`sesstok:<session>`), so "sign out of every device" and password changes end them all. The
+device list hides sessions past their idle timeout.
+*Projects.* A bidding close time must be in the future when saved and at publish; publish also
+needs a budget and slot counts equal to the team size (422s, not database 500s); a malformed plan
+preview is a 422. The deadline job notifies once per closing (read or not) and again after an
+extension; cancellations and terms changes notify every bidder each time. A draft reopened on
+Review re-runs the schedule check. The plan's Finish date is the last working day.
+*Bidding.* Bids can be edited (the API existed; the UI didn't call it). Recommendations refresh
+after a bid, edit or withdrawal. A racing second bid is a 409. No "minimums relaxed" without bids.
+The dry run says "may be filtered out" for minimums that relaxation can still lift.
+*Profiles and tests.* Autosave compares values as the server stores them (it saved forever after
+editing hours or leaving a trailing space), saves a pending edit when the page is left, and adopts
+changes made elsewhere. The test countdown uses the clock offset measured when the attempt arrived
+(a cached attempt showed the time spent away as extra time). Public profiles show each skill's best
+verified score, as bidding uses it (migration 0008). Review dates compare Dhaka calendar dates.
+*Client.* A sign-in drops every cached query of the previous user; a failed `/me` shows an error
+with retry instead of the sign-in page.

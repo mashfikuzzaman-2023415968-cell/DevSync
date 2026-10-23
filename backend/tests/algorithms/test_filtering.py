@@ -342,3 +342,10 @@ def test_relaxation_never_reduces_eligibility(n: int) -> None:
         FilterParams(p0=0.45, c0=0.40, team_size=max(1, n), relax_max_steps=3),
     )
     assert set(strict.eligible) <= set(loose.eligible)
+
+
+def test_devsync_mode_without_bids_does_not_relax() -> None:
+    # No bids: relaxing can't find anyone, so the client isn't told minimums were relaxed.
+    result = filter_bids([], PROJECT, FilterParams(team_size=1))
+    assert result.relaxations == ()
+    assert result.too_few

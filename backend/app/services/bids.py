@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.algorithms import availability as avail
@@ -86,6 +87,10 @@ _REASON_TEXT = {
     ReasonCode.SELF_DEALING: "Conflict of interest with this client",
     ReasonCode.NOT_SHORTLISTED: "Eligible but not in the top shortlist for this slot",
 }
+
+
+# Minimums Algorithm 1 relaxes when too few bids pass (the other reasons are never relaxed).
+_RELAXABLE = {ReasonCode.LOW_PERFORMANCE, ReasonCode.LOW_COMPETENCY}
 
 
 # --------------------------------------------------------------------------- terms
@@ -354,7 +359,14 @@ async def create_bid(ctx: Ctx, project_id: uuid.UUID, body: BidCreate) -> BidOut
         status=BidStatus.ACTIVE,
     )
     ctx.db.add(bid)
-    await ctx.db.flush()
+    try:
+        await ctx.db.flush()
+    except IntegrityError as exc:
+        # Two bids sent at the same moment: the one-active-bid index stops the second one.
+        await ctx.db.rollback()
+        raise DomainError(
+            "You already have an active bid on this project.", code=ErrorCode.INVALID_STATE
+        ) from exc
     await write_audit(
         ctx.db, action="bid.create", entity_type="bid", entity_id=bid.id, actor_id=ctx.uid
     )
@@ -399,6 +411,7 @@ async def update_bid(ctx: Ctx, bid_id: uuid.UUID, body: BidUpdate) -> BidOut:
     )
     await ctx.db.commit()
     await ctx.db.refresh(bid)
+    await marketplace.forget_recommendations(ctx.uid)  # days needed feed "typical days" (§9.16)
     return _bid_out(bid, await _bid_context(ctx.db, [bid]))
 
 
@@ -514,11 +527,17 @@ async def eligibility_preview(
     reason = classify_bid(bid, proj, params, params.p0, params.c0)
     skill = (await _skill_names(ctx.db, [slot.skill_id])).get(slot.skill_id, "this skill")
     checks = [_check_out(c, skill) for c in explain_bid(bid, proj, params, params.p0, params.c0)]
-    message = (
-        "You meet every requirement."
-        if reason is None
-        else (f"Would be filtered out: {_REASON_TEXT[reason].lower()}.")
-    )
+    if reason is None:
+        message = "You meet every requirement."
+    elif reason in _RELAXABLE:
+        # The client's view may relax these minimums when too few bids qualify, which this
+        # preview can't know without revealing other sealed bids (§9.2 step 6).
+        message = (
+            f"May be filtered out: {_REASON_TEXT[reason].lower()}. The minimum is lowered "
+            "a little if too few bids qualify."
+        )
+    else:
+        message = f"Would be filtered out: {_REASON_TEXT[reason].lower()}."
     return EligibilityOut(
         eligible=reason is None,
         reason=reason.value if reason else None,

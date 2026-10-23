@@ -22,6 +22,16 @@ export function refreshMe(qc: QueryClient): Promise<void> {
   return qc.invalidateQueries({ queryKey: meKey, refetchType: "all" });
 }
 
+/** A new sign-in: drop everything cached for whoever used this tab before (their bids, projects,
+ * tests, devices), then read the new user. A session that ended without a page reload (expiry,
+ * "sign out everywhere" elsewhere) would otherwise show the old user's data to the next one. */
+export async function startSession(qc: QueryClient): Promise<void> {
+  qc.removeQueries({
+    predicate: (q) => !(q.queryKey.length === meKey.length && q.queryKey[0] === meKey[0]),
+  });
+  await refreshMe(qc);
+}
+
 export function useMe() {
   return useQuery<Me | null>({
     queryKey: meKey,
@@ -71,7 +81,7 @@ export function useLogin() {
       body: { email: string; password: string; return_to?: string | null } & Partial<BotFields>,
     ) => api<LoginResult>("/auth/login", { method: "POST", body }),
     onSuccess: async (result) => {
-      if (result.status !== "TOTP_REQUIRED") await refreshMe(qc);
+      if (result.status !== "TOTP_REQUIRED") await startSession(qc);
     },
   });
 }
@@ -86,7 +96,7 @@ export function useTotpLogin() {
       recovery_code?: string;
       return_to?: string | null;
     }) => api<LoginResult>("/auth/login/totp", { method: "POST", body }),
-    onSuccess: () => refreshMe(qc),
+    onSuccess: () => startSession(qc),
   });
 }
 

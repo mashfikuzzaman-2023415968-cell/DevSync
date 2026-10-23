@@ -17,7 +17,7 @@ import { Alert, ErrorState, PageHeader, Progress, RingProgress } from "@/compone
 import { ConfirmDialog } from "@/components/ui/Overlay";
 import { toast } from "@/components/ui/toast-store";
 import { messageFor } from "@/features/auth/errors";
-import { useAnswer, useAttempt, useSubmitAttempt } from "@/features/profile/api";
+import { useAnswer, useAttempt, useSubmitAttempt, type TimedAttempt } from "@/features/profile/api";
 import { formatScore } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
@@ -54,16 +54,13 @@ function Running({
   attempt,
   onFinished,
 }: {
-  attempt: Attempt;
+  attempt: TimedAttempt;
   onFinished: (r?: AttemptResult) => void;
 }) {
   const [index, setIndex] = useState(0);
   const answer = useAnswer(attempt.id);
   const submit = useSubmitAttempt(attempt.id);
-  const offsetMs = useMemo(
-    () => new Date(attempt.server_now).getTime() - Date.now(),
-    [attempt.server_now],
-  );
+  const offsetMs = attempt.clock_offset_ms;
   const deadline = useMemo(() => new Date(attempt.deadline_at), [attempt.deadline_at]);
   const questions = attempt.questions;
   const question = questions[index];

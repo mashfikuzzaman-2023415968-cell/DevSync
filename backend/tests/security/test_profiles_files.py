@@ -6,7 +6,7 @@ from __future__ import annotations
 import io
 import os
 import uuid
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from fractions import Fraction
 from pathlib import Path
 from typing import Any
@@ -393,6 +393,28 @@ def test_external_review_normalises_rating_and_validates(api: Api) -> None:
         assert r.status_code == 422, (bad, r.text)
     review_id = api.get("/api/v1/me/external-reviews").json()[0]["id"]
     assert api.delete(f"/api/v1/me/external-reviews/{review_id}").status_code == 204
+
+
+def test_a_review_that_ended_today_in_dhaka_is_accepted_before_6am(
+    api: Api, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # 02:00 on 24 Oct in Dhaka is still 23 Oct in UTC.
+    early = datetime(2026, 10, 23, 20, 0, tzinfo=UTC)
+    monkeypatch.setattr(clock, "_clock", clock.FrozenClock(early))
+    api.sign_in_as("DEVELOPER")
+    base = {"source": "Upwork", "rating": "5", "scale": "5"}
+    today = api.post(
+        "/api/v1/me/external-reviews",
+        data={**base, "project_date": "2026-10-24"},
+        files={"file": ("r.txt", b"Ended today.\n", "text/plain")},
+    )
+    assert today.status_code == 201, today.text
+    tomorrow = api.post(
+        "/api/v1/me/external-reviews",
+        data={**base, "project_date": "2026-10-25"},
+        files={"file": ("r.txt", b"Not yet.\n", "text/plain")},
+    )
+    assert tomorrow.status_code == 422
 
 
 # --------------------------------------------------------------------------- IDOR

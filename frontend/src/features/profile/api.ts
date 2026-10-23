@@ -257,6 +257,15 @@ export function useSkillTests() {
   return useQuery({ queryKey: keys.tests, queryFn: () => api<SkillTest[]>("/skill-tests") });
 }
 
+/** An attempt plus the difference between the server's clock and this browser's, measured when
+ * the attempt arrived. The countdown uses it, so it stays right when a cached attempt is shown
+ * again later (comparing `server_now` with the time of rendering added the time spent away). */
+export type TimedAttempt = Attempt & { clock_offset_ms: number };
+
+function timed(attempt: Attempt): TimedAttempt {
+  return { ...attempt, clock_offset_ms: Date.parse(attempt.server_now) - Date.now() };
+}
+
 export function useStartAttempt() {
   const qc = useQueryClient();
   return useMutation({
@@ -264,7 +273,7 @@ export function useStartAttempt() {
     mutationFn: (testId: string) =>
       api<Attempt>(`/skill-tests/${testId}/attempts`, { method: "POST" }),
     onSuccess: (attempt) => {
-      qc.setQueryData(keys.attempt(attempt.id), attempt);
+      qc.setQueryData(keys.attempt(attempt.id), timed(attempt));
       void qc.invalidateQueries({ queryKey: keys.tests });
     },
   });
@@ -275,7 +284,7 @@ export function useAttempt(id: string) {
     queryKey: keys.attempt(id),
     retry: false,
     staleTime: Infinity,
-    queryFn: () => api<Attempt>(`/attempts/${id}`),
+    queryFn: async () => timed(await api<Attempt>(`/attempts/${id}`)),
   });
 }
 
@@ -286,7 +295,7 @@ export function useAnswer(attemptId: string) {
     mutationFn: (body: { question_id: string; choice: number }) =>
       api<AnswerAccepted>(`/attempts/${attemptId}/answer`, { method: "POST", body }),
     onSuccess: (_r, body) => {
-      qc.setQueryData<Attempt>(keys.attempt(attemptId), (old) =>
+      qc.setQueryData<TimedAttempt>(keys.attempt(attemptId), (old) =>
         old ? { ...old, answers: { ...old.answers, [body.question_id]: body.choice } } : old,
       );
     },

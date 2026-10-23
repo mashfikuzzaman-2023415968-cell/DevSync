@@ -1,4 +1,5 @@
 import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { server } from "@/test/server";
@@ -50,6 +51,35 @@ describe("route guards", () => {
     const { router } = renderRoutes(routes, "/client/x?tab=1");
     expect(await screen.findByText("login page")).toBeInTheDocument();
     expect(router.state.location.search).toBe("?return_to=%2Fclient%2Fx%3Ftab%3D1");
+  });
+
+  it("shows an error with retry, not the login page, when the account can't be checked", async () => {
+    let up = false;
+    server.use(
+      http.get("*/api/v1/me", () =>
+        up
+          ? HttpResponse.json({
+              id: "u1",
+              email: "a@b.co",
+              phone_e164: null,
+              display_name: "A",
+              role: "CLIENT",
+              status: "ACTIVE",
+              email_verified: true,
+              phone_verified: true,
+              totp_enabled: false,
+              totp_verified: false,
+              created_at: "2026-10-17T00:00:00Z",
+            })
+          : HttpResponse.json({ error: { code: "INTERNAL_ERROR" } }, { status: 503 }),
+      ),
+    );
+    renderRoutes(routes, "/client/x");
+    expect(await screen.findByText("We couldn’t check your account")).toBeInTheDocument();
+    expect(screen.queryByText("login page")).not.toBeInTheDocument();
+    up = true;
+    await userEvent.click(screen.getByRole("button", { name: /Try again/i }));
+    expect(await screen.findByText("client page")).toBeInTheDocument();
   });
 
   it("lets the right role through", async () => {

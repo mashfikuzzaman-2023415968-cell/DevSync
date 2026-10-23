@@ -1,5 +1,5 @@
 /** Sealed-bid data hooks (spec §10 Bids). */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import type {
   Bid,
@@ -17,6 +17,15 @@ export const keys = {
   clientBids: (projectId: string) => ["projects", projectId, "bids"] as const,
 };
 
+/** After placing, changing or withdrawing a bid: my bids, plus the recommendations (the server
+ * drops a project you've bid on from them; a withdrawn one may come back). */
+function afterBidChange(qc: QueryClient) {
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: keys.mine }),
+    qc.invalidateQueries({ queryKey: ["projects", "recommended"] }),
+  ]);
+}
+
 export function useMyBids() {
   return useQuery({ queryKey: keys.mine, queryFn: () => api<Bid[]>("/me/bids") });
 }
@@ -27,7 +36,7 @@ export function useCreateBid(projectId: string) {
     meta: { inlineErrors: true },
     mutationFn: (body: BidCreate) =>
       api<Bid>(`/projects/${projectId}/bids`, { method: "POST", body }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: keys.mine }),
+    onSuccess: () => afterBidChange(qc),
   });
 }
 
@@ -37,7 +46,7 @@ export function useUpdateBid() {
     meta: { inlineErrors: true },
     mutationFn: ({ bidId, body }: { bidId: string; body: BidUpdate }) =>
       api<Bid>(`/bids/${bidId}`, { method: "PATCH", body }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: keys.mine }),
+    onSuccess: () => afterBidChange(qc),
   });
 }
 
@@ -46,7 +55,7 @@ export function useWithdrawBid() {
   return useMutation({
     meta: { inlineErrors: true },
     mutationFn: (bidId: string) => api<undefined>(`/bids/${bidId}`, { method: "DELETE" }),
-    onSettled: () => qc.invalidateQueries({ queryKey: keys.mine }),
+    onSettled: () => afterBidChange(qc),
   });
 }
 

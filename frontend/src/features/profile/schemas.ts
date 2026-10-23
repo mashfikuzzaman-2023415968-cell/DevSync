@@ -77,11 +77,18 @@ export const reviewSchema = z
     path: ["rating"],
     message: "The rating can’t be above the top rating.",
   })
-  .refine((v) => new Date(v.project_date) <= new Date(), {
+  // Compare calendar dates in Asia/Dhaka (the date people enter), not UTC midnight: a project
+  // that ended "today" is fine at any hour.
+  .refine((v) => v.project_date <= todayInDhaka(), {
     path: ["project_date"],
     message: "Use a date in the past.",
   });
 export type ReviewValues = z.input<typeof reviewSchema>;
+
+/** Today's date in Asia/Dhaka as YYYY-MM-DD. */
+export function todayInDhaka(now = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(now);
+}
 
 const MB = 1024 * 1024;
 export const IMAGE_RULE = {

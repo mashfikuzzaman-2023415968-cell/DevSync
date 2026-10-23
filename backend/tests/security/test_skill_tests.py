@@ -225,3 +225,24 @@ def test_questions_are_random_per_attempt(api: Api) -> None:
             frozenset(q["id"] for q in start(api, first_test(api)["id"]).json()["questions"])
         )
     assert len(set(sets)) > 1  # 16 choose 10: three identical draws are vanishingly unlikely
+
+
+def test_public_profile_shows_the_best_score_bidding_uses(api: Api, migration_url: str) -> None:
+    # A later, lower score must not hide the passing score the newcomer rule relies on.
+    user = api.sign_in_as("DEVELOPER")
+    skill_id = api.get("/api/v1/skills").json()[0]["id"]
+    engine = create_engine(migration_url)
+    with engine.begin() as conn:
+        for score, days_ago in (("0.800", 40), ("0.500", 5)):
+            conn.execute(
+                text(
+                    "INSERT INTO skill_evidence (id, user_id, skill_id, source, score, at) "
+                    "VALUES (gen_random_uuid(), :u, :s, 'ADMIN_PORTFOLIO', :score, "
+                    "now() - make_interval(days => :days))"
+                ),
+                {"u": user.user_id, "s": skill_id, "score": score, "days": days_ago},
+            )
+    engine.dispose()
+    profile = api.get(f"/api/v1/developers/{user.user_id}").json()
+    scores = [v["score"] for v in profile["verified_scores"] if v["skill_id"] == skill_id]
+    assert scores == ["0.800"]
