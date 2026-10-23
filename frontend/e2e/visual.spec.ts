@@ -7,7 +7,7 @@
  * Update with `make visual-update` (runs in the pinned Playwright image).
  */
 import type { Page } from "@playwright/test";
-import { expect, resetLimits, test } from "./test";
+import { expect, optionChosen, resetLimits, test } from "./test";
 import { addSkillEvidence, apiSignIn, createOrderingProject, setReputation } from "./fixtures";
 
 const WIDTHS = [390, 768, 1440] as const;
@@ -131,6 +131,7 @@ for (const scheme of ["light", "dark"] as const) {
         await dev.goto(`/dev/projects/${id}`);
         await dev.getByRole("combobox").click();
         await dev.getByRole("option", { name: skill }).first().click();
+        await optionChosen(dev);
         await dev.getByLabel(/Your price/).fill(price);
         await dev.getByLabel(/Days you need/).fill(days);
         await dev.getByRole("button", { name: "Place sealed bid" }).click();
@@ -147,6 +148,7 @@ for (const scheme of ["light", "dark"] as const) {
       await sheet.goto(`/dev/projects/${id}`);
       await sheet.getByRole("combobox").click();
       await sheet.getByRole("option", { name: "FastAPI" }).first().click();
+      await optionChosen(sheet);
       await sheet.getByLabel(/Your price/).fill("22000");
       await sheet.getByLabel(/Days you need/).fill("18");
       await sheet.getByText("You meet every requirement.").waitFor();

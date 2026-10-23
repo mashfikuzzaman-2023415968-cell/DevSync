@@ -7,7 +7,7 @@
  */
 import AxeBuilder from "@axe-core/playwright";
 import type { Locator, Page } from "@playwright/test";
-import { expect, test } from "./test";
+import { expect, optionChosen, test } from "./test";
 import { apiSignIn, watchPage } from "./fixtures";
 import { layoutProblems } from "./layout-checks";
 
@@ -84,6 +84,7 @@ test("a client plans the §18.2 project, sees the critical path, and publishes i
   for (const [i, skill] of SLOTS.entries()) {
     await page.getByRole("combobox").nth(i).click();
     await page.getByRole("option", { name: skill, exact: true }).click();
+    await optionChosen(page);
   }
   await expect(page.getByText("Team size:")).toContainText("4");
   await next(page);

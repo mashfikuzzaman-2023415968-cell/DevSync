@@ -12,7 +12,7 @@
  * the Phase 4–5 highlights (the CPM plan and sealed bidding with Algorithm 1 filtering).
  */
 import type { Page, TestInfo } from "@playwright/test";
-import { closeDialog, expect, test } from "../test";
+import { closeDialog, expect, optionChosen, test } from "../test";
 import { csrfHeaders } from "../fixtures";
 
 const PW = "demo password strong 1!";
@@ -91,6 +91,7 @@ test("Demo 1 — planning, sealed bidding and Algorithm 1 filtering @demo", asyn
   await page.goto(`/dev/projects/${shortId}`);
   await page.getByRole("combobox").click();
   await page.getByRole("option", { name: /React/ }).first().click();
+  await optionChosen(page);
   // Fill and confirm each value (Firefox once dropped a fill that raced the form's first render).
   for (const [label, value] of [
     [/Your price/, "18000"],

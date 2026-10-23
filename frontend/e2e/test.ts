@@ -58,6 +58,16 @@ export async function mainNav(page: Page): Promise<Locator> {
 
 /** Close a dialog or sheet with its own Close button and wait until it has gone. Escape depends
  * on where focus is, and in WebKit it was sometimes lost after the window was resized. */
+/** After choosing an option in a select: wait until its list is gone and it has handed focus
+ * back to its trigger (a moment later, in a timer). Filling the next field before that loses
+ * the text in Firefox, because focus jumps back to the select mid-fill. */
+export async function optionChosen(page: Page): Promise<void> {
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await page.evaluate(
+    () => new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0))),
+  );
+}
+
 export async function closeDialog(page: Page, name: string): Promise<void> {
   const dialog = page.getByRole("dialog", { name });
   await dialog.getByRole("button", { name: "Close" }).click();

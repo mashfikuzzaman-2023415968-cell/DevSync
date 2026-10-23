@@ -11,7 +11,7 @@
  */
 import AxeBuilder from "@axe-core/playwright";
 import type { Locator, Page } from "@playwright/test";
-import { closeDialog, expect, test } from "./test";
+import { closeDialog, expect, optionChosen, test } from "./test";
 import {
   addSkillEvidence,
   apiSignIn,
@@ -84,6 +84,7 @@ test("a developer searches, previews eligibility, bids and withdraws @e2e", asyn
   // Fill the sealed bid; the live eligibility preview appears.
   await page.getByRole("combobox").click();
   await page.getByRole("option", { name: /React/ }).first().click();
+  await optionChosen(page);
   await page.getByLabel(/Your price/).fill("18000");
   await page.getByLabel(/Days you need/).fill("20");
   await expect(page.getByText(/meet every requirement|would be filtered out/i)).toBeVisible({
@@ -98,6 +99,7 @@ test("a developer searches, previews eligibility, bids and withdraws @e2e", asyn
   await expect(page.getByText("Bid withdrawn").first()).toBeVisible();
   await page.getByRole("combobox").click();
   await page.getByRole("option", { name: /React/ }).first().click();
+  await optionChosen(page);
   await page.getByLabel(/Your price/).fill("17500");
   await page.getByLabel(/Days you need/).fill("21");
   await clickClear(page, page.getByRole("button", { name: "Place sealed bid" }));
@@ -131,6 +133,7 @@ test("a bid is sealed from other developers across browser contexts @e2e", async
     .getByRole("option", { name: /FastAPI/ })
     .first()
     .click();
+  await optionChosen(a);
   await a.getByLabel(/Your price/).fill("22000");
   await a.getByLabel(/Days you need/).fill("18");
   await a.getByRole("button", { name: "Place sealed bid" }).click();
@@ -172,6 +175,7 @@ test("the client sees all bids with eligibility and the too-few banner @e2e", as
   await dev.goto(`/dev/projects/${projectId}`);
   await dev.getByRole("combobox").click();
   await dev.getByRole("option", { name: /React/ }).first().click();
+  await optionChosen(dev);
   await dev.getByLabel(/Your price/).fill("18000");
   await dev.getByLabel(/Days you need/).fill("20");
   await dev.getByRole("button", { name: "Place sealed bid" }).click();
@@ -203,6 +207,7 @@ async function bidAs(
   await dev.goto(`/dev/projects/${projectId}`);
   await dev.getByRole("combobox").click();
   await dev.getByRole("option", { name: skill }).first().click();
+  await optionChosen(dev);
   await dev.getByLabel(/Your price/).fill(price);
   await dev.getByLabel(/Days you need/).fill(days);
   await dev.getByRole("button", { name: "Place sealed bid" }).click();
@@ -360,6 +365,7 @@ test("after the bidding deadline the bid sheet is closed @e2e", async ({ page, b
     .getByRole("option", { name: /Testing/ })
     .first()
     .click();
+  await optionChosen(page);
   await page.getByLabel(/Your price/).fill("15000");
   await page.getByLabel(/Days you need/).fill("12");
   await page.getByRole("button", { name: "Place sealed bid" }).click();
