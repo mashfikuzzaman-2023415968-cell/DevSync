@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import timedelta
 from urllib.parse import parse_qs, urlparse
 
@@ -97,7 +98,9 @@ def test_duplicate_phone_is_uniform(api: Api) -> None:
     [
         ({"password": "short"}, "password"),
         ({"password": "password1234"}, "password"),
-        ({"phone": "01712345678"}, "phone"),
+        ({"phone": "+88012345"}, "phone"),  # too short for a Bangladeshi mobile
+        ({"phone": "+8802123456789"}, "phone"),  # a Dhaka landline: no SMS
+        ({"phone": "12345"}, "phone"),
         ({"email": "not-an-email"}, "email"),
         ({"role": "ADMIN"}, "role"),
         ({"accept_terms": False}, "accept_terms"),
@@ -108,6 +111,31 @@ def test_registration_validation(api: Api, override: dict[str, object], field: s
     r = register(api, unique_email(), unique_phone(), **override)
     assert r.status_code == 422
     assert field in r.json()["error"]["fields"]
+
+
+def test_validation_messages_read_without_the_library_prefix(api: Api) -> None:
+    r = register(api, unique_email(), "12345")
+    message = r.json()["error"]["fields"]["phone"]
+    assert not message.startswith("Value error")
+    assert message.startswith("Use international format")
+
+
+@pytest.mark.parametrize(
+    "written",
+    [
+        lambda local: "+880" + local,  # the form's "+880" prefill, then the usual local number
+        lambda local: local,  # just the local number
+        lambda local: "+88 " + local[:5] + "-" + local[5:],
+    ],
+)
+def test_the_usual_ways_of_writing_a_bangladeshi_mobile_reach_it(
+    api: Api, written: Callable[[str], str]
+) -> None:
+    phone = unique_phone()  # +8801XXXXXXXXX
+    local = "0" + phone[4:]  # 01XXXXXXXXX
+    r = register(api, unique_email(), written(local))
+    assert r.status_code == 202, r.text
+    assert otp_for(api, phone)  # the code went to the real number
 
 
 @pytest.mark.parametrize("field", ["status", "email_verified_at", "role_admin", "id"])

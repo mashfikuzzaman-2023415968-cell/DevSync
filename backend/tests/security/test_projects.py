@@ -599,3 +599,32 @@ def test_preview_of_a_malformed_plan_is_a_422_not_a_500(api: Api) -> None:
         json={"milestones": [_pm("a", "One", 3, 10_000, "a")]},
     )
     assert selfdep.status_code == 422
+
+
+def test_null_for_a_required_project_field_is_a_422_not_a_500(api: Api) -> None:
+    api.sign_in_as("CLIENT")
+    pid = _create_draft(api)["id"]
+    for body in ({"title": None}, {"budget_paisa": None}, {"deadline_days": None}):
+        r = api.patch(f"/api/v1/projects/{pid}", json=body)
+        assert r.status_code == 422, (body, r.text)
+    # Optional fields may still be cleared.
+    assert api.patch(f"/api/v1/projects/{pid}", json={"start_date": None}).status_code == 200
+
+
+def test_a_close_time_without_a_time_zone_is_a_422_not_a_500(api: Api) -> None:
+    api.sign_in_as("CLIENT")
+    pid = _create_draft(api)["id"]
+    r = api.patch(f"/api/v1/projects/{pid}", json={"bidding_deadline": "2030-12-01T10:00:00"})
+    assert r.status_code == 422, r.text
+    assert "bidding_deadline" in r.json()["error"]["fields"]
+
+
+def test_a_99_9_percent_share_total_is_not_reported_as_100(api: Api) -> None:
+    api.sign_in_as("CLIENT")
+    pid = _create_draft(api)["id"]
+    r = api.post(
+        f"/api/v1/projects/{pid}/plan/preview",
+        json={"milestones": [_pm("a", "One", 3, 4990), _pm("b", "Two", 3, 5000)]},
+    )
+    assert r.status_code == 200
+    assert "Milestone shares total 99.9%, not 100%." in r.json()["warnings"]

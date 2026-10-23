@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, Field
+from pydantic import AwareDatetime, BaseModel, Field, model_validator
 
 from app.schemas.common import StrictRequest
 
@@ -48,7 +48,22 @@ class ProjectCreate(StrictRequest):
     deadline_days: int = DeadlineDays
     team_size: int = TeamSize
     start_date: date | None = None
-    bidding_deadline: datetime | None = None
+    # A close time needs its time zone: a naive one can't be compared with "now" (→ 500).
+    bidding_deadline: AwareDatetime | None = None
+
+
+_REQUIRED = frozenset(
+    {
+        "title",
+        "summary",
+        "description",
+        "requirements",
+        "budget_paisa",
+        "bonus_pool_paisa",
+        "deadline_days",
+        "team_size",
+    }
+)
 
 
 class ProjectUpdate(StrictRequest):
@@ -63,7 +78,16 @@ class ProjectUpdate(StrictRequest):
     deadline_days: int | None = Field(default=None, ge=1, le=365)
     team_size: int | None = Field(default=None, ge=2, le=10)
     start_date: date | None = None
-    bidding_deadline: datetime | None = None
+    bidding_deadline: AwareDatetime | None = None
+
+    @model_validator(mode="after")
+    def _no_null_for_required(self) -> ProjectUpdate:
+        """Leaving a field out keeps it; sending `null` for one the project must have is an
+        error (it used to reach the database and fail there as a 500)."""
+        nulls = sorted(f for f in self.model_fields_set & _REQUIRED if getattr(self, f) is None)
+        if nulls:
+            raise ValueError(f"These can't be empty: {', '.join(nulls)}.")
+        return self
 
 
 class ProjectOut(BaseModel):

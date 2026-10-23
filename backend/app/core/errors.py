@@ -217,7 +217,12 @@ def _validation_fields(exc: RequestValidationError) -> dict[str, str]:
     fields: dict[str, str] = {}
     for err in exc.errors():
         loc = [str(p) for p in err.get("loc", ()) if p not in ("body", "query", "path")]
-        fields[".".join(loc) or "body"] = str(err.get("msg", "Invalid value"))
+        message = str(err.get("msg", "Invalid value"))
+        # Pydantic prefixes a custom validator's message with "Value error, " (or
+        # "Assertion failed, "); people should read only the message itself.
+        for prefix in ("Value error, ", "Assertion failed, "):
+            message = message.removeprefix(prefix)
+        fields[".".join(loc) or "body"] = message
     return fields
 
 

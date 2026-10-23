@@ -146,18 +146,17 @@ class SessionMiddleware:
                 cookies.extend(signed_out_cookies(self.settings))
                 return
             await set_context(db, DbContext(user_id=data.user_id, role=data.role))
-            rotated = (
-                await store.try_rotate(db, token, data, now)
-                if self.policy.needs_rotation(data, now)
-                else None
-            )
+            due = self.policy.needs_rotation(data, now)
+            rotated = await store.try_rotate(db, token, data, now) if due else None
             if rotated is not None:
                 token, data = rotated
                 max_age = int((data.expires_at - now).total_seconds())
                 cookies.append(session_cookie(token, max_age))
                 cookies.append(csrf_cookie(csrf.issue_token(data.csrf_secret)))
-            else:
+            elif not due:
                 data = await store.touch(db, token, data, now)
+            # else: a parallel request is rotating this token right now; don't refresh the old
+            # one, or it would outlive its 30 s grace.
             await db.commit()
         state["session_token"] = token
         state["session"] = data

@@ -10,10 +10,29 @@ export const password = z
   .string()
   .min(10, "Use at least 10 characters.")
   .max(128, "Use at most 128 characters.");
+/** Same rules as the server: "01712345678" and "+880" + "01712345678" (the prefill plus the
+ * local number) both mean +8801712345678; Bangladeshi numbers must be mobiles. */
+export function normalisePhone(raw: string): string {
+  const v = raw.replace(/[\s-]/g, "");
+  if (/^01\d{9}$/.test(v)) return `+88${v}`;
+  if (v.startsWith("+8800")) return `+880${v.slice(5)}`;
+  return v;
+}
 export const phone = z
   .string()
-  .transform((v) => v.replace(/[\s-]/g, ""))
-  .pipe(z.string().regex(/^\+[1-9]\d{7,14}$/, "Use international format, e.g. +8801712345678."));
+  .transform(normalisePhone)
+  .superRefine((v, ctx) => {
+    if (v.startsWith("+880")) {
+      if (!/^\+8801[3-9]\d{8}$/.test(v)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Use a Bangladeshi mobile number, e.g. +8801712345678.",
+        });
+      }
+    } else if (!/^\+[1-9]\d{7,14}$/.test(v)) {
+      ctx.addIssue({ code: "custom", message: "Use international format, e.g. +8801712345678." });
+    }
+  });
 export const displayName = z
   .string()
   .trim()

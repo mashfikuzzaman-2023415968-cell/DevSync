@@ -22,6 +22,28 @@ CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 LOOKUP_EMAIL = re.compile(r"^[^\s@]+@[^\s@]+$")
 
 
+BD_MOBILE = re.compile(r"^\+8801[3-9]\d{8}$")
+
+
+def normalise_phone(value: str) -> str:
+    """E.164, with the usual Bangladeshi ways of writing a mobile number accepted: the local
+    "01712345678", and "+880" typed in front of it ("+88001712345678", the form's prefill plus
+    the local number), both become "+8801712345678". Bangladeshi numbers must be mobiles (an
+    SMS code is sent to them)."""
+    value = value.replace(" ", "").replace("-", "")
+    if re.fullmatch(r"01\d{9}", value):
+        value = "+88" + value
+    elif value.startswith("+8800"):
+        value = "+880" + value[5:]
+    if value.startswith("+880"):
+        if not BD_MOBILE.fullmatch(value):
+            raise ValueError("Use a Bangladeshi mobile number, e.g. +8801712345678.")
+        return value
+    if not E164.fullmatch(value):
+        raise ValueError("Use international format, e.g. +8801712345678.")
+    return value
+
+
 def _lookup_email(value: str) -> str:
     """An address to *look up*, not to register: syntax only, lowercased (emails are citext).
 
@@ -68,10 +90,7 @@ class RegisterRequest(BotCheck):
     @field_validator("phone")
     @classmethod
     def _phone(cls, value: str) -> str:
-        value = value.replace(" ", "").replace("-", "")
-        if not E164.fullmatch(value):
-            raise ValueError("Use international format, e.g. +8801712345678.")
-        return value
+        return normalise_phone(value)
 
 
 class AcceptedResponse(BaseModel):

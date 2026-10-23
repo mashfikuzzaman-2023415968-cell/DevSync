@@ -145,6 +145,11 @@ def _require_future_bidding_deadline(deadline: datetime | None, now: datetime) -
         )
 
 
+def _pct(basis_points: int) -> str:
+    """9990 → "99.9%" (rounding to whole percent said "100%, must be 100%")."""
+    return f"{basis_points / 100:g}%"
+
+
 def _project_out(project: Project) -> ProjectOut:
     return ProjectOut.model_validate(project, from_attributes=True)
 
@@ -457,7 +462,7 @@ async def plan_preview(ctx: Ctx, project_id: uuid.UUID, data: PlanPreviewIn) -> 
             fields={"milestones": str(exc)},
         ) from exc
     if data.milestones and total_share != 10_000:  # noqa: PLR2004 - 100% in basis points
-        warnings.append(f"Milestone shares total {total_share / 100:.0f}%, not 100%.")
+        warnings.append(f"Milestone shares total {_pct(total_share)}, not 100%.")
     if result.duration > project.deadline_days:
         warnings.append(
             f"The plan needs {result.duration} days, over the {project.deadline_days}-day deadline."
@@ -558,7 +563,7 @@ async def publish(
         raise DomainError(
             "Milestone shares must total 100% before publishing.",
             code=ErrorCode.VALIDATION_ERROR,
-            fields={"milestones": f"shares total {total_share / 100:.0f}%, must be 100%"},
+            fields={"milestones": f"shares total {_pct(total_share)}, must be 100%"},
         )
     deps = await repo.load_dependencies(ctx.db, project_id)
     result = _compute_or_cycle(milestones, deps)  # raises 422 on a cycle
