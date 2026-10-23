@@ -1134,6 +1134,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/projects/{project_id}/draft": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Reopen a draft in the create-project wizard */
+    get: operations["get_draft_api_v1_projects__project_id__draft_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/projects/{project_id}/extend-bidding": {
     parameters: {
       query?: never;
@@ -1989,6 +2006,27 @@ export interface components {
       successor_id: string;
     };
     /**
+     * DependencyOut
+     * @description A stored dependency edge.
+     */
+    DependencyOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Predecessor Id
+       * Format: uuid
+       */
+      predecessor_id: string;
+      /**
+       * Successor Id
+       * Format: uuid
+       */
+      successor_id: string;
+    };
+    /**
      * DeveloperProfileOut
      * @description The caller's own developer profile.
      */
@@ -2090,6 +2128,19 @@ export interface components {
        * Format: uuid
        */
       skill_id: string;
+    };
+    /**
+     * DraftOut
+     * @description Everything the create-project wizard needs to reopen a saved draft.
+     */
+    DraftOut: {
+      /** Dependencies */
+      dependencies: components["schemas"]["DependencyOut"][];
+      /** Milestones */
+      milestones: components["schemas"]["MilestoneOut"][];
+      project: components["schemas"]["ProjectOut"];
+      /** Slots */
+      slots: components["schemas"]["SlotOut"][];
     };
     /**
      * EligibilityIn
@@ -12644,6 +12695,206 @@ export interface operations {
            *     ]
            */
           "application/json": components["schemas"]["CpmNodeOut"][];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description This can't be done in the current state. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "INVALID_STATE",
+           *         "message": "This can't be done in the current state.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_draft_api_v1_projects__project_id__draft_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        project_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "dependencies": [
+           *         {
+           *           "id": "3c2b1a09-8f7e-4d6c-b5a4-1e2d3c4b5a60",
+           *           "predecessor_id": "3c2b1a09-8f7e-4d6c-b5a4-1e2d3c4b5a60",
+           *           "successor_id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c"
+           *         }
+           *       ],
+           *       "milestones": [
+           *         {
+           *           "description": "Scope, wireframes and the data model.",
+           *           "duration_days": 4,
+           *           "id": "3c2b1a09-8f7e-4d6c-b5a4-1e2d3c4b5a60",
+           *           "name": "Requirements & design",
+           *           "position": 0,
+           *           "share_bp": 1500,
+           *           "skill_ids": [
+           *             "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
+           *           ],
+           *           "status": "PLANNED"
+           *         }
+           *       ],
+           *       "project": {
+           *         "bidding_deadline": "2026-11-05T12:00:00Z",
+           *         "bidding_extensions": 0,
+           *         "bonus_pool_paisa": 1200000,
+           *         "budget_paisa": 12000000,
+           *         "client_id": "11111111-1111-4111-8111-111111111111",
+           *         "created_at": "2026-10-19T06:00:00Z",
+           *         "deadline_days": 30,
+           *         "description": "Menu, cart, checkout and an admin dashboard.",
+           *         "id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+           *         "requirements": "React front end, FastAPI back end, PostgreSQL.",
+           *         "start_date": "2026-11-02",
+           *         "status": "DRAFT",
+           *         "summary": "A web app for a restaurant to take and track orders.",
+           *         "team_size": 4,
+           *         "title": "Online ordering system",
+           *         "updated_at": "2026-10-19T06:00:00Z",
+           *         "version": 1
+           *       },
+           *       "slots": [
+           *         {
+           *           "count": 1,
+           *           "id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+           *           "label": "React developer",
+           *           "skill_id": "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
+           *         }
+           *       ]
+           *     }
+           */
+          "application/json": components["schemas"]["DraftOut"];
         };
       };
       /** @description Please sign in to continue. */

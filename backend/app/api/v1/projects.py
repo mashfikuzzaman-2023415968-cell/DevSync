@@ -19,6 +19,7 @@ from app.schemas.projects import (
     CpmNodeOut,
     CpmPreviewOut,
     DependenciesReplace,
+    DraftOut,
     MilestoneOut,
     MilestonesReplace,
     PlanOut,
@@ -176,6 +177,26 @@ async def update_project(
 async def delete_project(ctx: Writer, project_id: uuid.UUID) -> Response:
     await svc.delete_draft(ctx, project_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get(
+    "/projects/{project_id}/draft",
+    summary="Reopen a draft in the create-project wizard",
+    response_model=DraftOut,
+    responses={
+        200: _ok(
+            {
+                "project": EX_PROJECT,
+                "slots": EX_SLOTS,
+                "milestones": EX_MILESTONES,
+                "dependencies": [{"id": _MID, "predecessor_id": _MID, "successor_id": _PID}],
+            }
+        ),
+        **error_responses(401, 403, 404, 409, 422),
+    },
+)
+async def get_draft(ctx: Writer, project_id: uuid.UUID) -> DraftOut:
+    return await svc.get_draft(ctx, project_id)
 
 
 @router.put(

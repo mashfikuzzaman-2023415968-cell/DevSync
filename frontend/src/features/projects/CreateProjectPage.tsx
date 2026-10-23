@@ -4,16 +4,20 @@
  * so the work is never lost. The Milestones step runs the critical-path method live; the Review
  * step publishes the draft for bidding, asking the client to acknowledge the risk if the plan
  * runs past the deadline (DECISIONS D40).
+ *
+ * The address carries the draft and the step (`/client/projects/new?draft=<id>&step=3`), so
+ * leaving and coming back, reloading, or "Continue editing" in My projects reopens the draft
+ * where the client left off (D55). A plain visit to `/client/projects/new` starts a new one.
  */
 import { ArrowLeft, ArrowRight, CircleCheck, CreditCard, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useBlocker, useNavigate } from "react-router";
-import type { CpmPreview, Project } from "@/api/types";
+import { Link, useBlocker, useLocation, useNavigate, useSearchParams } from "react-router";
+import type { CpmPreview, Project, ProjectDraft } from "@/api/types";
 import { api, ApiError } from "@/api/client";
 import { Button, IconButton } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Choice";
-import { Card, CardHeader } from "@/components/ui/Display";
-import { Alert, PageHeader, Stepper } from "@/components/ui/Feedback";
+import { Card, CardHeader, Skeleton } from "@/components/ui/Display";
+import { Alert, EmptyState, ErrorState, PageHeader, Stepper } from "@/components/ui/Feedback";
 import { Field, FormField, Textarea } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
 import { Dialog } from "@/components/ui/Overlay";
@@ -24,6 +28,7 @@ import { formatDays, formatMoney } from "@/lib/format";
 import { MilestonesStep } from "./MilestonesStep";
 import {
   useCreateProject,
+  useProjectDraft,
   usePublishProject,
   useReplaceDependencies,
   useReplaceMilestones,
@@ -47,8 +52,40 @@ interface Draft {
   version: number;
 }
 
+/** Marks the wizard's own address updates, so they neither remount it nor trigger the prompt. */
+const OWN = { wizard: true } as const;
+const isOwn = (state: unknown) => (state as { wizard?: boolean } | null)?.wizard === true;
+
 export default function CreateProjectPage() {
+  const location = useLocation();
+  const [params] = useSearchParams();
+  // Every visit from outside (sidebar, My projects, back/forward) mounts a fresh wizard; the
+  // wizard's own URL updates keep the same instance.
+  const [mountKey, setMountKey] = useState(location.key);
+  if (!isOwn(location.state) && mountKey !== location.key) setMountKey(location.key);
+  return <Wizard key={mountKey} resumeId={params.get("draft")} resumeStep={params.get("step")} />;
+}
+
+/** Steps are 1-based in the address. Resume at the requested step, but never past the first
+ * step that still needs input. */
+function resumeIndex(d: ProjectDraft, requested: string | null): number {
+  const firstIncomplete =
+    d.slots.length === 0 ? 2 : d.milestones.length === 0 ? 3 : d.project.budget_paisa < 1 ? 4 : 5;
+  const wanted = Number(requested);
+  if (!Number.isInteger(wanted) || wanted < 1) return firstIncomplete;
+  return Math.min(wanted - 1, firstIncomplete, STEPS.length - 1);
+}
+
+/** An ISO instant as the local "YYYY-MM-DDTHH:mm" a datetime-local input expects. */
+function toLocalInput(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${String(d.getFullYear())}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep: string | null }) {
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
   const me = useMe();
   const paymentVerified = me.data?.payment_verified === true;
   const skills = useSkills();
@@ -86,8 +123,59 @@ export default function CreateProjectPage() {
   const [published, setPublished] = useState(false);
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      dirty && !published && currentLocation.pathname !== nextLocation.pathname,
+      dirty &&
+      !published &&
+      (currentLocation.pathname !== nextLocation.pathname ||
+        (currentLocation.search !== nextLocation.search && !isOwn(nextLocation.state))),
   );
+
+  // Reopen a saved draft (D55): load it once, then the wizard owns the state.
+  const [hydrated, setHydrated] = useState(resumeId === null);
+  const resume = useProjectDraft(hydrated ? null : resumeId);
+  useEffect(() => {
+    if (hydrated || !resume.data) return;
+    const d = resume.data;
+    const p = d.project;
+    setDraft({ id: p.id, version: p.version });
+    setTitle(p.title);
+    setSummary(p.summary);
+    setDescription(p.description);
+    setRequirements(p.requirements);
+    setDeadlineDays(p.deadline_days);
+    setStartDate(p.start_date ? p.start_date.slice(0, 10) : "");
+    if (d.slots.length > 0) {
+      setSlots(d.slots.map((s) => ({ skill_id: s.skill_id, count: s.count, label: s.label })));
+    }
+    if (d.milestones.length > 0) {
+      setMilestones(
+        d.milestones.map((m) => ({
+          key: m.id,
+          savedId: m.id,
+          name: m.name,
+          duration_days: m.duration_days,
+          share_bp: m.share_bp,
+          skill_ids: m.skill_ids,
+          predecessor_keys: d.dependencies
+            .filter((x) => x.successor_id === m.id)
+            .map((x) => x.predecessor_id),
+        })),
+      );
+    }
+    setBudgetTaka(p.budget_paisa > 0 ? String(p.budget_paisa / 100) : "");
+    setBonusTaka(String(p.bonus_pool_paisa / 100));
+    setBiddingDeadline(p.bidding_deadline ? toLocalInput(p.bidding_deadline) : "");
+    setStep(resumeIndex(d, resumeStep));
+    setHydrated(true);
+  }, [hydrated, resume.data, resumeStep]);
+
+  // Keep the address in step with the wizard, so leaving and coming back resumes here.
+  useEffect(() => {
+    if (!draft || !hydrated) return;
+    const want = String(step + 1);
+    if (params.get("draft") !== draft.id || params.get("step") !== want) {
+      setParams({ draft: draft.id, step: want }, { replace: true, state: OWN });
+    }
+  }, [draft, hydrated, step, params, setParams]);
   useEffect(() => {
     if (!dirty || published) return undefined;
     const warn = (e: BeforeUnloadEvent) => {
@@ -247,6 +335,54 @@ export default function CreateProjectPage() {
 
   const skillOptions = (skills.data ?? []).map((s) => ({ value: s.id, label: s.name }));
   const exceeds = cpm != null && cpm.duration > deadlineDays;
+
+  if (!hydrated) {
+    const err = resume.error;
+    const gone = err instanceof ApiError && err.status === 404;
+    const notDraft = err instanceof ApiError && err.status === 409;
+    return (
+      <>
+        <PageHeader title="Create a project" />
+        <Card className="max-w-2xl">
+          {gone ? (
+            <EmptyState
+              title="This draft isn’t available"
+              description="It may have been deleted or cancelled. Start a new project instead."
+              action={
+                <Button asChild>
+                  <Link to="/client/projects/new">Start a new project</Link>
+                </Button>
+              }
+            />
+          ) : notDraft && resumeId ? (
+            <EmptyState
+              title="This project is no longer a draft"
+              description="It has been published or cancelled, so its plan can’t be edited here."
+              action={
+                <Button asChild>
+                  <Link to={`/client/projects/${resumeId}/plan`}>View plan</Link>
+                </Button>
+              }
+            />
+          ) : err ? (
+            <ErrorState
+              title="We couldn’t open this draft"
+              requestId={err instanceof ApiError ? err.requestId : null}
+              onRetry={() => {
+                void resume.refetch();
+              }}
+            />
+          ) : (
+            <div aria-busy="true" aria-label="Opening your draft" className="flex flex-col gap-4">
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-11 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          )}
+        </Card>
+      </>
+    );
+  }
 
   return (
     <>

@@ -186,6 +186,15 @@ class DependencyOut(BaseModel):
     successor_id: uuid.UUID
 
 
+class DraftOut(BaseModel):
+    """Everything the create-project wizard needs to reopen a saved draft."""
+
+    project: ProjectOut
+    slots: list[SlotOut]
+    milestones: list[MilestoneOut]
+    dependencies: list[DependencyOut]
+
+
 # --------------------------------------------------------------------------- plan preview / CPM
 
 

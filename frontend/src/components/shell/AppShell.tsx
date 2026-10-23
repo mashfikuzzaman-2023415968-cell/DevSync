@@ -42,9 +42,16 @@ export interface ShellNav {
   profilePath?: string;
 }
 
-function isActive(pathname: string, item: NavItem, home: string): boolean {
+function matches(pathname: string, item: NavItem, home: string): boolean {
   if (item.to === home) return pathname === home;
   return pathname === item.to || pathname.startsWith(`${item.to}/`);
+}
+
+/** The item for the current page: the most specific match wins, so "Create project"
+ * (/client/projects/new) doesn't also light up "My projects" (/client/projects). */
+function isActive(pathname: string, item: NavItem, home: string, items: NavItem[]): boolean {
+  if (!matches(pathname, item, home)) return false;
+  return !items.some((other) => other.to.length > item.to.length && matches(pathname, other, home));
 }
 
 function useSidebar(userId: string | undefined) {
@@ -78,7 +85,7 @@ function SidebarLink({
 }) {
   const Icon = item.icon;
   const link = (
-    <NavLink
+    <Link
       to={item.to}
       aria-current={active ? "page" : undefined}
       className={cn(
@@ -106,7 +113,7 @@ function SidebarLink({
       >
         {item.label}
       </span>
-    </NavLink>
+    </Link>
   );
   return tooltip ? <Tooltip content={item.label}>{link}</Tooltip> : link;
 }
@@ -245,7 +252,7 @@ export function AppShell({ nav, children }: { nav: ShellNav; children?: ReactNod
               <SidebarLink
                 key={item.to}
                 item={item}
-                active={isActive(location.pathname, item, nav.home)}
+                active={isActive(location.pathname, item, nav.home, nav.sidebar)}
                 rail={rail}
                 tooltip={collapsed || !wide}
               />
@@ -297,10 +304,10 @@ export function AppShell({ nav, children }: { nav: ShellNav; children?: ReactNod
         <ul className="grid grid-cols-4">
           {nav.tabs.map((item) => {
             const Icon = item.icon;
-            const active = isActive(location.pathname, item, nav.home);
+            const active = isActive(location.pathname, item, nav.home, nav.tabs);
             return (
               <li key={item.to}>
-                <NavLink
+                <Link
                   to={item.to}
                   aria-current={active ? "page" : undefined}
                   className={cn(
@@ -310,7 +317,7 @@ export function AppShell({ nav, children }: { nav: ShellNav; children?: ReactNod
                 >
                   <Icon className="size-5" aria-hidden="true" />
                   {item.label}
-                </NavLink>
+                </Link>
               </li>
             );
           })}

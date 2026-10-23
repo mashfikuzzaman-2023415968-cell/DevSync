@@ -1,8 +1,8 @@
 /** Projects feature: CPM charts, the create-project wizard, the plan and list pages (Phase 4). */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, renderHook, screen, waitFor, within } from "@testing-library/react";
+import { act, render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse, type JsonBodyType } from "msw";
 import { useState, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { CpmNode, Skill } from "@/api/types";
@@ -316,6 +316,39 @@ describe("MyProjectsPage", () => {
     renderRoutes(routes("/client/projects", <MyProjectsPage />), "/client/projects");
     await user.click(await screen.findByRole("button", { name: /Try again/i }));
     expect(await screen.findByText("No projects yet")).toBeInTheDocument();
+  });
+
+  it("lets the client continue a draft and view the plan of a published project", async () => {
+    const row = (id: string, title: string, status: string) => ({
+      id,
+      title,
+      status,
+      budget_paisa: 0,
+      team_size: 2,
+      deadline_days: 30,
+      bidding_deadline: null,
+      updated_at: "2026-10-19T06:00:00Z",
+    });
+    server.use(
+      http.get(`${API}/projects`, () =>
+        HttpResponse.json([
+          row("d1", "Half-planned app", "DRAFT"),
+          row("b1", "Ordering", "BIDDING"),
+        ]),
+      ),
+    );
+    renderRoutes(routes("/client/projects", <MyProjectsPage />), "/client/projects");
+    const cont = await screen.findByRole("link", { name: "Continue editing" });
+    expect(cont).toHaveAttribute("href", "/client/projects/new?draft=d1");
+    expect(screen.getByRole("link", { name: "Half-planned app" })).toHaveAttribute(
+      "href",
+      "/client/projects/new?draft=d1",
+    );
+    expect(screen.getAllByRole("link", { name: "View plan" })).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "View plan" })).toHaveAttribute(
+      "href",
+      "/client/projects/b1/plan",
+    );
   });
 
   it("lists projects and cancels one with a reason and the typed title", async () => {
@@ -653,6 +686,182 @@ describe("CreateProjectPage", () => {
     expect(calls).toContain("slots");
     expect(calls).toContain("milestones");
     expect(calls).toContain("deps");
+  });
+});
+
+describe("CreateProjectPage — resuming a draft (D55)", () => {
+  const draftProject = {
+    id: "p1",
+    title: "Ordering system",
+    summary: "Order and track restaurant orders.",
+    description: "Menu, cart and checkout.",
+    requirements: "React and FastAPI.",
+    status: "DRAFT",
+    start_date: "2026-11-02",
+    deadline_days: 30,
+    version: 7,
+    client_id: "c1",
+    budget_paisa: 0,
+    bonus_pool_paisa: 0,
+    team_size: 2,
+    bidding_deadline: null,
+    bidding_extensions: 0,
+    cancel_reason: null,
+    current_baseline_id: null,
+    created_at: "2026-10-01T00:00:00Z",
+    updated_at: "2026-10-01T00:00:00Z",
+  };
+  const milestone = (id: string, name: string, position: number, share: number) => ({
+    id,
+    name,
+    description: "",
+    duration_days: 5,
+    share_bp: share,
+    position,
+    status: "PLANNED",
+    skill_ids: ["s-react"],
+  });
+
+  function wizardAt(path: string, draft: JsonBodyType, status = 200) {
+    server.use(
+      http.get(`${API}/auth/csrf`, () => new HttpResponse(null, { status: 204 })),
+      http.get(`${API}/me`, () => HttpResponse.json(ME)),
+      http.get(`${API}/skills`, () => HttpResponse.json(SKILLS)),
+      http.get(`${API}/projects/p1/draft`, () => HttpResponse.json(draft, { status })),
+      http.post(`${API}/projects/p1/plan/preview`, () => HttpResponse.json(PREVIEW)),
+      http.patch(`${API}/projects/p1`, () => HttpResponse.json({ id: "p1", version: 8 })),
+    );
+    return renderRoutes(
+      [
+        ...routes("/client/projects/new", <CreateProjectPage />),
+        { path: "/client/projects/:id/plan", element: <Probe label="plan-page" /> },
+      ],
+      path,
+    );
+  }
+
+  it("puts the draft and the step in the address after the first step", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get(`${API}/auth/csrf`, () => new HttpResponse(null, { status: 204 })),
+      http.get(`${API}/skills`, () => HttpResponse.json(SKILLS)),
+      http.post(`${API}/projects`, () =>
+        HttpResponse.json({ id: "p1", version: 1, status: "DRAFT" }),
+      ),
+      http.patch(`${API}/projects/p1`, () => HttpResponse.json({ id: "p1", version: 2 })),
+    );
+    const { router } = renderRoutes(
+      routes("/client/projects/new", <CreateProjectPage />),
+      "/client/projects/new",
+    );
+    await user.type(await screen.findByLabelText(/Project title/), "Ordering system");
+    await user.click(screen.getByRole("button", { name: /Continue/ }));
+    expect(await screen.findByText("Requirements and deadline")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(router.state.location.search).toBe("?draft=p1&step=2");
+    });
+    // The address update is the wizard's own: it stays on the same step with its data.
+    expect(screen.getByText("Requirements and deadline")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Back/ }));
+    await waitFor(() => {
+      expect(router.state.location.search).toBe("?draft=p1&step=1");
+    });
+    expect(screen.getByLabelText(/Project title/)).toHaveValue("Ordering system");
+  });
+
+  it("reopens a saved draft at the requested step with everything filled in", async () => {
+    wizardAt("/client/projects/new?draft=p1&step=4", {
+      project: draftProject,
+      slots: [{ id: "s1", skill_id: "s-react", count: 2, label: "" }],
+      milestones: [milestone("m1", "Design", 0, 4000), milestone("m2", "Build", 1, 6000)],
+      dependencies: [{ id: "d1", predecessor_id: "m1", successor_id: "m2" }],
+    });
+    expect(await screen.findByText("Plan preview")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Design")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Build")).toBeInTheDocument();
+    // Build starts after Design: its "after" chip for Design is pressed.
+    const after = screen.getAllByRole("button", { name: "Design", pressed: true });
+    expect(after).toHaveLength(1);
+  });
+
+  it("never resumes past the first step that still needs input", async () => {
+    wizardAt("/client/projects/new?draft=p1&step=6", {
+      project: draftProject,
+      slots: [],
+      milestones: [],
+      dependencies: [],
+    });
+    expect(await screen.findByText("Skills and team")).toBeInTheDocument();
+  });
+
+  it("restores the info fields and opens the first missing step without a step", async () => {
+    const user = userEvent.setup();
+    wizardAt("/client/projects/new?draft=p1", {
+      project: { ...draftProject, budget_paisa: 0 },
+      slots: [{ id: "s1", skill_id: "s-react", count: 2, label: "" }],
+      milestones: [milestone("m1", "Design", 0, 10_000)],
+      dependencies: [],
+    });
+    expect(await screen.findByLabelText(/Bidding closes/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Back/ }));
+    await user.click(screen.getByRole("button", { name: /Back/ }));
+    await user.click(screen.getByRole("button", { name: /Back/ }));
+    expect(await screen.findByText("Requirements and deadline")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Preferred start/)).toHaveValue("2026-11-02");
+    await user.click(screen.getByRole("button", { name: /Back/ }));
+    expect(screen.getByLabelText(/Project title/)).toHaveValue("Ordering system");
+  });
+
+  it("explains a draft that no longer exists", async () => {
+    wizardAt(
+      "/client/projects/new?draft=p1&step=2",
+      { error: { code: "NOT_FOUND", message: "Not found." } },
+      404,
+    );
+    expect(await screen.findByText("This draft isn’t available")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Start a new project" })).toHaveAttribute(
+      "href",
+      "/client/projects/new",
+    );
+  });
+
+  it("sends a published project to its plan instead of the wizard", async () => {
+    wizardAt(
+      "/client/projects/new?draft=p1&step=2",
+      { error: { code: "INVALID_STATE", message: "Not a draft." } },
+      409,
+    );
+    expect(await screen.findByText("This project is no longer a draft")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View plan" })).toHaveAttribute(
+      "href",
+      "/client/projects/p1/plan",
+    );
+  });
+
+  it("offers a retry when the draft can’t be loaded", async () => {
+    wizardAt(
+      "/client/projects/new?draft=p1",
+      { error: { code: "INTERNAL_ERROR", message: "Boom." } },
+      500,
+    );
+    expect(await screen.findByText("We couldn’t open this draft")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Try again/i })).toBeInTheDocument();
+  });
+
+  it("starts a fresh wizard when Create project is opened again", async () => {
+    const { router } = wizardAt("/client/projects/new?draft=p1&step=2", {
+      project: draftProject,
+      slots: [],
+      milestones: [],
+      dependencies: [],
+    });
+    expect(await screen.findByText("Requirements and deadline")).toBeInTheDocument();
+    await act(async () => {
+      await router.navigate("/client/projects/new");
+    });
+    expect(await screen.findByText("What are you building?")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Project title/)).toHaveValue("");
+    expect(router.state.location.search).toBe("");
   });
 });
 

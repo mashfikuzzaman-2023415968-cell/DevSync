@@ -57,6 +57,30 @@ describe("AppShell (spec §13.4)", () => {
     expect(screen.getByRole("link", { name: "Skip to content" })).toHaveAttribute("href", "#main");
   });
 
+  it("marks only the most specific item when one path contains another", async () => {
+    server.use(http.get("*/api/v1/me", () => HttpResponse.json({ ...ME, role: "CLIENT" })));
+    renderRoutes(
+      [
+        {
+          element: <AppShell nav={NAV.CLIENT} />,
+          children: [
+            { path: "/client/projects/new", element: <Probe label="wizard" /> },
+            { path: "/client/projects", element: <Probe label="projects" /> },
+          ],
+        },
+      ],
+      "/client/projects/new",
+    );
+    const nav = await screen.findByRole("complementary", { name: "Main navigation" });
+    expect(within(nav).getByRole("link", { name: "Create project" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(within(nav).getByRole("link", { name: "My projects" })).not.toHaveAttribute(
+      "aria-current",
+    );
+  });
+
   it("remembers the collapsed sidebar per user", async () => {
     const user = userEvent.setup();
     const first = shell();

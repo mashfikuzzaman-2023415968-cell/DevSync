@@ -95,6 +95,7 @@ MATRIX: dict[tuple[str, str], tuple[set[str], str, bool]] = {
     ("GET", "/api/v1/projects/{project_id}"): ({CLIENT, ADMIN}, "auth", True),
     ("PATCH", "/api/v1/projects/{project_id}"): ({CLIENT}, "auth", True),
     ("DELETE", "/api/v1/projects/{project_id}"): ({CLIENT}, "auth", True),
+    ("GET", "/api/v1/projects/{project_id}/draft"): ({CLIENT}, "auth", True),
     ("PUT", "/api/v1/projects/{project_id}/slots"): ({CLIENT}, "auth", True),
     ("PUT", "/api/v1/projects/{project_id}/milestones"): ({CLIENT}, "auth", True),
     ("PUT", "/api/v1/projects/{project_id}/dependencies"): ({CLIENT}, "auth", True),

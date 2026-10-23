@@ -569,3 +569,15 @@ availability is checked at bidding and must be re-checked when invitations are a
 the SYSTEM sessions of D50 stay limited to the listed read policies and are used only after the
 caller is confirmed as the project's owner.
 
+
+**D55 · Reopening a draft in the create-project wizard (Taeen, 2026-10-23, found in manual testing).**
+The wizard saved every step to a DRAFT (§13.5 #21 "Draft autosaves") but kept the draft id only in
+memory, so leaving and coming back started an empty wizard, and My projects offered a draft only
+"View plan" and "Cancel". Now the address carries the draft and the step
+(`/client/projects/new?draft=<id>&step=N`); a reload, the browser's back button or "Continue
+editing" in My projects reopens it at that step (never past the first step that still needs input),
+and a plain visit to `/client/projects/new` starts a new project. The wizard loads the draft from a
+new read, `GET /projects/{id}/draft` (project + slots + milestones with shares and skills +
+dependencies), under `project.write`: only the owning client (others, admins included, get 404 or
+403), only while the project is a DRAFT (409 otherwise). The sidebar now marks only the most
+specific matching item, so "Create project" no longer also lights up "My projects".

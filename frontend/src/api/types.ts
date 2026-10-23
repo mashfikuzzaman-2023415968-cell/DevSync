@@ -34,6 +34,7 @@ export type AttemptResult = Schemas["AttemptResult"];
 
 // Projects and the CPM planner (spec §7.3, §9.10, §10.2)
 export type Project = Schemas["ProjectOut"];
+export type ProjectDraft = Schemas["DraftOut"];
 export type ProjectCreate = Schemas["ProjectCreate"];
 export type ProjectUpdate = Schemas["ProjectUpdate"];
 export type ProjectListItem = Schemas["ProjectListItem"];

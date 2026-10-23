@@ -1399,6 +1399,33 @@
         "title": "DependencyIn",
         "type": "object"
       },
+      "DependencyOut": {
+        "description": "A stored dependency edge.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "predecessor_id": {
+            "format": "uuid",
+            "title": "Predecessor Id",
+            "type": "string"
+          },
+          "successor_id": {
+            "format": "uuid",
+            "title": "Successor Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "predecessor_id",
+          "successor_id"
+        ],
+        "title": "DependencyOut",
+        "type": "object"
+      },
       "DeveloperProfileOut": {
         "description": "The caller's own developer profile.",
         "properties": {
@@ -1686,6 +1713,43 @@
           "self_level"
         ],
         "title": "DeveloperSkillOut",
+        "type": "object"
+      },
+      "DraftOut": {
+        "description": "Everything the create-project wizard needs to reopen a saved draft.",
+        "properties": {
+          "dependencies": {
+            "items": {
+              "$ref": "#/components/schemas/DependencyOut"
+            },
+            "title": "Dependencies",
+            "type": "array"
+          },
+          "milestones": {
+            "items": {
+              "$ref": "#/components/schemas/MilestoneOut"
+            },
+            "title": "Milestones",
+            "type": "array"
+          },
+          "project": {
+            "$ref": "#/components/schemas/ProjectOut"
+          },
+          "slots": {
+            "items": {
+              "$ref": "#/components/schemas/SlotOut"
+            },
+            "title": "Slots",
+            "type": "array"
+          }
+        },
+        "required": [
+          "project",
+          "slots",
+          "milestones",
+          "dependencies"
+        ],
+        "title": "DraftOut",
         "type": "object"
       },
       "EligibilityIn": {
@@ -14248,6 +14312,208 @@
           }
         },
         "summary": "Replace the project's milestone dependencies",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/draft": {
+      "get": {
+        "operationId": "get_draft_api_v1_projects__project_id__draft_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "dependencies": [
+                    {
+                      "id": "3c2b1a09-8f7e-4d6c-b5a4-1e2d3c4b5a60",
+                      "predecessor_id": "3c2b1a09-8f7e-4d6c-b5a4-1e2d3c4b5a60",
+                      "successor_id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c"
+                    }
+                  ],
+                  "milestones": [
+                    {
+                      "description": "Scope, wireframes and the data model.",
+                      "duration_days": 4,
+                      "id": "3c2b1a09-8f7e-4d6c-b5a4-1e2d3c4b5a60",
+                      "name": "Requirements & design",
+                      "position": 0,
+                      "share_bp": 1500,
+                      "skill_ids": [
+                        "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
+                      ],
+                      "status": "PLANNED"
+                    }
+                  ],
+                  "project": {
+                    "bidding_deadline": "2026-11-05T12:00:00Z",
+                    "bidding_extensions": 0,
+                    "bonus_pool_paisa": 1200000,
+                    "budget_paisa": 12000000,
+                    "client_id": "11111111-1111-4111-8111-111111111111",
+                    "created_at": "2026-10-19T06:00:00Z",
+                    "deadline_days": 30,
+                    "description": "Menu, cart, checkout and an admin dashboard.",
+                    "id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+                    "requirements": "React front end, FastAPI back end, PostgreSQL.",
+                    "start_date": "2026-11-02",
+                    "status": "DRAFT",
+                    "summary": "A web app for a restaurant to take and track orders.",
+                    "team_size": 4,
+                    "title": "Online ordering system",
+                    "updated_at": "2026-10-19T06:00:00Z",
+                    "version": 1
+                  },
+                  "slots": [
+                    {
+                      "count": 1,
+                      "id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+                      "label": "React developer",
+                      "skill_id": "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/DraftOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Reopen a draft in the create-project wizard",
         "tags": [
           "projects"
         ]

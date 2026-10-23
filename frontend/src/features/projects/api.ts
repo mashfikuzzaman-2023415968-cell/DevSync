@@ -12,6 +12,7 @@ import type {
   PlanPreviewIn,
   Project,
   ProjectCreate,
+  ProjectDraft,
   ProjectListItem,
   ProjectUpdate,
   PublishIn,
@@ -26,6 +27,7 @@ export const keys = {
   milestones: (id: string) => ["projects", id, "milestones"] as const,
   dependencies: (id: string) => ["projects", id, "dependencies"] as const,
   plan: (id: string) => ["projects", id, "plan"] as const,
+  draft: (id: string) => ["projects", id, "draft"] as const,
 };
 
 export function useMyProjects() {
@@ -39,6 +41,19 @@ export function useProject(id: string) {
   return useQuery({
     queryKey: keys.project(id),
     queryFn: () => api<Project>(`/projects/${id}`),
+  });
+}
+
+/** A saved draft with its slots, milestones and dependencies, to reopen the wizard (D55).
+ * Fetched once per visit: the wizard owns the state from then on. */
+export function useProjectDraft(id: string | null) {
+  return useQuery({
+    queryKey: keys.draft(id ?? ""),
+    queryFn: () => api<ProjectDraft>(`/projects/${id ?? ""}/draft`),
+    enabled: id !== null,
+    retry: false,
+    staleTime: Infinity,
+    gcTime: 0,
   });
 }
 

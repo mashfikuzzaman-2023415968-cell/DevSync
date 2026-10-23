@@ -187,6 +187,35 @@ test("a client cancels a draft by giving a reason and typing its title @e2e", as
   await expect(row.getByRole("button", { name: "Cancel" })).toHaveCount(0);
 });
 
+test("a draft reopens where the client left off @e2e", async ({ page, baseURL }) => {
+  await apiSignIn(page, baseURL ?? "", "CLIENT", "Rahim Uddin");
+  await page.goto("/client/projects/new");
+  await page.getByLabel("Project title").fill("Clinic booking app");
+  await next(page);
+  await expect(page.getByText("Requirements and deadline")).toBeVisible();
+  await page.getByLabel("Requirements", { exact: true }).fill("Patients book and cancel visits.");
+  await next(page);
+  await expect(page.getByText("Skills and team")).toBeVisible();
+  await expect(page).toHaveURL(/\/client\/projects\/new\?draft=[0-9a-f-]+&step=3$/);
+
+  // Leave, then come back through My projects.
+  await page.goto("/client/projects");
+  const row = page.locator("li", { has: page.getByRole("link", { name: "Clinic booking app" }) });
+  await expect(row.getByRole("link", { name: "View plan" })).toHaveCount(0);
+  await row.getByRole("link", { name: "Continue editing" }).click();
+  await expect(page.getByText("Skills and team")).toBeVisible();
+  await page.getByRole("button", { name: "Back" }).click();
+  await expect(page.getByLabel("Requirements", { exact: true })).toHaveValue(
+    "Patients book and cancel visits.",
+  );
+
+  // A reload keeps the step too; a plain visit to "Create project" starts a new one.
+  await page.reload();
+  await expect(page.getByText("Requirements and deadline")).toBeVisible();
+  await page.goto("/client/projects/new");
+  await expect(page.getByLabel("Project title")).toHaveValue("");
+});
+
 test("leaving the wizard with unsaved changes asks first @e2e", async ({ page, baseURL }) => {
   await apiSignIn(page, baseURL ?? "", "CLIENT", "Rahim Uddin");
   await page.goto("/client/projects/new");

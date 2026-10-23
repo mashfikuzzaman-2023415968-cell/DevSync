@@ -95,7 +95,11 @@ function ProjectRow({ project: p }: { project: ProjectListItem }) {
       <div className="min-w-0">
         <div className="flex items-center gap-2">
           <Link
-            to={`/client/projects/${p.id}/plan`}
+            to={
+              p.status === "DRAFT"
+                ? `/client/projects/new?draft=${p.id}`
+                : `/client/projects/${p.id}/plan`
+            }
             className="truncate font-medium text-text hover:text-primary hover:underline"
           >
             {p.title}
@@ -109,9 +113,15 @@ function ProjectRow({ project: p }: { project: ProjectListItem }) {
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <Button asChild variant="outline" size="sm">
-          <Link to={`/client/projects/${p.id}/plan`}>View plan</Link>
-        </Button>
+        {p.status === "DRAFT" ? (
+          <Button asChild size="sm">
+            <Link to={`/client/projects/new?draft=${p.id}`}>Continue editing</Link>
+          </Button>
+        ) : (
+          <Button asChild variant="outline" size="sm">
+            <Link to={`/client/projects/${p.id}/plan`}>View plan</Link>
+          </Button>
+        )}
         {CANCELLABLE.has(p.status) && <CancelDialog id={p.id} title={p.title} />}
       </div>
     </li>

@@ -46,6 +46,8 @@ from app.schemas.projects import (
     CpmNodeOut,
     CpmPreviewOut,
     DependenciesReplace,
+    DependencyOut,
+    DraftOut,
     MilestoneOut,
     MilestonesReplace,
     PlanEdge,
@@ -238,6 +240,25 @@ async def update_draft(
     await ctx.db.commit()
     await ctx.db.refresh(project)
     return _project_out(project)
+
+
+async def get_draft(ctx: Ctx, project_id: uuid.UUID) -> DraftOut:
+    """The owner's draft with its slots, milestones and dependencies, so the wizard can resume
+    where the client left off (D55). Other users (admins included) get 404; non-drafts 409."""
+    project = await _load_for_write(ctx, project_id, None)
+    _require_status(project, {EDITABLE}, "continue editing")
+    return DraftOut(
+        project=_project_out(project),
+        slots=[
+            SlotOut.model_validate(s, from_attributes=True)
+            for s in await repo.load_slots(ctx.db, project_id)
+        ],
+        milestones=await _milestones_out(ctx.db, project_id),
+        dependencies=[
+            DependencyOut.model_validate(d, from_attributes=True)
+            for d in await repo.load_dependencies(ctx.db, project_id)
+        ],
+    )
 
 
 async def delete_draft(ctx: Ctx, project_id: uuid.UUID) -> None:

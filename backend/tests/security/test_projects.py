@@ -426,3 +426,86 @@ def test_developer_cannot_use_project_endpoints(api: Api) -> None:
     body = {"title": "abcde", "budget_paisa": 1, "deadline_days": 1, "team_size": 2}
     assert api.post("/api/v1/projects", json=body).status_code == 403
     assert api.get("/api/v1/projects").status_code == 403
+
+
+# --------------------------------------------------------------------------- resuming a draft (D55)
+
+
+def test_get_draft_returns_everything_saved_so_far(api: Api) -> None:
+    api.sign_in_as("CLIENT")
+    sid = _skill_id(api)
+    pid = _create_draft(api, start_date="2026-11-02")["id"]
+    empty = api.get(f"/api/v1/projects/{pid}/draft")
+    assert empty.status_code == 200, empty.text
+    assert empty.json()["slots"] == []
+    assert empty.json()["milestones"] == []
+    assert empty.json()["dependencies"] == []
+
+    api.put(
+        f"/api/v1/projects/{pid}/slots",
+        json={"slots": [{"skill_id": sid, "count": 3, "label": "Full-stack"}]},
+    )
+    design, build = _add_two_milestones(api, pid, sid)
+    deps = {"dependencies": [{"predecessor_id": design["id"], "successor_id": build["id"]}]}
+    assert api.put(f"/api/v1/projects/{pid}/dependencies", json=deps).status_code == 200
+
+    body = api.get(f"/api/v1/projects/{pid}/draft").json()
+    assert body["project"]["id"] == pid
+    assert body["project"]["status"] == "DRAFT"
+    assert body["project"]["start_date"] == "2026-11-02"
+    assert body["project"]["team_size"] == 3
+    assert [(s["skill_id"], s["count"], s["label"]) for s in body["slots"]] == [
+        (sid, 3, "Full-stack")
+    ]
+    assert [
+        (m["name"], m["duration_days"], m["share_bp"], m["position"]) for m in body["milestones"]
+    ] == [
+        ("Design", 5, 6000, 0),
+        ("Build", 10, 4000, 1),
+    ]
+    assert all(m["skill_ids"] == [sid] for m in body["milestones"])
+    assert [(d["predecessor_id"], d["successor_id"]) for d in body["dependencies"]] == [
+        (design["id"], build["id"])
+    ]
+
+
+def test_get_draft_is_owner_only(api: Api) -> None:
+    api.sign_in_as("CLIENT")
+    pid = _create_draft(api)["id"]
+    api.sign_in_as("CLIENT")  # another client
+    assert api.get(f"/api/v1/projects/{pid}/draft").status_code == 404
+    api.sign_in_as("DEVELOPER")
+    assert api.get(f"/api/v1/projects/{pid}/draft").status_code == 403
+
+
+def test_get_draft_unknown_or_malformed_id(api: Api) -> None:
+    api.sign_in_as("CLIENT")
+    missing = api.get("/api/v1/projects/00000000-0000-4000-8000-000000000000/draft")
+    assert missing.status_code == 404
+    assert api.get("/api/v1/projects/not-a-uuid/draft").status_code == 422
+
+
+def test_get_draft_refuses_published_and_cancelled_projects(api: Api) -> None:
+    api.sign_in_as("CLIENT")
+    api.post("/api/v1/me/payment-method/verify")
+    pid = _ready_to_publish(api)
+    assert api.post(f"/api/v1/projects/{pid}/publish", json={}).status_code == 200
+    published = api.get(f"/api/v1/projects/{pid}/draft")
+    assert published.status_code == 409
+    assert published.json()["error"]["code"] == "INVALID_STATE"
+
+    other = _create_draft(api)["id"]
+    assert (
+        api.post(
+            f"/api/v1/projects/{other}/cancel", json={"reason": "No longer needed"}
+        ).status_code
+        == 200
+    )
+    assert api.get(f"/api/v1/projects/{other}/draft").status_code == 409
+
+
+def test_get_draft_requires_sign_in(api: Api) -> None:
+    api.sign_in_as("CLIENT")
+    pid = _create_draft(api)["id"]
+    api.client.cookies.clear()
+    assert api.get(f"/api/v1/projects/{pid}/draft").status_code == 401
