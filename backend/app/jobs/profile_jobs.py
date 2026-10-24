@@ -9,6 +9,7 @@ from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.db.context import DbContext
 from app.db.session import open_session
+from app.jobs.runs import run_recorded
 from app.services import files, skill_tests
 
 log = get_logger(__name__)
@@ -31,10 +32,10 @@ async def score_expired() -> int:
 
 
 def uploads_cleanup() -> dict[str, int]:
-    """RQ entry point (sync wrapper)."""
-    return asyncio.run(purge_uploads())
+    """RQ entry point (sync wrapper); the run is recorded in `jobs` (§11)."""
+    return asyncio.run(run_recorded("uploads.cleanup", purge_uploads))
 
 
 def attempts_expire() -> int:
-    """RQ entry point (sync wrapper)."""
-    return asyncio.run(score_expired())
+    """RQ entry point (sync wrapper); the run is recorded in `jobs` (§11)."""
+    return asyncio.run(run_recorded("attempts.expire", score_expired))

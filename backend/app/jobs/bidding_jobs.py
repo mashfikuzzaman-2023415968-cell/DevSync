@@ -30,6 +30,7 @@ from app.core.config import get_settings
 from app.core.settings_cache import active_settings
 from app.db.context import DbContext
 from app.db.session import open_session
+from app.jobs.runs import run_recorded
 from app.models.identity import User, UserStatus
 from app.models.projects import Project, ProjectStatus
 from app.repositories import bids as bidrepo
@@ -207,5 +208,5 @@ async def _auto_close(db: AsyncSession, project: Project, now: datetime) -> None
 
 
 def bidding_deadline() -> dict[str, int]:
-    """RQ entry point (sync wrapper)."""
-    return asyncio.run(close_due_bidding())
+    """RQ entry point (sync wrapper); the run is recorded in `jobs` (§11)."""
+    return asyncio.run(run_recorded("bidding.deadline", close_due_bidding))

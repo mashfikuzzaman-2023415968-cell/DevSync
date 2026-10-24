@@ -24,6 +24,7 @@ from app.core.logging import get_logger
 from app.db.context import DbContext
 from app.db.session import open_session
 from app.integrations.email import build_message, send_via_smtp
+from app.jobs.runs import prune_runs, run_recorded
 from app.models.foundation import IdempotencyKey
 from app.models.identity import EmailOutbox, EmailToken, OtpCode, OutboxStatus, Session
 
@@ -140,19 +141,22 @@ async def expire_records() -> dict[str, int]:
             .values(revoked_at=now)
         )
         await db.commit()
-    return {
+    counts = {
         "sessions": int(sessions.rowcount or 0),  # type: ignore[attr-defined]
         "email_tokens": int(tokens.rowcount or 0),  # type: ignore[attr-defined]
         "otp_codes": int(otps.rowcount or 0),  # type: ignore[attr-defined]
         "idempotency_keys": int(keys.rowcount or 0),  # type: ignore[attr-defined]
     }
+    # Old job run records go with the rest of the expired rows (§11 maintenance).
+    counts.update(await prune_runs(now))
+    return counts
 
 
 def email_send() -> dict[str, int]:
-    """RQ entry point (sync wrapper)."""
-    return asyncio.run(send_due_emails())
+    """RQ entry point (sync wrapper); the run is recorded in `jobs` (§11)."""
+    return asyncio.run(run_recorded("email.send", send_due_emails))
 
 
 def lifecycle_expire() -> dict[str, int]:
-    """RQ entry point (sync wrapper)."""
-    return asyncio.run(expire_records())
+    """RQ entry point (sync wrapper); the run is recorded in `jobs` (§11)."""
+    return asyncio.run(run_recorded("lifecycle.expire", expire_records))

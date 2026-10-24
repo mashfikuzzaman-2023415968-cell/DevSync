@@ -130,4 +130,12 @@ async def test_no_transaction_is_held_open_while_smtp_runs(
 
 async def test_expire_records_runs() -> None:
     counts = await email_jobs.expire_records()
-    assert set(counts) == {"sessions", "email_tokens", "otp_codes", "idempotency_keys"}
+    assert set(counts) == {
+        "sessions",
+        "email_tokens",
+        "otp_codes",
+        "idempotency_keys",
+        # Old job run records are pruned here too (spec §11).
+        "jobs_abandoned",
+        "jobs_pruned",
+    }
