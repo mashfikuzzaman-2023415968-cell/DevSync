@@ -10,7 +10,8 @@ How a module counts as tested:
 * **Backend** — a test file (anything under `backend/tests/`) imports it (`import app.x.y`,
   `from app.x import y`), names it in its text (`app.x.y`, `x/y.py`: how the suites that drive a
   module through the API refer to it), or is named after it (`tests/**/test_<module>.py`, also
-  `test_<module>_extra.py`), which is the convention §16.1 asks for.
+  `test_<module>_extra.py`), which is the convention §16.1 asks for. A test that uses a module
+  path as *data* would count as naming it, so tests about this checker use invented names.
 * **Frontend** — a unit test (`*.test.ts(x)`, `frontend/tests/**`) imports it, directly or
   through the modules it imports: a page's test exercises the components that page renders.
   A directory under `src/features/` must additionally own at least one test file, so a whole new

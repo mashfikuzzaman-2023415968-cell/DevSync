@@ -11,6 +11,8 @@
 | Visual baselines (light/dark × 390/768/1440, UI kit) | `make visual`; update with `make visual-update` | `frontend/e2e/visual.spec.ts`, `kit.spec.ts`, `e2e/__screenshots__` |
 | Lighthouse + 3D frame rate | gate step 16 (frame rate on the GPU via `infra/playwright-gpu`, D28) | `frontend/scripts/lighthouse.mjs`, `frontend/e2e/perf.spec.ts` |
 | Stills | `make stills` (gate checks the manifest hash) | `frontend/scripts/render-stills.mjs` |
+| Contract fuzzing + property tests | `make fuzz` (gate step 11; `FUZZ_EXAMPLES=…` to change the budget) | `backend/tests/api/test_schemathesis.py`, `backend/tests/property` |
+| Every module has tests | part of `make gate` step 6; `python3 backend/scripts/check_module_tests.py` | `backend/tests/module_tests.json` |
 | Full gate | `make gate PHASE=N` | `backend/scripts/phase_gate.py` |
 
 Phase 3 adds: `tests/unit/test_uploads.py` (detection, polyglots, PDF actions, re-encoding,
@@ -22,7 +24,19 @@ signing, storage), `tests/unit/test_question_bank_seed.py`, `tests/integration/t
 test container.
 
 E2E notes: every test starts with fresh rate-limit counters (`e2e/test.ts`, D27) and runs on one
-worker; signed-in tests seed users through the test-only router and sign in via the API.
+worker; signed-in tests seed users through the test-only router and sign in via the API. Screens
+with a fixed address are listed in `e2e/screens.ts`; screens that need state (verification, the
+email link, the admin's two-step verification and setup-2fa, a running timed test, a public
+profile, a public project) are prepared by `e2e/stateful-screens.ts`, which the axe scan, the
+responsive matrix and the visual baselines all iterate.
+
+Contract fuzzing runs three ways (all seeded, so two runs send the same requests): anonymous,
+200 examples per operation; signed in as a developer, client, admin and a CSRF-holding guest, 20
+examples per operation and role; and a state machine for create project → publish → bid → edit →
+withdraw. The signed-in runs exclude only schemathesis's "valid data is accepted" check, because
+the server's own rules (password policy, Bangladeshi mobiles, known skill ids, a close time in
+the future) are not expressible in JSON Schema; the state machine asserts acceptance where the
+input is known to be valid.
 
 Coverage thresholds by phase (backend / frontend): 0–3: 75 / 60; 4–9: 85 / 70; 10–15: 90 / 75.
 Security-critical modules and algorithms need ≥ 95% from the phase they appear in.
@@ -132,7 +146,8 @@ covered nor listed here.
 `smoke` (2), `auth` (6), `shell` (7), `home` (11), `csp` (2), `a11y` (2, every screen in
 `e2e/screens.ts`), `responsive` (3, viewport matrix), `visual` (4) + `kit` (2) (130 baselines),
 `perf` (1, `@gpu`), `phase3` (4), `phase4` (3), `phase5` (6), `demos/demo-1` (1, the Demo 1
-walkthrough).
+walkthrough). The axe, responsive and visual specs each add one run over the screens that need
+state (`e2e/stateful-screens.ts`).
 
 ## Latest gate results
 See `runs/gates/phase-N.json` and the gate log in `PROGRESS.md`.

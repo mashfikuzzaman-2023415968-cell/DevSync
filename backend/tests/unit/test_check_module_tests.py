@@ -34,32 +34,32 @@ pytestmark = pytest.mark.unit
 @pytest.mark.parametrize(
     ("test_path", "source"),
     [
-        ("tests/unit/test_x.py", "from app.services import bids"),  # from-import
-        ("tests/unit/test_x.py", "import app.services.bids"),  # plain import
-        ("tests/unit/test_x.py", '"""Drives services/bids.py through the API."""'),  # mention
-        ("tests/security/test_bids.py", "nothing imported here"),  # named after the module
-        ("tests/security/test_bids_extra.py", "nothing imported here"),  # …with a suffix
+        ("tests/unit/test_x.py", "from app.services import widgets"),  # from-import
+        ("tests/unit/test_x.py", "import app.services.widgets"),  # plain import
+        ("tests/unit/test_x.py", '"""Drives services/widgets.py through the API."""'),  # mention
+        ("tests/security/test_widgets.py", "nothing imported here"),  # named after the module
+        ("tests/security/test_widgets_extra.py", "nothing imported here"),  # …with a suffix
     ],
 )
 def test_a_module_counts_as_tested(test_path: str, source: str) -> None:
-    covered = backend_test_map(["app/services/bids.py"], {test_path: source})
-    assert covered == {"app/services/bids.py": [test_path]}
+    covered = backend_test_map(["app/services/widgets.py"], {test_path: source})
+    assert covered == {"app/services/widgets.py": [test_path]}
 
 
 @pytest.mark.parametrize(
     ("test_path", "source"),
     [
         ("tests/unit/test_other.py", "from app.services import projects"),
-        ("tests/unit/test_bidsomething.py", "x = 1"),  # not a word boundary
-        ("tests/unit/test_rebids.py", "x = 1"),
+        ("tests/unit/test_widgetsomething.py", "x = 1"),  # not a word boundary
+        ("tests/unit/test_rewidgets.py", "x = 1"),
     ],
 )
 def test_an_unrelated_test_does_not_count(test_path: str, source: str) -> None:
-    assert backend_test_map(["app/services/bids.py"], {test_path: source}) == {}
+    assert backend_test_map(["app/services/widgets.py"], {test_path: source}) == {}
 
 
 def test_a_broken_test_file_does_not_crash_the_scan() -> None:
-    covered = backend_test_map(["app/services/bids.py"], {"tests/x.py": "def ("})
+    covered = backend_test_map(["app/services/widgets.py"], {"tests/x.py": "def ("})
     assert covered == {}
 
 
@@ -186,6 +186,8 @@ def test_the_route_table_is_a_barrier() -> None:
 
 # --------------------------------------------------------------------------- the doc table
 
+TWO_TESTS = "def test_one():\n    pass\ndef test_two():\n    pass\n"
+
 
 def test_the_generated_section_lists_packages_areas_and_exceptions(tmp_path: Path) -> None:
     (tmp_path / "runs" / "gates").mkdir(parents=True)
@@ -193,10 +195,10 @@ def test_the_generated_section_lists_packages_areas_and_exceptions(tmp_path: Pat
         json.dumps(
             {
                 "files": {
-                    "app/services/bids.py": {
+                    "app/services/widgets.py": {
                         "summary": {"percent_covered": 90.0, "num_statements": 100}
                     },
-                    "app/services/projects.py": {
+                    "app/services/gadgets.py": {
                         "summary": {"percent_covered": 100.0, "num_statements": 100}
                     },
                 }
@@ -206,20 +208,23 @@ def test_the_generated_section_lists_packages_areas_and_exceptions(tmp_path: Pat
     )
     section = build_doc_section(
         tmp_path,
-        {"app/services/bids.py": ["tests/security/test_bids.py"], "app/services/projects.py": []},
-        {"tests/security/test_bids.py": "def test_one():\n    pass\ndef test_two():\n    pass\n"},
+        {
+            "app/services/widgets.py": ["tests/security/test_widgets.py"],
+            "app/services/gadgets.py": [],
+        },
+        {"tests/security/test_widgets.py": TWO_TESTS},
         {PAGE: [TEST]},
         {PAGE: [TEST]},
         {TEST: "it('a', () => {});\ntest('b', () => {});\n"},
-        {"backend": {"app/core/idempotency.py": "Phase 10"}, "frontend": {}},
+        {"backend": {"app/core/sprockets.py": "Phase 10"}, "frontend": {}},
     )
     assert section.startswith(DOC_START)
     assert section.endswith(DOC_END)
     assert "`app/services`" in section
-    assert "`security/test_bids.py` (2)" in section
+    assert "`security/test_widgets.py` (2)" in section
     assert "95.0 %" in section  # statement-weighted over the two modules
     assert "| `frontend/src/features/bids` | 1 | `bids.test.tsx` (2) |" in section
-    assert "| `app/core/idempotency.py` | Phase 10 |" in section
+    assert "| `app/core/sprockets.py` | Phase 10 |" in section
 
 
 def test_without_a_coverage_report_the_column_is_a_dash(tmp_path: Path) -> None:
