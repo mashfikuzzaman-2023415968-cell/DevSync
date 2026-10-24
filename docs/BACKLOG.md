@@ -61,7 +61,7 @@ Status as of 24 Oct 2026 (end of Phase 5). *done* = built, tested and behind a p
 | FR-AUTH-6 | Settings: password, notification preferences, profile visibility | 1, 3, 9 | Expected | partial | Password, sessions and profile visibility done; notification preferences come with the inbox (Phase 9) |
 | FR-PROF-1 | Developer profile: bio, skills, availability, GitHub, portfolio | 3 | Core | done | Autosave, drag reorder, screenshots |
 | FR-PROF-2 | Certificates with admin verification and badge | 3, 12 | Expected | partial | Upload and badge done; admin verification screen in Phase 12 (DB rule D35 already in place) |
-| FR-PROF-3 | Profile shows reputation, scores, history, portfolio, newcomer badge | 3, 6, 11 | Core | partial | Skill evidence, portfolio, certificates, newcomer badge done; reputation (seeded snapshots, D44) shown to clients in the bids view; reputation on profiles and project history in Phases 6/11 |
+| FR-PROF-3 | Profile shows reputation, scores, history, portfolio, newcomer badge | 3, 6, 11 | Core | partial | Skill evidence, portfolio, certificates, newcomer badge done; reputation (C, P, newcomer, seeded note; D58) on profiles and in the bids view; full reputation model and project history in Phases 6/11 |
 | FR-PROF-4 | Client profile with organisation and project history | 3, 11 | Core | partial | Organisation done; project history once projects complete |
 | FR-PROF-5 | Skills from a fixed, admin-managed list | 3, 12 | Core | partial | Fixed, read-only taxonomy; admin editing in Phase 12 |
 | FR-CHAL-1 | Timed MCQ tests from a randomised, admin-managed bank | 3, 12 | Core | partial | Tests done (128 seeded questions, human review pending, D34); admin bank editor ("Content" page) not built yet |
@@ -69,9 +69,9 @@ Status as of 24 Oct 2026 (end of Phase 5). *done* = built, tested and behind a p
 | FR-CHAL-3 | Scores set a newcomer's expertise and let newcomers pass filtering | 3, 5 | Core | done | Newcomer rule in Algorithm 1 |
 | FR-CHAL-4 | Admin portfolio review when the sandbox is unavailable | 13 | Expected | planned | |
 | FR-MKT-1 | Public landing page | 2 | Core | done | 3D hero; no algorithm figures until Phase 7 (D21) |
-| FR-MKT-2 | Search and filter (skill, budget, deadline, role, team size, availability) | 5 | Core | partial | Text, skills, budget, deadline, team size and sort done; role and availability filters not yet (availability is used by recommendations) |
+| FR-MKT-2 | Search and filter (skill, budget, deadline, role, team size, availability) | 5 | Core | done | Text, skills, budget range, deadline, role, team size, hours a week (the §9.17 availability check) and sort; every filter kept in the address |
 | FR-MKT-3 | Project cards with View project and Bid | 5 | Core | done | |
-| FR-MKT-4 | Project details with milestone list and states | 5, 9 | Core | partial | Description, budget, slots and skills shown; milestone list with states not on the developer's project page yet |
+| FR-MKT-4 | Project details with milestone list and states | 5, 9 | Core | done | Description, client, budget, slots (own skills highlighted), milestone list with states and a mini Gantt on the developer's project page |
 | FR-MKT-5 | Recommended projects | 5 | Expected | done | On Find Projects (§9.16, D54) |
 | FR-PROJ-1 | Multi-step creation wizard | 4 | Core | done | 6 steps, live CPM preview |
 | FR-PROJ-2 | Milestones with duration, skills, share (Σ 100 %) | 4 | Core | done | Enforced in service and DB |

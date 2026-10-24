@@ -641,3 +641,47 @@ the page invites them to sign in, rather than a misleading "newcomer". A develop
 snapshot gets null C/P ("Building a record") and `is_newcomer: true`; the on-the-fly newcomer
 prior used by filtering is not shown, as it would need other users' private data. `seeded`
 (D48) is forced false when `DEVSYNC_ENV=production`.
+
+**D59 · Project details and the role / hours filters (Taeen, 2026-10-24; spec §10, §13.5 #11–12, FR-MKT-2/4).**
+`GET /public/projects/{id}` adds the description, start date, the milestones (name, duration,
+state) and a CPM schedule with edges. The schedule is computed from the milestones and
+dependencies (readable for published projects), not from `plan_baselines` (owner/admin only, and
+it stores no edges), and is empty until a baseline exists. The client's organisation, else
+display name, is returned to signed-in callers only (guests get null). It is read in a SYSTEM
+session limited to those two columns, after the caller's own session has found the project (D50
+precedent). Never any bid data. `/projects/search` adds `role` (a slot skill name, matched
+case-insensitively, ≤80 chars; combines with `skills`, which still means "any of these") and
+`hours` (1–168, the hours a week the developer can commit). A project is kept when that
+commitment fits next to their confirmed reservations over the project's period (start date, else
+today, plus deadline days) within their profile hours (20 without a profile row): the §9.17 check
+of `algorithms/availability.py` that recommendations use. More than the profile's hours returns
+an empty page. The hours filter runs after each SQL page and reads at most 5 pages to fill one;
+the cursor continues after the last project examined, so a page can be short with a next cursor
+(the UI offers "Search further"). The developer's role list puts their own skills first and warns
+when a role would be filtered out, rather than hiding the other roles.
+
+**D60 · Fee, bonus pool and budget shares in the planning screens (Taeen, 2026-10-24; spec §6.2, §13.5 #21–22).**
+The plan preview returns `platform_fee_bp` and `bonus_pool_bp` from `pay.*`, and each CPM node
+carries an optional `share_bp` (preview, plan, dependency replace). The wizard's Budget step
+takes the bonus pool as a switch plus a percentage (0–50 %, one decimal, suggested from
+`pay.bonus_pool_bp`) and stores `round_half_up(budget × pct / 100)` paisa. A "Where the money goes"
+box shows the fee (rounded so the team share is rounded down, like `services/bids.py`), in integer
+paisa (`lib/money.ts`, BigInt). The Review step shows the plan (Gantt or table) and blocks
+publishing on a cycle or shares ≠ 100 % (the server already refused both). The Gantt gains a
+Months zoom (auto for plans over 180 days); the dependency graph opens a milestone panel.
+
+**D61 · Demo 1 stack, texts, passwords and walkthrough (Taeen, 2026-10-24; spec §18, D3, D5).**
+`make demo-up` = base + prod + `docker-compose.demo.yml`: production settings and validation,
+2 API replicas × 2 Gunicorn workers (laptop memory and the Postgres connection limit, D5),
+2 workers, the scheduler and Mailpit. It shares the `devsync` project, so `make demo-reset` wipes
+development data; demo one-off containers run with `--no-deps`. `make up` is unchanged. Texts on
+the demo stack use `SMS_PROVIDER=mailpit`: each arrives in Mailpit as an email to
+`<digits>@sms.devsync.local`. Production validation allows this only with `SMTP_HOST=mailpit` and
+the sender checks again, so one-time codes cannot reach a real relay; `console` stays
+development-only. Demo passwords are random per account on every seed, written once to
+`runs/demos/accounts-N.txt` (gitignored, 0600); `DEMO_PASSWORD` (12+ chars) sets one for
+rehearsals, and `make demo-check` generates its own and passes it by name only. A test-only route
+`GET /__test__/attempts/{id}/answer-key` (DEVSYNC_ENV=test only, like the whole test router) lets
+the walkthrough pass a timed test through the UI. `make demo-preflight` verifies the edge
+certificate against the system store plus the mkcert root: FAIL when mkcert is installed and the
+certificate is untrusted, WARN (self-signed, D3) when it isn't.

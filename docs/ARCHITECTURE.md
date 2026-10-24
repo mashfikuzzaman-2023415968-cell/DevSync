@@ -23,7 +23,7 @@ limits). **Only Nginx publishes ports** (plus Mailpit on `127.0.0.1:8025` in dev
 | `scheduler` | `python -m app.jobs.scheduler` | APScheduler (timezone Asia/Dhaka) that **only enqueues** RQ jobs, so a restart never loses or duplicates work |
 | `postgres` | `postgres:16` + `infra/postgres/init/01-roles.sh` | Data; four least-privilege roles, Row-Level Security on every table |
 | `redis` | `redis:7-alpine` (password, AOF, 256 MB, `noeviction`) | Sessions, rate-limit windows, small caches, RQ queues |
-| `mailpit` | `axllent/mailpit` (dev overlay only) | Catches all outgoing email in development and demos |
+| `mailpit` | `axllent/mailpit` (dev and demo overlays only) | Catches all outgoing email in development and demos |
 | `migrate` | backend image, profile `tools` | One-off `alembic upgrade head` as `devsync_migrator` |
 
 Networks: `edge` (nginx), `app` (nginx, api, worker, scheduler, postgres, redis, mailpit) and
@@ -32,9 +32,11 @@ Networks: `edge` (nginx), `app` (nginx, api, worker, scheduler, postgres, redis,
 filesystem, `no-new-privileges`, all capabilities dropped and a `/tmp` tmpfs (`x-hardening`).
 Uploaded files live in the `uploads` volume (read-write for api/worker, read-only for nginx).
 
-`make up` and `make demo-up` both use the base + dev overlay (one API container). The
-production overlay (`docker-compose.prod.yml`) is where replicas are defined; it is exercised
-in Phase 14 (load and chaos) and Phase 15 (deployment).
+`make up` uses the base + dev overlay (one API container with reload). `make demo-up` uses
+base + production + demo overlays (`docker-compose.demo.yml`): production settings and
+validation, 2 API replicas behind nginx, 2 workers, the scheduler and Mailpit, with texts
+delivered to Mailpit (`SMS_PROVIDER=mailpit`, refused unless `SMTP_HOST=mailpit`). The
+production overlay is also exercised in Phase 14 (load and chaos) and Phase 15 (deployment).
 
 ## 2. Request path
 
