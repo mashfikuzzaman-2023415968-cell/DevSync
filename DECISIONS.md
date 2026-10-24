@@ -427,7 +427,10 @@ other pin unchanged). Pillow 13 is a major version: the upload pipeline's tests 
 EXIF/GPS stripping, bomb guard, polyglots) pass unchanged. *Rule from now on:* a package may be
 newer than 14 days only to fix a published vulnerability, recorded here with the CVE source. *2026-10-22:* `opentelemetry-api` 1.45.0 → 1.45.1 (CVE-2026-114603, published
 that day; found by the gate's pip-audit) under the same exception, only that package re-resolved
-(`uv pip compile … --upgrade-package opentelemetry-api==1.45.1`).
+(`uv pip compile … --upgrade-package opentelemetry-api==1.45.1`). *2026-10-24:* `filelock` 4.0.8 → 4.2.1
+(dev/test only, via schemathesis; CVE-2026-112907, CVE-2026-112913, CVE-2026-112940, found by the
+gate's pip-audit; 4.2.1 released 2026-10-17) under the same exception, only that package
+re-resolved.
 
 **D52 · Phase 5 gate fixes (Taeen, before review fixes).**
 1. `/projects/{project_id}` (GET/PATCH/DELETE) uses Starlette's `uuid` path convertor, so the
