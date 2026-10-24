@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { ApiError } from "@/api/client";
@@ -8,6 +8,7 @@ import { Alert } from "@/components/ui/Feedback";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { isSafePath, safeRedirect } from "@/lib/redirects";
+import { clearSignedOutReason, parseReason, SIGNED_OUT_MESSAGES } from "@/lib/sessionNotice";
 import { useLogin } from "./api";
 import { messageFor } from "./errors";
 import { Honeypot } from "./Honeypot";
@@ -18,6 +19,12 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const returnTo = params.get("return_to");
+  // Why the person is here after a session ended (whitelisted values only).
+  const reason = parseReason(params.get("reason"));
+  const notice = reason ? SIGNED_OUT_MESSAGES[reason] : null;
+  useEffect(() => {
+    clearSignedOutReason(); // shown now; a later sign-out starts fresh
+  }, []);
   const login = useLogin();
   const bot = useBotCheck();
   const [needsCaptcha, setNeedsCaptcha] = useState(false);
@@ -59,6 +66,11 @@ export default function LoginPage() {
   return (
     <AuthLayout title="Sign in" subtitle="Welcome back. Pick up where your projects left off.">
       <form noValidate onSubmit={(e) => void submit(e)} className="space-y-5">
+        {notice && !formError ? (
+          <Alert tone={reason === "account_suspended" ? "danger" : "warning"} title={notice.title}>
+            {notice.body}
+          </Alert>
+        ) : null}
         {formError ? <Alert tone="danger">{formError}</Alert> : null}
         <Field
           label="Email"

@@ -2,13 +2,14 @@
  * maintenance, and the route error boundary that reports to /client-errors. */
 import { Construction, Home } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
-import { isRouteErrorResponse, Link, useRouteError } from "react-router";
+import { isRouteErrorResponse, Link, useRouteError, useSearchParams } from "react-router";
 import { ApiError } from "@/api/client";
 import { NodeArt } from "@/components/brand/NodeArt";
 import { Wordmark } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Display";
 import { EmptyState, PageHeader } from "@/components/ui/Feedback";
+import { isSafePath, pageLoad } from "@/lib/redirects";
 import { reportClientError } from "@/lib/reportError";
 
 function StandalonePage({
@@ -86,19 +87,27 @@ export function ForbiddenPage() {
   );
 }
 
+/** Shown when the API answers 503 (spec §13.5 #8). "Try again" reloads the page the person was
+ * on (a validated `return_to`), which asks the API afresh; if it is still unavailable they
+ * come back here. */
 export function MaintenancePage() {
+  const [params] = useSearchParams();
+  const target = params.get("return_to");
+  const back = isSafePath(target) && !target.startsWith("/maintenance") ? target : "/";
   return (
     <StandalonePage
       title="DevSync is being updated"
-      description="We’re applying an update and will be back in a few minutes. Your work is saved."
+      description="Part of DevSync isn’t answering right now, usually because an update is being applied. Your work is saved; try again in a minute."
     >
       <Button
-        variant="outline"
         onClick={() => {
-          window.location.reload();
+          pageLoad.to(back);
         }}
       >
-        Check again
+        Try again
+      </Button>
+      <Button asChild variant="outline">
+        <Link to="/">Go to the homepage</Link>
       </Button>
     </StandalonePage>
   );

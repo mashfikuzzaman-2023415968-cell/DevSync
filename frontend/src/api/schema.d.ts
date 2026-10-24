@@ -2369,6 +2369,8 @@ export interface components {
     ErrorCode:
       | "BAD_REQUEST"
       | "UNAUTHENTICATED"
+      | "SESSION_EXPIRED"
+      | "ACCOUNT_SUSPENDED"
       | "ROLE_NOT_ALLOWED"
       | "NOT_FOUND"
       | "METHOD_NOT_ALLOWED"

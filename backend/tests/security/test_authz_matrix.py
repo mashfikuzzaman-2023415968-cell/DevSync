@@ -195,7 +195,14 @@ PROTECTED = sorted(
 )
 # Error codes that mean "refused by the authorization gate" (anything else is business logic,
 # e.g. a wrong TOTP code or a missing step-up, which proves the gate let the role through).
-GATE_CODES = {"UNAUTHENTICATED", "ROLE_NOT_ALLOWED", "VERIFICATION_REQUIRED", "CSRF_FAILED"}
+GATE_CODES = {
+    "UNAUTHENTICATED",
+    "SESSION_EXPIRED",
+    "ACCOUNT_SUSPENDED",
+    "ROLE_NOT_ALLOWED",
+    "VERIFICATION_REQUIRED",
+    "CSRF_FAILED",
+}
 
 
 def _code(r: Any) -> str | None:

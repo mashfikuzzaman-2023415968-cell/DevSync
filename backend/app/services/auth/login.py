@@ -144,9 +144,7 @@ async def login(
         raise AuthError(code=ErrorCode.INVALID_CREDENTIALS)
 
     if record.status in (UserStatus.SUSPENDED.value, UserStatus.DELETED.value):
-        raise AuthError(
-            "This account is suspended. Contact support.", code=ErrorCode.UNAUTHENTICATED
-        )
+        raise AuthError(code=ErrorCode.ACCOUNT_SUSPENDED)
 
     if record.role == "ADMIN" and not captcha_needed:
         # Admin sign-in always requires the CAPTCHA (spec §14.16).

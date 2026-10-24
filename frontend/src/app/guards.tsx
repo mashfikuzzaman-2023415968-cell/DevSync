@@ -6,6 +6,7 @@ import { useMe } from "@/features/auth/api";
 import { PageSkeleton } from "@/components/shell/PageSkeleton";
 import { ErrorState } from "@/components/ui/Feedback";
 import { roleHome } from "@/lib/redirects";
+import { signedOutReason } from "@/lib/sessionNotice";
 
 const Loading = PageSkeleton;
 
@@ -29,7 +30,10 @@ export function RequireAuth({
     return <AccountError onRetry={() => void me.refetch()} />;
   if (!me.data) {
     const returnTo = encodeURIComponent(location.pathname + location.search);
-    return <Navigate to={`/login?return_to=${returnTo}`} replace />;
+    // Say why when the session just ended (expired or suspended), spec §13.4.
+    const reason = signedOutReason();
+    const why = reason ? `&reason=${reason}` : "";
+    return <Navigate to={`/login?return_to=${returnTo}${why}`} replace />;
   }
   if (me.data.status === "PENDING" && !allowPending) return <Navigate to="/verify" replace />;
   if (roles && !roles.includes(me.data.role)) return <Navigate to="/403" replace />;

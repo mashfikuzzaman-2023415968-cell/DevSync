@@ -8,9 +8,13 @@
  *   `Retry-After` (callers decide how to show them; 401 redirects are handled by
  *   the route guards so auth screens can show their own messages; 403/429 toasts come
  *   from the query client in app/queryClient.ts);
- * - network failures raise a `ds:network` event so the offline banner can appear.
+ * - network failures raise a `ds:network` event so the offline banner can appear;
+ * - a 401 saying the session ended (SESSION_EXPIRED / ACCOUNT_SUSPENDED) is noted for the
+ *   sign-in page (`lib/sessionNotice`), and a 503 raises `ds:maintenance` so the app shows the
+ *   maintenance page (spec §13.4, §13.5 #8).
  */
 import { readCookie } from "@/lib/cookies";
+import { noteSignedOut, reasonForCode } from "@/lib/sessionNotice";
 
 export const API_BASE = "/api/v1";
 const CSRF_COOKIE = "__Host-ds_csrf";
@@ -18,6 +22,21 @@ const TIMEOUT_MS = 15_000;
 const UNSAFE = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 /** Fired on window after every request: detail.online is false when the network failed. */
 export const NETWORK_EVENT = "ds:network";
+/** Fired on window when the API answers 503 (being updated, or a dependency is down). */
+export const MAINTENANCE_EVENT = "ds:maintenance";
+// The sign-in form shows its own answer (e.g. "this account is suspended"); it isn't a
+// session that ended.
+const OWN_AUTH_ANSWERS = /^\/auth\/(login|login\/totp)$/;
+
+/** What an error answer means for the whole app, beyond the caller's own handling. */
+function announce(path: string, error: ApiError): void {
+  if (error.status === 401 && !OWN_AUTH_ANSWERS.test(path)) {
+    const reason = reasonForCode(error.code);
+    if (reason) noteSignedOut(reason);
+  } else if (error.status === 503) {
+    window.dispatchEvent(new CustomEvent(MAINTENANCE_EVENT));
+  }
+}
 
 export interface ErrorBody {
   error?: {
@@ -174,10 +193,22 @@ async function send<T>(
   if (response.ok) options.onHeaders?.(response.headers);
   if (response.status === 204) return undefined as T;
   const text = await response.text();
-  const parsed: unknown = text ? JSON.parse(text) : null;
+  let parsed: unknown = null;
+  try {
+    parsed = text ? JSON.parse(text) : null;
+  } catch (error) {
+    // An error page from the proxy (e.g. a 502/503 HTML page) still becomes an ApiError.
+    if (response.ok) throw error;
+  }
   if (!response.ok) {
     const retry = Number(response.headers.get("Retry-After"));
-    throw new ApiError(response.status, parsed as ErrorBody | null, retry > 0 ? retry : null);
+    const error = new ApiError(
+      response.status,
+      parsed as ErrorBody | null,
+      retry > 0 ? retry : null,
+    );
+    announce(path, error);
+    throw error;
   }
   return parsed as T;
 }
@@ -219,7 +250,9 @@ export async function upload<T>(
         return;
       }
       const retry = Number(xhr.getResponseHeader("Retry-After"));
-      reject(new ApiError(xhr.status, parsed as ErrorBody | null, retry > 0 ? retry : null));
+      const error = new ApiError(xhr.status, parsed as ErrorBody | null, retry > 0 ? retry : null);
+      announce(path, error);
+      reject(error);
     };
     signal?.addEventListener("abort", () => {
       xhr.abort();

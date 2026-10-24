@@ -22,7 +22,7 @@ from app.core import csrf
 from app.core.authz import Principal
 from app.core.clock import get_clock
 from app.core.config import Settings
-from app.core.errors import DomainError, ErrorCode, error_body
+from app.core.errors import SESSION_ENDED_STATE, DomainError, ErrorCode, error_body
 from app.core.logging import get_logger
 from app.core.ratelimit import RateLimited, RateLimiter, RateLimitUnavailable, Rule
 from app.core.redis import get_redis
@@ -144,6 +144,10 @@ class SessionMiddleware:
             data = await store.load(db, token, now)
             if data is None or data.status in INACTIVE_STATUSES:
                 cookies.extend(signed_out_cookies(self.settings))
+                # Lets a 401 say why (errors.SESSION_ENDED_STATE); a deleted account reads as
+                # an ended session, never "suspended".
+                suspended = data is not None and data.status == "SUSPENDED"
+                state[SESSION_ENDED_STATE] = "SUSPENDED" if suspended else "EXPIRED"
                 return
             await set_context(db, DbContext(user_id=data.user_id, role=data.role))
             due = self.policy.needs_rotation(data, now)

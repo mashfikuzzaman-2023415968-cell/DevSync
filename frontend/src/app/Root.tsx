@@ -5,6 +5,7 @@ import { Outlet, ScrollRestoration, useMatches } from "react-router";
 import { OfflineBanner } from "@/components/shell/OfflineBanner";
 import { TooltipProvider } from "@/components/ui/Overlay";
 import { Toaster } from "@/components/ui/Toaster";
+import { AppEvents } from "./AppEvents";
 
 export interface RouteHandle {
   title?: string;
@@ -30,6 +31,7 @@ export function Root() {
   return (
     <TooltipProvider delayDuration={300}>
       <OfflineBanner />
+      <AppEvents />
       <Outlet />
       <Toaster />
       <ScrollRestoration />

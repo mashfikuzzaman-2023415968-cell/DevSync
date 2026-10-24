@@ -26,6 +26,8 @@ class ErrorCode(StrEnum):
 
     BAD_REQUEST = "BAD_REQUEST"
     UNAUTHENTICATED = "UNAUTHENTICATED"
+    SESSION_EXPIRED = "SESSION_EXPIRED"
+    ACCOUNT_SUSPENDED = "ACCOUNT_SUSPENDED"
     ROLE_NOT_ALLOWED = "ROLE_NOT_ALLOWED"
     NOT_FOUND = "NOT_FOUND"
     METHOD_NOT_ALLOWED = "METHOD_NOT_ALLOWED"
@@ -56,6 +58,8 @@ class ErrorCode(StrEnum):
 STATUS_BY_CODE: dict[ErrorCode, int] = {
     ErrorCode.BAD_REQUEST: 400,
     ErrorCode.UNAUTHENTICATED: 401,
+    ErrorCode.SESSION_EXPIRED: 401,
+    ErrorCode.ACCOUNT_SUSPENDED: 401,
     ErrorCode.ROLE_NOT_ALLOWED: 403,
     ErrorCode.NOT_FOUND: 404,
     ErrorCode.METHOD_NOT_ALLOWED: 405,
@@ -86,6 +90,9 @@ STATUS_BY_CODE: dict[ErrorCode, int] = {
 SAFE_MESSAGES: dict[ErrorCode, str] = {
     ErrorCode.BAD_REQUEST: "The request could not be understood.",
     ErrorCode.UNAUTHENTICATED: "Please sign in to continue.",
+    ErrorCode.SESSION_EXPIRED: "Your session expired. Sign in again to continue.",
+    ErrorCode.ACCOUNT_SUSPENDED: "This account is suspended. Contact support if you think this "
+    "is a mistake.",
     ErrorCode.ROLE_NOT_ALLOWED: "Your account can't do this.",
     ErrorCode.NOT_FOUND: "We couldn't find that.",
     ErrorCode.METHOD_NOT_ALLOWED: "This action isn't supported here.",
@@ -228,11 +235,28 @@ def _validation_fields(exc: RequestValidationError) -> dict[str, str]:
     return fields
 
 
-async def _domain_handler(_request: Request, exc: Exception) -> JSONResponse:
+# Why a session cookie the request carried no longer signs anyone in (set by the session
+# middleware): a plain "please sign in" then says what happened instead (spec §13.4).
+SESSION_ENDED_STATE = "session_ended"
+_SESSION_ENDED_CODES = {
+    "EXPIRED": ErrorCode.SESSION_EXPIRED,
+    "SUSPENDED": ErrorCode.ACCOUNT_SUSPENDED,
+}
+
+
+def _session_ended_code(request: Request) -> ErrorCode | None:
+    ended = request.scope.get("state", {}).get(SESSION_ENDED_STATE)
+    return _SESSION_ENDED_CODES.get(ended) if isinstance(ended, str) else None
+
+
+async def _domain_handler(request: Request, exc: Exception) -> JSONResponse:
     if not isinstance(exc, DomainError):  # registered for this type only
         raise TypeError(type(exc).__name__)
     retry_after = getattr(exc, "retry_after", None)
     headers = {"Retry-After": str(retry_after)} if retry_after else None
+    ended = _session_ended_code(request) if exc.code is ErrorCode.UNAUTHENTICATED else None
+    if ended is not None:
+        return error_response(ended, headers=headers)
     return error_response(
         exc.code, exc.message, fields=exc.fields, extra=exc.extra, headers=headers
     )
