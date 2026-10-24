@@ -2,7 +2,7 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { server } from "@/test/server";
 import { Probe, renderRoutes } from "@/test/render";
 import FindProjectsPage from "./FindProjectsPage";
@@ -28,9 +28,51 @@ const CARD = {
 };
 const DETAIL = {
   ...CARD,
+  description: "Customers order online; the kitchen sees each order live.",
   requirements: "React front end, FastAPI back end.",
+  start_date: null,
+  client: null,
   slots: [{ id: SLOT, label: "React developer", skill: "React", skill_id: "s-react", count: 1 }],
+  milestones: [],
+  schedule: null,
 };
+const SLOT_API = "1c8e5d2f-3a4b-4c5d-9e0f-1a2b3c4d5e6f";
+const PLAN_DAYS = 15;
+const M1 = "m-design";
+const M2 = "m-build";
+const PLANNED_DETAIL = {
+  ...DETAIL,
+  client: { name: "Dhaka Bites Ltd" },
+  // The API slot comes first from the server; my skill (React) should still be listed first.
+  slots: [
+    { id: SLOT_API, label: "", skill: "FastAPI", skill_id: "s-fastapi", count: 1 },
+    ...DETAIL.slots,
+  ],
+  milestones: [
+    { id: M1, name: "Design", duration_days: 5, status: "PLANNED" },
+    { id: M2, name: "Build", duration_days: 10, status: "PLANNED" },
+  ],
+  schedule: {
+    // A named constant: the motion-lint rule forbids numeric `duration:` literals.
+    duration: PLAN_DAYS,
+    nodes: [
+      { key: M1, name: "Design", es: 0, ef: 5, ls: 0, lf: 5, slack: 0, critical: true },
+      { key: M2, name: "Build", es: 5, ef: 15, ls: 5, lf: 15, slack: 0, critical: true },
+    ],
+    edges: [{ predecessor: M1, successor: M2 }],
+  },
+};
+/** A developer profile listing React (only `skills` matters here). */
+const PROFILE = {
+  headline: "",
+  bio: "",
+  hours_per_week: 40,
+  skills: [{ skill_id: "s-react", name: "React", domain: "FRONTEND", self_level: 4 }],
+};
+
+beforeEach(() => {
+  server.use(http.get(`${API}/me/developer-profile`, () => HttpResponse.json(PROFILE)));
+});
 
 function routes(path: string, element: React.ReactNode, init: string) {
   return renderRoutes(
@@ -355,5 +397,192 @@ describe("ProjectBidPage", () => {
     await waitFor(() => {
       expect(patched?.portfolio_item_ids).toEqual(["kept"]);
     });
+  });
+});
+
+describe("Find Projects filters", () => {
+  function searchCapturing(seen: URL[], items: unknown[] = []) {
+    server.use(
+      http.get(`${API}/skills`, () =>
+        HttpResponse.json([...SKILLS, { id: "s-fastapi", name: "FastAPI", domain: "BACKEND" }]),
+      ),
+      http.get(`${API}/projects/recommended`, () => HttpResponse.json([])),
+      http.get(`${API}/projects/search`, ({ request }) => {
+        seen.push(new URL(request.url));
+        return HttpResponse.json({ items, next_cursor: null });
+      }),
+    );
+  }
+  const last = (seen: URL[]) => seen[seen.length - 1]?.searchParams ?? new URLSearchParams();
+
+  it("sends every filter in the URL to the search (budget in paisa)", async () => {
+    const seen: URL[] = [];
+    searchCapturing(seen);
+    routes(
+      "/dev/find",
+      <FindProjectsPage />,
+      "/dev/find?budget_min=1000&budget_max=5000&deadline_max=30&role=React&team_size=4&hours=10&skills=FastAPI",
+    );
+    await waitFor(() => {
+      expect(seen.length).toBeGreaterThan(0);
+    });
+    const q = last(seen);
+    expect(q.get("budget_min")).toBe("100000");
+    expect(q.get("budget_max")).toBe("500000");
+    expect(q.get("deadline_max")).toBe("30");
+    expect(q.get("role")).toBe("React");
+    expect(q.get("team_size")).toBe("4");
+    expect(q.get("hours")).toBe("10");
+    expect(q.getAll("skills")).toEqual(["FastAPI"]);
+    // The panel shows them back.
+    expect(screen.getByLabelText("Minimum")).toHaveValue(1000);
+    expect(screen.getByLabelText("Hours a week you can give")).toHaveValue(10);
+  });
+
+  it("shows invalid values as field errors and leaves them out of the search", async () => {
+    const seen: URL[] = [];
+    searchCapturing(seen);
+    routes(
+      "/dev/find",
+      <FindProjectsPage />,
+      "/dev/find?budget_min=5000&budget_max=1000&hours=200&team_size=1&deadline_max=0",
+    );
+    expect(await screen.findByText("Use a maximum at or above the minimum.")).toBeInTheDocument();
+    expect(screen.getByText("Use a whole number of hours from 1 to 168.")).toBeInTheDocument();
+    expect(screen.getByText("Use a whole number of days from 1 to 365.")).toBeInTheDocument();
+    expect(screen.getByText("Choose a team size from 2 to 10.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(seen.length).toBeGreaterThan(0);
+    });
+    const q = last(seen);
+    expect(q.get("budget_min")).toBe("500000");
+    for (const key of ["budget_max", "hours", "team_size", "deadline_max"]) {
+      expect(q.has(key)).toBe(false);
+    }
+  });
+
+  it("puts typed filters in the URL and clears them, keeping the sort", async () => {
+    const user = userEvent.setup();
+    const seen: URL[] = [];
+    searchCapturing(seen);
+    const { router } = routes("/dev/find", <FindProjectsPage />, "/dev/find?sort=budget");
+    await user.type(await screen.findByLabelText("Hours a week you can give"), "15");
+    await waitFor(() => {
+      expect(router.state.location.search).toContain("hours=15");
+    });
+    await waitFor(() => {
+      expect(last(seen).get("hours")).toBe("15");
+    });
+    // Empty results with filters on: suggest broadening, with a way to clear.
+    expect(await screen.findByText(/Try fewer skills, a wider budget/)).toBeInTheDocument();
+    const clear = screen.getAllByRole("button", { name: "Clear filters" });
+    expect(clear.length).toBeGreaterThan(0);
+    await user.click(clear[0] as HTMLElement);
+    await waitFor(() => {
+      expect(router.state.location.search).toBe("?sort=budget");
+    });
+    expect(screen.queryByRole("button", { name: "Clear filters" })).not.toBeInTheDocument();
+  });
+
+  it("offers no clear button and a plain empty state without filters", async () => {
+    searchCapturing([]);
+    routes("/dev/find", <FindProjectsPage />, "/dev/find");
+    expect(await screen.findByText(/No open projects right now/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Clear filters" })).not.toBeInTheDocument();
+  });
+
+  it("highlights the skills on my profile in result cards", async () => {
+    searchCapturing([], [CARD]);
+    routes("/dev/find", <FindProjectsPage />, "/dev/find");
+    expect(await screen.findByText("1 of your skills")).toBeInTheDocument();
+    const chips = screen.getByRole("list", { name: "Skills needed" }).querySelectorAll("li");
+    // React (mine) comes first and says so; FastAPI doesn't.
+    expect(chips[0]).toHaveTextContent("React (your skill)");
+    expect(chips[1]).toHaveTextContent(/^FastAPI$/);
+  });
+
+  it("doesn't highlight anything when my profile fails to load", async () => {
+    server.use(
+      http.get(`${API}/me/developer-profile`, () =>
+        HttpResponse.json({ error: { code: "INTERNAL_ERROR" } }, { status: 500 }),
+      ),
+    );
+    searchCapturing([], [CARD]);
+    routes("/dev/find", <FindProjectsPage />, "/dev/find");
+    expect(await screen.findByText("Online ordering system")).toBeInTheDocument();
+    expect(screen.queryByText(/your skill/)).not.toBeInTheDocument();
+  });
+});
+
+describe("Project details", () => {
+  function details(body: unknown) {
+    server.use(
+      http.get(`${API}/auth/csrf`, () => new HttpResponse(null, { status: 204 })),
+      http.get(`${API}/public/projects/${PID}`, () => HttpResponse.json(body)),
+      http.get(`${API}/me/bids`, () => HttpResponse.json([])),
+      http.get(`${API}/me/portfolio`, () => HttpResponse.json([])),
+    );
+  }
+
+  it("shows the client, description, milestones and a mini Gantt", async () => {
+    details(PLANNED_DETAIL);
+    routes("/dev/projects/:id", <ProjectBidPage />, `/dev/projects/${PID}`);
+    expect(await screen.findByText("Dhaka Bites Ltd")).toBeInTheDocument();
+    expect(screen.getByText("Client")).toBeInTheDocument();
+    expect(screen.getByText(DETAIL.description)).toBeInTheDocument();
+    expect(screen.getByText("4 people")).toBeInTheDocument();
+    const list = screen.getByRole("list", { name: "Milestones" });
+    expect(list).toHaveTextContent("Design");
+    expect(list).toHaveTextContent("Build");
+    expect(screen.getAllByText("Planned")).toHaveLength(2);
+    expect(screen.getByRole("img")).toHaveAccessibleName(/2 milestones/i);
+    expect(screen.getByLabelText(/Design: days 0–5, on the critical path/)).toBeInTheDocument();
+    expect(screen.getByText("Highlighted roles match skills on your profile.")).toBeInTheDocument();
+  });
+
+  it("leaves out the client for guests and says when there's no plan", async () => {
+    details(DETAIL);
+    routes("/dev/projects/:id", <ProjectBidPage />, `/dev/projects/${PID}`);
+    expect(await screen.findByText("No plan shared yet")).toBeInTheDocument();
+    expect(screen.queryByText("Client")).not.toBeInTheDocument();
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+
+  it("lists my skills' roles first and marks the others", async () => {
+    const user = userEvent.setup();
+    details(PLANNED_DETAIL);
+    routes("/dev/projects/:id", <ProjectBidPage />, `/dev/projects/${PID}`);
+    await screen.findByText("Dhaka Bites Ltd");
+    await waitFor(() => {
+      expect(
+        screen.getByText("Highlighted roles match skills on your profile."),
+      ).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("combobox"));
+    const options = await screen.findAllByRole("option");
+    expect(options.map((o) => o.textContent)).toEqual([
+      "React: React developer",
+      "FastAPI (not one of your skills)",
+    ]);
+    await user.click(options[1] as HTMLElement);
+    expect(await screen.findByText("Not one of your skills")).toBeInTheDocument();
+    expect(
+      screen.getByText(/This role needs FastAPI, which isn’t on your profile/),
+    ).toBeInTheDocument();
+  });
+
+  it("marks nothing while my skills are unknown", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get(`${API}/me/developer-profile`, () =>
+        HttpResponse.json({ error: { code: "INTERNAL_ERROR" } }, { status: 500 }),
+      ),
+    );
+    details(PLANNED_DETAIL);
+    routes("/dev/projects/:id", <ProjectBidPage />, `/dev/projects/${PID}`);
+    await screen.findByText("Dhaka Bites Ltd");
+    await user.click(screen.getByRole("combobox"));
+    const options = await screen.findAllByRole("option");
+    expect(options.map((o) => o.textContent)).toEqual(["FastAPI", "React: React developer"]);
   });
 });

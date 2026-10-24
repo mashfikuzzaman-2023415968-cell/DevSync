@@ -6,12 +6,18 @@
  * refuses late changes, D54). The sheet takes the hours a week you commit (§9.17), your expected
  * contribution and up to three of your own portfolio items. Bids are sealed — nothing here reveals
  * other developers' bids (§14.5).
+ *
+ * The header shows who the client is (signed-in callers only), budget, deadline and team size;
+ * the page shows the description, requirements, the roles (yours highlighted), the published
+ * plan's milestones and a mini Gantt of its schedule. The role select lists slots needing your
+ * skills first and marks the rest "not one of your skills" (Algorithm 1 filters those bids out).
  */
-import { CheckCircle2, XCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { CalendarRange, CheckCircle2, XCircle } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import { ApiError } from "@/api/client";
-import type { EligibilityOut } from "@/api/types";
+import type { EligibilityOut, ProjectDetail } from "@/api/types";
+import { Gantt, type GanttEdge } from "@/components/Gantt";
 import { Button } from "@/components/ui/Button";
 import { Badge, Card, CardHeader, Skeleton } from "@/components/ui/Display";
 import { Alert, EmptyState, ErrorState, PageHeader } from "@/components/ui/Feedback";
@@ -28,7 +34,7 @@ import {
   useWithdrawBid,
 } from "@/features/bids/api";
 import { CHECK_LABEL } from "@/features/bids/bidText";
-import { usePortfolio } from "@/features/profile/api";
+import { useDeveloperProfile, usePortfolio } from "@/features/profile/api";
 import { takaProblem, wholeIn } from "@/features/projects/schemas";
 import { usePublicProject } from "./api";
 
@@ -53,10 +59,17 @@ export default function ProjectBidPage() {
   const [contribution, setContribution] = useState("");
   const [portfolioIds, setPortfolioIds] = useState<string[]>([]);
   const portfolio = usePortfolio();
+  const profile = useDeveloperProfile();
   const [verdict, setVerdict] = useState<EligibilityOut | null>(null);
 
   const existing = (myBids.data ?? []).find((b) => b.project_id === id && b.status === "ACTIVE");
-  const slots = project.data?.slots ?? [];
+  const mySkills = new Set((profile.data?.skills ?? []).map((s) => s.skill_id));
+  // Slots needing my skills first (stable otherwise), so the right role is the obvious choice.
+  const slots = [...(project.data?.slots ?? [])].sort(
+    (a, b) => Number(mySkills.has(b.skill_id)) - Number(mySkills.has(a.skill_id)),
+  );
+  const knowsSkills = profile.isSuccess;
+  const chosen = slots.find((s) => s.id === slotId);
   // Field problems with the server's limits (§10 bids), keyed by the server's field names.
   const [serverFields, setServerFields] = useState<Record<string, string>>({});
   const problems: Record<string, string> = {};
@@ -213,47 +226,69 @@ export default function ProjectBidPage() {
 
   return (
     <>
-      <PageHeader title={p.title} description={p.summary} />
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <Card>
-          <CardHeader title="About this project" />
-          <div className="px-5 pb-5">
-            <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 text-body-sm">
-              <div>
-                <dt className="text-text-muted">Budget</dt>
-                <dd className="font-medium tabular text-text">{formatMoney(p.budget_paisa)}</dd>
-              </div>
-              <div>
-                <dt className="text-text-muted">Deadline</dt>
-                <dd className="font-medium text-text">{formatDays(p.deadline_days)}</dd>
-              </div>
-              <div>
-                <dt className="text-text-muted">Team size</dt>
-                <dd className="font-medium text-text">{p.team_size}</dd>
-              </div>
-            </dl>
-            {p.requirements ? (
-              <div className="mt-4">
-                <h3 className="text-body-sm font-semibold text-text">Requirements</h3>
-                <p className="mt-1 whitespace-pre-wrap text-body-sm text-text-muted">
-                  {p.requirements}
-                </p>
-              </div>
-            ) : null}
-            <div className="mt-4">
-              <h3 className="text-body-sm font-semibold text-text">Roles</h3>
-              <ul className="mt-2 flex flex-wrap gap-1.5">
-                {slots.map((s) => (
-                  <li key={s.id}>
-                    <Badge tone="neutral">
-                      {s.skill} ×{s.count}
-                    </Badge>
-                  </li>
-                ))}
-              </ul>
+      <PageHeader title={p.title} description={p.summary}>
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-body-sm sm:flex sm:flex-wrap sm:gap-x-10">
+          {p.client ? (
+            <div className="col-span-2 min-w-0">
+              <dt className="text-text-muted">Client</dt>
+              <dd className="break-words font-medium text-text">{p.client.name}</dd>
             </div>
+          ) : null}
+          <div>
+            <dt className="text-text-muted">Budget</dt>
+            <dd className="font-medium tabular text-text">{formatMoney(p.budget_paisa)}</dd>
           </div>
-        </Card>
+          <div>
+            <dt className="text-text-muted">Deadline</dt>
+            <dd className="font-medium text-text">{formatDays(p.deadline_days)}</dd>
+          </div>
+          <div>
+            <dt className="text-text-muted">Team size</dt>
+            <dd className="font-medium text-text">{p.team_size} people</dd>
+          </div>
+        </dl>
+      </PageHeader>
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+        <div className="flex min-w-0 flex-col gap-6">
+          <Card>
+            <CardHeader title="About this project" />
+            <div className="px-5 pb-5">
+              {p.description ? (
+                <p className="mt-3 whitespace-pre-wrap text-body text-text">{p.description}</p>
+              ) : null}
+              {p.requirements ? (
+                <div className="mt-4">
+                  <h3 className="text-body-sm font-semibold text-text">Requirements</h3>
+                  <p className="mt-1 whitespace-pre-wrap text-body-sm text-text-muted">
+                    {p.requirements}
+                  </p>
+                </div>
+              ) : null}
+              <div className="mt-4">
+                <h3 className="text-body-sm font-semibold text-text">Roles</h3>
+                <ul className="mt-2 flex flex-wrap gap-1.5">
+                  {slots.map((s) => {
+                    const yours = mySkills.has(s.skill_id);
+                    return (
+                      <li key={s.id}>
+                        <Badge tone={yours ? "primary" : "neutral"} icon={yours}>
+                          {s.skill} ×{s.count}
+                          {yours ? <span className="sr-only"> (your skill)</span> : null}
+                        </Badge>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {slots.some((s) => mySkills.has(s.skill_id)) ? (
+                  <p className="mt-2 text-caption text-text-muted">
+                    Highlighted roles match skills on your profile.
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </Card>
+          <PlanCard project={p} />
+        </div>
 
         <Card>
           <CardHeader
@@ -330,14 +365,25 @@ export default function ProjectBidPage() {
                       {...a11y}
                       value={slotId || undefined}
                       onChange={setSlotId}
-                      options={slots.map((s) => ({
-                        value: s.id,
-                        label: s.label ? `${s.skill}: ${s.label}` : s.skill,
-                      }))}
+                      options={slots.map((s) => {
+                        const base = s.label ? `${s.skill}: ${s.label}` : s.skill;
+                        return {
+                          value: s.id,
+                          label:
+                            knowsSkills && !mySkills.has(s.skill_id)
+                              ? `${base} (not one of your skills)`
+                              : base,
+                        };
+                      })}
                       placeholder="Choose a role"
                     />
                   )}
                 </FormField>
+                {knowsSkills && chosen && !mySkills.has(chosen.skill_id) ? (
+                  <Alert tone="warning" title="Not one of your skills">
+                    {`This role needs ${chosen.skill}, which isn’t on your profile, so the bid would be filtered out. Add the skill to your profile, or choose a role that matches your skills.`}
+                  </Alert>
+                ) : null}
                 <div className="grid grid-cols-2 gap-4">
                   <Field
                     label="Your price (৳)"
@@ -476,5 +522,70 @@ function EligibilityPreview({ verdict }: { verdict: EligibilityOut }) {
         ))}
       </ul>
     </Alert>
+  );
+}
+
+function statusLabel(status: string): string {
+  const words = status.toLowerCase().replace(/_/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** The published plan: milestones with durations and states, and a mini Gantt (§13.5 #11). */
+function PlanCard({ project }: { project: ProjectDetail }) {
+  const schedule = project.schedule;
+  const edges = useMemo<GanttEdge[]>(
+    () => (schedule?.edges ?? []).map((e): GanttEdge => [e.predecessor, e.successor]),
+    [schedule],
+  );
+  return (
+    <Card>
+      <CardHeader
+        title="Plan"
+        description={
+          schedule
+            ? `${String(project.milestones.length)} milestones over ${formatDays(schedule.duration)}. Critical milestones are in rose.`
+            : undefined
+        }
+      />
+      <div className="px-5 pb-5">
+        {project.milestones.length === 0 ? (
+          <EmptyState
+            icon={<CalendarRange />}
+            title="No plan shared yet"
+            description="The client hasn’t published milestones for this project."
+          />
+        ) : (
+          <>
+            <ol className="mt-3 flex flex-col divide-y divide-border" aria-label="Milestones">
+              {project.milestones.map((m) => (
+                <li key={m.id} className="flex items-center justify-between gap-3 py-2.5">
+                  <span className="min-w-0 break-words text-body-sm font-medium text-text">
+                    {m.name}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className="text-body-sm tabular text-text-muted">
+                      {formatDays(m.duration_days)}
+                    </span>
+                    <Badge tone="neutral" icon={false}>
+                      {statusLabel(m.status)}
+                    </Badge>
+                  </span>
+                </li>
+              ))}
+            </ol>
+            {schedule && schedule.nodes.length > 0 ? (
+              <div className="mt-4">
+                <Gantt
+                  nodes={schedule.nodes}
+                  edges={edges}
+                  startDate={project.start_date ?? null}
+                  deadlineDays={project.deadline_days}
+                />
+              </div>
+            ) : null}
+          </>
+        )}
+      </div>
+    </Card>
   );
 }

@@ -10,6 +10,10 @@ export interface SearchFilters {
   budget_max?: number | undefined;
   deadline_max?: number | undefined;
   team_size?: number | undefined;
+  /** A slot skill name: projects with a slot needing it. */
+  role?: string | undefined;
+  /** Hours a week I can commit: projects whose period fits them (server-side, §9.17). */
+  hours?: number | undefined;
   sort?: string;
 }
 
@@ -28,6 +32,8 @@ function searchPath(f: SearchFilters, cursor: string | null): string {
   if (f.budget_max != null) p.set("budget_max", String(f.budget_max));
   if (f.deadline_max != null) p.set("deadline_max", String(f.deadline_max));
   if (f.team_size != null) p.set("team_size", String(f.team_size));
+  if (f.role) p.set("role", f.role);
+  if (f.hours != null) p.set("hours", String(f.hours));
   if (f.sort) p.set("sort", f.sort);
   if (cursor) p.set("cursor", cursor);
   const qs = p.toString();
@@ -67,7 +73,8 @@ export function usePublicProjects(q: string) {
   });
 }
 
-/** A single open project with its slots, for the bid sheet (works for guests and developers). */
+/** A single open project with its slots and published plan, for the bid sheet (works for guests
+ * and developers; who the client is comes only for signed-in callers). */
 export function usePublicProject(id: string) {
   return useQuery({
     queryKey: keys.publicProject(id),

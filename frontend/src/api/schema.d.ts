@@ -997,7 +997,11 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Search open projects */
+    /**
+     * Search open projects
+     * @description `role`: projects with a slot needing that skill. `hours`: the hours a week you can
+     *     commit; only projects whose period fits them next to your confirmed reservations (§9.17).
+     */
     get: operations["search_projects_api_v1_projects_search_get"];
     put?: never;
     post?: never;
@@ -1302,7 +1306,11 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Public view of one open project */
+    /**
+     * Public view of one open project
+     * @description Limited columns, the published plan and never any bid data; who the client is only for
+     *     signed-in callers.
+     */
     get: operations["public_project_api_v1_public_projects__project_id__get"];
     put?: never;
     post?: never;
@@ -2678,6 +2686,16 @@ export interface components {
       title: string;
     };
     /**
+     * ProjectClient
+     * @description Who posted the project: the organisation from the client profile, else their display
+     *     name. Shown to signed-in callers only (never to anonymous visitors). The client rating
+     *     arrives with reviews (Phase 11).
+     */
+    ProjectClient: {
+      /** Name */
+      name: string;
+    };
+    /**
      * ProjectCreate
      * @description Create a DRAFT project (spec §10.2 POST /projects).
      */
@@ -2718,12 +2736,16 @@ export interface components {
     /**
      * ProjectDetail
      * @description A single open project with its slots, for the developer's bid sheet (spec §13.5 #11).
+     *
+     *     Never carries bid data (sealed, §14.5). `milestones` is empty and `schedule` null until the
+     *     project has a baseline plan (written at publish).
      */
     ProjectDetail: {
       /** Bidding Deadline */
       bidding_deadline: string | null;
       /** Budget Paisa */
       budget_paisa: number;
+      client: components["schemas"]["ProjectClient"] | null;
       /**
        * Created At
        * Format: date-time
@@ -2731,19 +2753,26 @@ export interface components {
       created_at: string;
       /** Deadline Days */
       deadline_days: number;
+      /** Description */
+      description: string;
       /**
        * Id
        * Format: uuid
        */
       id: string;
+      /** Milestones */
+      milestones: components["schemas"]["ProjectMilestone"][];
       /** Open For Bids */
       open_for_bids: boolean;
       /** Requirements */
       requirements: string;
+      schedule: components["schemas"]["ProjectSchedule"] | null;
       /** Skills */
       skills: string[];
       /** Slots */
       slots: components["schemas"]["SlotCard"][];
+      /** Start Date */
+      start_date: string | null;
       /** Status */
       status: string;
       /** Summary */
@@ -2780,6 +2809,23 @@ export interface components {
        * Format: date-time
        */
       updated_at: string;
+    };
+    /**
+     * ProjectMilestone
+     * @description One milestone of the published plan: name, duration and state.
+     */
+    ProjectMilestone: {
+      /** Duration Days */
+      duration_days: number;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /** Status */
+      status: string;
     };
     /**
      * ProjectOut
@@ -2836,6 +2882,18 @@ export interface components {
       updated_at: string;
       /** Version */
       version: number;
+    };
+    /**
+     * ProjectSchedule
+     * @description The published plan's CPM schedule for the mini Gantt (day offsets from the start).
+     */
+    ProjectSchedule: {
+      /** Duration */
+      duration: number;
+      /** Edges */
+      edges: components["schemas"]["PlanEdge"][];
+      /** Nodes */
+      nodes: components["schemas"]["CpmNodeOut"][];
     };
     /**
      * ProjectUpdate
@@ -10918,6 +10976,8 @@ export interface operations {
         budget_max?: number | null;
         deadline_max?: number | null;
         team_size?: number | null;
+        role?: string | null;
+        hours?: number | null;
         sort?: "newest" | "budget" | "deadline";
         cursor?: string | null;
         limit?: number;

@@ -3012,6 +3012,20 @@
         "title": "ProjectCard",
         "type": "object"
       },
+      "ProjectClient": {
+        "description": "Who posted the project: the organisation from the client profile, else their display\nname. Shown to signed-in callers only (never to anonymous visitors). The client rating\narrives with reviews (Phase 11).",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ProjectClient",
+        "type": "object"
+      },
       "ProjectCreate": {
         "additionalProperties": false,
         "description": "Create a DRAFT project (spec §10.2 POST /projects).",
@@ -3100,7 +3114,7 @@
         "type": "object"
       },
       "ProjectDetail": {
-        "description": "A single open project with its slots, for the developer's bid sheet (spec §13.5 #11).",
+        "description": "A single open project with its slots, for the developer's bid sheet (spec §13.5 #11).\n\nNever carries bid data (sealed, §14.5). `milestones` is empty and `schedule` null until the\nproject has a baseline plan (written at publish).",
         "properties": {
           "bidding_deadline": {
             "anyOf": [
@@ -3118,6 +3132,16 @@
             "title": "Budget Paisa",
             "type": "integer"
           },
+          "client": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProjectClient"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -3127,10 +3151,21 @@
             "title": "Deadline Days",
             "type": "integer"
           },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "milestones": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectMilestone"
+            },
+            "title": "Milestones",
+            "type": "array"
           },
           "open_for_bids": {
             "title": "Open For Bids",
@@ -3139,6 +3174,16 @@
           "requirements": {
             "title": "Requirements",
             "type": "string"
+          },
+          "schedule": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProjectSchedule"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "skills": {
             "items": {
@@ -3153,6 +3198,18 @@
             },
             "title": "Slots",
             "type": "array"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
           },
           "status": {
             "title": "Status",
@@ -3183,8 +3240,13 @@
           "skills",
           "created_at",
           "open_for_bids",
+          "description",
           "requirements",
-          "slots"
+          "start_date",
+          "client",
+          "slots",
+          "milestones",
+          "schedule"
         ],
         "title": "ProjectDetail",
         "type": "object"
@@ -3246,6 +3308,36 @@
           "updated_at"
         ],
         "title": "ProjectListItem",
+        "type": "object"
+      },
+      "ProjectMilestone": {
+        "description": "One milestone of the published plan: name, duration and state.",
+        "properties": {
+          "duration_days": {
+            "title": "Duration Days",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "duration_days",
+          "status"
+        ],
+        "title": "ProjectMilestone",
         "type": "object"
       },
       "ProjectOut": {
@@ -3385,6 +3477,36 @@
           "updated_at"
         ],
         "title": "ProjectOut",
+        "type": "object"
+      },
+      "ProjectSchedule": {
+        "description": "The published plan's CPM schedule for the mini Gantt (day offsets from the start).",
+        "properties": {
+          "duration": {
+            "title": "Duration",
+            "type": "integer"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/PlanEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/CpmNodeOut"
+            },
+            "title": "Nodes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "duration",
+          "nodes",
+          "edges"
+        ],
+        "title": "ProjectSchedule",
         "type": "object"
       },
       "ProjectUpdate": {
@@ -12211,6 +12333,7 @@
     },
     "/api/v1/projects/search": {
       "get": {
+        "description": "`role`: projects with a slot needing that skill. `hours`: the hours a week you can\ncommit; only projects whose period fits them next to your confirmed reservations (§9.17).",
         "operationId": "search_projects_api_v1_projects_search_get",
         "parameters": [
           {
@@ -12317,6 +12440,42 @@
                 }
               ],
               "title": "Team Size"
+            }
+          },
+          {
+            "in": "query",
+            "name": "role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Role"
+            }
+          },
+          {
+            "in": "query",
+            "name": "hours",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 168,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hours"
             }
           },
           {
@@ -15921,6 +16080,7 @@
     },
     "/api/v1/public/projects/{project_id}": {
       "get": {
+        "description": "Limited columns, the published plan and never any bid data; who the client is only for\nsigned-in callers.",
         "operationId": "public_project_api_v1_public_projects__project_id__get",
         "parameters": [
           {
