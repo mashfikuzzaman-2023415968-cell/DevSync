@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert, CircleCheck, LoaderCircle } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
+import { isVersionConflict } from "@/api/client";
 import type { DeveloperProfile, DeveloperProfileUpdate } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { RadioGroup } from "@/components/ui/Choice";
@@ -12,7 +13,7 @@ import { Field, FormField, Textarea } from "@/components/ui/Field";
 import { Combobox } from "@/components/ui/Select";
 import { applyFieldErrors } from "@/features/auth/errors";
 import { aboutSchema, type AboutValues } from "./schemas";
-import { useUpdateDeveloperProfile } from "./api";
+import { useDeveloperProfile, useUpdateDeveloperProfile } from "./api";
 import { useAutosave, type SaveState } from "./useAutosave";
 
 const FALLBACK_ZONES = ["Asia/Dhaka", "Asia/Kolkata", "Asia/Dubai", "Europe/London", "UTC"];
@@ -25,7 +26,18 @@ function timeZones(): string[] {
   }
 }
 
-export function SaveIndicator({ state, onRetry }: { state: SaveState; onRetry: () => void }) {
+export function SaveIndicator({
+  state,
+  onRetry,
+  conflict = false,
+  onReload,
+}: {
+  state: SaveState;
+  onRetry: () => void;
+  /** The last save was refused because the profile changed elsewhere (If-Match, §10.1). */
+  conflict?: boolean;
+  onReload?: () => void;
+}) {
   return (
     <span aria-live="polite" className="inline-flex min-h-9 items-center gap-1.5 text-body-sm">
       {state === "saving" ? (
@@ -43,7 +55,16 @@ export function SaveIndicator({ state, onRetry }: { state: SaveState; onRetry: (
           <span className="text-text-muted">Saved</span>
         </>
       ) : null}
-      {state === "error" ? (
+      {state === "error" && conflict && onReload ? (
+        <>
+          <CircleAlert className="size-4 text-danger" aria-hidden="true" />
+          <span className="text-danger">Not saved: this profile changed elsewhere.</span>
+          <Button variant="link" size="sm" onClick={onReload}>
+            Reload
+          </Button>
+        </>
+      ) : null}
+      {state === "error" && !(conflict && onReload) ? (
         <>
           <CircleAlert className="size-4 text-danger" aria-hidden="true" />
           <span className="text-danger">Not saved.</span>
@@ -69,6 +90,7 @@ function toValues(p: DeveloperProfile): AboutValues {
 
 export function AboutCard({ profile }: { profile: DeveloperProfile }) {
   const update = useUpdateDeveloperProfile();
+  const { refetch } = useDeveloperProfile();
   const saved = useMemo(() => toValues(profile), [profile]);
   const form = useForm<AboutValues>({
     resolver: zodResolver(aboutSchema),
@@ -107,7 +129,7 @@ export function AboutCard({ profile }: { profile: DeveloperProfile }) {
     },
     [update, form.setError],
   );
-  const { state, retry } = useAutosave(
+  const { state, retry, error, clear } = useAutosave(
     values,
     saved,
     save,
@@ -129,6 +151,14 @@ export function AboutCard({ profile }: { profile: DeveloperProfile }) {
             state={state}
             onRetry={() => {
               void retry();
+            }}
+            conflict={isVersionConflict(error)}
+            onReload={() => {
+              // Show what is saved now (re-read after the 409) and drop the refused edits.
+              void refetch().then((r) => {
+                if (r.data) form.reset(toValues(r.data));
+                clear();
+              });
             }}
           />
         }

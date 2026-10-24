@@ -14,6 +14,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import column, delete, func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.profiles import (
@@ -76,28 +77,54 @@ async def get_developer_profile(db: AsyncSession, user_id: uuid.UUID) -> Develop
     return await db.scalar(select(DeveloperProfile).where(DeveloperProfile.user_id == user_id))
 
 
-async def get_or_create_developer_profile(db: AsyncSession, user_id: uuid.UUID) -> DeveloperProfile:
-    row = await get_developer_profile(db, user_id)
-    if row is None:
-        row = DeveloperProfile(user_id=user_id)
-        db.add(row)
-        await db.flush()
-        await db.refresh(row)
-    return row
+async def get_or_create_developer_profile(
+    db: AsyncSession, user_id: uuid.UUID
+) -> tuple[DeveloperProfile, bool]:
+    """The caller's row (and whether this call created it), created on first save and locked
+    for the update (version check, §10.1).
+
+    `ON CONFLICT DO NOTHING` makes two first saves racing each other safe: both then lock and
+    read the one row, so the second sees the first's version instead of failing on UNIQUE."""
+    inserted = await db.scalar(
+        pg_insert(DeveloperProfile)
+        .values(id=uuid.uuid4(), user_id=user_id)
+        .on_conflict_do_nothing(index_elements=["user_id"])
+        .returning(DeveloperProfile.id)
+    )
+    row = await db.scalar(
+        select(DeveloperProfile)
+        .where(DeveloperProfile.user_id == user_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if row is None:  # pragma: no cover - the insert above guarantees the row
+        raise LookupError("developer profile")
+    return row, inserted is not None
 
 
 async def get_client_profile(db: AsyncSession, user_id: uuid.UUID) -> ClientProfile | None:
     return await db.scalar(select(ClientProfile).where(ClientProfile.user_id == user_id))
 
 
-async def get_or_create_client_profile(db: AsyncSession, user_id: uuid.UUID) -> ClientProfile:
-    row = await get_client_profile(db, user_id)
-    if row is None:
-        row = ClientProfile(user_id=user_id)
-        db.add(row)
-        await db.flush()
-        await db.refresh(row)
-    return row
+async def get_or_create_client_profile(
+    db: AsyncSession, user_id: uuid.UUID
+) -> tuple[ClientProfile, bool]:
+    """Like `get_or_create_developer_profile`: created on first save, row locked."""
+    inserted = await db.scalar(
+        pg_insert(ClientProfile)
+        .values(id=uuid.uuid4(), user_id=user_id)
+        .on_conflict_do_nothing(index_elements=["user_id"])
+        .returning(ClientProfile.id)
+    )
+    row = await db.scalar(
+        select(ClientProfile)
+        .where(ClientProfile.user_id == user_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if row is None:  # pragma: no cover - the insert above guarantees the row
+        raise LookupError("client profile")
+    return row, inserted is not None
 
 
 async def public_developer_profile(db: AsyncSession, user_id: uuid.UUID) -> dict[str, Any] | None:

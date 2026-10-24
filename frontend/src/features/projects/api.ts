@@ -114,14 +114,36 @@ export function useDeleteProject() {
   });
 }
 
+/** A whole-set replace's saved rows and the project's new version (`X-Version`; null if the
+ * server didn't send one, then the caller re-reads the project). */
+export interface Replaced<T> {
+  items: T;
+  version: number | null;
+}
+
+/** PUT a whole set with `If-Match: <version>` (spec §10.1); a stale version is a 409. */
+async function replaceSet<T>(path: string, body: unknown, version?: number): Promise<Replaced<T>> {
+  let next: number | null = null;
+  const items = await api<T>(path, {
+    method: "PUT",
+    body,
+    ...(version === undefined ? {} : { headers: { "If-Match": String(version) } }),
+    onHeaders: (headers) => {
+      const value = Number(headers.get("X-Version"));
+      next = Number.isInteger(value) && value > 0 ? value : null;
+    },
+  });
+  return { items, version: next };
+}
+
 export function useReplaceSlots(id: string) {
   const qc = useQueryClient();
   return useMutation({
     meta: { inlineErrors: true },
-    mutationFn: (slots: SlotIn[]) =>
-      api<Slot[]>(`/projects/${id}/slots`, { method: "PUT", body: { slots } }),
-    onSuccess: (slots) => {
-      qc.setQueryData(keys.slots(id), slots);
+    mutationFn: ({ slots, version }: { slots: SlotIn[]; version?: number }) =>
+      replaceSet<Slot[]>(`/projects/${id}/slots`, { slots }, version),
+    onSuccess: ({ items }) => {
+      qc.setQueryData(keys.slots(id), items);
       void qc.invalidateQueries({ queryKey: keys.project(id) });
     },
   });
@@ -131,9 +153,9 @@ export function useReplaceMilestones(id: string) {
   const qc = useQueryClient();
   return useMutation({
     meta: { inlineErrors: true },
-    mutationFn: (milestones: MilestoneIn[]) =>
-      api<Milestone[]>(`/projects/${id}/milestones`, { method: "PUT", body: { milestones } }),
-    onSuccess: (milestones) => qc.setQueryData(keys.milestones(id), milestones),
+    mutationFn: ({ milestones, version }: { milestones: MilestoneIn[]; version?: number }) =>
+      replaceSet<Milestone[]>(`/projects/${id}/milestones`, { milestones }, version),
+    onSuccess: ({ items }) => qc.setQueryData(keys.milestones(id), items),
   });
 }
 
@@ -141,12 +163,9 @@ export function useReplaceDependencies(id: string) {
   const qc = useQueryClient();
   return useMutation({
     meta: { inlineErrors: true },
-    mutationFn: (dependencies: Dependency[]) =>
-      api<Dependency[]>(`/projects/${id}/dependencies`, {
-        method: "PUT",
-        body: { dependencies },
-      }),
-    onSuccess: (deps) => qc.setQueryData(keys.dependencies(id), deps),
+    mutationFn: ({ dependencies, version }: { dependencies: Dependency[]; version?: number }) =>
+      replaceSet<Dependency[]>(`/projects/${id}/dependencies`, { dependencies }, version),
+    onSuccess: ({ items }) => qc.setQueryData(keys.dependencies(id), items),
   });
 }
 

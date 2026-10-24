@@ -611,22 +611,27 @@ describe("CreateProjectPage", () => {
         calls.push(`patch@${request.headers.get("If-Match") ?? "-"}`);
         return HttpResponse.json({ id: "p1", version: calls.length + 1 });
       }),
-      // Re-read after the slot/milestone/dependency replaces (they bump the version).
+      // Never needed: each replace answers with the new version (X-Version).
       http.get(`${API}/projects/p1`, () => {
         calls.push("reread");
-        return HttpResponse.json({ id: "p1", version: 40 });
+        return HttpResponse.json({ id: "p1", version: 99 });
       }),
-      http.put(`${API}/projects/p1/slots`, () => {
-        calls.push("slots");
-        return HttpResponse.json([{ id: "s1", skill_id: "s-react", count: 2, label: "" }]);
+      // The replaces send If-Match and answer with the bumped version.
+      http.put(`${API}/projects/p1/slots`, ({ request }) => {
+        calls.push(`slots@${request.headers.get("If-Match") ?? "-"}`);
+        return HttpResponse.json([{ id: "s1", skill_id: "s-react", count: 2, label: "" }], {
+          headers: { "X-Version": "40" },
+        });
       }),
-      http.put(`${API}/projects/p1/milestones`, () => {
-        calls.push("milestones");
-        return HttpResponse.json([{ id: "m1", name: "Build", position: 0 }]);
+      http.put(`${API}/projects/p1/milestones`, ({ request }) => {
+        calls.push(`milestones@${request.headers.get("If-Match") ?? "-"}`);
+        return HttpResponse.json([{ id: "m1", name: "Build", position: 0 }], {
+          headers: { "X-Version": "41" },
+        });
       }),
-      http.put(`${API}/projects/p1/dependencies`, () => {
-        calls.push("deps");
-        return HttpResponse.json([]);
+      http.put(`${API}/projects/p1/dependencies`, ({ request }) => {
+        calls.push(`deps@${request.headers.get("If-Match") ?? "-"}`);
+        return HttpResponse.json([], { headers: { "X-Version": "42" } });
       }),
       http.post(`${API}/projects/p1/plan/preview`, () => HttpResponse.json(PREVIEW)),
       http.post(`${API}/projects/p1/publish`, async ({ request }) => {
@@ -696,12 +701,17 @@ describe("CreateProjectPage", () => {
       expect(publishBody).toEqual({ acknowledge_schedule_risk: true });
     });
     expect(await screen.findByText("plan-page")).toBeInTheDocument();
-    // The draft is patched by its real id, and the budget PATCH carries the re-read version.
-    expect(calls).toContain("reread");
-    expect(calls).toContain("patch@40");
-    expect(calls).toContain("slots");
-    expect(calls).toContain("milestones");
-    expect(calls).toContain("deps");
+    // The draft is patched by its real id; every save sends the version the previous one
+    // returned (If-Match), so no re-read is needed (spec §10.1).
+    expect(calls).toEqual([
+      "patch@1",
+      "patch@2",
+      "slots@3",
+      "milestones@40",
+      "deps@41",
+      "patch@42",
+    ]);
+    expect(calls).not.toContain("reread");
   });
 });
 
@@ -1159,9 +1169,20 @@ describe("api hooks", () => {
         seen.ifMatch = request.headers.get("If-Match");
         return HttpResponse.json({ id: "p1", version: 7 });
       }),
-      http.put(`${API}/projects/p1/slots`, () => HttpResponse.json([{ id: "s1" }])),
-      http.put(`${API}/projects/p1/milestones`, () => HttpResponse.json([{ id: "m1" }])),
-      http.put(`${API}/projects/p1/dependencies`, () => HttpResponse.json([])),
+      http.put(`${API}/projects/p1/slots`, ({ request }) => {
+        seen.slotsIfMatch = request.headers.get("If-Match");
+        return HttpResponse.json([{ id: "s1" }], { headers: { "X-Version": "8" } });
+      }),
+      http.put(`${API}/projects/p1/milestones`, ({ request }) => {
+        seen.milestonesIfMatch = request.headers.get("If-Match");
+        return HttpResponse.json([{ id: "m1" }]);
+      }),
+      http.put(`${API}/projects/p1/dependencies`, () =>
+        HttpResponse.json(
+          { error: { code: "VERSION_CONFLICT", message: "This project changed." } },
+          { status: 409 },
+        ),
+      ),
       http.post(`${API}/projects/p1/extend-bidding`, () => HttpResponse.json({ id: "p1" })),
       http.delete(`${API}/projects/p1`, () => new HttpResponse(null, { status: 204 })),
     );
@@ -1172,15 +1193,30 @@ describe("api hooks", () => {
     expect(seen.ifMatch).toBe("5");
 
     const slots = renderHook(() => hooks.useReplaceSlots("p1"), { wrapper });
-    await slots.result.current.mutateAsync([{ skill_id: "s", count: 2, label: "" }]);
+    const savedSlots = await slots.result.current.mutateAsync({
+      slots: [{ skill_id: "s", count: 2, label: "" }],
+      version: 7,
+    });
+    expect(seen.slotsIfMatch).toBe("7");
+    expect(savedSlots).toEqual({ items: [{ id: "s1" }], version: 8 });
 
     const ms = renderHook(() => hooks.useReplaceMilestones("p1"), { wrapper });
-    await ms.result.current.mutateAsync([
-      { name: "m", description: "", duration_days: 1, share_bp: 10_000, skill_ids: [] },
-    ]);
+    const savedMs = await ms.result.current.mutateAsync({
+      milestones: [
+        { name: "m", description: "", duration_days: 1, share_bp: 10_000, skill_ids: [] },
+      ],
+    });
+    // No version given: no If-Match, and no X-Version answered → null (the caller re-reads).
+    expect(seen.milestonesIfMatch).toBeNull();
+    expect(savedMs.version).toBeNull();
 
     const deps = renderHook(() => hooks.useReplaceDependencies("p1"), { wrapper });
-    await deps.result.current.mutateAsync([]);
+    await expect(
+      deps.result.current.mutateAsync({ dependencies: [], version: 1 }),
+    ).rejects.toMatchObject({
+      code: "VERSION_CONFLICT",
+      status: 409,
+    });
 
     const ext = renderHook(() => hooks.useExtendBidding("p1"), { wrapper });
     await ext.result.current.mutateAsync();

@@ -147,7 +147,7 @@ async def replace_skills(ctx: Ctx, body: SkillsUpdate) -> list[DeveloperSkillOut
 async def get_developer_profile(ctx: Ctx) -> DeveloperProfileOut:
     row = await repo.get_developer_profile(ctx.db, ctx.uid)
     skills = await _skills_out(ctx.db, ctx.uid)
-    if row is None:  # not created until the first save; show the defaults
+    if row is None:  # not created until the first save; show the defaults (version 0)
         return DeveloperProfileOut(
             headline="",
             bio="",
@@ -157,6 +157,7 @@ async def get_developer_profile(ctx: Ctx) -> DeveloperProfileOut:
             visibility="PUBLIC",
             skills=skills,
             updated_at=None,
+            version=UNSAVED_VERSION,
         )
     return DeveloperProfileOut(
         headline=row.headline,
@@ -167,17 +168,39 @@ async def get_developer_profile(ctx: Ctx) -> DeveloperProfileOut:
         visibility=row.visibility.value,
         skills=skills,
         updated_at=row.updated_at,
+        version=row.version,
     )
 
 
-async def update_developer_profile(ctx: Ctx, body: DeveloperProfileUpdate) -> DeveloperProfileOut:
+# A profile that was never saved has no row; it reports this version, so the first save can
+# send If-Match like any other.
+UNSAVED_VERSION = 0
+PROFILE_CHANGED = "Your profile was changed elsewhere (another tab or device). Reload to see it."
+
+
+def _check_version(current: int, if_match: int | None) -> None:
+    """If-Match (§10.1): a stale version is 409 VERSION_CONFLICT; no header skips the check."""
+    if if_match is not None and if_match != current:
+        raise DomainError(PROFILE_CHANGED, code=ErrorCode.VERSION_CONFLICT)
+
+
+async def update_developer_profile(
+    ctx: Ctx, body: DeveloperProfileUpdate, if_match: int | None = None
+) -> DeveloperProfileOut:
     data = _changes(body, nullable=frozenset({"github_username"}))
     if "visibility" in data:  # store the enum, not the string (the ORM keeps what it is given)
         data["visibility"] = ProfileVisibility(data["visibility"])
-    row = await repo.get_or_create_developer_profile(ctx.db, ctx.uid)
+    row, created = await repo.get_or_create_developer_profile(ctx.db, ctx.uid)
+    try:
+        _check_version(UNSAVED_VERSION if created else row.version, if_match)
+    except DomainError:
+        await ctx.db.rollback()  # also undoes a row created just for this check
+        raise
     for key, value in data.items():
         setattr(row, key, value)
     row.updated_at = ctx.now
+    if not created:
+        row.version += 1
     await _audit(
         ctx, "profile.update", "developer_profile", row.id, {k: str(v) for k, v in data.items()}
     )
@@ -191,21 +214,37 @@ async def update_developer_profile(ctx: Ctx, body: DeveloperProfileUpdate) -> De
 async def get_client_profile(ctx: Ctx) -> ClientProfileOut:
     row = await repo.get_client_profile(ctx.db, ctx.uid)
     if row is None:
-        return ClientProfileOut(organization="", description="", website=None, updated_at=None)
+        return ClientProfileOut(
+            organization="",
+            description="",
+            website=None,
+            updated_at=None,
+            version=UNSAVED_VERSION,
+        )
     return ClientProfileOut(
         organization=row.organization,
         description=row.description,
         website=row.website,
         updated_at=row.updated_at,
+        version=row.version,
     )
 
 
-async def update_client_profile(ctx: Ctx, body: ClientProfileUpdate) -> ClientProfileOut:
+async def update_client_profile(
+    ctx: Ctx, body: ClientProfileUpdate, if_match: int | None = None
+) -> ClientProfileOut:
     data = _changes(body, nullable=frozenset({"website"}))
-    row = await repo.get_or_create_client_profile(ctx.db, ctx.uid)
+    row, created = await repo.get_or_create_client_profile(ctx.db, ctx.uid)
+    try:
+        _check_version(UNSAVED_VERSION if created else row.version, if_match)
+    except DomainError:
+        await ctx.db.rollback()
+        raise
     for key, value in data.items():
         setattr(row, key, value)
     row.updated_at = ctx.now
+    if not created:
+        row.version += 1
     await _audit(ctx, "client_profile.update", "client_profile", row.id, data)
     await ctx.db.commit()
     return await get_client_profile(ctx)

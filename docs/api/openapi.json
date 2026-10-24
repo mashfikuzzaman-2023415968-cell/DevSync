@@ -1418,6 +1418,12 @@
             ],
             "title": "Updated At"
           },
+          "version": {
+            "description": "Send as If-Match on the next PATCH (0 = never saved).",
+            "minimum": 0.0,
+            "title": "Version",
+            "type": "integer"
+          },
           "website": {
             "anyOf": [
               {
@@ -1434,7 +1440,8 @@
           "organization",
           "description",
           "website",
-          "updated_at"
+          "updated_at",
+          "version"
         ],
         "title": "ClientProfileOut",
         "type": "object"
@@ -1800,6 +1807,12 @@
             ],
             "title": "Updated At"
           },
+          "version": {
+            "description": "Send as If-Match on the next PATCH (0 = never saved).",
+            "minimum": 0.0,
+            "title": "Version",
+            "type": "integer"
+          },
           "visibility": {
             "enum": [
               "PUBLIC",
@@ -1817,7 +1830,8 @@
           "timezone",
           "visibility",
           "skills",
-          "updated_at"
+          "updated_at",
+          "version"
         ],
         "title": "DeveloperProfileOut",
         "type": "object"
@@ -10772,7 +10786,8 @@
                 "example": {
                   "description": "Wholesale textiles; we need an ordering app.",
                   "organization": "Rahim Traders",
-                  "updated_at": "2026-10-18T05:00:00Z"
+                  "updated_at": "2026-10-18T05:00:00Z",
+                  "version": 2
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ClientProfileOut"
@@ -10873,8 +10888,30 @@
         ]
       },
       "patch": {
-        "description": "Send only the fields that changed; an empty website removes it.",
+        "description": "Send only the fields that changed (an empty website removes it), with `If-Match`.",
         "operationId": "patch_client_profile_api_v1_me_client_profile_patch",
+        "parameters": [
+          {
+            "description": "Profile version",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 2147483647,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Profile version",
+              "title": "If-Match"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -10892,7 +10929,8 @@
                 "example": {
                   "description": "Wholesale textiles; we need an ordering app.",
                   "organization": "Rahim Traders",
-                  "updated_at": "2026-10-18T05:00:00Z"
+                  "updated_at": "2026-10-18T05:00:00Z",
+                  "version": 2
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ClientProfileOut"
@@ -10951,6 +10989,23 @@
               }
             },
             "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VERSION_CONFLICT",
+                    "message": "Your profile was changed elsewhere (another tab or device). Reload to see it.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The resource changed since it was loaded (stale If-Match), or its state does not allow the change."
           },
           "413": {
             "content": {
@@ -11050,6 +11105,7 @@
                   ],
                   "timezone": "Asia/Dhaka",
                   "updated_at": "2026-10-18T05:00:00Z",
+                  "version": 3,
                   "visibility": "PUBLIC"
                 },
                 "schema": {
@@ -11151,8 +11207,30 @@
         ]
       },
       "patch": {
-        "description": "Send only the fields that changed (autosave).",
+        "description": "Send only the fields that changed (autosave), with `If-Match: <version>`.",
         "operationId": "patch_developer_profile_api_v1_me_developer_profile_patch",
+        "parameters": [
+          {
+            "description": "Profile version",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 2147483647,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Profile version",
+              "title": "If-Match"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -11182,6 +11260,7 @@
                   ],
                   "timezone": "Asia/Dhaka",
                   "updated_at": "2026-10-18T05:00:00Z",
+                  "version": 3,
                   "visibility": "PUBLIC"
                 },
                 "schema": {
@@ -11241,6 +11320,23 @@
               }
             },
             "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VERSION_CONFLICT",
+                    "message": "Your profile was changed elsewhere (another tab or device). Reload to see it.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The resource changed since it was loaded (stale If-Match), or its state does not allow the change."
           },
           "413": {
             "content": {
@@ -15861,6 +15957,24 @@
               "title": "Project Id",
               "type": "string"
             }
+          },
+          {
+            "description": "Project version",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Project version",
+              "title": "If-Match"
+            }
           }
         ],
         "requestBody": {
@@ -15899,7 +16013,16 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Version": {
+                "description": "The project's new version; send it as If-Match on the next change.",
+                "schema": {
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              }
+            }
           },
           "401": {
             "content": {
@@ -15957,8 +16080,8 @@
               "application/json": {
                 "example": {
                   "error": {
-                    "code": "INVALID_STATE",
-                    "message": "This can't be done in the current state.",
+                    "code": "VERSION_CONFLICT",
+                    "message": "This project changed since you loaded it. Reload and try again.",
                     "request_id": "req_123"
                   }
                 },
@@ -15967,7 +16090,7 @@
                 }
               }
             },
-            "description": "This can't be done in the current state."
+            "description": "The resource changed since it was loaded (stale If-Match), or its state does not allow the change."
           },
           "413": {
             "content": {
@@ -16447,6 +16570,24 @@
               "title": "Project Id",
               "type": "string"
             }
+          },
+          {
+            "description": "Project version",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Project version",
+              "title": "If-Match"
+            }
           }
         ],
         "requestBody": {
@@ -16486,7 +16627,16 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Version": {
+                "description": "The project's new version; send it as If-Match on the next change.",
+                "schema": {
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              }
+            }
           },
           "401": {
             "content": {
@@ -16544,8 +16694,8 @@
               "application/json": {
                 "example": {
                   "error": {
-                    "code": "INVALID_STATE",
-                    "message": "This can't be done in the current state.",
+                    "code": "VERSION_CONFLICT",
+                    "message": "This project changed since you loaded it. Reload and try again.",
                     "request_id": "req_123"
                   }
                 },
@@ -16554,7 +16704,7 @@
                 }
               }
             },
-            "description": "This can't be done in the current state."
+            "description": "The resource changed since it was loaded (stale If-Match), or its state does not allow the change."
           },
           "413": {
             "content": {
@@ -17218,6 +17368,24 @@
               "title": "Project Id",
               "type": "string"
             }
+          },
+          {
+            "description": "Project version",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Project version",
+              "title": "If-Match"
+            }
           }
         ],
         "requestBody": {
@@ -17251,7 +17419,16 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Version": {
+                "description": "The project's new version; send it as If-Match on the next change.",
+                "schema": {
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              }
+            }
           },
           "401": {
             "content": {
@@ -17309,8 +17486,8 @@
               "application/json": {
                 "example": {
                   "error": {
-                    "code": "INVALID_STATE",
-                    "message": "This can't be done in the current state.",
+                    "code": "VERSION_CONFLICT",
+                    "message": "This project changed since you loaded it. Reload and try again.",
                     "request_id": "req_123"
                   }
                 },
@@ -17319,7 +17496,7 @@
                 }
               }
             },
-            "description": "This can't be done in the current state."
+            "description": "The resource changed since it was loaded (stale If-Match), or its state does not allow the change."
           },
           "413": {
             "content": {

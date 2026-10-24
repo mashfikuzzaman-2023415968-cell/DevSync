@@ -746,7 +746,7 @@ export interface paths {
     head?: never;
     /**
      * Update my client profile
-     * @description Send only the fields that changed; an empty website removes it.
+     * @description Send only the fields that changed (an empty website removes it), with `If-Match`.
      */
     patch: operations["patch_client_profile_api_v1_me_client_profile_patch"];
     trace?: never;
@@ -770,7 +770,7 @@ export interface paths {
     head?: never;
     /**
      * Update my developer profile
-     * @description Send only the fields that changed (autosave).
+     * @description Send only the fields that changed (autosave), with `If-Match: <version>`.
      */
     patch: operations["patch_developer_profile_api_v1_me_developer_profile_patch"];
     trace?: never;
@@ -2044,6 +2044,11 @@ export interface components {
       organization: string;
       /** Updated At */
       updated_at: string | null;
+      /**
+       * Version
+       * @description Send as If-Match on the next PATCH (0 = never saved).
+       */
+      version: number;
       /** Website */
       website: string | null;
     };
@@ -2207,6 +2212,11 @@ export interface components {
       timezone: string;
       /** Updated At */
       updated_at: string | null;
+      /**
+       * Version
+       * @description Send as If-Match on the next PATCH (0 = never saved).
+       */
+      version: number;
       /**
        * Visibility
        * @enum {string}
@@ -9154,7 +9164,8 @@ export interface operations {
            * @example {
            *       "description": "Wholesale textiles; we need an ordering app.",
            *       "organization": "Rahim Traders",
-           *       "updated_at": "2026-10-18T05:00:00Z"
+           *       "updated_at": "2026-10-18T05:00:00Z",
+           *       "version": 2
            *     }
            */
           "application/json": components["schemas"]["ClientProfileOut"];
@@ -9255,7 +9266,10 @@ export interface operations {
   patch_client_profile_api_v1_me_client_profile_patch: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Profile version */
+        "If-Match"?: number | null;
+      };
       path?: never;
       cookie?: never;
     };
@@ -9275,7 +9289,8 @@ export interface operations {
            * @example {
            *       "description": "Wholesale textiles; we need an ordering app.",
            *       "organization": "Rahim Traders",
-           *       "updated_at": "2026-10-18T05:00:00Z"
+           *       "updated_at": "2026-10-18T05:00:00Z",
+           *       "version": 2
            *     }
            */
           "application/json": components["schemas"]["ClientProfileOut"];
@@ -9328,6 +9343,24 @@ export interface operations {
            *       "error": {
            *         "code": "NOT_FOUND",
            *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The resource changed since it was loaded (stale If-Match), or its state does not allow the change. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VERSION_CONFLICT",
+           *         "message": "Your profile was changed elsewhere (another tab or device). Reload to see it.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -9440,6 +9473,7 @@ export interface operations {
            *       ],
            *       "timezone": "Asia/Dhaka",
            *       "updated_at": "2026-10-18T05:00:00Z",
+           *       "version": 3,
            *       "visibility": "PUBLIC"
            *     }
            */
@@ -9541,7 +9575,10 @@ export interface operations {
   patch_developer_profile_api_v1_me_developer_profile_patch: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Profile version */
+        "If-Match"?: number | null;
+      };
       path?: never;
       cookie?: never;
     };
@@ -9573,6 +9610,7 @@ export interface operations {
            *       ],
            *       "timezone": "Asia/Dhaka",
            *       "updated_at": "2026-10-18T05:00:00Z",
+           *       "version": 3,
            *       "visibility": "PUBLIC"
            *     }
            */
@@ -9626,6 +9664,24 @@ export interface operations {
            *       "error": {
            *         "code": "NOT_FOUND",
            *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The resource changed since it was loaded (stale If-Match), or its state does not allow the change. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VERSION_CONFLICT",
+           *         "message": "Your profile was changed elsewhere (another tab or device). Reload to see it.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -13993,7 +14049,10 @@ export interface operations {
   replace_dependencies_api_v1_projects__project_id__dependencies_put: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Project version */
+        "If-Match"?: number | null;
+      };
       path: {
         project_id: string;
       };
@@ -14008,6 +14067,8 @@ export interface operations {
       /** @description Successful Response */
       200: {
         headers: {
+          /** @description The project's new version; send it as If-Match on the next change. */
+          "X-Version"?: number;
           [name: string]: unknown;
         };
         content: {
@@ -14083,7 +14144,7 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
-      /** @description This can't be done in the current state. */
+      /** @description The resource changed since it was loaded (stale If-Match), or its state does not allow the change. */
       409: {
         headers: {
           [name: string]: unknown;
@@ -14092,8 +14153,8 @@ export interface operations {
           /**
            * @example {
            *       "error": {
-           *         "code": "INVALID_STATE",
-           *         "message": "This can't be done in the current state.",
+           *         "code": "VERSION_CONFLICT",
+           *         "message": "This project changed since you loaded it. Reload and try again.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -14565,7 +14626,10 @@ export interface operations {
   replace_milestones_api_v1_projects__project_id__milestones_put: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Project version */
+        "If-Match"?: number | null;
+      };
       path: {
         project_id: string;
       };
@@ -14580,6 +14644,8 @@ export interface operations {
       /** @description Successful Response */
       200: {
         headers: {
+          /** @description The project's new version; send it as If-Match on the next change. */
+          "X-Version"?: number;
           [name: string]: unknown;
         };
         content: {
@@ -14656,7 +14722,7 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
-      /** @description This can't be done in the current state. */
+      /** @description The resource changed since it was loaded (stale If-Match), or its state does not allow the change. */
       409: {
         headers: {
           [name: string]: unknown;
@@ -14665,8 +14731,8 @@ export interface operations {
           /**
            * @example {
            *       "error": {
-           *         "code": "INVALID_STATE",
-           *         "message": "This can't be done in the current state.",
+           *         "code": "VERSION_CONFLICT",
+           *         "message": "This project changed since you loaded it. Reload and try again.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -15292,7 +15358,10 @@ export interface operations {
   replace_slots_api_v1_projects__project_id__slots_put: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Project version */
+        "If-Match"?: number | null;
+      };
       path: {
         project_id: string;
       };
@@ -15307,6 +15376,8 @@ export interface operations {
       /** @description Successful Response */
       200: {
         headers: {
+          /** @description The project's new version; send it as If-Match on the next change. */
+          "X-Version"?: number;
           [name: string]: unknown;
         };
         content: {
@@ -15377,7 +15448,7 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
-      /** @description This can't be done in the current state. */
+      /** @description The resource changed since it was loaded (stale If-Match), or its state does not allow the change. */
       409: {
         headers: {
           [name: string]: unknown;
@@ -15386,8 +15457,8 @@ export interface operations {
           /**
            * @example {
            *       "error": {
-           *         "code": "INVALID_STATE",
-           *         "message": "This can't be done in the current state.",
+           *         "code": "VERSION_CONFLICT",
+           *         "message": "This project changed since you loaded it. Reload and try again.",
            *         "request_id": "req_123"
            *       }
            *     }

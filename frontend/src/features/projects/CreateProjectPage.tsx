@@ -26,7 +26,7 @@ import {
   useSearchParams,
 } from "react-router";
 import type { CpmPreview, PlanPreviewIn, Project, ProjectDraft } from "@/api/types";
-import { api, ApiError } from "@/api/client";
+import { api, ApiError, isVersionConflict } from "@/api/client";
 import { CpmTable } from "@/components/CpmTable";
 import { Gantt, type GanttEdge } from "@/components/Gantt";
 import { Button, IconButton } from "@/components/ui/Button";
@@ -42,6 +42,7 @@ import { useMe } from "@/features/auth/api";
 import { useSkills } from "@/features/profile/api";
 import { formatDays, formatMoney } from "@/lib/format";
 import { afterFee, bpOf, bpPercent } from "@/lib/money";
+import { pageLoad } from "@/lib/redirects";
 import { MilestonesStep } from "./MilestonesStep";
 import {
   useCreateProject,
@@ -64,6 +65,9 @@ import {
   type MilestoneRow,
   type SlotRow,
 } from "./schemas";
+
+const CHANGED_ELSEWHERE =
+  "This draft was changed in another tab or on another device since you opened it, so this step wasn’t saved. Reload the draft to continue from what is saved.";
 
 const STEPS = [
   { label: "Info" },
@@ -145,6 +149,8 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** The last save was refused because the draft changed elsewhere (If-Match, §10.1). */
+  const [conflict, setConflict] = useState(false);
 
   // Local form state (persisted to the draft on each "Continue").
   const [title, setTitle] = useState("");
@@ -299,6 +305,7 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
     putDeps.isPending;
 
   function problem(e: unknown): string {
+    if (isVersionConflict(e)) return CHANGED_ELSEWHERE;
     return e instanceof ApiError ? e.message : "Something went wrong. Please try again.";
   }
 
@@ -320,9 +327,14 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
     return next;
   }
 
-  /** Slot, milestone and dependency replaces bump the server's version too; re-read it so the
-   * next PATCH (sent with If-Match) isn't rejected as stale. */
-  async function refreshVersion(d: Draft): Promise<Draft> {
+  /** Slot, milestone and dependency replaces (sent with If-Match) bump the server's version
+   * too and answer with the new one, which the next change sends. Without it, re-read it. */
+  async function adoptVersion(d: Draft, version: number | null): Promise<Draft> {
+    if (version !== null) {
+      const next = { id: d.id, version };
+      setDraft(next);
+      return next;
+    }
     const project = await api<Project>(`/projects/${d.id}`);
     const next = { id: project.id, version: project.version };
     setDraft(next);
@@ -339,6 +351,7 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
   /** Save the current step; returns false (and shows an error) if it could not be saved. */
   async function saveStep(current: number): Promise<boolean> {
     setError(null);
+    setConflict(false);
     setServerFields({});
     try {
       const d = await ensureDraft();
@@ -355,13 +368,18 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
           d,
         );
       } else if (current === 2) {
-        await putSlots.mutateAsync(
-          slots.map((r) => ({ skill_id: r.skill_id, count: r.count, label: r.label.trim() })),
-        );
-        await refreshVersion(d);
+        const saved = await putSlots.mutateAsync({
+          slots: slots.map((r) => ({
+            skill_id: r.skill_id,
+            count: r.count,
+            label: r.label.trim(),
+          })),
+          version: d.version,
+        });
+        await adoptVersion(d, saved.version);
       } else if (current === 3) {
-        const saved = await putMilestones.mutateAsync(
-          milestones.map((m) => ({
+        const result = await putMilestones.mutateAsync({
+          milestones: milestones.map((m) => ({
             ...(m.savedId ? { id: m.savedId } : {}),
             name: m.name.trim(),
             description: "",
@@ -369,7 +387,10 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
             share_bp: m.share_bp,
             skill_ids: m.skill_ids,
           })),
-        );
+          version: d.version,
+        });
+        const afterMilestones = await adoptVersion(d, result.version);
+        const saved = result.items;
         const keyToId = new Map(milestones.map((m, i) => [m.key, saved[i]?.id]));
         setMilestones((rows) => rows.map((m, i) => ({ ...m, savedId: saved[i]?.id })));
         const deps = milestones.flatMap((m) =>
@@ -379,8 +400,11 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
             return predecessor_id && successor_id ? [{ predecessor_id, successor_id }] : [];
           }),
         );
-        await putDeps.mutateAsync(deps);
-        await refreshVersion(d);
+        const depsResult = await putDeps.mutateAsync({
+          dependencies: deps,
+          version: afterMilestones.version,
+        });
+        await adoptVersion(afterMilestones, depsResult.version);
         // The Budget and Review steps use this plan's result (fee, warnings, Gantt), even if the
         // live preview hadn't answered yet when the client pressed Continue.
         void checkSchedule(d.id, milestones, teamSize);
@@ -398,6 +422,7 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
       return true;
     } catch (e) {
       setError(problem(e));
+      setConflict(isVersionConflict(e));
       // Show each field the server refused next to that field, not just in the banner.
       if (e instanceof ApiError) setServerFields(e.fields);
       return false;
@@ -542,7 +567,20 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
 
       {error ? (
         <Alert tone="danger" title="That step could not be saved" className="mb-6">
-          {error}
+          <p>{error}</p>
+          {conflict ? (
+            <Button
+              className="mt-3"
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                // The address carries the draft and step (D55), so a reload reopens it as saved.
+                pageLoad.to(`${window.location.pathname}${window.location.search}`);
+              }}
+            >
+              Reload the draft
+            </Button>
+          ) : null}
         </Alert>
       ) : null}
 

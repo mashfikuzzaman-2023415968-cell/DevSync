@@ -12,8 +12,9 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -312,9 +313,23 @@ async def delete_draft(ctx: Ctx, project_id: uuid.UUID) -> None:
 # --------------------------------------------------------------------------- plan editing
 
 
-async def replace_slots(ctx: Ctx, project_id: uuid.UUID, data: SlotsReplace) -> list[SlotOut]:
+T = TypeVar("T")
+
+
+@dataclass(frozen=True)
+class Replaced(Generic[T]):  # noqa: UP046 - Generic[T] keeps Semgrep able to parse the module
+    """A whole-set replace's result and the project's new version (sent back as `X-Version`,
+    for the next `If-Match`)."""
+
+    items: list[T]
+    version: int
+
+
+async def replace_slots(
+    ctx: Ctx, project_id: uuid.UUID, data: SlotsReplace, if_match: int | None = None
+) -> Replaced[SlotOut]:
     """Replace all slots; the team size auto-sums to the slot counts (wizard §13.5 step 3)."""
-    project = await _load_for_write(ctx, project_id, None)
+    project = await _load_for_write(ctx, project_id, if_match)
     _require_status(project, {EDITABLE}, "edit the slots of")
     await _validate_skill_ids(ctx, [s.skill_id for s in data.slots], "slots")
     total = sum(s.count for s in data.slots)
@@ -333,18 +348,20 @@ async def replace_slots(ctx: Ctx, project_id: uuid.UUID, data: SlotsReplace) -> 
     project.version += 1
     await ctx.db.flush()
     await _audit(ctx, "project.slots_replaced", project_id, {"count": len(data.slots)})
+    version = project.version
     await ctx.db.commit()
-    return [
+    slots = [
         SlotOut.model_validate(s, from_attributes=True)
         for s in await repo.load_slots(ctx.db, project_id)
     ]
+    return Replaced(slots, version)
 
 
 async def replace_milestones(
-    ctx: Ctx, project_id: uuid.UUID, data: MilestonesReplace
-) -> list[MilestoneOut]:
+    ctx: Ctx, project_id: uuid.UUID, data: MilestonesReplace, if_match: int | None = None
+) -> Replaced[MilestoneOut]:
     """Replace all milestones (and their skills); dependencies cascade away and must be re-set."""
-    project = await _load_for_write(ctx, project_id, None)
+    project = await _load_for_write(ctx, project_id, if_match)
     _require_status(project, {EDITABLE}, "edit the milestones of")
     all_skill_ids = [sid for m in data.milestones for sid in m.skill_ids]
     await _validate_skill_ids(ctx, all_skill_ids, "milestones")
@@ -366,15 +383,16 @@ async def replace_milestones(
     project.version += 1
     await ctx.db.flush()
     await _audit(ctx, "project.milestones_replaced", project_id, {"count": len(data.milestones)})
+    version = project.version
     await ctx.db.commit()
-    return await _milestones_out(ctx.db, project_id)
+    return Replaced(await _milestones_out(ctx.db, project_id), version)
 
 
 async def replace_dependencies(
-    ctx: Ctx, project_id: uuid.UUID, data: DependenciesReplace
-) -> list[CpmNodeOut]:
+    ctx: Ctx, project_id: uuid.UUID, data: DependenciesReplace, if_match: int | None = None
+) -> Replaced[CpmNodeOut]:
     """Replace all dependency edges; rejects a cycle (422 with the cycle) via CPM validation."""
-    project = await _load_for_write(ctx, project_id, None)
+    project = await _load_for_write(ctx, project_id, if_match)
     _require_status(project, {EDITABLE}, "edit the dependencies of")
     milestones = await repo.load_milestones(ctx.db, project_id)
     known = {m.id for m in milestones}
@@ -403,9 +421,10 @@ async def replace_dependencies(
     await _audit(
         ctx, "project.dependencies_replaced", project_id, {"count": len(data.dependencies)}
     )
+    version = project.version
     await ctx.db.commit()
     names = {str(m.id): m.name for m in milestones}
-    return _cpm_nodes(result, names, {str(m.id): m.share_bp for m in milestones})
+    return Replaced(_cpm_nodes(result, names, {str(m.id): m.share_bp for m in milestones}), version)
 
 
 def _compute_or_cycle(

@@ -103,3 +103,25 @@ def error_responses(*statuses: int) -> dict[int | str, dict[str, object]]:
             },
         }
     return out
+
+
+def version_conflict_response(message: str) -> dict[int | str, dict[str, object]]:
+    """The 409 entry for an `If-Match` update whose version is stale (§10.1)."""
+    return {
+        409: {
+            "model": ErrorResponse,
+            "description": "The resource changed since it was loaded (stale If-Match), or its "
+            "state does not allow the change.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "error": {
+                            "code": ErrorCode.VERSION_CONFLICT.value,
+                            "message": message,
+                            "request_id": "req_123",
+                        }
+                    }
+                }
+            },
+        }
+    }

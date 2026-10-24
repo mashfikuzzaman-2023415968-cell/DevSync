@@ -7,11 +7,11 @@ from datetime import date
 from decimal import Decimal
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, File, Form, Request, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Header, Request, Response, UploadFile
 
 from app.api.deps import DbSession, acting, app_settings, principal_of, rate_limit, require
 from app.core.config import Settings
-from app.schemas.common import error_responses
+from app.schemas.common import error_responses, version_conflict_response
 from app.schemas.profiles import (
     CertificateOut,
     CertificateUpdate,
@@ -39,6 +39,9 @@ router = APIRouter(tags=["profiles"])
 Dev = Annotated[Ctx, Depends(acting("profile.developer"))]
 Client = Annotated[Ctx, Depends(acting("profile.client"))]
 AppSettings = Annotated[Settings, Depends(app_settings)]
+IfMatch = Annotated[
+    int | None, Header(alias="If-Match", ge=0, le=2_147_483_647, description="Profile version")
+]
 Upload = Annotated[UploadFile, File(description="The file (type checked by its content).")]
 UPLOAD_LIMIT = [Depends(rate_limit("upload"))]
 
@@ -62,6 +65,7 @@ EX_PROFILE = {
     "visibility": "PUBLIC",
     "skills": EX_SKILLS,
     "updated_at": "2026-10-18T05:00:00Z",
+    "version": 3,
 }
 EX_ITEM = {
     "id": _ID,
@@ -96,6 +100,7 @@ EX_CLIENT = {
     "description": "Wholesale textiles; we need an ordering app.",
     "website": None,
     "updated_at": "2026-10-18T05:00:00Z",
+    "version": 2,
 }
 EX_PUBLIC = {
     "id": _ID,
@@ -186,11 +191,13 @@ async def get_developer_profile(ctx: Dev) -> DeveloperProfileOut:
     "/me/developer-profile",
     summary="Update my developer profile",
     response_model=DeveloperProfileOut,
-    responses=_ok(EX_PROFILE, 422),
+    responses={**_ok(EX_PROFILE, 422), **version_conflict_response(svc.PROFILE_CHANGED)},
 )
-async def patch_developer_profile(body: DeveloperProfileUpdate, ctx: Dev) -> DeveloperProfileOut:
-    """Send only the fields that changed (autosave)."""
-    return await svc.update_developer_profile(ctx, body)
+async def patch_developer_profile(
+    body: DeveloperProfileUpdate, ctx: Dev, if_match: IfMatch = None
+) -> DeveloperProfileOut:
+    """Send only the fields that changed (autosave), with `If-Match: <version>`."""
+    return await svc.update_developer_profile(ctx, body, if_match)
 
 
 # --------------------------------------------------------------------------- client profile
@@ -211,11 +218,13 @@ async def get_client_profile(ctx: Client) -> ClientProfileOut:
     "/me/client-profile",
     summary="Update my client profile",
     response_model=ClientProfileOut,
-    responses=_ok(EX_CLIENT, 422),
+    responses={**_ok(EX_CLIENT, 422), **version_conflict_response(svc.PROFILE_CHANGED)},
 )
-async def patch_client_profile(body: ClientProfileUpdate, ctx: Client) -> ClientProfileOut:
-    """Send only the fields that changed; an empty website removes it."""
-    return await svc.update_client_profile(ctx, body)
+async def patch_client_profile(
+    body: ClientProfileUpdate, ctx: Client, if_match: IfMatch = None
+) -> ClientProfileOut:
+    """Send only the fields that changed (an empty website removes it), with `If-Match`."""
+    return await svc.update_client_profile(ctx, body, if_match)
 
 
 # --------------------------------------------------------------------------- portfolio

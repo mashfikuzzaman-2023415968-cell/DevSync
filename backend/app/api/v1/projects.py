@@ -8,12 +8,12 @@ Optimistic concurrency uses the `If-Match` header carrying the project `version`
 from __future__ import annotations
 
 import uuid
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Header, Response, status
 
 from app.api.deps import acting, rate_limit
-from app.schemas.common import error_responses
+from app.schemas.common import error_responses, version_conflict_response
 from app.schemas.projects import CancelIn as CancelBody
 from app.schemas.projects import (
     CpmNodeOut,
@@ -201,38 +201,76 @@ async def get_draft(ctx: Writer, project_id: uuid.UUID) -> DraftOut:
     return await svc.get_draft(ctx, project_id)
 
 
+VERSION_HEADER = "X-Version"
+_VERSION_HEADER_DOC = {
+    VERSION_HEADER: {
+        "description": "The project's new version; send it as If-Match on the next change.",
+        "schema": {"type": "integer", "minimum": 1},
+    }
+}
+_STALE = "This project changed since you loaded it. Reload and try again."
+
+
+def _replaced(example: object) -> dict[int | str, dict[str, Any]]:
+    return {
+        200: {**_ok(example), "headers": _VERSION_HEADER_DOC},
+        **error_responses(401, 403, 404, 422),
+        **version_conflict_response(_STALE),
+    }
+
+
 @router.put(
     "/projects/{project_id}/slots",
     summary="Replace the project's skill slots",
     response_model=list[SlotOut],
-    responses={200: _ok(EX_SLOTS), **error_responses(401, 403, 404, 409, 422)},
+    responses=_replaced(EX_SLOTS),
 )
-async def replace_slots(ctx: Writer, project_id: uuid.UUID, body: SlotsReplace) -> list[SlotOut]:
-    return await svc.replace_slots(ctx, project_id, body)
+async def replace_slots(
+    ctx: Writer,
+    project_id: uuid.UUID,
+    body: SlotsReplace,
+    response: Response,
+    if_match: IfMatch = None,
+) -> list[SlotOut]:
+    saved = await svc.replace_slots(ctx, project_id, body, if_match)
+    response.headers[VERSION_HEADER] = str(saved.version)
+    return saved.items
 
 
 @router.put(
     "/projects/{project_id}/milestones",
     summary="Replace the project's milestones",
     response_model=list[MilestoneOut],
-    responses={200: _ok(EX_MILESTONES), **error_responses(401, 403, 404, 409, 422)},
+    responses=_replaced(EX_MILESTONES),
 )
 async def replace_milestones(
-    ctx: Writer, project_id: uuid.UUID, body: MilestonesReplace
+    ctx: Writer,
+    project_id: uuid.UUID,
+    body: MilestonesReplace,
+    response: Response,
+    if_match: IfMatch = None,
 ) -> list[MilestoneOut]:
-    return await svc.replace_milestones(ctx, project_id, body)
+    saved = await svc.replace_milestones(ctx, project_id, body, if_match)
+    response.headers[VERSION_HEADER] = str(saved.version)
+    return saved.items
 
 
 @router.put(
     "/projects/{project_id}/dependencies",
     summary="Replace the project's milestone dependencies",
     response_model=list[CpmNodeOut],
-    responses={200: _ok(EX_NODES), **error_responses(401, 403, 404, 409, 422)},
+    responses=_replaced(EX_NODES),
 )
 async def replace_dependencies(
-    ctx: Writer, project_id: uuid.UUID, body: DependenciesReplace
+    ctx: Writer,
+    project_id: uuid.UUID,
+    body: DependenciesReplace,
+    response: Response,
+    if_match: IfMatch = None,
 ) -> list[CpmNodeOut]:
-    return await svc.replace_dependencies(ctx, project_id, body)
+    saved = await svc.replace_dependencies(ctx, project_id, body, if_match)
+    response.headers[VERSION_HEADER] = str(saved.version)
+    return saved.items
 
 
 @router.post(

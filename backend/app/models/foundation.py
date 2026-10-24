@@ -92,7 +92,10 @@ class Job(UUIDPrimaryKey, Timestamps, Base):
     """A background job visible to its requester and admins (§7.8)."""
 
     __tablename__ = "jobs"
-    __table_args__ = (CheckConstraint("progress BETWEEN 0 AND 100", name="progress_range"),)
+    __table_args__ = (
+        CheckConstraint("progress BETWEEN 0 AND 100", name="progress_range"),
+        Index("ix_jobs_type_created_at", "type", "created_at"),
+    )
 
     type: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[JobStatus] = mapped_column(

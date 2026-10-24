@@ -80,6 +80,21 @@ export interface RequestOptions {
   signal?: AbortSignal;
   /** Extra request headers (e.g. `If-Match` for optimistic concurrency). */
   headers?: Record<string, string>;
+  /** Sees the response headers of a successful request (e.g. a plan replace's `X-Version`). */
+  onHeaders?: (headers: Headers) => void;
+}
+
+/** The server refused a change because the resource changed since it was loaded (If-Match). */
+export function isVersionConflict(error: unknown): boolean {
+  return error instanceof ApiError && error.code === "VERSION_CONFLICT";
+}
+
+/** Run `task` after every earlier task of the same queue finished (success or not). Saves that
+ * send If-Match must not overlap, or the second would carry the version the first replaces. */
+export function serialized<T>(queue: { tail: Promise<unknown> }, task: () => Promise<T>) {
+  const run = queue.tail.then(task, task);
+  queue.tail = run.catch(() => undefined);
+  return run;
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -156,6 +171,7 @@ async function send<T>(
   }
 
   window.dispatchEvent(new CustomEvent(NETWORK_EVENT, { detail: { online: true } }));
+  if (response.ok) options.onHeaders?.(response.headers);
   if (response.status === 204) return undefined as T;
   const text = await response.text();
   const parsed: unknown = text ? JSON.parse(text) : null;

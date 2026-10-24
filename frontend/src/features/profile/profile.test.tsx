@@ -46,6 +46,7 @@ const PROFILE = {
   visibility: "PUBLIC",
   skills: [{ skill_id: "s-react", name: "React", domain: "FRONTEND", self_level: 4 }],
   updated_at: null,
+  version: 3,
 };
 const item = (id: string, title: string, position: number) => ({
   id,
@@ -288,6 +289,64 @@ describe("ProfilePage", () => {
     await waitFor(() => {
       expect(bodies).toEqual([{ bio: "Hi" }]);
     });
+  });
+
+  it("sends the saved version as If-Match, the next save the returned one", async () => {
+    const seen: (string | null)[] = [];
+    let version = 3;
+    server.use(
+      ...base(),
+      http.patch("*/api/v1/me/developer-profile", async ({ request }) => {
+        seen.push(request.headers.get("If-Match"));
+        const body = (await request.json()) as Record<string, unknown>;
+        version += 1;
+        return HttpResponse.json({ ...PROFILE, ...body, version });
+      }),
+    );
+    renderRoutes([{ path: "/dev/profile", element: <ProfilePage /> }], "/dev/profile");
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Headline"), " one");
+    await screen.findByText("Saved", {}, { timeout: 3000 });
+    await user.type(screen.getByLabelText("About"), "two");
+    await waitFor(
+      () => {
+        expect(seen).toEqual(["3", "4"]);
+      },
+      { timeout: 3000 },
+    );
+  });
+
+  it("says the profile changed elsewhere on a 409 and reloads the saved values", async () => {
+    let current: Record<string, unknown> = { ...PROFILE };
+    server.use(
+      http.get("*/api/v1/me/developer-profile", () => HttpResponse.json(current)),
+      ...base(),
+      http.patch("*/api/v1/me/developer-profile", () => {
+        // Another tab saved first: the server now holds version 4 and another headline.
+        current = { ...PROFILE, headline: "Saved in another tab", version: 4 };
+        return HttpResponse.json(
+          {
+            error: {
+              code: "VERSION_CONFLICT",
+              message: "Your profile was changed elsewhere (another tab or device).",
+            },
+          },
+          { status: 409 },
+        );
+      }),
+    );
+    renderRoutes([{ path: "/dev/profile", element: <ProfilePage /> }], "/dev/profile");
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Headline"), " edited here");
+    expect(
+      await screen.findByText(/this profile changed elsewhere/i, {}, { timeout: 3000 }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Reload" }));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Headline")).toHaveValue("Saved in another tab");
+    });
+    expect(screen.queryByText(/changed elsewhere/i)).not.toBeInTheDocument();
   });
 
   it("shows the server's field error and Not saved", async () => {
@@ -560,13 +619,21 @@ describe("PublicProfilePage", () => {
 describe("Client profile in Settings", () => {
   it("saves the organisation for clients and rejects an http website", async () => {
     let body: unknown;
+    let ifMatch: string | null = null;
     server.use(
       ...base({ me: { role: "CLIENT", id: "c-1" } }),
       http.get("*/api/v1/auth/sessions", () => HttpResponse.json({ items: [] })),
       http.get("*/api/v1/me/client-profile", () =>
-        HttpResponse.json({ organization: "", description: "", website: null, updated_at: null }),
+        HttpResponse.json({
+          organization: "",
+          description: "",
+          website: null,
+          updated_at: null,
+          version: 0,
+        }),
       ),
       http.patch("*/api/v1/me/client-profile", async ({ request }) => {
+        ifMatch = request.headers.get("If-Match");
         body = await request.json();
         return HttpResponse.json({
           organization: "Rahim Traders",
@@ -588,5 +655,6 @@ describe("Client profile in Settings", () => {
     await waitFor(() => {
       expect(body).toEqual({ organization: "Rahim Traders", description: "", website: "" });
     });
+    expect(ifMatch).toBe("0"); // a never-saved profile is version 0 (spec §10.1)
   });
 });

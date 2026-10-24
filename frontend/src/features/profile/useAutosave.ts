@@ -43,6 +43,8 @@ export function useAutosave<T extends Record<string, unknown>>(
   read?: () => T,
 ) {
   const [state, setState] = useState<SaveState>("idle");
+  /** Why the last save failed (e.g. a version conflict), cleared by the next success. */
+  const [error, setError] = useState<unknown>(null);
   const timer = useRef<number | undefined>(undefined);
   const latest = useRef(values);
   latest.current = values;
@@ -70,9 +72,11 @@ export function useAutosave<T extends Record<string, unknown>>(
     try {
       await saveRef.current(changes);
       failedKey.current = null;
+      setError(null);
       setState("saved");
-    } catch {
+    } catch (e) {
       failedKey.current = JSON.stringify(now);
+      setError(e);
       setState("error");
     }
   }, [current]);
@@ -125,5 +129,12 @@ export function useAutosave<T extends Record<string, unknown>>(
     };
   }, [flush, current]);
 
-  return { state, retry: flush };
+  /** Forget a failed save (after the form was reset to the saved values). */
+  const clear = useCallback(() => {
+    failedKey.current = null;
+    setError(null);
+    setState("idle");
+  }, []);
+
+  return { state, retry: flush, error, clear };
 }

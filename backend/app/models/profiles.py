@@ -118,8 +118,11 @@ class DeveloperProfile(UUIDPrimaryKey, Timestamps, Base):
         nullable=False,
         server_default=ProfileVisibility.PUBLIC.value,
     )
+    # Optimistic concurrency (If-Match, spec §10.1); bumped on every saved change.
+    version: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
 
     __table_args__ = (
+        CheckConstraint("version >= 1", name="version_positive"),
         CheckConstraint("char_length(headline) <= 120", name="headline_len"),
         CheckConstraint("char_length(bio) <= 2000", name="bio_len"),
         CheckConstraint("hours_per_week BETWEEN 1 AND 80", name="hours_range"),
@@ -159,8 +162,11 @@ class ClientProfile(UUIDPrimaryKey, Timestamps, Base):
     organization: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     description: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     website: Mapped[str | None] = mapped_column(Text)
+    # Optimistic concurrency (If-Match, spec §10.1); bumped on every saved change.
+    version: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
 
     __table_args__ = (
+        CheckConstraint("version >= 1", name="version_positive"),
         CheckConstraint("char_length(organization) <= 120", name="organization_len"),
         CheckConstraint("char_length(description) <= 2000", name="description_len"),
         CheckConstraint(

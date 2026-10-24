@@ -1,6 +1,6 @@
 /** Profile, portfolio, evidence and skill-test data hooks (spec §10.2 Profiles, Tests). */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, upload } from "@/api/client";
+import { api, isVersionConflict, serialized, upload } from "@/api/client";
 import type {
   AnswerAccepted,
   Attempt,
@@ -47,14 +47,30 @@ export function useDeveloperProfile() {
   });
 }
 
+const profileSaves = { tail: Promise.resolve() as Promise<unknown> };
+const clientSaves = { tail: Promise.resolve() as Promise<unknown> };
+
+/** Patch the profile with `If-Match: <version>` (spec §10.1). The version is read when the save
+ * starts, after any earlier save finished, so autosaves in a row never refuse each other; a 409
+ * means it changed elsewhere (another tab or device), and the profile is re-read. */
 export function useUpdateDeveloperProfile() {
   const qc = useQueryClient();
   return useMutation({
     meta: { inlineErrors: true },
     mutationFn: (body: DeveloperProfileUpdate) =>
-      api<DeveloperProfile>("/me/developer-profile", { method: "PATCH", body }),
+      serialized(profileSaves, () => {
+        const version = qc.getQueryData<DeveloperProfile>(keys.profile)?.version;
+        return api<DeveloperProfile>("/me/developer-profile", {
+          method: "PATCH",
+          body,
+          ...(version === undefined ? {} : { headers: { "If-Match": String(version) } }),
+        });
+      }),
     onSuccess: (data) => {
       qc.setQueryData(keys.profile, data);
+    },
+    onError: (error) => {
+      if (isVersionConflict(error)) void qc.invalidateQueries({ queryKey: keys.profile });
     },
   });
 }
@@ -78,14 +94,25 @@ export function useClientProfile() {
   });
 }
 
+/** Like `useUpdateDeveloperProfile`, for the client's organisation. */
 export function useUpdateClientProfile() {
   const qc = useQueryClient();
   return useMutation({
     meta: { inlineErrors: true },
     mutationFn: (body: ClientProfileUpdate) =>
-      api<ClientProfile>("/me/client-profile", { method: "PATCH", body }),
+      serialized(clientSaves, () => {
+        const version = qc.getQueryData<ClientProfile>(keys.client)?.version;
+        return api<ClientProfile>("/me/client-profile", {
+          method: "PATCH",
+          body,
+          ...(version === undefined ? {} : { headers: { "If-Match": String(version) } }),
+        });
+      }),
     onSuccess: (data) => {
       qc.setQueryData(keys.client, data);
+    },
+    onError: (error) => {
+      if (isVersionConflict(error)) void qc.invalidateQueries({ queryKey: keys.client });
     },
   });
 }

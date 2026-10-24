@@ -139,6 +139,7 @@ class DeveloperProfileOut(BaseModel):
     visibility: VisibilityName
     skills: list[DeveloperSkillOut]
     updated_at: datetime | None
+    version: int = Field(ge=0, description="Send as If-Match on the next PATCH (0 = never saved).")
 
 
 class DeveloperProfileUpdate(StrictRequest):
@@ -164,6 +165,7 @@ class ClientProfileOut(BaseModel):
     description: str
     website: str | None
     updated_at: datetime | None
+    version: int = Field(ge=0, description="Send as If-Match on the next PATCH (0 = never saved).")
 
 
 class ClientProfileUpdate(StrictRequest):
