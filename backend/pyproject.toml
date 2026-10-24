@@ -47,7 +47,7 @@ check_untyped_defs = true
 files = ["app", "scripts"]
 
 [[tool.mypy.overrides]]
-module = ["app.core.*", "app.algorithms.*", "app.services.money", "app.services.ledger", "app.services.auth"]
+module = ["app.core.*", "app.algorithms.*", "app.services.money", "app.services.ledger", "app.services.auth", "app.services.auth.*"]
 strict = true
 
 [[tool.mypy.overrides]]
