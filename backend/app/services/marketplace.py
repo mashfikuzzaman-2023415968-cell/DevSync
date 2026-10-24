@@ -5,6 +5,19 @@ Search is full-text over the project title, summary **and the slots' skill names
 order. It only lists projects still taking bids — `BIDDING` and before the bidding deadline — and
 never exposes any bid data (§14.5).
 
+Two developer filters (§10 `role=` and `hours=`):
+
+* `role` — a slot skill name: only projects with a slot needing that skill (case-insensitive).
+  It narrows on its own; `skills` keeps meaning "needs any of these".
+* `hours` — the hours a week the developer can commit. A project is kept when that commitment
+  fits their profile hours over the project's period (start date, or today when unset, plus the
+  deadline days) next to their **confirmed** reservations — the §9.17 check that `recommended()`
+  also uses, via the pure `algorithms/availability.py`. This needs the developer's own data, so
+  it runs after the SQL page is read: the service reads further pages (at most
+  `MAX_SCAN_BATCHES`) until the page is full, and the cursor continues after the last project it
+  examined. A page can therefore come back short — even empty — with a `next_cursor` when many
+  projects in a row don't fit.
+
 Recommendations (§9.16) are open projects needing at least one of the developer's skills, whose
 deadline is at least the developer's typical days for that skill (median of their past bids on
 it; any deadline when they have none), and whose period fits their free hours; ranked by
@@ -22,6 +35,7 @@ import statistics
 import unicodedata
 import uuid
 from collections import defaultdict
+from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -31,20 +45,29 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.algorithms import availability as avail
+from app.algorithms.cpm import CpmError, MilestoneInput, compute_cpm
 from app.core.clock import get_clock
 from app.core.errors import DomainError, ErrorCode, NotFoundError
 from app.core.redis import get_redis
+from app.db.context import DbContext
+from app.db.session import open_session
 from app.models.bidding import Bid, BidStatus
-from app.models.profiles import Skill
-from app.models.projects import Project, ProjectSlot, ProjectStatus
+from app.models.identity import User
+from app.models.profiles import ClientProfile, Skill
+from app.models.projects import Milestone, MilestoneDependency, Project, ProjectSlot, ProjectStatus
 from app.repositories import bids as bidrepo
+from app.repositories import projects as projrepo
 from app.schemas.common import Page
 from app.schemas.marketplace import (
     ProjectCard,
+    ProjectClient,
     ProjectDetail,
+    ProjectMilestone,
+    ProjectSchedule,
     RecommendedProject,
     SlotCard,
 )
+from app.schemas.projects import CpmNodeOut, PlanEdge
 
 log = structlog.get_logger(__name__)
 
@@ -53,6 +76,8 @@ MAX_LIMIT = 100
 RECOMMENDED_LIMIT = 12
 RECOMMENDED_CANDIDATES = 200
 RECOMMENDED_CACHE_SECONDS = 300
+MAX_SCAN_BATCHES = 5  # pages read to fill one page when filtering by hours a week
+DEFAULT_PROFILE_HOURS = 20  # a developer without a profile row (as in recommendations)
 
 
 def _rec_key(developer_id: uuid.UUID) -> str:
@@ -177,11 +202,16 @@ async def search(
     budget_max: int | None = None,
     deadline_max: int | None = None,
     team_size: int | None = None,
+    role: str | None = None,
+    hours: int | None = None,
+    developer_id: uuid.UUID | None = None,
     sort: str = "newest",
     cursor: str | None = None,
     limit: int = 20,
     now: datetime | None = None,
 ) -> Page[ProjectCard]:
+    """One page of open projects matching the filters (see the module docstring for `role` and
+    `hours`; `hours` needs the searching developer's id)."""
     if sort not in SORTS:
         raise DomainError(
             f"Unknown sort '{sort}'.", code=ErrorCode.VALIDATION_ERROR, fields={"sort": "invalid"}
@@ -195,6 +225,9 @@ async def search(
             code=ErrorCode.VALIDATION_ERROR,
             fields={"skills": "too_many"},
         )
+    role = _clean(role) if role else None
+    if hours is not None and developer_id is None:
+        raise ValueError("filtering by hours a week needs the developer")
     now = now or get_clock().now()
 
     stmt = select(Project).where(_taking_bids(now))
@@ -212,12 +245,7 @@ async def search(
         )
         stmt = stmt.where(vector.op("@@")(func.plainto_tsquery("simple", q)))
     if skills:
-        stmt = stmt.where(
-            select(ProjectSlot.id)
-            .join(Skill, Skill.id == ProjectSlot.skill_id)
-            .where(ProjectSlot.project_id == Project.id, Skill.name.in_(skills))
-            .exists()
-        )
+        stmt = stmt.where(_needs_skill(Skill.name.in_(skills)))
     if budget_min is not None:
         stmt = stmt.where(Project.budget_paisa >= budget_min)
     if budget_max is not None:
@@ -226,21 +254,102 @@ async def search(
         stmt = stmt.where(Project.deadline_days <= deadline_max)
     if team_size is not None:
         stmt = stmt.where(Project.team_size == team_size)
+    if role:
+        stmt = stmt.where(_needs_skill(func.lower(Skill.name) == func.lower(role)))
 
-    stmt = _keyset(stmt, sort, cursor)
-    stmt = stmt.limit(limit + 1)
+    keep: Callable[[Project], bool] | None = None
+    if hours is not None and developer_id is not None:
+        free = await _free_hours(db, developer_id)
+        if hours > free.profile_hours:  # more than the profile allows: nothing can fit
+            return Page[ProjectCard](items=[], next_cursor=None)
+        keep = free.fitting(hours, now)
 
-    rows = list((await db.scalars(stmt)).all())
-    has_more = len(rows) > limit
-    page = list(rows[:limit])
+    page, next_cursor = await _scan(db, stmt, sort=sort, cursor=cursor, limit=limit, keep=keep)
     skill_map = await _skill_names(db, [p.id for p in page])
     items = [_card(p, skill_map.get(p.id, []), now) for p in page]
+    return Page[ProjectCard](items=items, next_cursor=next_cursor)
+
+
+def _needs_skill(condition: Any) -> Any:
+    """Projects with a slot whose skill matches `condition`."""
+    return (
+        select(ProjectSlot.id)
+        .join(Skill, Skill.id == ProjectSlot.skill_id)
+        .where(ProjectSlot.project_id == Project.id, condition)
+        .exists()
+    )
+
+
+async def _scan(
+    db: AsyncSession,
+    stmt: Any,
+    *,
+    sort: str,
+    cursor: str | None,
+    limit: int,
+    keep: Callable[[Project], bool] | None,
+) -> tuple[list[Project], str | None]:
+    """Read one page in keyset order. With a post-filter (`keep`), read further pages (at most
+    MAX_SCAN_BATCHES) until the page is full; the next cursor continues after the last project
+    examined, kept or not, so nothing is skipped or repeated."""
+    page: list[Project] = []
+    last: Project | None = None
+    has_more = False
+    after = cursor
+    for _ in range(MAX_SCAN_BATCHES if keep else 1):
+        rows = list((await db.scalars(_keyset(stmt, sort, after).limit(limit + 1))).all())
+        has_more = len(rows) > limit
+        batch = rows[:limit]
+        for i, project in enumerate(batch):
+            last = project
+            if keep is None or keep(project):
+                page.append(project)
+            if len(page) == limit:
+                has_more = has_more or i < len(batch) - 1
+                break
+        if len(page) == limit or not has_more or last is None:
+            break
+        after = _encode_cursor(sort, _cursor_value(last, sort), last.id)
     next_cursor = (
-        _encode_cursor(sort, _cursor_value(page[-1], sort), page[-1].id)
-        if has_more and page
+        _encode_cursor(sort, _cursor_value(last, sort), last.id)
+        if has_more and last is not None
         else None
     )
-    return Page[ProjectCard](items=items, next_cursor=next_cursor)
+    return page, next_cursor
+
+
+# --------------------------------------------------------------------------- availability
+
+
+class _FreeHours:
+    """A developer's profile hours and confirmed reservations, for the §9.17 check."""
+
+    def __init__(self, profile_hours: int, reservations: list[avail.Reservation]) -> None:
+        self.profile_hours = profile_hours
+        self.reservations = reservations
+
+    def allows(self, project: Project, commitment: int, now: datetime) -> bool:
+        """Whether `commitment` hours a week fit over the project's period."""
+        start = project.start_date or now.date()
+        period = avail.Period(start, start + timedelta(days=project.deadline_days))
+        return avail.is_feasible(self.reservations, period, commitment, self.profile_hours)
+
+    def fitting(self, commitment: int, now: datetime) -> Callable[[Project], bool]:
+        """A filter keeping the projects `commitment` hours a week fit."""
+        return lambda project: self.allows(project, commitment, now)
+
+
+async def _free_hours(db: AsyncSession, developer_id: uuid.UUID) -> _FreeHours:
+    hours = (await bidrepo.profile_hours_by_developer(db, [developer_id])).get(
+        developer_id, DEFAULT_PROFILE_HOURS
+    )
+    reservations = [
+        avail.Reservation(avail.Period(r.from_date, r.to_date), r.hours_per_week)
+        for r in (await bidrepo.confirmed_reservations_by_developer(db, [developer_id])).get(
+            developer_id, []
+        )
+    ]
+    return _FreeHours(hours, reservations)
 
 
 # --------------------------------------------------------------------------- recommendations
@@ -323,14 +432,8 @@ async def _recommend(
         matched[project.id].add(skill_id)
 
     typical = await _typical_days(db, developer_id)
-    hours = (await bidrepo.profile_hours_by_developer(db, [developer_id])).get(developer_id, 20)
-    commitment = min(20, hours)
-    reservations = [
-        avail.Reservation(avail.Period(r.from_date, r.to_date), r.hours_per_week)
-        for r in (await bidrepo.confirmed_reservations_by_developer(db, [developer_id])).get(
-            developer_id, []
-        )
-    ]
+    free = await _free_hours(db, developer_id)
+    commitment = min(DEFAULT_PROFILE_HOURS, free.profile_hours)
     picked: list[tuple[int, Project, list[uuid.UUID]]] = []
     for pid, project in projects.items():
         fitting = [
@@ -338,9 +441,7 @@ async def _recommend(
         ]
         if not fitting:
             continue
-        start = project.start_date or now.date()
-        period = avail.Period(start, start + timedelta(days=project.deadline_days))
-        if not avail.is_feasible(reservations, period, commitment, hours):
+        if not free.allows(project, commitment, now):
             continue
         picked.append((len(fitting), project, fitting))
     picked.sort(key=lambda t: (-t[0], -t[1].created_at.timestamp(), str(t[1].id)))
@@ -363,10 +464,80 @@ async def _recommend(
     ]
 
 
+def _schedule(
+    milestones: list[Milestone], deps: list[MilestoneDependency]
+) -> ProjectSchedule | None:
+    """The CPM schedule of the published plan (the same computation as the baseline)."""
+    preds: dict[uuid.UUID, list[str]] = {m.id: [] for m in milestones}
+    for d in deps:
+        preds.setdefault(d.successor_id, []).append(str(d.predecessor_id))
+    try:
+        result = compute_cpm(
+            [
+                MilestoneInput(
+                    id=str(m.id),
+                    duration_days=m.duration_days,
+                    predecessors=tuple(preds.get(m.id, ())),
+                    name=m.name,
+                )
+                for m in milestones
+            ]
+        )
+    except CpmError:  # a published plan always schedules (§8 publish guards); fail closed
+        log.warning("marketplace_schedule_unavailable", milestones=len(milestones))
+        return None
+    names = {str(m.id): m.name for m in milestones}
+    return ProjectSchedule(
+        duration=result.duration,
+        nodes=[
+            CpmNodeOut(
+                key=key,
+                name=names.get(key, ""),
+                es=n.es,
+                ef=n.ef,
+                ls=n.ls,
+                lf=n.lf,
+                slack=n.slack,
+                critical=n.critical,
+            )
+            for key, n in result.nodes.items()
+        ],
+        edges=[
+            PlanEdge(predecessor=str(d.predecessor_id), successor=str(d.successor_id)) for d in deps
+        ],
+    )
+
+
+async def _client(client_id: uuid.UUID) -> ProjectClient | None:
+    """The project's client as bidders see them: organisation, else display name.
+
+    Client profiles and user rows are owner-only under RLS, so this reads exactly those two
+    columns in a SYSTEM session (like D50); only signed-in callers get here."""
+    async with open_session(DbContext.system(), job=True) as sysdb:
+        row = (
+            await sysdb.execute(
+                select(User.display_name, ClientProfile.organization)
+                .outerjoin(ClientProfile, ClientProfile.user_id == User.id)
+                .where(User.id == client_id)
+            )
+        ).first()
+    if row is None:
+        return None
+    display_name, organization = row
+    name = (organization or "").strip() or display_name
+    return ProjectClient(name=name)
+
+
 async def get_public(
-    db: AsyncSession, project_id: uuid.UUID, now: datetime | None = None
+    db: AsyncSession,
+    project_id: uuid.UUID,
+    now: datetime | None = None,
+    *,
+    signed_in: bool = False,
 ) -> ProjectDetail:
-    """One non-DRAFT project with its slots for the bid sheet (limited columns, no bids)."""
+    """One non-DRAFT project for its detail page: slots, description, the published plan's
+    milestones and schedule, and — for signed-in callers only — who the client is. Never any
+    bid data (sealed, §14.5)."""
     project = await db.get(Project, project_id)
     if project is None or project.status == ProjectStatus.DRAFT:
         raise NotFoundError
@@ -380,5 +551,24 @@ async def get_public(
         SlotCard(id=s.id, label=s.label, skill=name, skill_id=s.skill_id, count=s.count)
         for s, name in rows
     ]
+    milestones: list[Milestone] = []
+    deps: list[MilestoneDependency] = []
+    if project.current_baseline_id is not None:  # published: the plan is fixed (§8)
+        milestones = list(await projrepo.load_milestones(db, project_id))
+        deps = list(await projrepo.load_dependencies(db, project_id))
     card = _card(project, [sc.skill for sc in slots], now or get_clock().now())
-    return ProjectDetail(**card.model_dump(), requirements=project.requirements, slots=slots)
+    return ProjectDetail(
+        **card.model_dump(),
+        description=project.description,
+        requirements=project.requirements,
+        start_date=project.start_date,
+        client=await _client(project.client_id) if signed_in else None,
+        slots=slots,
+        milestones=[
+            ProjectMilestone(
+                id=m.id, name=m.name, duration_days=m.duration_days, status=m.status.value
+            )
+            for m in milestones
+        ],
+        schedule=_schedule(milestones, deps) if milestones else None,
+    )

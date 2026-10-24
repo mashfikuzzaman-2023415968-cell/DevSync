@@ -55,10 +55,14 @@ async def search_projects(
     budget_max: Annotated[int | None, Query(ge=0)] = None,
     deadline_max: Annotated[int | None, Query(ge=1, le=365)] = None,
     team_size: Annotated[int | None, Query(ge=2, le=10)] = None,
+    role: Annotated[str | None, Query(min_length=1, max_length=80)] = None,
+    hours: Annotated[int | None, Query(ge=1, le=168)] = None,
     sort: Annotated[Literal["newest", "budget", "deadline"], Query()] = "newest",
     cursor: Annotated[str | None, Query(min_length=1, max_length=200)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> Page[ProjectCard]:
+    """`role`: projects with a slot needing that skill. `hours`: the hours a week you can
+    commit; only projects whose period fits them next to your confirmed reservations (§9.17)."""
     return await svc.search(
         ctx.db,
         q=q,
@@ -67,6 +71,9 @@ async def search_projects(
         budget_max=budget_max,
         deadline_max=deadline_max,
         team_size=team_size,
+        role=role,
+        hours=hours,
+        developer_id=ctx.uid,
         sort=sort,
         cursor=cursor,
         limit=limit,

@@ -89,5 +89,7 @@ async def public_projects(
         **error_responses(404, 422),
     },
 )
-async def public_project(db: DbSession, project_id: uuid.UUID) -> ProjectDetail:
-    return await market.get_public(db, project_id)
+async def public_project(request: Request, db: DbSession, project_id: uuid.UUID) -> ProjectDetail:
+    """Limited columns, the published plan and never any bid data; who the client is only for
+    signed-in callers."""
+    return await market.get_public(db, project_id, signed_in=principal_of(request) is not None)

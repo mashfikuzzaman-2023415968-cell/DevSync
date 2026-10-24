@@ -8,9 +8,11 @@ filters are whitelisted (unknown params → 400 at the router); the query itself
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel
+
+from app.schemas.projects import CpmNodeOut, PlanEdge
 
 
 class ProjectCard(BaseModel):
@@ -48,8 +50,41 @@ class SlotCard(BaseModel):
     count: int
 
 
-class ProjectDetail(ProjectCard):
-    """A single open project with its slots, for the developer's bid sheet (spec §13.5 #11)."""
+class ProjectClient(BaseModel):
+    """Who posted the project: the organisation from the client profile, else their display
+    name. Shown to signed-in callers only (never to anonymous visitors). The client rating
+    arrives with reviews (Phase 11)."""
 
+    name: str
+
+
+class ProjectMilestone(BaseModel):
+    """One milestone of the published plan: name, duration and state."""
+
+    id: uuid.UUID
+    name: str
+    duration_days: int
+    status: str
+
+
+class ProjectSchedule(BaseModel):
+    """The published plan's CPM schedule for the mini Gantt (day offsets from the start)."""
+
+    duration: int
+    nodes: list[CpmNodeOut]
+    edges: list[PlanEdge]
+
+
+class ProjectDetail(ProjectCard):
+    """A single open project with its slots, for the developer's bid sheet (spec §13.5 #11).
+
+    Never carries bid data (sealed, §14.5). `milestones` is empty and `schedule` null until the
+    project has a baseline plan (written at publish)."""
+
+    description: str
     requirements: str
+    start_date: date | None
+    client: ProjectClient | None  # null for anonymous visitors
     slots: list[SlotCard]
+    milestones: list[ProjectMilestone]
+    schedule: ProjectSchedule | None
