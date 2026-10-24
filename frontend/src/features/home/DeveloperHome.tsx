@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge, Card, CardHeader, NewcomerBadge, Skeleton } from "@/components/ui/Display";
 import { EmptyState, ErrorState, PageHeader, StatCard } from "@/components/ui/Feedback";
 import { useMe } from "@/features/auth/api";
-import { useMyBids } from "@/features/bids/api";
+import { useOpenBids, useRecentBids } from "@/features/bids/api";
 import { BID_STATUS_TONE, bidStatusLabel } from "@/features/bids/bidText";
 import { useRecommended } from "@/features/marketplace/api";
 import { useDeveloper, usePortfolio, useSkillTests } from "@/features/profile/api";
@@ -26,7 +26,8 @@ export default function DeveloperHome() {
   const user = me.data;
   const portfolio = usePortfolio();
   const tests = useSkillTests();
-  const bids = useMyBids();
+  const bids = useOpenBids();
+  const recent = useRecentBids(RECENT_BIDS);
   const profile = useDeveloper(user?.id ?? "", true);
   const reputation = profile.data?.reputation ?? null;
   const hasPortfolio = (portfolio.data?.length ?? 0) > 0;
@@ -57,10 +58,7 @@ export default function DeveloperHome() {
               <p className="mt-2 text-body-sm text-text">Couldn’t load your bids.</p>
             </Card>
           ) : (
-            <StatCard
-              label="Open bids"
-              value={bids.data.filter((b) => b.status === "ACTIVE").length}
-            />
+            <StatCard label="Open bids" value={bids.data.items.length} />
           )}
         </div>
         {profile.isPending ? (
@@ -107,7 +105,7 @@ export default function DeveloperHome() {
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]">
         <div className="min-w-0 space-y-6">
           <Recommended />
-          <RecentBids query={bids} />
+          <RecentBids query={recent} />
           <Card>
             <EmptyState
               art={<NodeArt />}
@@ -232,8 +230,8 @@ function RecommendedItem({ item }: { item: RecommendedProject }) {
   );
 }
 
-function RecentBids({ query }: { query: ReturnType<typeof useMyBids> }) {
-  const latest: Bid[] = [...(query.data ?? [])]
+function RecentBids({ query }: { query: ReturnType<typeof useRecentBids> }) {
+  const latest: Bid[] = [...(query.data?.items ?? [])]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, RECENT_BIDS);
   return (
@@ -274,7 +272,7 @@ function RecentBids({ query }: { query: ReturnType<typeof useMyBids> }) {
             <li key={b.id} className="flex items-center justify-between gap-3 px-5 py-3">
               <div className="min-w-0">
                 <Link
-                  to={`/dev/projects/${b.project_id}`}
+                  to={`/dev/bids/${b.id}`}
                   className="inline-flex min-h-11 max-w-full items-center font-medium text-text hover:text-primary hover:underline"
                 >
                   <span className="truncate">{b.project_title}</span>

@@ -6,6 +6,8 @@ import { describe, expect, it } from "vitest";
 import { server } from "@/test/server";
 import { Probe, renderRoutes } from "@/test/render";
 import ClientBidsPage from "./ClientBidsPage";
+import { Toaster } from "@/components/ui/Toaster";
+import BidDetailPage from "./BidDetailPage";
 import MyBidsPage from "./MyBidsPage";
 
 const API = "https://testserver/api/v1";
@@ -21,40 +23,266 @@ function render(path: string, element: React.ReactNode, init: string) {
   );
 }
 
+const myBid = (over: Record<string, unknown> = {}) => ({
+  id: "b1",
+  project_id: PID,
+  project_title: "Online ordering system",
+  slot_id: "s",
+  slot_label: "React",
+  status: "ACTIVE",
+  price_paisa: 1_800_000,
+  days_needed: 20,
+  proposal: "",
+  expected_contribution: "",
+  portfolio_item_ids: [],
+  hours_per_week_committed: 20,
+  created_at: "2026-10-21T06:00:00Z",
+  updated_at: "2026-10-21T06:00:00Z",
+  version: 1,
+  evaluated_at: null,
+  reasons: [],
+  ...over,
+});
+
 describe("MyBidsPage", () => {
   it("shows the empty state", async () => {
-    server.use(http.get(`${API}/me/bids`, () => HttpResponse.json([])));
+    server.use(
+      http.get(`${API}/me/bids`, () => HttpResponse.json({ items: [], next_cursor: null })),
+    );
     render("/dev/bids", <MyBidsPage />, "/dev/bids");
     expect(await screen.findByText("No bids yet")).toBeInTheDocument();
   });
 
-  it("lists bids with their status", async () => {
+  it("shows an error with a retry", async () => {
     server.use(
       http.get(`${API}/me/bids`, () =>
-        HttpResponse.json([
-          {
-            id: "b1",
-            project_id: PID,
-            project_title: "Online ordering system",
-            slot_id: "s",
-            slot_label: "React",
-            status: "ACTIVE",
-            price_paisa: 1_800_000,
-            days_needed: 20,
-            proposal: "",
-            expected_contribution: "",
-            portfolio_item_ids: [],
-            hours_per_week_committed: 20,
-            created_at: "2026-10-21T06:00:00Z",
-            updated_at: "2026-10-21T06:00:00Z",
-          },
-        ]),
+        HttpResponse.json(
+          { error: { code: "INTERNAL_ERROR", request_id: "r-9" } },
+          { status: 500 },
+        ),
       ),
     );
     render("/dev/bids", <MyBidsPage />, "/dev/bids");
-    expect(await screen.findByText("Active")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Online ordering system" })).toBeInTheDocument();
+    expect(await screen.findByText("Your bids didn’t load")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Try again/ })).toBeInTheDocument();
+  });
+
+  it("lists bids with their status, linking each to its detail", async () => {
+    server.use(
+      http.get(`${API}/me/bids`, () => HttpResponse.json({ items: [myBid()], next_cursor: null })),
+    );
+    render("/dev/bids", <MyBidsPage />, "/dev/bids");
+    expect(await screen.findByText("Open")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Online ordering system" })).toHaveAttribute(
+      "href",
+      "/dev/bids/b1",
+    );
     expect(screen.getByText("React, ৳18,000 for 20 days")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Load more bids" })).not.toBeInTheDocument();
+  });
+
+  it("explains a filtered-out bid in plain words", async () => {
+    const reason = {
+      code: "OVER_BUDGET",
+      text: "Your price is above the project’s budget after the platform fee.",
+      hint: "Check the budget before you set your price.",
+    };
+    server.use(
+      http.get(`${API}/me/bids`, () =>
+        HttpResponse.json({
+          items: [myBid({ status: "INELIGIBLE", reasons: [reason] })],
+          next_cursor: null,
+        }),
+      ),
+    );
+    render("/dev/bids", <MyBidsPage />, "/dev/bids");
+    expect(await screen.findByText("Filtered out")).toBeInTheDocument();
+    expect(screen.getByText(reason.text)).toBeInTheDocument();
+    expect(screen.queryByText("OVER_BUDGET")).not.toBeInTheDocument();
+  });
+
+  it("loads more bids with the cursor", async () => {
+    const user = userEvent.setup();
+    const cursors: (string | null)[] = [];
+    server.use(
+      http.get(`${API}/me/bids`, ({ request }) => {
+        const cursor = new URL(request.url).searchParams.get("cursor");
+        cursors.push(cursor);
+        return cursor
+          ? HttpResponse.json({
+              items: [myBid({ id: "b2", project_title: "Clinic queue" })],
+              next_cursor: null,
+            })
+          : HttpResponse.json({ items: [myBid()], next_cursor: "c-1" });
+      }),
+    );
+    render("/dev/bids", <MyBidsPage />, "/dev/bids");
+    await user.click(await screen.findByRole("button", { name: "Load more bids" }));
+    expect(await screen.findByText("Clinic queue")).toBeInTheDocument();
+    expect(screen.getByText("Online ordering system")).toBeInTheDocument();
+    expect(cursors).toEqual([null, "c-1"]);
+    expect(screen.queryByRole("button", { name: "Load more bids" })).not.toBeInTheDocument();
+  });
+});
+
+const detail = (over: Record<string, unknown> = {}) => ({
+  ...myBid(),
+  proposal: "I’ll build the React front end.",
+  project: {
+    id: PID,
+    title: "Online ordering system",
+    summary: "Orders for a restaurant.",
+    status: "BIDDING",
+    budget_paisa: 12_000_000,
+    deadline_days: 30,
+    team_size: 4,
+    bidding_deadline: "2026-10-31T18:00:00Z",
+    open_for_bids: true,
+  },
+  portfolio: [{ id: "p1", title: "Kitchen app" }],
+  can_edit: true,
+  can_withdraw: true,
+  eligibility: {
+    eligible: true,
+    reason: null,
+    message: "You meet every requirement.",
+    checks: [{ name: "days", ok: true, detail: "20 days (deadline 30 days)" }],
+  },
+  ...over,
+});
+
+describe("BidDetailPage", () => {
+  const show = () =>
+    render(
+      "/dev/bids/:id",
+      <>
+        <BidDetailPage />
+        <Toaster />
+      </>,
+      "/dev/bids/b1",
+    );
+
+  it("shows my bid, its standing and the actions while bidding is open", async () => {
+    server.use(http.get(`${API}/bids/b1`, () => HttpResponse.json(detail())));
+    show();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Online ordering system" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("You meet every requirement.")).toBeInTheDocument();
+    expect(screen.getByText("Kitchen app")).toBeInTheDocument();
+    expect(screen.getByText("I’ll build the React front end.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Edit bid" })).toHaveAttribute(
+      "href",
+      `/dev/projects/${PID}`,
+    );
+    expect(screen.getByRole("button", { name: "Withdraw bid" })).toBeInTheDocument();
+    // Timeline: submitted, waiting for the close.
+    expect(screen.getByText("Checked when bidding closes.")).toBeInTheDocument();
+  });
+
+  it("shows why a bid was filtered out, with no actions", async () => {
+    server.use(
+      http.get(`${API}/bids/b1`, () =>
+        HttpResponse.json(
+          detail({
+            status: "INELIGIBLE",
+            evaluated_at: "2026-10-31T18:05:00Z",
+            can_edit: false,
+            can_withdraw: false,
+            eligibility: null,
+            project: { ...detail().project, open_for_bids: false },
+            reasons: [
+              {
+                code: "TOO_SLOW",
+                text: "You asked for more days than the project’s deadline allows.",
+                hint: "Bid within the deadline next time.",
+              },
+            ],
+          }),
+        ),
+      ),
+    );
+    show();
+    expect(await screen.findByText("Why this bid was filtered out")).toBeInTheDocument();
+    expect(
+      screen.getByText("You asked for more days than the project’s deadline allows."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Bid within the deadline next time.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Withdraw bid" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Edit bid" })).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Bidding has closed, so this bid can no longer be changed."),
+    ).toBeInTheDocument();
+  });
+
+  it("says not found for a bid that isn't mine", async () => {
+    server.use(
+      http.get(`${API}/bids/b1`, () =>
+        HttpResponse.json({ error: { code: "NOT_FOUND", message: "Not found" } }, { status: 404 }),
+      ),
+    );
+    show();
+    expect(await screen.findByText("We couldn’t find that bid")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back to my bids" })).toHaveAttribute(
+      "href",
+      "/dev/bids",
+    );
+  });
+
+  it("shows an error with a retry", async () => {
+    server.use(
+      http.get(`${API}/bids/b1`, () =>
+        HttpResponse.json({ error: { code: "INTERNAL_ERROR" } }, { status: 500 }),
+      ),
+    );
+    show();
+    expect(await screen.findByText("Your bid didn’t load")).toBeInTheDocument();
+  });
+
+  it("withdraws with the bid's version and goes back to my bids", async () => {
+    const user = userEvent.setup();
+    let ifMatch: string | null = null;
+    server.use(
+      http.get(`${API}/auth/csrf`, () => new HttpResponse(null, { status: 204 })),
+      http.get(`${API}/bids/b1`, () => HttpResponse.json(detail({ version: 4 }))),
+      http.delete(`${API}/bids/b1`, ({ request }) => {
+        ifMatch = request.headers.get("If-Match");
+        return new HttpResponse(null, { status: 204 });
+      }),
+      http.get(`${API}/me/bids`, () => HttpResponse.json({ items: [], next_cursor: null })),
+    );
+    show();
+    await user.click(await screen.findByRole("button", { name: "Withdraw bid" }));
+    const dialog = await screen.findByRole("alertdialog");
+    await user.click(within(dialog).getByRole("button", { name: "Withdraw bid" }));
+    expect(await screen.findByText("elsewhere")).toBeInTheDocument();
+    expect(ifMatch).toBe("4");
+  });
+
+  it("reloads the bid when it changed in another tab", async () => {
+    const user = userEvent.setup();
+    let reads = 0;
+    server.use(
+      http.get(`${API}/auth/csrf`, () => new HttpResponse(null, { status: 204 })),
+      http.get(`${API}/bids/b1`, () => {
+        reads += 1;
+        return HttpResponse.json(detail());
+      }),
+      http.delete(`${API}/bids/b1`, () =>
+        HttpResponse.json(
+          { error: { code: "VERSION_CONFLICT", message: "This bid changed." } },
+          { status: 409 },
+        ),
+      ),
+    );
+    show();
+    await user.click(await screen.findByRole("button", { name: "Withdraw bid" }));
+    const dialog = await screen.findByRole("alertdialog");
+    await user.click(within(dialog).getByRole("button", { name: "Withdraw bid" }));
+    expect(await screen.findByText("This bid changed elsewhere")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(reads).toBeGreaterThan(1);
+    });
   });
 });
 

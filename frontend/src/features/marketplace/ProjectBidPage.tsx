@@ -14,7 +14,7 @@
  */
 import { CalendarRange, CheckCircle2, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 import { ApiError } from "@/api/client";
 import type { EligibilityOut, ProjectDetail } from "@/api/types";
 import { Gantt, type GanttEdge } from "@/components/Gantt";
@@ -29,11 +29,11 @@ import { formatDate, formatDays, formatMoney } from "@/lib/format";
 import {
   useCreateBid,
   useEligibilityPreview,
-  useMyBids,
+  useMyBidsOnProject,
   useUpdateBid,
   useWithdrawBid,
 } from "@/features/bids/api";
-import { CHECK_LABEL } from "@/features/bids/bidText";
+import { BID_STATUS_TONE, CHECK_LABEL, bidStatusLabel } from "@/features/bids/bidText";
 import { useDeveloperProfile, usePortfolio } from "@/features/profile/api";
 import { takaProblem, wholeIn } from "@/features/projects/schemas";
 import { usePublicProject } from "./api";
@@ -44,7 +44,7 @@ const MAX_PORTFOLIO = 3;
 export default function ProjectBidPage() {
   const { id = "" } = useParams();
   const project = usePublicProject(id);
-  const myBids = useMyBids();
+  const myBids = useMyBidsOnProject(id);
   const create = useCreateBid(id);
   const withdraw = useWithdrawBid();
   const update = useUpdateBid();
@@ -62,7 +62,11 @@ export default function ProjectBidPage() {
   const profile = useDeveloperProfile();
   const [verdict, setVerdict] = useState<EligibilityOut | null>(null);
 
-  const existing = (myBids.data ?? []).find((b) => b.project_id === id && b.status === "ACTIVE");
+  // My standing bid here: open, or filtered out when bidding closed (at most one, D49).
+  const existing = (myBids.data?.items ?? []).find(
+    (b) => b.project_id === id && (b.status === "ACTIVE" || b.status === "INELIGIBLE"),
+  );
+  const canChange = existing?.status === "ACTIVE";
   const mySkills = new Set((profile.data?.skills ?? []).map((s) => s.skill_id));
   // Slots needing my skills first (stable otherwise), so the right role is the obvious choice.
   const slots = [...(project.data?.slots ?? [])].sort(
@@ -162,6 +166,7 @@ export default function ProjectBidPage() {
     update.mutate(
       {
         bidId: existing.id,
+        version: existing.version,
         body: {
           slot_id: slotId,
           price_paisa: Math.round(Number(priceTaka) * 100),
@@ -182,6 +187,17 @@ export default function ProjectBidPage() {
           });
         },
         onError: (e) => {
+          if (e instanceof ApiError && e.code === "VERSION_CONFLICT") {
+            // Changed in another tab: show the saved bid rather than overwrite it.
+            setEditing(false);
+            void myBids.refetch();
+            toast({
+              tone: "danger",
+              title: "This bid changed elsewhere",
+              description: "We’ve loaded the latest version. Check it, then edit again.",
+            });
+            return;
+          }
           if (e instanceof ApiError) setServerFields(e.fields);
           toast({
             tone: "danger",
@@ -216,7 +232,10 @@ export default function ProjectBidPage() {
           if (e instanceof ApiError) setServerFields(e.fields);
           toast({
             tone: "danger",
-            title: "Could not place the bid",
+            title:
+              e instanceof ApiError && e.code === "LIMIT_REACHED"
+                ? "You’re at the open-bid limit"
+                : "Could not place the bid",
             description: e instanceof ApiError ? e.message : "Please try again.",
           });
         },
@@ -311,16 +330,24 @@ export default function ProjectBidPage() {
                 requestId={myBids.error instanceof ApiError ? myBids.error.requestId : null}
                 onRetry={() => void myBids.refetch()}
               />
-            ) : existing && !(editing && p.open_for_bids) ? (
+            ) : existing && !(editing && p.open_for_bids && canChange) ? (
               <div className="mt-4">
                 <p className="text-body-sm text-text">
                   You bid {formatMoney(existing.price_paisa)} over{" "}
                   {formatDays(existing.days_needed)}.
                 </p>
-                <Badge tone={existing.status === "ACTIVE" ? "info" : "neutral"} className="mt-2">
-                  {existing.status.charAt(0) + existing.status.slice(1).toLowerCase()}
-                </Badge>
-                {p.open_for_bids ? (
+                <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <Badge tone={BID_STATUS_TONE[existing.status] ?? "neutral"}>
+                    {bidStatusLabel(existing.status)}
+                  </Badge>
+                  <Link
+                    to={`/dev/bids/${existing.id}`}
+                    className="inline-flex min-h-11 items-center text-body-sm font-medium text-primary hover:underline"
+                  >
+                    See bid details
+                  </Link>
+                </div>
+                {p.open_for_bids && canChange ? (
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Button variant="outline" size="sm" onClick={startEditing}>
                       Edit bid
@@ -330,11 +357,29 @@ export default function ProjectBidPage() {
                       size="sm"
                       loading={withdraw.isPending}
                       onClick={() => {
-                        withdraw.mutate(existing.id, {
-                          onSuccess: () => {
-                            toast({ tone: "success", title: "Bid withdrawn" });
+                        withdraw.mutate(
+                          { bidId: existing.id, version: existing.version },
+                          {
+                            onSuccess: () => {
+                              toast({ tone: "success", title: "Bid withdrawn" });
+                            },
+                            onError: (e) => {
+                              const conflict =
+                                e instanceof ApiError && e.code === "VERSION_CONFLICT";
+                              toast({
+                                tone: "danger",
+                                title: conflict
+                                  ? "This bid changed elsewhere"
+                                  : "Could not withdraw the bid",
+                                description: conflict
+                                  ? "We’ve loaded the latest version. Check it, then try again."
+                                  : e instanceof ApiError
+                                    ? e.message
+                                    : "Please try again.",
+                              });
+                            },
                           },
-                        });
+                        );
                       }}
                     >
                       Withdraw bid

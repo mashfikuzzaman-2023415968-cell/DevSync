@@ -1143,7 +1143,11 @@ function PublishButton({
             onError: (e) => {
               toast({
                 tone: "danger",
-                title: "Could not publish",
+                // The 20-active-projects cap (§14.8) is a limit, not a fault: say so.
+                title:
+                  e instanceof ApiError && e.code === "LIMIT_REACHED"
+                    ? "You’re at the active-project limit"
+                    : "Could not publish",
                 description: e instanceof ApiError ? e.message : "Please try again.",
               });
             },

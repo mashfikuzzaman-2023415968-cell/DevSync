@@ -231,6 +231,9 @@ function bid(id: string, status: string, created: string) {
     portfolio_item_ids: [],
     created_at: created,
     updated_at: created,
+    version: 1,
+    evaluated_at: null,
+    reasons: [],
   };
 }
 
@@ -261,7 +264,7 @@ function developer(
   opts: {
     reputation?: object | null;
     recommended?: unknown;
-    bids?: unknown;
+    bids?: ReturnType<typeof bid>[];
     failRecommended?: boolean;
     failBids?: boolean;
     failProfile?: boolean;
@@ -271,7 +274,18 @@ function developer(
     http.get(`${API}/me`, () => HttpResponse.json(DEV_ME)),
     http.get(`${API}/me/portfolio`, () => HttpResponse.json([])),
     http.get(`${API}/skill-tests`, () => HttpResponse.json([])),
-    http.get(`${API}/me/bids`, () => (opts.failBids ? fail() : HttpResponse.json(opts.bids ?? []))),
+    // Like the server: newest first, optional status filter, a page of `limit` (§10.1).
+    http.get(`${API}/me/bids`, ({ request }) => {
+      if (opts.failBids) return fail();
+      const params = new URL(request.url).searchParams;
+      const status = params.get("status");
+      const limit = Number(params.get("limit") ?? "20");
+      const items = (opts.bids ?? [])
+        .filter((b) => !status || b.status === status)
+        .sort((a, b) => b.created_at.localeCompare(a.created_at))
+        .slice(0, limit);
+      return HttpResponse.json({ items, next_cursor: null });
+    }),
     http.get(`${API}/projects/recommended`, () =>
       opts.failRecommended ? fail() : HttpResponse.json(opts.recommended ?? []),
     ),
@@ -345,7 +359,7 @@ describe("DeveloperHome", () => {
       "Bid project 3",
       "Bid project 2",
     ]);
-    expect(links[0]).toHaveAttribute("href", "/dev/projects/proj-6");
+    expect(links[0]).toHaveAttribute("href", "/dev/bids/6");
     expect(within(card).getByText("Not selected")).toBeInTheDocument();
     expect(within(card).queryByText("Bid project 1")).not.toBeInTheDocument();
     expect(within(card).getByRole("link", { name: "All bids" })).toHaveAttribute(

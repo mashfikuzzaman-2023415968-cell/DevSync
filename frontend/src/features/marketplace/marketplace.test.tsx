@@ -3,6 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse, type JsonBodyType } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
+import { Toaster } from "@/components/ui/Toaster";
 import { server } from "@/test/server";
 import { Probe, renderRoutes } from "@/test/render";
 import FindProjectsPage from "./FindProjectsPage";
@@ -141,7 +142,7 @@ describe("ProjectBidPage", () => {
     server.use(
       http.get(`${API}/auth/csrf`, () => new HttpResponse(null, { status: 204 })),
       http.get(`${API}/public/projects/${PID}`, () => HttpResponse.json(DETAIL)),
-      http.get(`${API}/me/bids`, () => HttpResponse.json([])),
+      http.get(`${API}/me/bids`, () => HttpResponse.json({ items: [], next_cursor: null })),
       http.get(`${API}/me/portfolio`, () => HttpResponse.json([])),
     );
   }
@@ -247,33 +248,82 @@ describe("ProjectBidPage", () => {
       http.get(`${API}/auth/csrf`, () => new HttpResponse(null, { status: 204 })),
       http.get(`${API}/public/projects/${PID}`, () => HttpResponse.json(DETAIL)),
       http.get(`${API}/me/portfolio`, () => HttpResponse.json([])),
-      http.get(`${API}/me/bids`, () =>
-        HttpResponse.json([
-          {
-            id: "b1",
-            project_id: PID,
-            slot_id: SLOT,
-            status: "ACTIVE",
-            price_paisa: 1_800_000,
-            days_needed: 20,
-            proposal: "",
-            expected_contribution: "",
-            portfolio_item_ids: [],
-            hours_per_week_committed: 20,
-            created_at: "2026-10-21T06:00:00Z",
-            updated_at: "2026-10-21T06:00:00Z",
-          },
-        ]),
-      ),
+      http.get(`${API}/me/bids`, ({ request }) => {
+        // The sheet asks only for my bids on this project.
+        expect(new URL(request.url).searchParams.get("project_id")).toBe(PID);
+        return HttpResponse.json({
+          items: [
+            {
+              id: "b1",
+              project_id: PID,
+              slot_id: SLOT,
+              status: "ACTIVE",
+              price_paisa: 1_800_000,
+              days_needed: 20,
+              proposal: "",
+              expected_contribution: "",
+              portfolio_item_ids: [],
+              hours_per_week_committed: 20,
+              created_at: "2026-10-21T06:00:00Z",
+              updated_at: "2026-10-21T06:00:00Z",
+              version: 1,
+              reasons: [],
+            },
+          ],
+          next_cursor: null,
+        });
+      }),
     );
     routes("/dev/projects/:id", <ProjectBidPage />, `/dev/projects/${PID}`);
     expect(await screen.findByText("Your bid")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Withdraw bid/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "See bid details" })).toHaveAttribute(
+      "href",
+      "/dev/bids/b1",
+    );
+  });
+
+  it("shows a bid filtered out at the close without edit or withdraw", async () => {
+    server.use(
+      http.get(`${API}/auth/csrf`, () => new HttpResponse(null, { status: 204 })),
+      http.get(`${API}/public/projects/${PID}`, () =>
+        HttpResponse.json({ ...DETAIL, open_for_bids: false }),
+      ),
+      http.get(`${API}/me/portfolio`, () => HttpResponse.json([])),
+      http.get(`${API}/me/bids`, () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: "b9",
+              project_id: PID,
+              slot_id: SLOT,
+              status: "INELIGIBLE",
+              price_paisa: 1_800_000,
+              days_needed: 20,
+              proposal: "",
+              expected_contribution: "",
+              portfolio_item_ids: [],
+              hours_per_week_committed: 20,
+              created_at: "2026-10-21T06:00:00Z",
+              updated_at: "2026-10-21T06:00:00Z",
+              version: 2,
+              reasons: [],
+            },
+          ],
+          next_cursor: null,
+        }),
+      ),
+    );
+    routes("/dev/projects/:id", <ProjectBidPage />, `/dev/projects/${PID}`);
+    expect(await screen.findByText("Filtered out")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Withdraw bid/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit bid" })).not.toBeInTheDocument();
   });
 
   it("edits an existing bid with the form filled in from it", async () => {
     const user = userEvent.setup();
     let patched: unknown = null;
+    let ifMatch: string | null = null;
     const bid = {
       id: "b1",
       project_id: PID,
@@ -287,10 +337,12 @@ describe("ProjectBidPage", () => {
       hours_per_week_committed: 25,
       created_at: "2026-10-21T06:00:00Z",
       updated_at: "2026-10-21T06:00:00Z",
+      version: 3,
+      reasons: [],
     };
     base();
     server.use(
-      http.get(`${API}/me/bids`, () => HttpResponse.json([bid])),
+      http.get(`${API}/me/bids`, () => HttpResponse.json({ items: [bid], next_cursor: null })),
       http.post(`${API}/projects/${PID}/bids/eligibility`, () =>
         HttpResponse.json({
           eligible: true,
@@ -301,7 +353,8 @@ describe("ProjectBidPage", () => {
       ),
       http.patch(`${API}/bids/b1`, async ({ request }) => {
         patched = await request.json();
-        return HttpResponse.json({ ...bid, price_paisa: 1_500_000 });
+        ifMatch = request.headers.get("If-Match");
+        return HttpResponse.json({ ...bid, price_paisa: 1_500_000, version: 4 });
       }),
     );
     routes("/dev/projects/:id", <ProjectBidPage />, `/dev/projects/${PID}`);
@@ -324,6 +377,97 @@ describe("ProjectBidPage", () => {
         expected_contribution: "Front end",
       });
     });
+    expect(ifMatch).toBe("3"); // the version the form was opened on
+  });
+
+  it("explains an edit made elsewhere instead of overwriting it", async () => {
+    const user = userEvent.setup();
+    const bid = {
+      id: "b1",
+      project_id: PID,
+      slot_id: SLOT,
+      status: "ACTIVE",
+      price_paisa: 1_800_000,
+      days_needed: 20,
+      proposal: "",
+      expected_contribution: "",
+      portfolio_item_ids: [],
+      hours_per_week_committed: 20,
+      created_at: "2026-10-21T06:00:00Z",
+      updated_at: "2026-10-21T06:00:00Z",
+      version: 1,
+      reasons: [],
+    };
+    let reads = 0;
+    base();
+    server.use(
+      http.get(`${API}/me/bids`, () => {
+        reads += 1;
+        return HttpResponse.json({ items: [bid], next_cursor: null });
+      }),
+      http.post(`${API}/projects/${PID}/bids/eligibility`, () =>
+        HttpResponse.json({ eligible: true, reason: null, message: "ok", checks: [] }),
+      ),
+      http.patch(`${API}/bids/b1`, () =>
+        HttpResponse.json(
+          { error: { code: "VERSION_CONFLICT", message: "This bid changed since you opened it." } },
+          { status: 409 },
+        ),
+      ),
+    );
+    routes(
+      "/dev/projects/:id",
+      <>
+        <ProjectBidPage />
+        <Toaster />
+      </>,
+      `/dev/projects/${PID}`,
+    );
+    await user.click(await screen.findByRole("button", { name: "Edit bid" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(await screen.findByText("This bid changed elsewhere")).toBeInTheDocument();
+    // The form closes and the saved bid is loaded again.
+    await waitFor(() => {
+      expect(reads).toBeGreaterThan(1);
+    });
+    expect(screen.getByRole("button", { name: "Edit bid" })).toBeInTheDocument();
+  });
+
+  it("says when the open-bid limit is reached", async () => {
+    const user = userEvent.setup();
+    base();
+    server.use(
+      http.post(`${API}/projects/${PID}/bids/eligibility`, () =>
+        HttpResponse.json({ eligible: true, reason: null, message: "ok", checks: [] }),
+      ),
+      http.post(`${API}/projects/${PID}/bids`, () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: "LIMIT_REACHED",
+              message: "You already have 30 open bids, the most allowed at once.",
+            },
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+    routes(
+      "/dev/projects/:id",
+      <>
+        <ProjectBidPage />
+        <Toaster />
+      </>,
+      `/dev/projects/${PID}`,
+    );
+    expect(await screen.findByText("Online ordering system")).toBeInTheDocument();
+    await user.click(screen.getByRole("combobox"));
+    await user.click(await screen.findByRole("option", { name: /React/ }));
+    await user.type(screen.getByLabelText("Your price (৳)"), "18000");
+    await user.type(screen.getByLabelText("Days you need"), "20");
+    await user.click(screen.getByRole("button", { name: /Place sealed bid/ }));
+    expect(await screen.findByText("You’re at the open-bid limit")).toBeInTheDocument();
+    expect(screen.getByText(/30 open bids/)).toBeInTheDocument();
   });
 
   it("doesn't offer an empty bid form while my bids are loading or failed", async () => {
@@ -369,10 +513,12 @@ describe("ProjectBidPage", () => {
       hours_per_week_committed: 20,
       created_at: "2026-10-21T06:00:00Z",
       updated_at: "2026-10-21T06:00:00Z",
+      version: 1,
+      reasons: [],
     };
     base();
     server.use(
-      http.get(`${API}/me/bids`, () => HttpResponse.json([bid])),
+      http.get(`${API}/me/bids`, () => HttpResponse.json({ items: [bid], next_cursor: null })),
       http.get(`${API}/me/portfolio`, () =>
         HttpResponse.json([
           {
@@ -519,7 +665,7 @@ describe("Project details", () => {
     server.use(
       http.get(`${API}/auth/csrf`, () => new HttpResponse(null, { status: 204 })),
       http.get(`${API}/public/projects/${PID}`, () => HttpResponse.json(body)),
-      http.get(`${API}/me/bids`, () => HttpResponse.json([])),
+      http.get(`${API}/me/bids`, () => HttpResponse.json({ items: [], next_cursor: null })),
       http.get(`${API}/me/portfolio`, () => HttpResponse.json([])),
     );
   }

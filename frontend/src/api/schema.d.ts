@@ -476,7 +476,11 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get?: never;
+    /**
+     * One of my bids
+     * @description My own bid with its project and status; anyone else's bid is 404 (sealed, §14.5).
+     */
+    get: operations["bid_detail_api_v1_bids__bid_id__get"];
     put?: never;
     post?: never;
     /** Withdraw my bid */
@@ -496,7 +500,8 @@ export interface paths {
     };
     /**
      * Get a proof-of-work challenge for a public form
-     * @description Signed, expires in 5 minutes, each solution usable once.
+     * @description Signed, expires in 5 minutes, each solution usable once. Difficulty from the platform
+     *     settings (`captcha.max_number`).
      */
     get: operations["challenge_api_v1_captcha_challenge_get"];
     put?: never;
@@ -660,7 +665,11 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** My bids */
+    /**
+     * My bids
+     * @description Newest first, cursor-paged (§10.1). `project_id`: only my bids on that project;
+     *     `status`: only bids in that state (e.g. ACTIVE for the dashboard's open-bid count).
+     */
     get: operations["my_bids_api_v1_me_bids_get"];
     put?: never;
     post?: never;
@@ -1579,8 +1588,73 @@ export interface components {
       slot_id: string;
     };
     /**
+     * BidDetailOut
+     * @description One of my bids with its project, what I may still do with it and — while bidding is open
+     *     — how it stands against the project's own requirements (never against other bids).
+     */
+    BidDetailOut: {
+      /** Can Edit */
+      can_edit: boolean;
+      /** Can Withdraw */
+      can_withdraw: boolean;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Days Needed */
+      days_needed: number;
+      eligibility?: components["schemas"]["EligibilityOut"] | null;
+      /** Evaluated At */
+      evaluated_at?: string | null;
+      /** Expected Contribution */
+      expected_contribution: string;
+      /** Hours Per Week Committed */
+      hours_per_week_committed: number;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Portfolio */
+      portfolio: components["schemas"]["PortfolioRef"][];
+      /** Portfolio Item Ids */
+      portfolio_item_ids: string[];
+      /** Price Paisa */
+      price_paisa: number;
+      project: components["schemas"]["BidProject"];
+      /**
+       * Project Id
+       * Format: uuid
+       */
+      project_id: string;
+      /** Project Title */
+      project_title: string;
+      /** Proposal */
+      proposal: string;
+      /** Reasons */
+      reasons?: components["schemas"]["BidReason"][];
+      /**
+       * Slot Id
+       * Format: uuid
+       */
+      slot_id: string;
+      /** Slot Label */
+      slot_label: string;
+      /** Status */
+      status: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+      /** Version */
+      version: number;
+    };
+    /**
      * BidOut
-     * @description A developer's own bid.
+     * @description A developer's own bid. `reasons` are filled when the bid is INELIGIBLE; `version` goes in
+     *     `If-Match` on edits (§10.1); `evaluated_at` is when bidding closed and the bid was checked.
      */
     BidOut: {
       /**
@@ -1590,6 +1664,8 @@ export interface components {
       created_at: string;
       /** Days Needed */
       days_needed: number;
+      /** Evaluated At */
+      evaluated_at?: string | null;
       /** Expected Contribution */
       expected_contribution: string;
       /** Hours Per Week Committed */
@@ -1612,6 +1688,8 @@ export interface components {
       project_title: string;
       /** Proposal */
       proposal: string;
+      /** Reasons */
+      reasons?: components["schemas"]["BidReason"][];
       /**
        * Slot Id
        * Format: uuid
@@ -1626,6 +1704,47 @@ export interface components {
        * Format: date-time
        */
       updated_at: string;
+      /** Version */
+      version: number;
+    };
+    /**
+     * BidProject
+     * @description The project a bid is on, as its bidder may see it (published columns only).
+     */
+    BidProject: {
+      /** Bidding Deadline */
+      bidding_deadline: string | null;
+      /** Budget Paisa */
+      budget_paisa: number;
+      /** Deadline Days */
+      deadline_days: number;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Open For Bids */
+      open_for_bids: boolean;
+      /** Status */
+      status: string;
+      /** Summary */
+      summary: string;
+      /** Team Size */
+      team_size: number;
+      /** Title */
+      title: string;
+    };
+    /**
+     * BidReason
+     * @description Why a bid was filtered out, in plain words for the bidder (spec §9.2 reason codes).
+     */
+    BidReason: {
+      /** Code */
+      code: string;
+      /** Hint */
+      hint: string;
+      /** Text */
+      text: string;
     };
     /**
      * BidUpdate
@@ -2224,6 +2343,7 @@ export interface components {
       | "METHOD_NOT_ALLOWED"
       | "INVALID_STATE"
       | "VERSION_CONFLICT"
+      | "LIMIT_REACHED"
       | "IDEMPOTENCY_CONFLICT"
       | "PAYLOAD_TOO_LARGE"
       | "UNSUPPORTED_MEDIA_TYPE"
@@ -2508,6 +2628,13 @@ export interface components {
       score: number;
       /** Skill */
       skill: string;
+    };
+    /** Page[BidOut] */
+    Page_BidOut_: {
+      /** Items */
+      items: components["schemas"]["BidOut"][];
+      /** Next Cursor */
+      next_cursor?: string | null;
     };
     /** Page[ProjectCard] */
     Page_ProjectCard_: {
@@ -6348,10 +6475,177 @@ export interface operations {
       };
     };
   };
-  withdraw_bid_api_v1_bids__bid_id__delete: {
+  bid_detail_api_v1_bids__bid_id__get: {
     parameters: {
       query?: never;
       header?: never;
+      path: {
+        bid_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "can_edit": true,
+           *       "can_withdraw": true,
+           *       "created_at": "2026-10-21T06:00:00Z",
+           *       "days_needed": 20,
+           *       "expected_contribution": "Front-end components and integration.",
+           *       "hours_per_week_committed": 20,
+           *       "id": "9c8b7a6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+           *       "portfolio": [],
+           *       "portfolio_item_ids": [],
+           *       "price_paisa": 1800000,
+           *       "project": {
+           *         "bidding_deadline": "2026-10-31T18:00:00Z",
+           *         "budget_paisa": 12000000,
+           *         "deadline_days": 30,
+           *         "id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+           *         "open_for_bids": true,
+           *         "status": "BIDDING",
+           *         "summary": "A web app for a restaurant to take and track orders.",
+           *         "team_size": 4,
+           *         "title": "Online ordering system"
+           *       },
+           *       "project_id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+           *       "project_title": "Online ordering system",
+           *       "proposal": "I'll build the React front end with tests.",
+           *       "reasons": [],
+           *       "slot_id": "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e",
+           *       "slot_label": "React developer",
+           *       "status": "ACTIVE",
+           *       "updated_at": "2026-10-21T06:00:00Z",
+           *       "version": 1
+           *     }
+           */
+          "application/json": components["schemas"]["BidDetailOut"];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  withdraw_bid_api_v1_bids__bid_id__delete: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Bid version */
+        "If-Match"?: number | null;
+      };
       path: {
         bid_id: string;
       };
@@ -6497,7 +6791,10 @@ export interface operations {
   update_bid_api_v1_bids__bid_id__patch: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Bid version */
+        "If-Match"?: number | null;
+      };
       path: {
         bid_id: string;
       };
@@ -6527,10 +6824,12 @@ export interface operations {
            *       "project_id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
            *       "project_title": "Online ordering system",
            *       "proposal": "I'll build the React front end with tests.",
+           *       "reasons": [],
            *       "slot_id": "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e",
            *       "slot_label": "React developer",
            *       "status": "ACTIVE",
-           *       "updated_at": "2026-10-21T06:00:00Z"
+           *       "updated_at": "2026-10-21T06:00:00Z",
+           *       "version": 1
            *     }
            */
           "application/json": components["schemas"]["BidOut"];
@@ -7547,7 +7846,23 @@ export interface operations {
   };
   my_bids_api_v1_me_bids_get: {
     parameters: {
-      query?: never;
+      query?: {
+        project_id?: string | null;
+        status?:
+          | (
+              | "ACTIVE"
+              | "WITHDRAWN"
+              | "INELIGIBLE"
+              | "SELECTED"
+              | "NOT_SELECTED"
+              | "ACCEPTED"
+              | "DECLINED"
+              | "EXPIRED"
+            )
+          | null;
+        cursor?: string | null;
+        limit?: number;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -7561,26 +7876,30 @@ export interface operations {
         };
         content: {
           /**
-           * @example [
-           *       {
-           *         "created_at": "2026-10-21T06:00:00Z",
-           *         "days_needed": 20,
-           *         "expected_contribution": "Front-end components and integration.",
-           *         "hours_per_week_committed": 20,
-           *         "id": "9c8b7a6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
-           *         "portfolio_item_ids": [],
-           *         "price_paisa": 1800000,
-           *         "project_id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
-           *         "project_title": "Online ordering system",
-           *         "proposal": "I'll build the React front end with tests.",
-           *         "slot_id": "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e",
-           *         "slot_label": "React developer",
-           *         "status": "ACTIVE",
-           *         "updated_at": "2026-10-21T06:00:00Z"
-           *       }
-           *     ]
+           * @example {
+           *       "items": [
+           *         {
+           *           "created_at": "2026-10-21T06:00:00Z",
+           *           "days_needed": 20,
+           *           "expected_contribution": "Front-end components and integration.",
+           *           "hours_per_week_committed": 20,
+           *           "id": "9c8b7a6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+           *           "portfolio_item_ids": [],
+           *           "price_paisa": 1800000,
+           *           "project_id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+           *           "project_title": "Online ordering system",
+           *           "proposal": "I'll build the React front end with tests.",
+           *           "reasons": [],
+           *           "slot_id": "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e",
+           *           "slot_label": "React developer",
+           *           "status": "ACTIVE",
+           *           "updated_at": "2026-10-21T06:00:00Z",
+           *           "version": 1
+           *         }
+           *       ]
+           *     }
            */
-          "application/json": components["schemas"]["BidOut"][];
+          "application/json": components["schemas"]["Page_BidOut_"];
         };
       };
       /** @description Please sign in to continue. */
@@ -7653,6 +7972,24 @@ export interface operations {
            *     }
            */
           "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
         };
       };
       /** @description Too many requests. Please wait and try again. */
@@ -12282,10 +12619,12 @@ export interface operations {
            *       "project_id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
            *       "project_title": "Online ordering system",
            *       "proposal": "I'll build the React front end with tests.",
+           *       "reasons": [],
            *       "slot_id": "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e",
            *       "slot_label": "React developer",
            *       "status": "ACTIVE",
-           *       "updated_at": "2026-10-21T06:00:00Z"
+           *       "updated_at": "2026-10-21T06:00:00Z",
+           *       "version": 1
            *     }
            */
           "application/json": components["schemas"]["BidOut"];

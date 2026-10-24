@@ -13,9 +13,68 @@ export const BID_STATUS_TONE: Record<string, Tone> = {
   EXPIRED: "neutral",
 };
 
-/** "NOT_SELECTED" → "Not selected". */
+/** Plain words where the code reads badly; the rest follow "NOT_SELECTED" → "Not selected". */
+const STATUS_LABEL: Record<string, string> = {
+  ACTIVE: "Open",
+  INELIGIBLE: "Filtered out",
+};
+
 export function bidStatusLabel(status: string): string {
-  return status.charAt(0) + status.slice(1).toLowerCase().replace(/_/g, " ");
+  return (
+    STATUS_LABEL[status] ?? status.charAt(0) + status.slice(1).toLowerCase().replace(/_/g, " ")
+  );
+}
+
+/** The bid's steps for the detail timeline (spec §13.5 #12): Submitted → Evaluated →
+ * Selected / Not selected → Accepted. `done` steps are reached; `current` is where it stands. */
+export interface BidStep {
+  label: string;
+  state: "done" | "current" | "upcoming" | "stopped";
+  note?: string;
+}
+
+export function bidSteps(status: string, evaluated: boolean): BidStep[] {
+  if (status === "WITHDRAWN") {
+    return [
+      { label: "Submitted", state: "done" },
+      { label: "Withdrawn", state: "stopped", note: "You withdrew this bid." },
+    ];
+  }
+  if (status === "INELIGIBLE") {
+    return [
+      { label: "Submitted", state: "done" },
+      { label: "Evaluated", state: "stopped", note: "Filtered out when bidding closed." },
+    ];
+  }
+  const selection: Record<string, BidStep> = {
+    SELECTED: { label: "Selected", state: "current", note: "Respond to the invitation." },
+    ACCEPTED: { label: "Selected", state: "done" },
+    DECLINED: { label: "Selected", state: "done" },
+    EXPIRED: { label: "Selected", state: "done" },
+    NOT_SELECTED: { label: "Not selected", state: "stopped" },
+  };
+  const evaluatedStep: BidStep =
+    evaluated || status in selection
+      ? { label: "Evaluated", state: "done", note: "Meets the project’s requirements." }
+      : { label: "Evaluated", state: "current", note: "Checked when bidding closes." };
+  const last: BidStep =
+    status === "ACCEPTED"
+      ? { label: "Accepted", state: "done" }
+      : status === "DECLINED"
+        ? { label: "Declined", state: "stopped" }
+        : status === "EXPIRED"
+          ? { label: "Invitation expired", state: "stopped" }
+          : { label: "Accepted", state: "upcoming" };
+  return [
+    { label: "Submitted", state: "done" },
+    evaluatedStep,
+    selection[status] ?? {
+      label: "Selected or not selected",
+      state: "upcoming",
+      note: "Decided when the client forms the team.",
+    },
+    ...(status === "NOT_SELECTED" ? [] : [last]),
+  ];
 }
 
 export const REASON_TEXT: Record<string, string> = {
