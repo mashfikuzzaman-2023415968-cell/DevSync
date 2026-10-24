@@ -24,6 +24,7 @@ def demo_production(**overrides: object) -> Settings:
         "SECRET_KEY": base64.b64encode(secrets.token_bytes(64)).decode(),
         "SMS_PROVIDER": "mailpit",
         "SMTP_HOST": "mailpit",
+        "DEMO_STACK": True,
         "PUBLIC_ORIGIN": "https://localhost",
         "REDIS_URL": "redis://:pw@redis:6379/0",
         "ALLOWED_HOSTS": "localhost,api",

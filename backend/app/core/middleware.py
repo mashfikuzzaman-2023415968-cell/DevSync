@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import re
 import secrets
+import time
 from collections.abc import Awaitable, Callable, MutableMapping
 from typing import Any
 
@@ -16,8 +17,12 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.errors import SAFE_MESSAGES, ErrorCode, error_body
 from app.core.logging import get_logger, request_id_var
+from app.core.metrics import route_template
+from app.core.netutil import IPNetwork, ip_in_networks, trusted_client_ip
+from app.core.security import derive_key, hmac_sha256
 
 log = get_logger(__name__)
+access_log = get_logger("devsync.access")
 
 REQUEST_ID_HEADER = b"x-request-id"
 _SAFE_REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{8,64}$")
@@ -37,6 +42,8 @@ API_SECURITY_HEADERS: list[tuple[bytes, bytes]] = [
         b"content-security-policy",
         b"default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
     ),
+    # The API and the admin area are never indexed; robots.txt does not name them (§14.17).
+    (b"x-robots-tag", b"noindex, nofollow"),
 ]
 
 ASGIHandler = Callable[[Scope, Receive, Send], Awaitable[None]]
@@ -240,3 +247,143 @@ class TimeoutMiddleware:
                 await _send_json_error(
                     send, 504, ErrorCode.TIMEOUT, "The request took too long. Please try again."
                 )
+
+
+ADMIN_API_PREFIX = "/api/v1/admin"
+# Path segments a canonical API path may contain (RFC 3986 pchar; encoded "/", "\", "." and
+# NUL are refused separately).
+_SAFE_SEGMENT = re.compile(rb"^[A-Za-z0-9\-_~!$&'()*+,;=:@.%]+$")
+_UNSAFE_ESCAPE = re.compile(rb"%(?:2f|5c|2e|00)", re.IGNORECASE)
+_SAFE_QUERY = re.compile(rb"^[A-Za-z0-9\-._~!$&'()*+,;=:@/?%]*$")
+
+
+class AccessLogMiddleware:
+    """One structured line per request (spec §14.12, §15.7), just inside the request-id step.
+
+    Logged: method, route *template* (never the raw path, which may carry tokens), status,
+    duration in ms, the request id and a keyed hash of the user id. Never logged: query
+    strings, headers, cookies or bodies.
+    """
+
+    def __init__(self, app: ASGIApp, secret_key: str) -> None:
+        self.app = app
+        self.user_key = derive_key(secret_key, "log-user-id")
+
+    def user_hash(self, user_id: object) -> str:
+        """Stable, non-reversible id for correlating one user's requests (16 hex chars)."""
+        return hmac_sha256(self.user_key, str(user_id)).hex()[:16]
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        start = time.perf_counter()
+        status = {"code": 500}
+
+        async def recording_send(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                status["code"] = int(message["status"])
+            await send(message)
+
+        try:
+            await self.app(scope, receive, recording_send)
+        finally:
+            principal = scope.get("state", {}).get("principal")
+            access_log.info(
+                "http_request",
+                method=str(scope.get("method", "")),
+                route=route_template(scope),
+                status=status["code"],
+                duration_ms=round((time.perf_counter() - start) * 1000, 1),
+                user_hash=self.user_hash(principal.user_id) if principal is not None else None,
+            )
+
+
+def is_admin_api_path(path: str) -> bool:
+    """True for `/api/v1/admin` and everything below it."""
+    return path == ADMIN_API_PREFIX or path.startswith(ADMIN_API_PREFIX + "/")
+
+
+class AdminNetworkMiddleware:
+    """`ADMIN_ALLOWED_CIDRS` (spec §14.17): admin API requests from other networks get the
+    same 404 a non-admin gets, before any session or database work. Empty list = no limit.
+
+    The client address comes from :func:`trusted_client_ip`, which believes
+    `X-Forwarded-For` only from `TRUSTED_PROXY_IPS`; an unknown address is refused.
+    """
+
+    def __init__(
+        self,
+        app: ASGIApp,
+        allowed: tuple[IPNetwork, ...],
+        trusted_proxies: tuple[IPNetwork, ...],
+    ) -> None:
+        self.app = app
+        self.allowed = allowed
+        self.trusted_proxies = trusted_proxies
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if (
+            scope["type"] == "http"
+            and self.allowed
+            and is_admin_api_path(str(scope.get("path", "")))
+            and not ip_in_networks(trusted_client_ip(scope, self.trusted_proxies), self.allowed)
+        ):
+            log.warning("admin_network_refused")
+            await _send_json_error(
+                send, 404, ErrorCode.NOT_FOUND, SAFE_MESSAGES[ErrorCode.NOT_FOUND]
+            )
+            return
+        await self.app(scope, receive, send)
+
+
+def canonical_api_location(scope: Scope) -> bytes | None:
+    """`Location` for an API path with trailing slashes, or None to leave the request alone.
+
+    Only a same-origin *relative* path under `/api/` is produced: no `//`, no backslash, no
+    dot segments, no encoded slash/backslash/dot/NUL, so it can never point elsewhere.
+    """
+    path = str(scope.get("path", ""))
+    raw: bytes = scope.get("raw_path") or path.encode("utf-8")
+    if not (path.startswith("/api/") and raw.startswith(b"/api/") and raw.endswith(b"/")):
+        return None
+    canonical = raw.rstrip(b"/")
+    segments = canonical.split(b"/")[1:]
+    if (
+        not canonical.startswith(b"/api/")
+        or _UNSAFE_ESCAPE.search(canonical)
+        or any(s in {b"", b".", b".."} or not _SAFE_SEGMENT.match(s) for s in segments)
+    ):
+        return None
+    query: bytes = scope.get("query_string", b"")
+    if query and not _SAFE_QUERY.match(query):
+        return None
+    return canonical + (b"?" + query if query else b"")
+
+
+class TrailingSlashRedirectMiddleware:
+    """`/api/v1/me/` → 308 `/api/v1/me` (spec §10.1, §15.5): method, body and query kept.
+
+    Anything that is not a clean API path falls through to the router (404).
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        location = canonical_api_location(scope) if scope["type"] == "http" else None
+        if location is None:
+            await self.app(scope, receive, send)
+            return
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 308,
+                "headers": [
+                    (b"location", location),
+                    (b"content-length", b"0"),
+                    (b"cache-control", b"no-store"),
+                ],
+            }
+        )
+        await send({"type": "http.response.body", "body": b""})

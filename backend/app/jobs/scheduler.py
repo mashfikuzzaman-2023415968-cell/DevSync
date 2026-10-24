@@ -12,7 +12,7 @@ from types import FrameType
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 
-from app.core.config import get_settings
+from app.core.config import get_settings, validate_production
 from app.core.logging import configure_logging, get_logger
 from app.jobs import bidding_jobs, email_jobs, profile_jobs, tasks
 from app.jobs.queues import get_queue
@@ -107,6 +107,7 @@ def build_scheduler() -> BlockingScheduler:
 
 def main() -> None:
     """Run until SIGTERM/SIGINT, then shut down cleanly."""
+    validate_production(get_settings())  # same fail-closed checks as the API (§14.18)
     configure_logging(get_settings().LOG_LEVEL)
     scheduler = build_scheduler()
 

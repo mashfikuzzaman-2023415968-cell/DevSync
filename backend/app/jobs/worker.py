@@ -8,13 +8,14 @@ from __future__ import annotations
 
 from rq import Worker
 
-from app.core.config import get_settings
+from app.core.config import get_settings, validate_production
 from app.core.logging import configure_logging, get_logger
 from app.jobs.queues import MAX_JOBS_PER_WORKER, QUEUE_NAMES, get_queue, get_sync_redis
 
 
 def main() -> None:
     """Start a worker on all queues in priority order."""
+    validate_production(get_settings())  # same fail-closed checks as the API (§14.18)
     configure_logging(get_settings().LOG_LEVEL)
     get_logger(__name__).info("worker_starting", queues=list(QUEUE_NAMES))
     worker = Worker([get_queue(n) for n in QUEUE_NAMES], connection=get_sync_redis())

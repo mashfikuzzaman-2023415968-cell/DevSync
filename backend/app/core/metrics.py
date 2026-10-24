@@ -24,7 +24,7 @@ REQUEST_ERRORS = Counter(
 )
 
 
-def _route_template(scope: Scope) -> str:
+def route_template(scope: Scope) -> str:
     """Full route template after matching, else "unmatched".
 
     FastAPI includes routers without rewriting their paths, so the matched
@@ -67,7 +67,7 @@ class MetricsMiddleware:
         try:
             await self.app(scope, receive, recording_send)
         finally:
-            route = _route_template(scope)
+            route = route_template(scope)
             method = scope.get("method", "GET")
             REQUEST_LATENCY.labels(method, route, str(status["code"])).observe(
                 time.perf_counter() - start

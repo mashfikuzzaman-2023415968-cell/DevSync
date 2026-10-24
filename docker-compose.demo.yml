@@ -10,6 +10,9 @@ x-demo-env: &demo-env
   SMS_PROVIDER: mailpit
   SMTP_HOST: mailpit
   SMTP_PORT: "1025"
+  # The only switch that allows Mailpit under DEVSYNC_ENV=production, and only with a
+  # localhost PUBLIC_ORIGIN; no other compose file or .env sets it.
+  DEMO_STACK: "1"
   # Two workers per replica: 2 replicas × 2 workers fit the team laptops' memory and the
   # Postgres connection limit (the prod default 2×CPU+1 would start 33 per replica, D5).
   GUNICORN_WORKERS: "2"

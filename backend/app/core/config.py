@@ -10,16 +10,28 @@ from __future__ import annotations
 import base64
 import binascii
 import os
+import sys
+from collections.abc import Mapping, Sequence
 from enum import StrEnum
 from functools import lru_cache
 from urllib.parse import urlparse
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from app.core.netutil import IPNetwork, parse_networks
 
 MIN_SECRET_KEY_BYTES = 64
 # The local mail catcher of the dev and demo stacks (never a real relay).
 DEMO_MAIL_CAPTURE_HOST = "mailpit"
+# `DEMO_STACK=1` (set only by docker-compose.demo.yml) is honoured only for these origins, so
+# a real deployment cannot turn the demo's mail capture on by copying one variable.
+DEMO_ORIGIN_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
+# Command-line flags meaning auto-reload or debug mode (uvicorn, gunicorn).
+_RELOAD_FLAGS = frozenset(
+    {"--reload", "--reload-dir", "--reload-include", "--reload-exclude", "--debug"}
+)
+_VERBOSE_LOG_LEVELS = frozenset({"debug", "trace"})
 
 
 class Environment(StrEnum):
@@ -64,6 +76,7 @@ class Settings(BaseSettings):
     SMS_PROVIDER: str = "console"
     GITHUB_TOKEN: str = Field(default="", repr=False)
     CAPTCHA_HMAC_KEY: str = Field(default="", repr=False)
+    # Comma-separated networks allowed to reach /api/v1/admin (empty = every network, §14.17).
     ADMIN_ALLOWED_CIDRS: str = ""
     GITHUB_WEBHOOK_SECRET: str = Field(default="", repr=False)
     JUDGE0_URL: str = "http://judge0:2358"
@@ -85,6 +98,25 @@ class Settings(BaseSettings):
     CACHE_TTL_SECONDS_DEFAULT: int = Field(default=60, ge=1, le=3600)
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
+    # Set only by docker-compose.demo.yml: the offline demo may use its local Mailpit (D61).
+    DEMO_STACK: bool = False
+
+    @field_validator("ADMIN_ALLOWED_CIDRS", "TRUSTED_PROXY_IPS")
+    @classmethod
+    def _networks_are_valid(cls, value: str) -> str:
+        """A malformed network list stops startup in every environment (fail closed)."""
+        parse_networks(value)
+        return value
+
+    @property
+    def admin_allowed_networks(self) -> tuple[IPNetwork, ...]:
+        """`ADMIN_ALLOWED_CIDRS` parsed; empty means no network restriction."""
+        return parse_networks(self.ADMIN_ALLOWED_CIDRS)
+
+    @property
+    def trusted_proxy_networks(self) -> tuple[IPNetwork, ...]:
+        """`TRUSTED_PROXY_IPS` parsed: peers whose `X-Forwarded-For` is believed."""
+        return parse_networks(self.TRUSTED_PROXY_IPS)
 
     @property
     def allowed_hosts(self) -> list[str]:
@@ -110,25 +142,79 @@ def _secret_key_bytes(value: str) -> int:
         return 0
 
 
-def production_problems(settings: Settings) -> list[str]:
-    """List every insecure setting for production (empty list means safe).
+def _truthy(value: str | None) -> bool:
+    return (value or "").strip().lower() in {"1", "true", "yes", "on"}
 
-    Kept separate from :func:`validate_production` so tests can assert on each
-    individual problem and the startup message can print all of them at once.
+
+def runtime_problems(argv: Sequence[str], environ: Mapping[str, str]) -> list[str]:
+    """Auto-reload or debug switches on the server's command line or environment (§14.18).
+
+    `uvicorn --reload` runs the app in a spawned child whose `sys.argv` is the parent's, so
+    the flag is visible from inside the app factory as well.
     """
     problems: list[str] = []
-    if _secret_key_bytes(settings.SECRET_KEY) < MIN_SECRET_KEY_BYTES:
-        problems.append("SECRET_KEY must be at least 64 random bytes, base64 encoded")
-    if settings.SMS_PROVIDER == "console":
-        problems.append("SMS_PROVIDER=console is only allowed in development")
+    flags = {a.split("=", 1)[0] for a in argv}
+    if flags & _RELOAD_FLAGS or "--reload" in environ.get("GUNICORN_CMD_ARGS", "").split():
+        problems.append("auto-reload / --debug server flags are not allowed in production")
+    if _truthy(environ.get("UVICORN_RELOAD")):
+        problems.append("UVICORN_RELOAD is not allowed in production")
+    for i, arg in enumerate(argv):
+        level = ""
+        if arg.startswith("--log-level="):
+            level = arg.split("=", 1)[1]
+        elif arg == "--log-level" and i + 1 < len(argv):
+            level = argv[i + 1]
+        if level.strip().lower() in _VERBOSE_LOG_LEVELS:
+            problems.append("--log-level debug/trace is not allowed in production")
+    return problems
+
+
+def _mail_problems(settings: Settings) -> list[str]:
+    """Mailpit is off in production (§14.18) except on the offline demo stack (D61)."""
+    problems: list[str] = []
     if settings.SMS_PROVIDER == "mailpit" and settings.SMTP_HOST != DEMO_MAIL_CAPTURE_HOST:
         # The offline demo stack (`make demo-up`) delivers codes to its local Mailpit; anywhere
         # else that would hand one-time codes to a real mail relay.
         problems.append(
             "SMS_PROVIDER=mailpit is only allowed with SMTP_HOST=mailpit (the offline demo stack)"
         )
+    demo_origin = (urlparse(settings.PUBLIC_ORIGIN).hostname or "") in DEMO_ORIGIN_HOSTS
+    if settings.DEMO_STACK and not demo_origin:
+        problems.append("DEMO_STACK is only allowed with a localhost PUBLIC_ORIGIN (offline demo)")
+    mailpit = settings.SMTP_HOST.strip().lower() == DEMO_MAIL_CAPTURE_HOST
+    if (mailpit or settings.SMS_PROVIDER == "mailpit") and not settings.DEMO_STACK:
+        # §14.18 "Mailpit disabled": a real deployment needs a real relay. The default
+        # SMTP_HOST is the dev catcher, so production has to set it explicitly.
+        problems.append(
+            "Mailpit (SMTP_HOST=mailpit or SMS_PROVIDER=mailpit) is only allowed on the "
+            "offline demo stack (DEMO_STACK=1)"
+        )
+    return problems
+
+
+def production_problems(
+    settings: Settings,
+    argv: Sequence[str] | None = None,
+    environ: Mapping[str, str] | None = None,
+) -> list[str]:
+    """List every insecure setting for production (empty list means safe).
+
+    Kept separate from :func:`validate_production` so tests can assert on each
+    individual problem and the startup message can print all of them at once.
+    `argv` and `environ` default to the real process; tests pass their own.
+    """
+    argv = sys.argv if argv is None else argv
+    environ = os.environ if environ is None else environ
+    problems: list[str] = []
+    if _secret_key_bytes(settings.SECRET_KEY) < MIN_SECRET_KEY_BYTES:
+        problems.append("SECRET_KEY must be at least 64 random bytes, base64 encoded")
+    if settings.SMS_PROVIDER == "console":
+        problems.append("SMS_PROVIDER=console is only allowed in development")
+    problems.extend(_mail_problems(settings))
     if settings.DEBUG:
         problems.append("DEBUG must be off in production")
+    if settings.LOG_LEVEL.strip().lower() in _VERBOSE_LOG_LEVELS:
+        problems.append("LOG_LEVEL=DEBUG is not allowed in production (verbose logs)")
     if urlparse(settings.PUBLIC_ORIGIN).scheme != "https":
         problems.append("PUBLIC_ORIGIN must use https")
     redis = urlparse(settings.REDIS_URL)
@@ -140,8 +226,9 @@ def production_problems(settings: Settings) -> list[str]:
         problems.append("SESSION_COOKIE_SECURE must be true in production")
     if not settings.CAPTCHA_HMAC_KEY:
         problems.append("CAPTCHA_HMAC_KEY must be set in production")
-    if os.environ.get("DEVSYNC_CAPTCHA_BYPASS"):
+    if environ.get("DEVSYNC_CAPTCHA_BYPASS"):
         problems.append("CAPTCHA bypass is only allowed in the test environment")
+    problems.extend(runtime_problems(argv, environ))
     return problems
 
 

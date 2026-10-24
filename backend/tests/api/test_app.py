@@ -122,6 +122,7 @@ def test_production_app_has_no_test_router_or_docs() -> None:
         DEVSYNC_ENV=Environment.PRODUCTION,
         SECRET_KEY=base64.b64encode(secrets.token_bytes(64)).decode(),
         SMS_PROVIDER="provider",
+        SMTP_HOST="smtp.example.com",
         REDIS_URL="redis://:pw@redis:6379/0",
         ALLOWED_HOSTS="testserver",
         PUBLIC_ORIGIN="https://testserver",

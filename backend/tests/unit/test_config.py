@@ -17,6 +17,7 @@ from app.core.config import (
 
 pytestmark = pytest.mark.unit
 
+PROD_ARGV = ["gunicorn", "-c", "gunicorn.conf.py", "app.main:app_factory()"]
 STRONG_KEY = base64.b64encode(secrets.token_bytes(64)).decode()
 
 
@@ -25,6 +26,7 @@ def secure_production(**overrides: object) -> Settings:
         "DEVSYNC_ENV": Environment.PRODUCTION,
         "SECRET_KEY": STRONG_KEY,
         "SMS_PROVIDER": "twilio",
+        "SMTP_HOST": "smtp.devsync.example",
         "PUBLIC_ORIGIN": "https://devsync.example",
         "REDIS_URL": "redis://:pw@redis:6379/0",
         "ALLOWED_HOSTS": "devsync.example",
@@ -70,7 +72,7 @@ def test_out_of_range_values_are_rejected(monkeypatch: pytest.MonkeyPatch, value
 
 def test_secure_production_config_passes() -> None:
     s = secure_production()
-    assert production_problems(s) == []
+    assert production_problems(s, argv=PROD_ARGV, environ={}) == []
     validate_production(s)
 
 
