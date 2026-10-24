@@ -128,3 +128,13 @@ async def reputation(user_id: uuid.UUID, body: ReputationRequest) -> Response:
     """Give a developer an experienced reputation snapshot (E2E: relaxation, eligibility)."""
     await seed.set_reputation(user_id, body.p, body.c)
     return Response(status_code=204)
+
+
+@router.get("/attempts/{attempt_id}/answer-key")
+async def attempt_answer_key(attempt_id: uuid.UUID) -> dict[str, list[int]]:
+    """Correct option per question, in attempt order (E2E: the Demo 1 newcomer passes a test).
+    Like every route here it exists only when DEVSYNC_ENV=test (spec §16.2)."""
+    key = await seed.answer_key(attempt_id)
+    if key is None:
+        raise HTTPException(status_code=404)
+    return {"answers": key}

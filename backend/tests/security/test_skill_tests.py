@@ -246,3 +246,23 @@ def test_public_profile_shows_the_best_score_bidding_uses(api: Api, migration_ur
     profile = api.get(f"/api/v1/developers/{user.user_id}").json()
     scores = [v["score"] for v in profile["verified_scores"] if v["skill_id"] == skill_id]
     assert scores == ["0.800"]
+
+
+def test_test_only_answer_key_matches_the_bank_and_scores_full_marks(api: Api) -> None:
+    """The test-only answer key (DEVSYNC_ENV=test, Demo 1 walkthrough) lists the bank's correct
+    option per question in attempt order; an unknown attempt is a 404."""
+    api.sign_in_as("DEVELOPER")
+    attempt = start(api, first_test(api)["id"]).json()
+    r = api.get(f"/api/v1/__test__/attempts/{attempt['id']}/answer-key")
+    assert r.status_code == 200, r.text
+    key = r.json()["answers"]
+    assert len(key) == len(attempt["questions"]) == 10
+    assert all(0 <= k <= 3 for k in key)
+    for q, choice in zip(attempt["questions"], key, strict=True):
+        r = api.post(f"/api/v1/attempts/{attempt['id']}/answer",
+                     json={"question_id": q["id"], "choice": choice})  # fmt: skip
+        assert r.status_code == 200, r.text
+    result = api.post(f"/api/v1/attempts/{attempt['id']}/submit").json()
+    assert (result["correct"], result["total"]) == (10, 10)
+    missing = api.get(f"/api/v1/__test__/attempts/{uuid.uuid4()}/answer-key")
+    assert missing.status_code == 404
