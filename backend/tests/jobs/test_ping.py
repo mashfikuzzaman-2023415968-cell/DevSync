@@ -31,11 +31,15 @@ def test_unknown_queue_is_rejected() -> None:
 
 @pytest.mark.skipif(not os.environ.get("REDIS_URL"), reason="needs Redis from the test stack")
 def test_ping_through_rq_simple_worker() -> None:
-    from rq import SimpleWorker  # noqa: PLC0415
+    import uuid  # noqa: PLC0415
 
-    from app.jobs.queues import get_queue, get_sync_redis  # noqa: PLC0415
+    from rq import Queue, SimpleWorker  # noqa: PLC0415
 
-    queue = get_queue("low")
+    from app.jobs.queues import get_sync_redis  # noqa: PLC0415
+
+    # A queue of its own: the deployed worker listens on high/default/low, so on a stack with
+    # a running worker it would take this job and the burst worker below would find none.
+    queue = Queue(f"test-ping-{uuid.uuid4().hex}", connection=get_sync_redis())
     job = queue.enqueue(tasks.ping, job_timeout=30)
     SimpleWorker([queue], connection=get_sync_redis()).work(burst=True)
     job.refresh()
