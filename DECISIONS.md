@@ -630,3 +630,14 @@ server's regexes; ratings have at most 2 decimals; password minimums ignore end 
 change password show the server's reason. Share totals keep one decimal.
 *Today's changes.* Browser back/forward into a draft reopens it; a bid edit drops deleted
 portfolio items; a request losing the rotation lock doesn't refresh the old token.
+
+**D58 · Reputation summary on developer profiles (Taeen, 2026-10-24; spec §13.5 #7/#9, §17 Phase 5).**
+`GET /developers/{id}` and `GET /public/developers/{id}` add `reputation = {competency,
+performance, is_newcomer, seeded}` (C/P as 3-place decimal strings on 0–1). It is read through
+`reputation_read.read_stored()` in the caller's own session, only after the profile itself proved
+visible — no SYSTEM session (D50's stay limited to project owners). Reputation snapshots are
+readable only when signed in (migration 0006), so anonymous visitors get `reputation: null` and
+the page invites them to sign in, rather than a misleading "newcomer". A developer with no stored
+snapshot gets null C/P ("Building a record") and `is_newcomer: true`; the on-the-fly newcomer
+prior used by filtering is not shown, as it would need other users' private data. `seeded`
+(D48) is forced false when `DEVSYNC_ENV=production`.

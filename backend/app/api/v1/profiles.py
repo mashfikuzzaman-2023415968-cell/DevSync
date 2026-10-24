@@ -7,9 +7,10 @@ from datetime import date
 from decimal import Decimal
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, File, Form, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Request, Response, UploadFile
 
-from app.api.deps import DbSession, acting, rate_limit, require
+from app.api.deps import DbSession, acting, app_settings, principal_of, rate_limit, require
+from app.core.config import Settings
 from app.schemas.common import error_responses
 from app.schemas.profiles import (
     CertificateOut,
@@ -37,6 +38,7 @@ router = APIRouter(tags=["profiles"])
 
 Dev = Annotated[Ctx, Depends(acting("profile.developer"))]
 Client = Annotated[Ctx, Depends(acting("profile.client"))]
+AppSettings = Annotated[Settings, Depends(app_settings)]
 Upload = Annotated[UploadFile, File(description="The file (type checked by its content).")]
 UPLOAD_LIMIT = [Depends(rate_limit("upload"))]
 
@@ -117,6 +119,12 @@ EX_PUBLIC = {
         }
     ],
     "certificates": [{"title": "AWS Cloud Practitioner", "issuer": "Amazon Web Services"}],
+    "reputation": {
+        "competency": "0.712",
+        "performance": "0.768",
+        "is_newcomer": False,
+        "seeded": False,
+    },
 }
 
 
@@ -422,9 +430,14 @@ async def delete_external_review(review_id: uuid.UUID, ctx: Dev) -> Response:
     dependencies=[Depends(require("catalog.read"))],
     responses=_ok(EX_PUBLIC, 422),
 )
-async def get_developer(developer_id: uuid.UUID, db: DbSession) -> DeveloperPublicProfile:
-    """Respects the developer's visibility (clients-only profiles are hidden from developers)."""
-    return await svc.developer_view(db, developer_id)
+async def get_developer(
+    developer_id: uuid.UUID, db: DbSession, settings: AppSettings
+) -> DeveloperPublicProfile:
+    """Respects the developer's visibility (clients-only profiles are hidden from developers).
+    Includes the reputation summary (C, P, newcomer)."""
+    return await svc.developer_view(
+        db, developer_id, signed_in=True, production=settings.is_production
+    )
 
 
 @router.get(
@@ -437,6 +450,14 @@ async def get_developer(developer_id: uuid.UUID, db: DbSession) -> DeveloperPubl
         **error_responses(404, 422, 429),
     },
 )
-async def get_public_developer(developer_id: uuid.UUID, db: DbSession) -> DeveloperPublicProfile:
-    """Never email or phone; a clients-only profile is 'not found' unless a client signed in."""
-    return await svc.developer_view(db, developer_id)
+async def get_public_developer(
+    developer_id: uuid.UUID, db: DbSession, request: Request, settings: AppSettings
+) -> DeveloperPublicProfile:
+    """Never email or phone; a clients-only profile is 'not found' unless a client signed in.
+    The reputation summary is null for anonymous visitors."""
+    return await svc.developer_view(
+        db,
+        developer_id,
+        signed_in=principal_of(request) is not None,
+        production=settings.is_production,
+    )

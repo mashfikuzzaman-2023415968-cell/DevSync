@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.audit import write_audit
 from app.core.clock import to_display
 from app.core.errors import DomainError, ErrorCode, InvalidStateTransition, NotFoundError
+from app.core.settings_cache import active_settings
 from app.models.profiles import (
     Certificate,
     ExternalReview,
@@ -45,9 +46,11 @@ from app.schemas.profiles import (
     PortfolioItemOut,
     PortfolioItemUpdate,
     PortfolioReorder,
+    ReputationSummary,
     SkillOut,
     SkillsUpdate,
 )
+from app.services import reputation_read
 from app.services.context import Ctx
 from app.services.files import store_upload
 from app.uploads.storage import Readable
@@ -211,12 +214,41 @@ async def update_client_profile(ctx: Ctx, body: ClientProfileUpdate) -> ClientPr
 # --------------------------------------------------------------------------- public view
 
 
-async def developer_view(db: AsyncSession, developer_id: uuid.UUID) -> DeveloperPublicProfile:
-    """What the caller (anonymous or signed in) may see; hidden and missing look the same."""
+SCORE_PLACES = Decimal("0.001")
+
+
+def reputation_summary(
+    stored: reputation_read.StoredReputation | None, *, production: bool
+) -> ReputationSummary:
+    """C/P (3 places) from a stored snapshot; none yet → a newcomer still building a record.
+    The "seeded" demo marker never reaches production (D48)."""
+    if stored is None:
+        return ReputationSummary(competency=None, performance=None, is_newcomer=True, seeded=False)
+    return ReputationSummary(
+        competency=stored.c.quantize(SCORE_PLACES, rounding=ROUND_HALF_UP),
+        performance=stored.p.quantize(SCORE_PLACES, rounding=ROUND_HALF_UP),
+        is_newcomer=stored.is_newcomer,
+        seeded=stored.seeded and not production,
+    )
+
+
+async def developer_view(
+    db: AsyncSession, developer_id: uuid.UUID, *, signed_in: bool, production: bool
+) -> DeveloperPublicProfile:
+    """What the caller (anonymous or signed in) may see; hidden and missing look the same.
+
+    The reputation summary is read in the caller's own session only after the profile itself
+    proved visible. Snapshots are readable only when signed in (§14.15), so anonymous visitors
+    get `reputation = null` rather than a misleading "newcomer" (D55)."""
     data = await repo.public_developer_profile(db, developer_id)
     if data is None:
         raise NotFoundError
-    return DeveloperPublicProfile.model_validate(data)
+    profile = DeveloperPublicProfile.model_validate(data)
+    if signed_in:
+        settings = await active_settings(db)
+        stored = await reputation_read.read_stored(db, developer_id, settings)
+        profile.reputation = reputation_summary(stored, production=production)
+    return profile
 
 
 # --------------------------------------------------------------------------- portfolio

@@ -537,6 +537,7 @@ export interface paths {
     /**
      * A developer's profile
      * @description Respects the developer's visibility (clients-only profiles are hidden from developers).
+     *     Includes the reputation summary (C, P, newcomer).
      */
     get: operations["get_developer_api_v1_developers__developer_id__get"];
     put?: never;
@@ -1263,6 +1264,7 @@ export interface paths {
     /**
      * A developer's public profile
      * @description Never email or phone; a clients-only profile is 'not found' unless a client signed in.
+     *     The reputation summary is null for anonymous visitors.
      */
     get: operations["get_public_developer_api_v1_public_developers__developer_id__get"];
     put?: never;
@@ -2098,6 +2100,8 @@ export interface components {
       member_since: string;
       /** Portfolio */
       portfolio: components["schemas"]["PublicPortfolioItem"][];
+      /** @description C, P and the newcomer flag; null for anonymous visitors (reputation snapshots are readable only when signed in). */
+      reputation?: components["schemas"]["ReputationSummary"] | null;
       /** Skills */
       skills: components["schemas"]["PublicSkill"][];
       /** Verified Scores */
@@ -3021,6 +3025,23 @@ export interface components {
       p0: number;
       /** Step */
       step: number;
+    };
+    /**
+     * ReputationSummary
+     * @description Competency C and performance P on 0–1 (3 places) from the stored reputation snapshot.
+     *
+     *     Both are null while the developer has no record yet (a newcomer without a snapshot).
+     *     `seeded` marks a fixed demo value (D44/D48); it is never true in production.
+     */
+    ReputationSummary: {
+      /** Competency */
+      competency: string | null;
+      /** Is Newcomer */
+      is_newcomer: boolean;
+      /** Performance */
+      performance: string | null;
+      /** Seeded */
+      seeded: boolean;
     };
     /**
      * ResetPasswordRequest
@@ -6772,6 +6793,12 @@ export interface operations {
            *           "title": "Clinic booking app"
            *         }
            *       ],
+           *       "reputation": {
+           *         "competency": "0.712",
+           *         "is_newcomer": false,
+           *         "performance": "0.768",
+           *         "seeded": false
+           *       },
            *       "skills": [
            *         {
            *           "domain": "FRONTEND",
@@ -14068,6 +14095,12 @@ export interface operations {
            *           "title": "Clinic booking app"
            *         }
            *       ],
+           *       "reputation": {
+           *         "competency": "0.712",
+           *         "is_newcomer": false,
+           *         "performance": "0.768",
+           *         "seeded": false
+           *       },
            *       "skills": [
            *         {
            *           "domain": "FRONTEND",

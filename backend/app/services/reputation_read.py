@@ -140,3 +140,31 @@ async def read_one(
     db: AsyncSession, developer_id: uuid.UUID, settings: PlatformSettingsValues
 ) -> ReputationView:
     return (await read_many(db, [developer_id], settings))[developer_id]
+
+
+@dataclass(frozen=True)
+class StoredReputation:
+    """A developer's stored snapshot as a profile shows it (C and P exact, on 0–1)."""
+
+    c: Decimal
+    p: Decimal
+    is_newcomer: bool
+    seeded: bool
+
+
+async def read_stored(
+    db: AsyncSession, developer_id: uuid.UUID, settings: PlatformSettingsValues
+) -> StoredReputation | None:
+    """The stored snapshot only (None when there is none yet). Runs in the caller's session, so
+    row-level security decides what is visible; nothing is computed from other users' data."""
+    snap = await db.scalar(
+        select(ReputationSnapshot).where(ReputationSnapshot.developer_id == developer_id)
+    )
+    if snap is None:
+        return None
+    return StoredReputation(
+        c=snap.c,
+        p=snap.p,
+        is_newcomer=snap.completed_projects < settings.newcomer.threshold,
+        seeded=snap.settings_version is None,
+    )

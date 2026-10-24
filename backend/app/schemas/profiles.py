@@ -309,6 +309,19 @@ class PublicCertificate(BaseModel):
     issuer: str
 
 
+class ReputationSummary(BaseModel):
+    """Competency C and performance P on 0–1 (3 places) from the stored reputation snapshot.
+
+    Both are null while the developer has no record yet (a newcomer without a snapshot).
+    `seeded` marks a fixed demo value (D44/D48); it is never true in production.
+    """
+
+    competency: Decimal | None
+    performance: Decimal | None
+    is_newcomer: bool
+    seeded: bool
+
+
 class DeveloperPublicProfile(BaseModel):
     """What others may see of a developer (never email or phone)."""
 
@@ -324,3 +337,8 @@ class DeveloperPublicProfile(BaseModel):
     verified_scores: list[VerifiedScore]
     portfolio: list[PublicPortfolioItem]
     certificates: list[PublicCertificate]
+    reputation: ReputationSummary | None = Field(
+        default=None,
+        description="C, P and the newcomer flag; null for anonymous visitors (reputation "
+        "snapshots are readable only when signed in).",
+    )
