@@ -187,8 +187,9 @@ async def answer_key(attempt_id: uuid.UUID) -> list[int] | None:
         attempt = await db.get(TestAttempt, attempt_id)
         if attempt is None:
             return None
+        question_ids = list(attempt.question_ids)
         rows = await db.execute(
-            select(Question.id, Question.correct_index).where(Question.id.in_(attempt.question_ids))
+            select(Question.id, Question.correct_index).where(Question.id.in_(question_ids))
         )
         correct = {qid: int(idx) for qid, idx in rows.all()}
-    return [correct[qid] for qid in attempt.question_ids]
+    return [correct[qid] for qid in question_ids]
