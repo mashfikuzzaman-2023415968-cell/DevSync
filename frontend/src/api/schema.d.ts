@@ -120,7 +120,7 @@ export interface paths {
     put?: never;
     /**
      * Send a new verification email
-     * @description Older links stop working.
+     * @description Older links stop working; the CAPTCHA is required (spec §14.16).
      */
     post: operations["email_resend_api_v1_auth_email_resend_post"];
     delete?: never;
@@ -240,7 +240,7 @@ export interface paths {
     put?: never;
     /**
      * Send a phone verification code
-     * @description 60-second cooldown between codes.
+     * @description 60-second cooldown between codes; the CAPTCHA is required (spec §14.16).
      */
     post: operations["otp_send_api_v1_auth_otp_send_post"];
     delete?: never;
@@ -1825,6 +1825,24 @@ export interface components {
        * @description Platform, e.g. Upwork.
        */
       source: string;
+    };
+    /**
+     * BotCheck
+     * @description Fields every public form carries (spec §14.16).
+     */
+    BotCheck: {
+      /** Captcha */
+      captcha?: string | null;
+      /**
+       * Started At Ms
+       * @description When the form was shown.
+       */
+      started_at_ms?: number | null;
+      /**
+       * Website
+       * @description Honeypot; leave empty.
+       */
+      website?: string | null;
     };
     /**
      * CancelIn
@@ -4264,7 +4282,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BotCheck"];
+      };
+    };
     responses: {
       /** @description Done */
       204: {
@@ -4361,6 +4383,24 @@ export interface operations {
            *     }
            */
           "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
         };
       };
       /** @description Too many requests. Please wait and try again. */
@@ -4965,7 +5005,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BotCheck"];
+      };
+    };
     responses: {
       /** @description Done */
       204: {
@@ -5062,6 +5106,24 @@ export interface operations {
            *     }
            */
           "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
         };
       };
       /** @description Too many requests. Please wait and try again. */

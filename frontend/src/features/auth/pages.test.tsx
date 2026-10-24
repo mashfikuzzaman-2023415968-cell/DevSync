@@ -1,7 +1,7 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Toaster } from "@/components/ui/Toaster";
 import SettingsPage from "@/features/account/SettingsPage";
 import SetupTwoFactorPage from "@/features/admin/SetupTwoFactorPage";
@@ -51,6 +51,7 @@ const challenge = () =>
 describe("VerifyPage", () => {
   it("verifies the phone and offers a fresh email link", async () => {
     let verified = false;
+    const resendBodies: Record<string, unknown>[] = [];
     server.use(
       csrf(),
       http.get("*/api/v1/me", () => HttpResponse.json({ ...ME, phone_verified: verified })),
@@ -69,7 +70,11 @@ describe("VerifyPage", () => {
               { status: 400 },
             );
       }),
-      http.post("*/api/v1/auth/email/resend", () => new HttpResponse(null, { status: 204 })),
+      challenge(),
+      http.post("*/api/v1/auth/email/resend", async ({ request }) => {
+        resendBodies.push((await request.json()) as Record<string, unknown>);
+        return new HttpResponse(null, { status: 204 });
+      }),
     );
     renderRoutes([{ path: "/verify", element: <VerifyPage /> }], "/verify");
     const user = userEvent.setup();
@@ -82,6 +87,58 @@ describe("VerifyPage", () => {
     expect(await screen.findByText(/invalid or has expired/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Send a new link" }));
     expect(await screen.findByText(/We sent a new link/)).toBeInTheDocument();
+    // The resend carried a solved CAPTCHA and the (empty) honeypot (spec §14.16).
+    expect(resendBodies).toHaveLength(1);
+    expect(resendBodies[0]).toMatchObject({ website: "" });
+    expect(typeof resendBodies[0]?.captcha).toBe("string");
+    expect(typeof resendBodies[0]?.started_at_ms).toBe("number");
+  });
+
+  /** The resend countdown ticks once a second (each tick schedules the next). */
+  async function waitOutCooldown() {
+    for (let i = 0; i < 61; i += 1) await act(() => vi.advanceTimersByTimeAsync(1000));
+  }
+
+  it("solves the bot check before sending a new code and shows a refusal", async () => {
+    const bodies: Record<string, unknown>[] = [];
+    server.use(
+      csrf(),
+      me(),
+      challenge(),
+      http.post("*/api/v1/auth/otp/send", async ({ request }) => {
+        bodies.push((await request.json()) as Record<string, unknown>);
+        return bodies.length === 1
+          ? new HttpResponse(null, { status: 204 })
+          : HttpResponse.json(
+              {
+                error: {
+                  code: "CAPTCHA_FAILED",
+                  message: "Please complete the verification check again.",
+                },
+              },
+              { status: 403 },
+            );
+      }),
+    );
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      renderRoutes([{ path: "/verify", element: <VerifyPage /> }], "/verify");
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+      await screen.findByText(/Enter the code we sent/);
+      await waitOutCooldown();
+      await user.click(screen.getByRole("button", { name: "Send a new code" }));
+      expect(await screen.findByText("We sent a new code.")).toBeInTheDocument();
+      expect(typeof bodies[0]?.captcha).toBe("string");
+      expect(screen.getByRole("button", { name: /Send a new code in/ })).toBeDisabled();
+      await waitOutCooldown();
+      await user.click(screen.getByRole("button", { name: "Send a new code" }));
+      expect(
+        await screen.findByText("Please complete the verification check again."),
+      ).toBeInTheDocument();
+      expect(bodies).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("redirects active users home and signed-out users to login", async () => {

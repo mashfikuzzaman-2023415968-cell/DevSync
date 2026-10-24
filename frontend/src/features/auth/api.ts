@@ -121,8 +121,12 @@ export function useLogout(all = false) {
   });
 }
 
+/** A new phone code; the bot check is required (spec §14.16). */
 export function useSendOtp() {
-  return useMutation({ mutationFn: () => api<undefined>("/auth/otp/send", { method: "POST" }) });
+  return useMutation({
+    meta: { inlineErrors: true },
+    mutationFn: (body: BotFields) => api<undefined>("/auth/otp/send", { method: "POST", body }),
+  });
 }
 
 export function useVerifyOtp() {
@@ -138,7 +142,7 @@ export function useVerifyOtp() {
 export function useResendEmail() {
   return useMutation({
     meta: { inlineErrors: true },
-    mutationFn: () => api<undefined>("/auth/email/resend", { method: "POST" }),
+    mutationFn: (body: BotFields) => api<undefined>("/auth/email/resend", { method: "POST", body }),
   });
 }
 

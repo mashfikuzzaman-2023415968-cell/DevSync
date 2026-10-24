@@ -907,6 +907,52 @@
         "title": "Body_create_external_review_api_v1_me_external_reviews_post",
         "type": "object"
       },
+      "BotCheck": {
+        "additionalProperties": false,
+        "description": "Fields every public form carries (spec §14.16).",
+        "properties": {
+          "captcha": {
+            "anyOf": [
+              {
+                "maxLength": 4096,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captcha"
+          },
+          "started_at_ms": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the form was shown.",
+            "title": "Started At Ms"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Honeypot; leave empty.",
+            "title": "Website"
+          }
+        },
+        "title": "BotCheck",
+        "type": "object"
+      },
       "CancelIn": {
         "additionalProperties": false,
         "description": "Cancel a project with a reason (spec §8 cancellation rules).",
@@ -5802,8 +5848,18 @@
     },
     "/api/v1/auth/email/resend": {
       "post": {
-        "description": "Older links stop working.",
+        "description": "Older links stop working; the CAPTCHA is required (spec §14.16).",
         "operationId": "email_resend_api_v1_auth_email_resend_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BotCheck"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "204": {
             "description": "Done"
@@ -5892,6 +5948,23 @@
               }
             },
             "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
           },
           "429": {
             "content": {
@@ -6474,8 +6547,18 @@
     },
     "/api/v1/auth/otp/send": {
       "post": {
-        "description": "60-second cooldown between codes.",
+        "description": "60-second cooldown between codes; the CAPTCHA is required (spec §14.16).",
         "operationId": "otp_send_api_v1_auth_otp_send_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BotCheck"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "204": {
             "description": "Done"
@@ -6564,6 +6647,23 @@
               }
             },
             "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
           },
           "429": {
             "content": {

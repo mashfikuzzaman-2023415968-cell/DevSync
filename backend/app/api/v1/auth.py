@@ -31,6 +31,7 @@ from app.core.errors import AuthError
 from app.core.sessions import SessionData
 from app.schemas.auth import (
     AcceptedResponse,
+    BotCheck,
     ChangePasswordRequest,
     CodeRequest,
     EmailTokenRequest,
@@ -85,6 +86,14 @@ def _client(request: Request) -> login_service.ClientInfo:
 
 def _bypass(settings: Settings, payload: str | None) -> bool:
     return settings.DEVSYNC_ENV.value == "test" and payload == "test-bypass"
+
+
+async def _verify_bot_check(deps: AuthDeps, settings: Settings, body: BotCheck) -> None:
+    """Honeypot, minimum fill time and a single-use CAPTCHA solution (spec §14.16)."""
+    await captcha.verify(
+        deps.redis, settings.CAPTCHA_HMAC_KEY, payload=body.captcha, honeypot=body.website,
+        started_at_ms=body.started_at_ms, bypass=_bypass(settings, body.captcha),
+    )  # fmt: skip
 
 
 # --------------------------------------------------------------------------- CSRF
@@ -314,15 +323,18 @@ async def revoke_session(
     summary="Send a phone verification code",
     status_code=204,
     dependencies=[Depends(rate_limit("otp_send"))],
-    responses={**NO_CONTENT, **error_responses(401, 403, 404, 409, 429)},
+    responses={**NO_CONTENT, **error_responses(401, 403, 404, 409, 422, 429)},
 )
 async def otp_send(
+    body: BotCheck,
     db: DbSession,
     settings: SettingsDep,
     principal: Annotated[Principal, Depends(require("account.verify"))],
 ) -> Response:
-    """60-second cooldown between codes."""
-    await registration.send_phone_otp(_deps(db, settings), principal, now())
+    """60-second cooldown between codes; the CAPTCHA is required (spec §14.16)."""
+    deps = _deps(db, settings)
+    await _verify_bot_check(deps, settings, body)
+    await registration.send_phone_otp(deps, principal, now())
     return Response(status_code=204)
 
 
@@ -361,15 +373,18 @@ async def email_verify(body: EmailTokenRequest, db: DbSession, settings: Setting
     summary="Send a new verification email",
     status_code=204,
     dependencies=[Depends(rate_limit("email_resend"))],
-    responses={**NO_CONTENT, **error_responses(401, 403, 404, 409, 429)},
+    responses={**NO_CONTENT, **error_responses(401, 403, 404, 409, 422, 429)},
 )
 async def email_resend(
+    body: BotCheck,
     db: DbSession,
     settings: SettingsDep,
     principal: Annotated[Principal, Depends(require("account.verify"))],
 ) -> Response:
-    """Older links stop working."""
-    await registration.resend_verification_email(_deps(db, settings), principal, now())
+    """Older links stop working; the CAPTCHA is required (spec §14.16)."""
+    deps = _deps(db, settings)
+    await _verify_bot_check(deps, settings, body)
+    await registration.resend_verification_email(deps, principal, now())
     return Response(status_code=204)
 
 

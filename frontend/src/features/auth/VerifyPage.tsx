@@ -5,8 +5,10 @@ import { Alert } from "@/components/ui/Feedback";
 import { Button } from "@/components/ui/Button";
 import { OtpInput } from "@/components/ui/OtpInput";
 import { roleHome } from "@/lib/redirects";
-import { useMe, useResendEmail, useSendOtp, useVerifyOtp } from "./api";
+import { useMe, useResendEmail, useSendOtp, useVerifyOtp, type BotFields } from "./api";
 import { messageFor } from "./errors";
+import { Honeypot } from "./Honeypot";
+import { useBotCheck } from "./useBotCheck";
 
 const RESEND_SECONDS = 60;
 
@@ -33,6 +35,32 @@ export default function VerifyPage() {
   const [code, setCode] = useState("");
   const [message, setMessage] = useState<{ tone: "danger" | "success"; text: string } | null>(null);
   const [left, setLeft] = useCountdown(RESEND_SECONDS);
+  // Sending a new code or link solves a CAPTCHA first (spec §14.16).
+  const bot = useBotCheck();
+  const [checking, setChecking] = useState<"code" | "link" | null>(null);
+  const resend = (which: "code" | "link", send: (fields: BotFields) => Promise<unknown>) => {
+    setMessage(null);
+    setChecking(which);
+    void bot
+      .fields(true)
+      .then(send)
+      .then(() => {
+        if (which === "code") setLeft(RESEND_SECONDS);
+        setMessage({
+          tone: "success",
+          text:
+            which === "code"
+              ? "We sent a new code."
+              : "We sent a new link. Older links no longer work.",
+        });
+      })
+      .catch((err: unknown) => {
+        setMessage({ tone: "danger", text: messageFor(err) });
+      })
+      .finally(() => {
+        setChecking(null);
+      });
+  };
 
   if (me.isPending)
     return (
@@ -82,17 +110,10 @@ export default function VerifyPage() {
                 <Button
                   type="button"
                   variant="ghost"
-                  disabled={left > 0 || sendOtp.isPending}
+                  disabled={left > 0 || checking !== null}
+                  loading={checking === "code"}
                   onClick={() => {
-                    sendOtp.mutate(undefined, {
-                      onSuccess: () => {
-                        setLeft(RESEND_SECONDS);
-                        setMessage({ tone: "success", text: "We sent a new code." });
-                      },
-                      onError: (err) => {
-                        setMessage({ tone: "danger", text: messageFor(err) });
-                      },
-                    });
+                    resend("code", (fields) => sendOtp.mutateAsync(fields));
                   }}
                 >
                   {left > 0 ? `Send a new code in ${String(left)}s` : "Send a new code"}
@@ -112,19 +133,10 @@ export default function VerifyPage() {
               </p>
               <Button
                 variant="secondary"
-                loading={resendEmail.isPending}
+                loading={checking === "link"}
+                disabled={checking !== null}
                 onClick={() => {
-                  resendEmail.mutate(undefined, {
-                    onSuccess: () => {
-                      setMessage({
-                        tone: "success",
-                        text: "We sent a new link. Older links no longer work.",
-                      });
-                    },
-                    onError: (err) => {
-                      setMessage({ tone: "danger", text: messageFor(err) });
-                    },
-                  });
+                  resend("link", (fields) => resendEmail.mutateAsync(fields));
                 }}
               >
                 Send a new link
@@ -136,6 +148,7 @@ export default function VerifyPage() {
           )}
         </li>
       </ol>
+      <Honeypot value={bot.honeypot} onChange={bot.setHoneypot} />
       <div className="mt-6" aria-live="polite">
         {message ? <Alert tone={message.tone}>{message.text}</Alert> : null}
       </div>

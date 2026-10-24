@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 from datetime import timedelta
+from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -12,6 +14,8 @@ from app.core import clock
 from tests.helpers import STRONG_PASSWORD, Api, unique_email, unique_phone
 
 pytestmark = [pytest.mark.security, pytest.mark.api]
+
+BOT_OK = {"captcha": "test-bypass"}
 
 
 def register(api: Api, email_value: str, phone_value: str, **overrides: object) -> object:
@@ -187,8 +191,9 @@ def test_otp_expiry(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_otp_resend_cooldown(api: Api) -> None:
     _pending_user(api)
-    assert api.post("/api/v1/auth/otp/send").status_code == 429  # just sent at registration
-    r = api.post("/api/v1/auth/otp/send")
+    # A code was just sent at registration.
+    assert api.post("/api/v1/auth/otp/send", json=BOT_OK).status_code == 429
+    r = api.post("/api/v1/auth/otp/send", json=BOT_OK)
     assert r.status_code == 429
     assert int(r.headers["Retry-After"]) >= 1
 
@@ -197,7 +202,7 @@ def test_already_verified_is_409(api: Api) -> None:
     user = api.sign_in_as("DEVELOPER")
     assert user.user_id
     assert api.post("/api/v1/auth/otp/verify", json={"code": "123456"}).status_code == 409
-    assert api.post("/api/v1/auth/email/resend").status_code == 409
+    assert api.post("/api/v1/auth/email/resend", json=BOT_OK).status_code == 409
 
 
 def test_email_token_single_use_and_invalid(api: Api) -> None:
@@ -211,7 +216,7 @@ def test_email_token_single_use_and_invalid(api: Api) -> None:
 def test_resend_invalidates_previous_link(api: Api) -> None:
     email, _phone = _pending_user(api)
     old = email_token(api, email)
-    assert api.post("/api/v1/auth/email/resend").status_code == 204
+    assert api.post("/api/v1/auth/email/resend", json=BOT_OK).status_code == 204
     new = email_token(api, email)
     assert old != new
     assert api.post("/api/v1/auth/email/verify", json={"token": old}).status_code == 400
@@ -222,3 +227,44 @@ def test_registration_rate_limit(api: Api) -> None:
     statuses = [register(api, unique_email(), unique_phone()).status_code for _ in range(6)]
     assert statuses[:5] == [202] * 5
     assert statuses[5] == 429
+
+
+@pytest.mark.parametrize("path", ["/api/v1/auth/otp/send", "/api/v1/auth/email/resend"])
+def test_resends_require_the_bot_check(
+    api: Api, path: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """OTP resend and email-verification resend are CAPTCHA-protected (spec §14.16)."""
+    email, phone = _pending_user(api)
+    # Past the 60 s OTP cooldown, so only the bot check can refuse.
+    later = clock.FrozenClock(clock.get_clock().now() + timedelta(minutes=2))
+    monkeypatch.setattr(clock, "_clock", later)
+    before_sms = api.get("/api/v1/__test__/sms", params={"phone": phone}).json()["message"]
+    before_link = email_token(api, email)
+
+    def send(**kw: Any) -> Any:
+        api.get("/api/v1/__test__/ratelimits/reset")  # 1 send a minute: isolate each case
+        return api.post(path, **kw)
+
+    refused = [
+        send(),  # no body at all
+        send(json={}),  # no solution
+        send(json={"captcha": "not-a-solution"}),  # wrong or tampered
+        send(json={"captcha": "x" * 4097}),  # over the bound
+        send(json={"captcha": "test-bypass", "website": "https://spam.example"}),  # honeypot
+        send(json={"captcha": "test-bypass", "started_at_ms": int(time.time() * 1000)}),  # fast
+        send(json={"captcha": "test-bypass", "role": "ADMIN"}),  # unknown field
+    ]
+    assert [r.status_code for r in refused] == [422, 403, 403, 422, 403, 403, 422]
+    for r in (refused[1], refused[2], refused[4], refused[5]):
+        assert r.json()["error"]["code"] == "CAPTCHA_FAILED"
+    # The refused requests sent nothing.
+    assert api.get("/api/v1/__test__/sms", params={"phone": phone}).json()["message"] == (
+        before_sms
+    )
+    assert email_token(api, email) == before_link
+    assert send(json=BOT_OK).status_code == 204
+
+
+def test_resends_need_a_session(api: Api) -> None:
+    for path in ("/api/v1/auth/otp/send", "/api/v1/auth/email/resend"):
+        assert api.post(path, json=BOT_OK).status_code == 401
