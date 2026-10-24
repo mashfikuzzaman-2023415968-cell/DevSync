@@ -359,7 +359,10 @@ def step_static_security(g: Gate) -> str:
 def step_structure(g: Gate) -> str:
     run([sys.executable, "backend/scripts/check_forbidden.py", str(ROOT)])
     in_tests(["python", "scripts/check_layers.py"], no_deps=True)
-    notes = ["forbidden patterns", "layers"]
+    # Every module has tests of its own (spec §16.1); the table in docs/TESTING.md is refreshed
+    # after the test steps, when this run's coverage report exists.
+    run([sys.executable, "backend/scripts/check_module_tests.py", str(ROOT)])
+    notes = ["forbidden patterns", "layers", "module tests"]
     if g.phase >= 1:
         in_tests(["python", "scripts/check_rls.py"])
         notes.append("RLS coverage")
@@ -880,6 +883,18 @@ def phase5_checks(g: Gate) -> str:
     )
 
 
+def refresh_testing_doc() -> str:
+    """Rewrite the module → tests → coverage table of docs/TESTING.md (spec §16.1)."""
+    proc = run(
+        [sys.executable, "backend/scripts/check_module_tests.py", "--write-doc", str(ROOT)],
+        check=False,
+    )
+    for line in (proc.stdout or "").splitlines():
+        if "docs/TESTING.md" in line:
+            return line.strip()
+    return "docs/TESTING.md not refreshed"
+
+
 def step_regression_guard(g: Gate) -> str:
     baseline_file = RUNS / "baseline.json"
     current = dict(g.counts)
@@ -893,7 +908,9 @@ def step_regression_guard(g: Gate) -> str:
         raise StepFailed(
             f"test counts dropped (baseline → now): {dropped}; needs a DECISIONS.md entry"
         )
-    return f"no tests removed: {current} (baseline {baseline})"
+    # The coverage report of this run is on disk now, so the doc table quotes today's numbers.
+    doc = refresh_testing_doc()
+    return f"no tests removed: {current} (baseline {baseline}); {doc}"
 
 
 STEPS: list[tuple[str, str, Callable[[Gate], str]]] = [

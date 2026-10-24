@@ -1,0 +1,33 @@
+{
+  "_about": "Modules that backend/scripts/check_module_tests.py (gate step 6, spec 16.1) accepts without a test of their own. Every entry says WHY: which suite exercises the module instead, or which phase builds and tests it. Adding an entry is a decision, not a convenience - a module that can be unit-tested gets a unit test. Keys are paths (backend ones relative to backend/, the way the coverage report names them); a directory key covers the modules inside it. The gate fails on an entry whose module no longer exists and reports entries that have since gained tests.",
+  "backend": {
+    "app/api/deps.py": "FastAPI dependencies (session, CSRF-safe acting context, rate-limit keys) run on every API request; tests/security/test_authz_matrix.py drives every route × role through them.",
+    "app/api/v1/auth.py": "Route layer of the auth services; covered end to end by tests/security/test_login_sessions.py, test_registration_verification.py and test_admin_totp.py.",
+    "app/api/v1/me.py": "Account reads used by tests/security/test_registration_verification.py (status, verification flags) and the profile suites.",
+    "app/api/v1/test_seed.py": "Test-only router, mounted only when DEVSYNC_ENV=test (§16.2). Every API test's fixtures and the E2E suite use it; it is never part of a built image.",
+    "app/core/idempotency.py": "Idempotency keys for money endpoints; Phase 10 builds the endpoints that use them and tests replay there (the module is unused until then, 0 % coverage, noted in docs/TESTING.md).",
+    "app/core/metrics.py": "Prometheus middleware; tests/api/test_app.py asserts /metrics is served with route templates and tests/edge/test_edge.py that Nginx blocks it from outside.",
+    "app/core/netutil.py": "valid_ip() guards the `inet` columns; exercised through session and audit writes in tests/security/test_login_sessions.py and tests/integration/test_foundation_db.py.",
+    "app/db/base.py": "Declarative base, naming conventions and column mixins — no behaviour of its own; every model and migration test (tests/integration/test_foundation_db.py) loads it.",
+    "app/jobs/worker.py": "RQ worker entry point (queues, connection, signal handling); the jobs suite runs tasks with a SimpleWorker, and the stack's worker container is exercised by the gate's E2E run.",
+    "app/schemas/common.py": "Shared response and error-envelope helpers; tests/unit/test_errors.py checks the envelope and scripts/check_openapi.py the documented responses they generate.",
+    "app/services/auth/account.py": "Sessions and device list; tested through the API in tests/security/test_login_sessions.py.",
+    "app/services/auth/common.py": "AuthDeps and shared helpers of the auth services, used by every auth test.",
+    "app/services/auth/credentials.py": "Password change, forgot and reset; tested through the API in tests/security/test_login_sessions.py (single-use tokens, expiry, sign-out of every device).",
+    "app/services/bidding_terms.py": "Too-few-bids actions (D54); tested through the API in tests/security/test_bidding_followups.py (preview, apply, bounds, If-Match, audit, notifications).",
+    "app/services/context.py": "The acting context (who acts, which session, when) passed to every service; built and asserted in every service test.",
+    "app/services/notifications.py": "Notification writer; asserted by its effects in tests/security/test_bidding_followups.py and tests/jobs/test_bidding_deadline.py (one notification per closing, per bidder).",
+    "app/services/outbox.py": "Email outbox writer; tests/jobs/test_email_jobs.py claims, sends and retries the rows it writes.",
+    "app/services/public_stats.py": "Cached homepage counters; tested through the API in tests/api/test_public.py."
+  },
+  "frontend": {
+    "frontend/src/main.tsx": "Browser entry point (mounts the app); exercised by every Playwright run — there is nothing to unit test that rendering the app does not already cover.",
+    "frontend/src/app/App.tsx": "Providers and the router outlet; covered by the E2E suite, which loads the real app on every screen of e2e/screens.ts.",
+    "frontend/src/app/router.tsx": "Route table; its guards and redirects are unit-tested (src/app/guards.test.tsx) and every route is visited by the E2E screens matrix.",
+    "frontend/src/app/RoleShell.tsx": "Chooses the shell for a signed-in role; covered by the shell tests and the E2E runs for each role.",
+    "frontend/src/features/admin": "Admin console shell and navigation; Phase 12 builds the console and its tests. Today the bundle is only reachable by a TOTP-verified admin (§14.17), which the E2E a11y run checks.",
+    "frontend/src/features/challenges": "Coding challenges; Phase 13 builds the screens and their tests (§17).",
+    "frontend/src/features/devtools": "Development-only pages (UI kit, stills) built with VITE_DEV_TOOLS and asserted to be absent from the deployed bundle by the gate (check_no_dev_tools, tests/build/no-inline.test.ts).",
+    "frontend/src/features/legal": "Static terms and privacy text; covered by the E2E screens matrix (a11y, responsive, visual)."
+  }
+}
