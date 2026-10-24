@@ -27,7 +27,9 @@ make gate PHASE=0
 - Build specification: [`DEVSYNC_BUILD_SPEC.md`](DEVSYNC_BUILD_SPEC.md) (authoritative)
 - Progress and hand-offs: [`PROGRESS.md`](PROGRESS.md), [`docs/OWNERSHIP.md`](docs/OWNERSHIP.md)
 - Decisions: [`DECISIONS.md`](DECISIONS.md) · Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- Security: [`docs/SECURITY.md`](docs/SECURITY.md) · Testing: [`docs/TESTING.md`](docs/TESTING.md)
+- Diagrams: [architecture](docs/design/architecture.svg) · [use cases](docs/design/use-cases.svg) · [ERD](docs/design/erd.svg)
+- Security: [`docs/SECURITY.md`](docs/SECURITY.md) · Testing: [`docs/TESTING.md`](docs/TESTING.md) · UI guide: [`docs/UI_GUIDE.md`](docs/UI_GUIDE.md)
+- Agile: [`docs/BACKLOG.md`](docs/BACKLOG.md) · sprints in [`docs/sprints/`](docs/sprints/)
 - Working rules for Claude Code: [`CLAUDE.md`](CLAUDE.md) · AI disclosure: [`docs/AI_ASSISTANCE.md`](docs/AI_ASSISTANCE.md)
 
 Payments in DevSync are **simulated**; no real money moves.
