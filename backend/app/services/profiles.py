@@ -40,6 +40,7 @@ from app.schemas.profiles import (
     DeveloperPublicProfile,
     DeveloperSkillOut,
     ExternalReviewOut,
+    ExternalReviewUpdate,
     FileOut,
     PortfolioImageOut,
     PortfolioItemCreate,
@@ -579,6 +580,49 @@ async def create_external_review(
         "external_review",
         review.id,
         {"source": source_name, "rating_norm": str(rating_norm)},
+    )
+    await ctx.db.commit()
+    await ctx.db.refresh(review)
+    return (await _reviews_out(ctx.db, [review]))[0]
+
+
+EXTERNAL_REVIEW_LOCKED = (
+    "This review has already been checked by an admin, so it can't be edited. "
+    "Delete it and add it again if it was wrong."
+)
+
+
+async def update_external_review(
+    ctx: Ctx, review_id: uuid.UUID, body: ExternalReviewUpdate
+) -> ExternalReviewOut:
+    """Correct a PENDING review of one's own (owner only; §10.2). Verified or rejected ones are
+    frozen (409), and nothing but these fields can be changed."""
+    review = await repo.get_external_review(ctx.db, review_id, ctx.uid)
+    if review is None:
+        raise NotFoundError
+    if review.status is not VerificationStatus.PENDING:
+        raise InvalidStateTransition(
+            current_state=review.status.value,
+            allowed_actions=["delete"],
+            message=EXTERNAL_REVIEW_LOCKED,
+        )
+    changes = body.model_dump(exclude_unset=True, exclude_none=True)
+    if not changes:
+        raise DomainError(
+            code=ErrorCode.VALIDATION_ERROR, fields={"body": "Send at least one field to change."}
+        )
+    if body.project_date is not None:
+        if body.project_date > to_display(ctx.now).date():
+            raise DomainError(
+                code=ErrorCode.VALIDATION_ERROR, fields={"project_date": "Use a date in the past."}
+            )
+        review.project_date = body.project_date
+    if body.source is not None:
+        review.source = body.source
+    if body.rating is not None and body.scale is not None:
+        review.rating_norm = normalise_rating(body.rating, body.scale)
+    await _audit(
+        ctx, "external_review.update", "external_review", review.id, {"fields": sorted(changes)}
     )
     await ctx.db.commit()
     await ctx.db.refresh(review)

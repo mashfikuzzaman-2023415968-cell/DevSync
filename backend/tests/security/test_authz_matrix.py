@@ -79,6 +79,7 @@ MATRIX: dict[tuple[str, str], tuple[set[str], str, bool]] = {
     ("DELETE", "/api/v1/me/certificates/{cert_id}"): ({DEV}, "auth", True),
     ("GET", "/api/v1/me/external-reviews"): ({DEV}, "auth", False),
     ("POST", "/api/v1/me/external-reviews"): ({DEV}, "auth", False),
+    ("PATCH", "/api/v1/me/external-reviews/{review_id}"): ({DEV}, "auth", True),
     ("DELETE", "/api/v1/me/external-reviews/{review_id}"): ({DEV}, "auth", True),
     ("GET", "/api/v1/developers/{developer_id}"): (ACTIVE, "auth", True),
     ("GET", "/api/v1/public/developers/{developer_id}"): (EVERYONE, "", True),

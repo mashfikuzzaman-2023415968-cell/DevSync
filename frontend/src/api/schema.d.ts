@@ -816,7 +816,12 @@ export interface paths {
     delete: operations["delete_external_review_api_v1_me_external_reviews__review_id__delete"];
     options?: never;
     head?: never;
-    patch?: never;
+    /**
+     * Correct an external review
+     * @description Only while it is still pending, and only the source, rating and date (the evidence file
+     *     and the verification status can't be changed here).
+     */
+    patch: operations["update_external_review_api_v1_me_external_reviews__review_id__patch"];
     trace?: never;
   };
   "/api/v1/me/payment-method/verify": {
@@ -2453,6 +2458,26 @@ export interface components {
        * @enum {string}
        */
       status: "PENDING" | "VERIFIED" | "REJECTED";
+    };
+    /**
+     * ExternalReviewUpdate
+     * @description Correct the details of a PENDING external review (the evidence file stays as it is).
+     *
+     *     `rating` is on the platform's own scale, so `scale` must come with it; `status`, `reason` and
+     *     every other field are set by admins only and are refused here (mass assignment, §14.5).
+     */
+    ExternalReviewUpdate: {
+      /** Project Date */
+      project_date?: string | null;
+      /** Rating */
+      rating?: number | string | null;
+      /**
+       * Scale
+       * @description The platform's top rating.
+       */
+      scale?: number | null;
+      /** Source */
+      source?: string | null;
     };
     /**
      * FileOut
@@ -10156,6 +10181,198 @@ export interface operations {
            *       "error": {
            *         "code": "NOT_FOUND",
            *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  update_external_review_api_v1_me_external_reviews__review_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        review_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExternalReviewUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "created_at": "2026-10-18T05:00:00Z",
+           *       "file": {
+           *         "height": 1000,
+           *         "id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+           *         "mime_type": "image/png",
+           *         "name": "review.png",
+           *         "size_bytes": 182044,
+           *         "width": 1600
+           *       },
+           *       "id": "6f1c3a52-6a3e-4c0e-9d4c-2f1b0b6e2a11",
+           *       "project_date": "2026-03-01",
+           *       "rating_norm": "0.960",
+           *       "source": "Upwork",
+           *       "status": "PENDING"
+           *     }
+           */
+          "application/json": components["schemas"]["ExternalReviewOut"];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description This review has already been checked by an admin, so it can't be edited. Delete it and add it again if it was wrong. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "allowed_actions": [
+           *           "delete"
+           *         ],
+           *         "code": "INVALID_STATE",
+           *         "current_state": "VERIFIED",
+           *         "message": "This review has already been checked by an admin, so it can't be edited. Delete it and add it again if it was wrong.",
            *         "request_id": "req_123"
            *       }
            *     }

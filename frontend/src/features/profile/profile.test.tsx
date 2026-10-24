@@ -552,6 +552,110 @@ describe("Challenges and the timed test", () => {
   });
 });
 
+const REVIEW = {
+  id: "r1",
+  source: "Upwork",
+  rating_norm: "0.960",
+  project_date: "2026-03-01",
+  file: { id: "f1", name: "review.txt", mime_type: "text/plain", size_bytes: 20 },
+  status: "PENDING",
+  reason: null,
+  created_at: "2026-10-18T05:00:00Z",
+};
+
+describe("Editing an external review (spec §10.2)", () => {
+  function withReviews(rows: Record<string, unknown>[]) {
+    server.use(
+      http.get("*/api/v1/me/external-reviews", () => HttpResponse.json(rows)),
+      ...base(),
+      http.get("*/api/v1/me/external-reviews", () => HttpResponse.json(rows)),
+    );
+  }
+
+  it("prefills the review, saves the correction and shows it", async () => {
+    let body: Record<string, unknown> | null = null;
+    let rows = [REVIEW];
+    server.use(
+      http.get("*/api/v1/me/external-reviews", () => HttpResponse.json(rows)),
+      ...base(),
+      http.patch("*/api/v1/me/external-reviews/r1", async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        rows = [{ ...REVIEW, source: "Fiverr", rating_norm: "0.900" }];
+        return HttpResponse.json(rows[0]);
+      }),
+    );
+    renderRoutes([{ path: "/dev/profile", element: <ProfilePage /> }], "/dev/profile");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Edit Upwork" }));
+    const dialog = await screen.findByRole("dialog");
+    const form = within(dialog);
+    const platform = form.getByLabelText(/Platform/);
+    expect(platform).toHaveValue("Upwork");
+    // Only the normalised score is stored, so the form shows it out of 100.
+    expect(form.getByLabelText(/Rating/)).toHaveValue(96);
+    expect(form.getByLabelText(/Project ended/)).toHaveValue("2026-03-01");
+    await user.clear(platform);
+    await user.type(platform, "Fiverr");
+    await user.clear(form.getByLabelText(/Rating/));
+    await user.type(form.getByLabelText(/Rating/), "90");
+    await user.click(form.getByRole("button", { name: "Save review" }));
+    await waitFor(() => {
+      expect(body).toEqual({
+        source: "Fiverr",
+        rating: "90",
+        scale: 100,
+        project_date: "2026-03-01",
+      });
+    });
+    expect(await screen.findByText("Fiverr")).toBeInTheDocument();
+  });
+
+  it("checks the fields before sending and shows the server's refusal", async () => {
+    let calls = 0;
+    server.use(
+      http.get("*/api/v1/me/external-reviews", () => HttpResponse.json([REVIEW])),
+      ...base(),
+      http.patch("*/api/v1/me/external-reviews/r1", () => {
+        calls += 1;
+        return HttpResponse.json(
+          {
+            error: {
+              code: "VALIDATION_ERROR",
+              message: "Some fields need attention.",
+              fields: { source: "Name the platform." },
+            },
+          },
+          { status: 422 },
+        );
+      }),
+    );
+    renderRoutes([{ path: "/dev/profile", element: <ProfilePage /> }], "/dev/profile");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Edit Upwork" }));
+    const form = within(await screen.findByRole("dialog"));
+    const date = form.getByLabelText(/Project ended/);
+    await user.clear(date);
+    await user.type(date, "2999-01-01");
+    await user.click(form.getByRole("button", { name: "Save review" }));
+    expect(await form.findByText("Use a date in the past.")).toBeInTheDocument();
+    expect(calls).toBe(0); // refused before it was sent
+    await user.clear(date);
+    await user.type(date, "2026-03-01");
+    await user.click(form.getByRole("button", { name: "Save review" }));
+    // The server's own field error lands on the field.
+    expect(await form.findByText("Name the platform.")).toBeInTheDocument();
+    expect(calls).toBe(1);
+  });
+
+  it("offers no edit once an admin has checked the review", async () => {
+    withReviews([{ ...REVIEW, status: "VERIFIED" }]);
+    renderRoutes([{ path: "/dev/profile", element: <ProfilePage /> }], "/dev/profile");
+    expect(await screen.findByText("Verified")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit Upwork" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete Upwork" })).toBeInTheDocument();
+  });
+});
+
 describe("PublicProfilePage", () => {
   const PUBLIC = {
     id: "dev-1",

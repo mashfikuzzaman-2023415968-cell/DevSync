@@ -12,6 +12,7 @@ import type {
   DeveloperProfileUpdate,
   DeveloperSkill,
   ExternalReview,
+  ExternalReviewUpdate,
   PortfolioItem,
   PortfolioItemCreate,
   PortfolioItemUpdate,
@@ -256,6 +257,17 @@ export function uploadExternalReview(
   form.append("project_date", fields.project_date);
   form.append("file", file);
   return upload<ExternalReview>("/me/external-reviews", form, onProgress);
+}
+
+/** Correct a review that is still pending (source, rating, date; spec §10.2). */
+export function useUpdateExternalReview() {
+  const qc = useQueryClient();
+  return useMutation({
+    meta: { inlineErrors: true },
+    mutationFn: ({ id, body }: { id: string; body: ExternalReviewUpdate }) =>
+      api<ExternalReview>(`/me/external-reviews/${id}`, { method: "PATCH", body }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.reviews }),
+  });
 }
 
 export function useDeleteExternalReview() {

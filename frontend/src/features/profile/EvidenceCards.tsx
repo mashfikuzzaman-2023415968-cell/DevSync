@@ -1,8 +1,8 @@
 /** Certificates and reviews from other platforms (spec §7.2, §7.7): uploaded with evidence,
  * pending until an admin verifies them; only verified ones appear publicly or count later. */
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FileText, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { FileText, Pencil, Trash2 } from "lucide-react";
+import { useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { fileUrl } from "@/api/client";
@@ -12,7 +12,7 @@ import { Badge, Card, CardHeader, Skeleton, type Tone } from "@/components/ui/Di
 import { ErrorState } from "@/components/ui/Feedback";
 import { Field } from "@/components/ui/Field";
 import { FileDropzone } from "@/components/ui/FileDropzone";
-import { ConfirmDialog } from "@/components/ui/Overlay";
+import { ConfirmDialog, Dialog } from "@/components/ui/Overlay";
 import { toast } from "@/components/ui/toast-store";
 import { applyFieldErrors, messageFor } from "@/features/auth/errors";
 import { formatDate, formatScore } from "@/lib/format";
@@ -24,6 +24,7 @@ import {
   useDeleteCertificate,
   useDeleteExternalReview,
   useExternalReviews,
+  useUpdateExternalReview,
 } from "./api";
 import {
   CERTIFICATE_RULE,
@@ -79,6 +80,7 @@ function EvidenceRow({
   fileName,
   status,
   reason,
+  action,
   onDelete,
 }: {
   title: string;
@@ -87,6 +89,8 @@ function EvidenceRow({
   fileName: string;
   status: Certificate["status"];
   reason: string | null;
+  /** An extra control for this row (e.g. "Edit" while it is pending). */
+  action?: ReactNode;
   onDelete: () => Promise<void>;
 }) {
   return (
@@ -104,6 +108,7 @@ function EvidenceRow({
       </div>
       <div className="flex items-center gap-2">
         <StatusBadge status={status} reason={reason} />
+        {action}
         <ConfirmDialog
           trigger={
             <IconButton aria-label={`Delete ${title}`}>
@@ -226,6 +231,100 @@ export function CertificatesCard() {
   );
 }
 
+/** Edit a review that is still pending (spec §10.2; verified ones are frozen server-side).
+ * The rating is shown out of 100, because only the normalised score is stored. */
+function EditReviewDialog({ review }: { review: ExternalReview }) {
+  const [open, setOpen] = useState(false);
+  const update = useUpdateExternalReview();
+  const form = useForm<ReviewValues>({
+    resolver: zodResolver(reviewSchema),
+    values: {
+      source: review.source,
+      // 0–1 with 3 decimals → out of 100 with at most one (0.965 → "96.5").
+      rating: (Number(review.rating_norm) * 100).toFixed(1).replace(/\.0$/, ""),
+      scale: "100",
+      project_date: review.project_date,
+    },
+  });
+  const errors = form.formState.errors;
+  const submit = form.handleSubmit(async (values) => {
+    try {
+      await update.mutateAsync({
+        id: review.id,
+        body: {
+          source: values.source,
+          rating: String(values.rating),
+          scale: Number(values.scale),
+          project_date: values.project_date,
+        },
+      });
+      toast({ tone: "success", title: "Review updated" });
+      setOpen(false);
+    } catch (e) {
+      if (!applyFieldErrors(e, form.setError, ["source", "rating", "scale", "project_date"])) {
+        toast({ tone: "danger", title: "Not saved", description: messageFor(e) });
+      }
+    }
+  });
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={setOpen}
+      trigger={
+        <IconButton aria-label={`Edit ${review.source}`}>
+          <Pencil />
+        </IconButton>
+      }
+      title="Edit this review"
+      description="You can correct it while an admin hasn’t checked it yet. The evidence file stays as it is."
+      footer={
+        <>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setOpen(false);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button loading={update.isPending} onClick={() => void submit()}>
+            Save review
+          </Button>
+        </>
+      }
+    >
+      <form noValidate onSubmit={(e) => void submit(e)} className="grid gap-4 sm:grid-cols-2">
+        <Field
+          label="Platform"
+          required
+          error={errors.source?.message}
+          {...form.register("source")}
+        />
+        <Field
+          label="Project ended"
+          required
+          type="date"
+          error={errors.project_date?.message}
+          {...form.register("project_date")}
+        />
+        <Field
+          label="Rating"
+          required
+          type="number"
+          inputMode="decimal"
+          step="0.1"
+          min={0}
+          hint="Out of 100, the way DevSync stores it."
+          error={errors.rating?.message}
+          {...form.register("rating")}
+        />
+        <input type="hidden" {...form.register("scale")} />
+      </form>
+    </Dialog>
+  );
+}
+
 function reviewDetail(r: ExternalReview): string {
   return `${formatScore(Number(r.rating_norm))} / 100 on ${r.source}, project ended ${formatDate(r.project_date)}`;
 }
@@ -296,6 +395,7 @@ export function ExternalReviewsCard() {
               fileName={r.file.name}
               status={r.status}
               reason={r.reason}
+              action={r.status === "PENDING" ? <EditReviewDialog review={r} /> : undefined}
               onDelete={async () => {
                 await remove.mutateAsync(r.id);
                 toast({ tone: "success", title: "Review deleted" });

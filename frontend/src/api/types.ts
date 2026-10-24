@@ -25,6 +25,7 @@ export type PortfolioItemCreate = Schemas["PortfolioItemCreate"];
 export type PortfolioItemUpdate = Schemas["PortfolioItemUpdate"];
 export type Certificate = Schemas["CertificateOut"];
 export type ExternalReview = Schemas["ExternalReviewOut"];
+export type ExternalReviewUpdate = Schemas["ExternalReviewUpdate"];
 export type PublicProfile = Schemas["DeveloperPublicProfile"];
 export type SkillTest = Schemas["SkillTestOut"];
 export type Attempt = Schemas["AttemptOut"];

@@ -15,7 +15,14 @@ from functools import lru_cache
 from typing import Annotated, Literal
 from zoneinfo import available_timezones
 
-from pydantic import AfterValidator, BaseModel, BeforeValidator, Field, field_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    BeforeValidator,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from app.schemas.common import StrictRequest
 
@@ -270,6 +277,24 @@ class ExternalReviewOut(BaseModel):
     status: VerificationName
     reason: str | None
     created_at: datetime
+
+
+class ExternalReviewUpdate(StrictRequest):
+    """Correct the details of a PENDING external review (the evidence file stays as it is).
+
+    `rating` is on the platform's own scale, so `scale` must come with it; `status`, `reason` and
+    every other field are set by admins only and are refused here (mass assignment, §14.5)."""
+
+    source: SourceName | None = None
+    rating: Decimal | None = Field(default=None, ge=0, le=100, max_digits=6, decimal_places=2)
+    scale: int | None = Field(default=None, ge=1, le=100, description="The platform's top rating.")
+    project_date: date | None = None
+
+    @model_validator(mode="after")
+    def _rating_needs_its_scale(self) -> ExternalReviewUpdate:
+        if (self.rating is None) != (self.scale is None):
+            raise ValueError("Send rating and scale together.")
+        return self
 
 
 # --------------------------------------------------------------------------- public profile

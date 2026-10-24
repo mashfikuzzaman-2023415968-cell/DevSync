@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, File, Form, Header, Request, Response, U
 
 from app.api.deps import DbSession, acting, app_settings, principal_of, rate_limit, require
 from app.core.config import Settings
-from app.schemas.common import error_responses, version_conflict_response
+from app.schemas.common import ErrorResponse, error_responses, version_conflict_response
 from app.schemas.profiles import (
     CertificateOut,
     CertificateUpdate,
@@ -22,6 +22,7 @@ from app.schemas.profiles import (
     DeveloperPublicProfile,
     DeveloperSkillOut,
     ExternalReviewOut,
+    ExternalReviewUpdate,
     PortfolioItemCreate,
     PortfolioItemOut,
     PortfolioItemUpdate,
@@ -415,6 +416,39 @@ async def create_external_review(
         source=file,
         filename=file.filename,
     )
+
+
+@router.patch(
+    "/me/external-reviews/{review_id}",
+    summary="Correct an external review",
+    response_model=ExternalReviewOut,
+    responses={
+        **_ok(EX_REVIEW, 422),
+        409: {
+            "model": ErrorResponse,
+            "description": svc.EXTERNAL_REVIEW_LOCKED,
+            "content": {
+                "application/json": {
+                    "example": {
+                        "error": {
+                            "code": "INVALID_STATE",
+                            "message": svc.EXTERNAL_REVIEW_LOCKED,
+                            "current_state": "VERIFIED",
+                            "allowed_actions": ["delete"],
+                            "request_id": "req_123",
+                        }
+                    }
+                }
+            },
+        },
+    },
+)
+async def update_external_review(
+    review_id: uuid.UUID, body: ExternalReviewUpdate, ctx: Dev
+) -> ExternalReviewOut:
+    """Only while it is still pending, and only the source, rating and date (the evidence file
+    and the verification status can't be changed here)."""
+    return await svc.update_external_review(ctx, review_id, body)
 
 
 @router.delete(
