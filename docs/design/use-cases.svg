@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1060" width="1500" height="1060" font-family="Inter, 'Segoe UI', Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">DevSync use case diagram (built through Phase 5, later phases marked)</title>
+<desc id="desc">UML use case diagram. Actors: Guest, Client, Developer, Newcomer (a kind of Developer), Admin and System/Jobs. Solid teal use cases are built through Phase 5; dashed grey ones are planned for the phase shown.</desc>
+<defs><marker id="open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10" fill="none" stroke="#475569" stroke-width="1.4"/></marker><marker id="gen" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="14" markerHeight="14" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#ffffff" stroke="#0f172a" stroke-width="1.2"/></marker></defs>
+<rect x="0" y="0" width="1500" height="1060" fill="#ffffff"/>
+<text x="40" y="44" font-size="22" font-weight="700" fill="#0f172a">DevSync — use cases</text>
+<text x="40" y="66" font-size="12.5" fill="#475569">UML 2.5 style. Solid teal: built through Phase 5 (Demo 1, 2 Nov 2026). Dashed grey: later phases (main ones only).</text>
+<rect x="320" y="92" width="880" height="895" rx="16" fill="none" stroke="#0f172a" stroke-width="1.6"/>
+<text x="1184" y="116" text-anchor="end" font-size="13" font-weight="600" fill="#0f172a">«system» DevSync</text>
+<text x="340" y="112" font-size="11" font-weight="600" fill="#64748b" letter-spacing="0.06em">ACCOUNTS</text>
+<text x="340" y="305" font-size="11" font-weight="600" fill="#64748b" letter-spacing="0.06em">PLANNING &amp; HIRING</text>
+<text x="340" y="618" font-size="11" font-weight="600" fill="#64748b" letter-spacing="0.06em">LATER PHASES</text>
+<text x="340" y="815" font-size="11" font-weight="600" fill="#64748b" letter-spacing="0.06em">ADMIN &amp; SYSTEM</text>
+<line x1="320" y1="290" x2="1200" y2="290" stroke="#e2e8f0"/>
+<line x1="320" y1="603" x2="1200" y2="603" stroke="#e2e8f0"/>
+<line x1="320" y1="800" x2="1200" y2="800" stroke="#e2e8f0"/>
+<line x1="154" y1="165" x2="342" y2="135" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="154" y1="165" x2="342" y2="190" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="154" y1="165" x2="342" y2="245" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="154" y1="165" x2="630" y2="135" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="154" y1="495" x2="630" y2="190" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="154" y1="495" x2="342" y2="330" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="154" y1="495" x2="342" y2="385" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="154" y1="495" x2="342" y2="440" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="154" y1="495" x2="342" y2="505" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="154" y1="495" x2="342" y2="570" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="154" y1="495" x2="342" y2="640" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="154" y1="495" x2="342" y2="695" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="154" y1="495" x2="342" y2="750" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="154" y1="495" x2="630" y2="135" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="154" y1="870" x2="342" y2="840" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="154" y1="870" x2="342" y2="895" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="154" y1="870" x2="342" y2="950" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="154" y1="870" x2="630" y2="190" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="1356" y1="370" x2="894" y2="190" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="1356" y1="370" x2="1178" y2="300" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="1356" y1="370" x2="1178" y2="355" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="1356" y1="370" x2="1178" y2="410" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="1356" y1="370" x2="1178" y2="465" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="1356" y1="370" x2="1178" y2="520" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="1356" y1="370" x2="1178" y2="600" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="1356" y1="370" x2="1178" y2="655" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="1356" y1="370" x2="1178" y2="710" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="1356" y1="370" x2="1178" y2="765" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="1356" y1="550" x2="1178" y2="355" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="1356" y1="870" x2="1178" y2="840" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="1356" y1="870" x2="1178" y2="895" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="1356" y1="870" x2="1178" y2="950" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="598" y1="385" x2="650" y2="385" stroke="#475569" stroke-width="1.3" stroke-dasharray="6 4" marker-end="url(#open)"/>
+<text x="624.0" y="359.0" text-anchor="middle" font-size="10.5" fill="#475569">«include»</text>
+<line x1="598" y1="505" x2="644" y2="505" stroke="#475569" stroke-width="1.3" stroke-dasharray="6 4" marker-end="url(#open)"/>
+<text x="621.0" y="479.0" text-anchor="middle" font-size="10.5" fill="#475569">«include»</text>
+<line x1="922" y1="465" x2="880" y2="505" stroke="#475569" stroke-width="1.3" stroke-dasharray="6 4" marker-end="url(#open)"/>
+<text x="901.0" y="459.0" text-anchor="middle" font-size="10.5" fill="#475569">«include»</text>
+<line x1="470" y1="548" x2="470" y2="527" stroke="#475569" stroke-width="1.3" stroke-dasharray="6 4" marker-end="url(#open)"/>
+<text x="478.0" y="541.5" font-size="10.5" fill="#475569">«extend»</text>
+<line x1="1380" y1="508" x2="1380" y2="446" stroke="#0f172a" stroke-width="1.5" marker-end="url(#gen)"/>
+<ellipse cx="470" cy="135" rx="128" ry="22" fill="#e6f4f2" stroke="#0f766e" stroke-width="1.5"/><text x="470" y="139" text-anchor="middle" font-size="12" fill="#0f172a">Browse homepage &amp; open projects</text>
+<ellipse cx="470" cy="190" rx="128" ry="22" fill="#e6f4f2" stroke="#0f766e" stroke-width="1.5"/><text x="470" y="194" text-anchor="middle" font-size="12" fill="#0f172a">Register; verify phone (OTP) &amp; email</text>
+<ellipse cx="470" cy="245" rx="128" ry="22" fill="#e6f4f2" stroke="#0f766e" stroke-width="1.5"/><text x="470" y="249" text-anchor="middle" font-size="12" fill="#0f172a">Reset a forgotten password</text>
+<ellipse cx="762" cy="190" rx="132" ry="22" fill="#e6f4f2" stroke="#0f766e" stroke-width="1.5"/><text x="762" y="194" text-anchor="middle" font-size="12" fill="#0f172a">Sign in; manage sessions &amp; settings</text>
+<ellipse cx="762" cy="135" rx="132" ry="22" fill="#e6f4f2" stroke="#0f766e" stroke-width="1.5"/><text x="762" y="139" text-anchor="middle" font-size="12" fill="#0f172a">View a developer’s public profile</text>
+<ellipse cx="470" cy="330" rx="128" ry="22" fill="#e6f4f2" stroke="#0f766e" stroke-width="1.5"/><text x="470" y="334" text-anchor="middle" font-size="12" fill="#0f172a">Edit organisation; verify payment (sim.)</text>
+<ellipse cx="470" cy="385" rx="128" ry="22" fill="#e6f4f2" stroke="#0f766e" stroke-width="1.5"/><text x="470" y="389" text-anchor="middle" font-size="12" fill="#0f172a">Create project in the wizard</text>
+<ellipse cx="762" cy="385" rx="112" ry="22" fill="#e6f4f2" stroke="#0f766e" stroke-width="1.5"/><text x="762" y="389" text-anchor="middle" font-size="12" fill="#0f172a">Generate CPM timeline</text>
+<ellipse cx="470" cy="440" rx="128" ry="22" fill="#e6f4f2" stroke="#0f766e" stroke-width="1.5"/><text x="470" y="444" text-anchor="middle" font-size="12" fill="#0f172a">Publish, extend or cancel bidding</text>
+<ellipse cx="470" cy="505" rx="128" ry="22" fill="#e6f4f2" stroke="#0f766e" stroke-width="1.5"/><text x="470" y="509" text-anchor="middle" font-size="12" fill="#0f172a">Review bids with eligibility reasons</text>
+<ellipse cx="470" cy="570" rx="128" ry="22" fill="#e6f4f2" stroke="#0f766e" stroke-width="1.5"/><text x="470" y="574" text-anchor="middle" font-size="12" fill="#0f172a">Change terms when too few bids</text>
+<ellipse cx="470" cy="640" rx="128" ry="22" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 4"/><text x="470" y="638" text-anchor="middle" font-size="12" fill="#64748b">Form team (BPSO, fairness dial)</text><text x="470" y="653" text-anchor="middle" font-size="10.5" fill="#64748b" font-style="italic">later · Phase 7</text>
+<ellipse cx="470" cy="695" rx="128" ry="22" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 4"/><text x="470" y="693" text-anchor="middle" font-size="12" fill="#64748b">Watch progress &amp; risks</text><text x="470" y="708" text-anchor="middle" font-size="10.5" fill="#64748b" font-style="italic">later · Phase 9</text>
+<ellipse cx="470" cy="750" rx="128" ry="22" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 4"/><text x="470" y="748" text-anchor="middle" font-size="12" fill="#64748b">Fund escrow; approve milestones</text><text x="470" y="763" text-anchor="middle" font-size="10.5" fill="#64748b" font-style="italic">later · Phase 10</text>
+<ellipse cx="470" cy="840" rx="128" ry="22" fill="#e6f4f2" stroke="#0f766e" stroke-width="1.5"/><text x="470" y="844" text-anchor="middle" font-size="12" fill="#0f172a">Admin sign-in with TOTP &amp; step-up</text>
+<ellipse cx="470" cy="895" rx="128" ry="22" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 4"/><text x="470" y="893" text-anchor="middle" font-size="12" fill="#64748b">Manage users, certificates, settings</text><text x="470" y="908" text-anchor="middle" font-size="10.5" fill="#64748b" font-style="italic">later · Phase 12</text>
+<ellipse cx="470" cy="950" rx="128" ry="22" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 4"/><text x="470" y="948" text-anchor="middle" font-size="12" fill="#64748b">Resolve disputes &amp; integrity flags</text><text x="470" y="963" text-anchor="middle" font-size="10.5" fill="#64748b" font-style="italic">later · Phase 12</text>
+<ellipse cx="762" cy="505" rx="118" ry="22" fill="#e6f4f2" stroke="#0f766e" stroke-width="1.5"/><text x="762" y="509" text-anchor="middle" font-size="12" fill="#0f172a">Check eligibility (Algorithm 1)</text>
+<ellipse cx="1050" cy="300" rx="128" ry="22" fill="#e6f4f2" stroke="#0f766e" stroke-width="1.5"/><text x="1050" y="304" text-anchor="middle" font-size="12" fill="#0f172a">Build profile, portfolio, certificates</text>
+<ellipse cx="1050" cy="355" rx="128" ry="22" fill="#e6f4f2" stroke="#0f766e" stroke-width="1.5"/><text x="1050" y="359" text-anchor="middle" font-size="12" fill="#0f172a">Take a timed skill test</text>
+<ellipse cx="1050" cy="410" rx="128" ry="22" fill="#e6f4f2" stroke="#0f766e" stroke-width="1.5"/><text x="1050" y="414" text-anchor="middle" font-size="12" fill="#0f172a">Search, filter, see recommended</text>
+<ellipse cx="1050" cy="465" rx="128" ry="22" fill="#e6f4f2" stroke="#0f766e" stroke-width="1.5"/><text x="1050" y="469" text-anchor="middle" font-size="12" fill="#0f172a">Place, edit or withdraw a sealed bid</text>
+<ellipse cx="1050" cy="520" rx="128" ry="22" fill="#e6f4f2" stroke="#0f766e" stroke-width="1.5"/><text x="1050" y="524" text-anchor="middle" font-size="12" fill="#0f172a">Track my bids and verdicts</text>
+<ellipse cx="1050" cy="600" rx="128" ry="22" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 4"/><text x="1050" y="598" text-anchor="middle" font-size="12" fill="#64748b">Answer invitation; lead role</text><text x="1050" y="613" text-anchor="middle" font-size="10.5" fill="#64748b" font-style="italic">later · Phase 8</text>
+<ellipse cx="1050" cy="655" rx="128" ry="22" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 4"/><text x="1050" y="653" text-anchor="middle" font-size="12" fill="#64748b">Work on tasks; post check-ins</text><text x="1050" y="668" text-anchor="middle" font-size="10.5" fill="#64748b" font-style="italic">later · Phase 9</text>
+<ellipse cx="1050" cy="710" rx="128" ry="22" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 4"/><text x="1050" y="708" text-anchor="middle" font-size="12" fill="#64748b">Review teammates; see reputation</text><text x="1050" y="723" text-anchor="middle" font-size="10.5" fill="#64748b" font-style="italic">later · Phases 6, 11</text>
+<ellipse cx="1050" cy="765" rx="128" ry="22" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 4"/><text x="1050" y="763" text-anchor="middle" font-size="12" fill="#64748b">Link GitHub; coding challenge</text><text x="1050" y="778" text-anchor="middle" font-size="10.5" fill="#64748b" font-style="italic">later · Phase 13</text>
+<ellipse cx="1050" cy="840" rx="128" ry="22" fill="#e6f4f2" stroke="#0f766e" stroke-width="1.5"/><text x="1050" y="844" text-anchor="middle" font-size="12" fill="#0f172a">Close bidding at the deadline</text>
+<ellipse cx="1050" cy="895" rx="128" ry="22" fill="#e6f4f2" stroke="#0f766e" stroke-width="1.5"/><text x="1050" y="899" text-anchor="middle" font-size="12" fill="#0f172a">Send emails; expire records &amp; uploads</text>
+<ellipse cx="1050" cy="950" rx="128" ry="22" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 4"/><text x="1050" y="948" text-anchor="middle" font-size="12" fill="#64748b">Update reputation; integrity scans</text><text x="1050" y="963" text-anchor="middle" font-size="10.5" fill="#64748b" font-style="italic">later · Phases 6, 11</text>
+<g stroke="#0f172a" stroke-width="2" fill="none"><circle cx="130" cy="137" r="12" fill="#ffffff"/><line x1="130" y1="149" x2="130" y2="181"/><line x1="110" y1="161" x2="150" y2="161"/><line x1="130" y1="181" x2="114" y2="207"/><line x1="130" y1="181" x2="146" y2="207"/></g><text x="130" y="227" text-anchor="middle" font-size="14" font-weight="600" fill="#0f172a">Guest</text>
+<g stroke="#0f172a" stroke-width="2" fill="none"><circle cx="130" cy="467" r="12" fill="#ffffff"/><line x1="130" y1="479" x2="130" y2="511"/><line x1="110" y1="491" x2="150" y2="491"/><line x1="130" y1="511" x2="114" y2="537"/><line x1="130" y1="511" x2="146" y2="537"/></g><text x="130" y="557" text-anchor="middle" font-size="14" font-weight="600" fill="#0f172a">Client</text>
+<g stroke="#0f172a" stroke-width="2" fill="none"><circle cx="130" cy="842" r="12" fill="#ffffff"/><line x1="130" y1="854" x2="130" y2="886"/><line x1="110" y1="866" x2="150" y2="866"/><line x1="130" y1="886" x2="114" y2="912"/><line x1="130" y1="886" x2="146" y2="912"/></g><text x="130" y="932" text-anchor="middle" font-size="14" font-weight="600" fill="#0f172a">Admin</text>
+<g stroke="#0f172a" stroke-width="2" fill="none"><circle cx="1380" cy="342" r="12" fill="#ffffff"/><line x1="1380" y1="354" x2="1380" y2="386"/><line x1="1360" y1="366" x2="1400" y2="366"/><line x1="1380" y1="386" x2="1364" y2="412"/><line x1="1380" y1="386" x2="1396" y2="412"/></g><text x="1380" y="432" text-anchor="middle" font-size="14" font-weight="600" fill="#0f172a">Developer</text>
+<g stroke="#0f172a" stroke-width="2" fill="none"><circle cx="1380" cy="522" r="12" fill="#ffffff"/><line x1="1380" y1="534" x2="1380" y2="566"/><line x1="1360" y1="546" x2="1400" y2="546"/><line x1="1380" y1="566" x2="1364" y2="592"/><line x1="1380" y1="566" x2="1396" y2="592"/></g><text x="1380" y="612" text-anchor="middle" font-size="14" font-weight="600" fill="#0f172a">Newcomer</text>
+<g stroke="#0f172a" stroke-width="2" fill="none"><circle cx="1380" cy="842" r="12" fill="#ffffff"/><line x1="1380" y1="854" x2="1380" y2="886"/><line x1="1360" y1="866" x2="1400" y2="866"/><line x1="1380" y1="886" x2="1364" y2="912"/><line x1="1380" y1="886" x2="1396" y2="912"/></g><text x="1380" y="932" text-anchor="middle" font-size="14" font-weight="600" fill="#0f172a">System / Jobs</text>
+<text x="1408" y="480.0" font-size="10.5" fill="#475569">is a kind of</text>
+<g font-size="12" fill="#475569">
+<ellipse cx="370" cy="1016" rx="30" ry="11" fill="#e6f4f2" stroke="#0f766e" stroke-width="1.5"/>
+<text x="410" y="1020">built (Phases 0–5)</text>
+<ellipse cx="580" cy="1016" rx="30" ry="11" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="620" y="1020">later phase</text>
+<line x1="740" y1="1016" x2="790" y2="1016" stroke="#475569" stroke-width="1.3" stroke-dasharray="6 4" marker-end="url(#open)"/>
+<text x="800" y="1020">«include» always happens · «extend» optional</text>
+<line x1="1110" y1="1016" x2="1160" y2="1016" stroke="#0f172a" stroke-width="1.5" marker-end="url(#gen)"/>
+<text x="1170" y="1020">generalization</text>
+</g>
+</svg>
