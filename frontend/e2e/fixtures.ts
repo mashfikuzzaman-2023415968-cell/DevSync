@@ -28,11 +28,18 @@ export interface Seeded {
   totpSecret: string | null;
 }
 
+/** How a seeded account differs from the usual one (verified, with a TOTP secret). */
+export interface SeedOptions {
+  verified?: boolean;
+  withTotp?: boolean;
+}
+
 export async function seedUser(
   request: APIRequestContext,
   baseURL: string,
   role: "CLIENT" | "DEVELOPER" | "ADMIN",
   displayName = "Test User",
+  { verified = true, withTotp = true }: SeedOptions = {},
 ): Promise<Seeded> {
   const email = uniqueEmail(role.toLowerCase());
   const response = await request.post("/api/v1/__test__/seed/user", {
@@ -42,8 +49,8 @@ export async function seedUser(
       email,
       phone: role === "ADMIN" ? null : uniquePhone(),
       password: PASSWORD,
-      verified: true,
-      with_totp: true,
+      verified,
+      with_totp: withTotp,
       display_name: displayName,
     },
   });
@@ -90,8 +97,9 @@ export async function apiSignIn(
   baseURL: string,
   role: "CLIENT" | "DEVELOPER" | "ADMIN",
   displayName = "Nadia Rahman",
+  options: SeedOptions = {},
 ): Promise<Seeded> {
-  const user = await seedUser(page.request, baseURL, role, displayName);
+  const user = await seedUser(page.request, baseURL, role, displayName, options);
   const headers = await csrfHeaders(page.request, baseURL);
   let r = await page.request.post("/api/v1/auth/login", {
     headers,

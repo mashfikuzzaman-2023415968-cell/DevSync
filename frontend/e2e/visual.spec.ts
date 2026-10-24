@@ -1,7 +1,8 @@
 /**
  * Visual baselines (spec §13.14 #2, §16.5 step 15): homepage, auth screens, the app shell and
- * the Phase 3 profile and challenge screens, the Phase 4 planning screens and the Phase 5 bid
- * sheet and client Bids screen (with its "Why?" panel),
+ * the Phase 3 profile and challenge screens, the Phase 4 planning screens, the Phase 5 bid
+ * sheet and client Bids screen (with its "Why?" panel), and the screens that need state
+ * (verification, the admin's second factor, the timed test, a public profile and project),
  * light and dark, at 390, 768 and 1440 px. Rendered with reduced motion (final states, poster
  * instead of the live scene) and a fixed clock so they are stable.
  * Update with `make visual-update` (runs in the pinned Playwright image).
@@ -9,6 +10,7 @@
 import type { Page } from "@playwright/test";
 import { expect, optionChosen, resetLimits, test } from "./test";
 import { addSkillEvidence, apiSignIn, createOrderingProject, setReputation } from "./fixtures";
+import { openScreen, STATEFUL_SCREENS } from "./stateful-screens";
 
 const WIDTHS = [390, 768, 1440] as const;
 const FIXED_NOW = new Date("2026-10-12T04:00:00Z"); // 10:00 in Dhaka → "Good morning"
@@ -72,6 +74,9 @@ for (const scheme of ["light", "dark"] as const) {
         ["login", "/login"],
         ["register", "/register"],
         ["register-details", "/register?role=client"],
+        ["forgot-password", "/forgot-password"],
+        ["reset-password", "/reset-password?token=example"],
+        ["public-projects", "/projects"],
         ["not-found", "/missing"],
       ] as const) {
         await resetLimits(page.request);
@@ -173,6 +178,22 @@ for (const scheme of ["light", "dark"] as const) {
         animations: "disabled",
         mask: [panel.locator("[data-volatile]")],
       });
+    });
+
+    test(`screens that need state ${scheme} ${String(width)} @visual`, async ({
+      page,
+      baseURL,
+    }) => {
+      test.setTimeout(180_000);
+      for (const screen of STATEFUL_SCREENS) {
+        // A preparation step navigates and may sign a different person in, so the clock, the
+        // colour scheme and the viewport are set again just before the screenshot.
+        const reach = await screen.prepare(page, baseURL ?? "");
+        await prepare(page, scheme, width);
+        await openScreen(page, reach);
+        // Emails, ids, countdowns and "active 3 minutes ago" differ on every run.
+        await snap(page, `${screen.name}-${scheme}-${String(width)}`, ["[data-volatile]"]);
+      }
     });
   }
 }

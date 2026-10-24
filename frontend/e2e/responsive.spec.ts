@@ -4,6 +4,7 @@ import { expect, resetLimits, test } from "./test";
 import { apiSignIn } from "./fixtures";
 import { layoutProblems } from "./layout-checks";
 import { PUBLIC_SCREENS, SIGNED_IN_SCREENS, type Screen } from "./screens";
+import { openScreen, STATEFUL_SCREENS } from "./stateful-screens";
 
 const VIEWPORTS = [
   { width: 375, height: 667, touch: true },
@@ -44,6 +45,25 @@ for (const role of ["DEVELOPER", "CLIENT", "ADMIN"] as const) {
     expect(results).toEqual([]);
   });
 }
+
+test("screens that need state pass the viewport matrix @e2e", async ({ page, baseURL }) => {
+  test.setTimeout(300_000);
+  const results: string[] = [];
+  for (const screen of STATEFUL_SCREENS) {
+    const reach = await screen.prepare(page, baseURL ?? "");
+    for (const scheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+      for (const v of VIEWPORTS) {
+        await page.setViewportSize({ width: v.width, height: v.height });
+        await openScreen(page, reach);
+        const problems = await page.evaluate(layoutProblems, { touch: v.touch });
+        for (const p of problems)
+          results.push(`${screen.name} ${String(v.width)}×${String(v.height)} ${scheme}: ${p}`);
+      }
+    }
+  }
+  expect(results).toEqual([]);
+});
 
 test("mobile menu sheets pass the checks @e2e", async ({ page, baseURL }) => {
   const results: string[] = [];

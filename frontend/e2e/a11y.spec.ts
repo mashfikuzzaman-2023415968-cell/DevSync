@@ -5,6 +5,7 @@ import type { Page } from "@playwright/test";
 import { expect, resetLimits, test } from "./test";
 import { apiSignIn } from "./fixtures";
 import { PUBLIC_SCREENS, SIGNED_IN_SCREENS } from "./screens";
+import { openScreen, STATEFUL_SCREENS } from "./stateful-screens";
 
 async function serious(page: Page) {
   const results = await new AxeBuilder({ page })
@@ -49,3 +50,20 @@ for (const role of ["DEVELOPER", "CLIENT", "ADMIN"] as const) {
     expect(found).toEqual([]);
   });
 }
+
+test("screens that need state have no serious accessibility violations @a11y", async ({
+  page,
+  baseURL,
+}) => {
+  test.setTimeout(240_000);
+  const found: string[] = [];
+  for (const screen of STATEFUL_SCREENS) {
+    const reach = await screen.prepare(page, baseURL ?? "");
+    for (const scheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+      await openScreen(page, reach);
+      found.push(...(await serious(page)).map((v) => `${screen.name} ${scheme}: ${v}`));
+    }
+  }
+  expect(found).toEqual([]);
+});
