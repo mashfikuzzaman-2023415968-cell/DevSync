@@ -13,6 +13,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.logging import configure_logging
 from app.main import create_app
 from tests.conftest import _flush_redis
 from tests.helpers import Api, stack_available, stack_settings
@@ -101,6 +102,9 @@ def test_ipv6_admin_inside_the_allowlist_works(clients: dict[str, Api]) -> None:
 def test_access_log_hashes_the_user_id(
     clients: dict[str, Api], capsys: pytest.CaptureFixture[str]
 ) -> None:
+    # Another test may have left structlog at a higher level (an app built with production
+    # settings configures logging on startup), which would drop the line we are asserting on.
+    configure_logging("INFO")
     inside = clients["inside"]
     user = inside.sign_in_as("DEVELOPER")
     capsys.readouterr()
