@@ -1,8 +1,9 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
 # DevSync backend image (spec §14.12): non-root, read-only-root friendly, hashed deps.
 # Targets: `runtime` (api / worker / scheduler) and `dev` (+ test & quality tooling, used by the gate).
 # Base image pinned by digest; update deliberately with `make deps-update` (spec §14.21).
-ARG PYTHON_IMAGE=python:3.12-slim
+# python:3.12-slim as built on 2026-10-06 (≥ 14 days old, DECISIONS D1/D51).
+ARG PYTHON_IMAGE=python:3.12-slim@sha256:05cda9777409a9c3ffddd94a4c476b79f0769a0b4857f0c7ed9226b6800b0d6f
 
 FROM ${PYTHON_IMAGE} AS base
 ENV PYTHONDONTWRITEBYTECODE=1 \

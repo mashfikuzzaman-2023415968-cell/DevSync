@@ -2,7 +2,7 @@
 # the demo laptop, measured with the Playwright performance trace"). The stock image only has
 # software WebGL (SwiftShader); with /dev/dri passed in, Chromium renders through Vulkan on the
 # laptop's real GPU. Used only by gate step 16.
-FROM mcr.microsoft.com/playwright:v1.63.0-noble
+FROM mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       mesa-vulkan-drivers libgl1-mesa-dri libegl-mesa0 \
