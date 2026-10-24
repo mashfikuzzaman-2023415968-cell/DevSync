@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
+import { prefetchProps } from "@/app/prefetch";
 import type { NavItem } from "@/app/navigation";
 import { Wordmark } from "@/components/brand/Logo";
 import { IconButton } from "@/components/ui/Button";
@@ -88,6 +89,7 @@ function SidebarLink({
     <Link
       to={item.to}
       aria-current={active ? "page" : undefined}
+      {...prefetchProps(item.to)}
       className={cn(
         "group relative flex min-h-11 items-center gap-3 rounded-md px-3 text-body-sm font-medium transition-colors duration-fast",
         active
@@ -310,6 +312,7 @@ export function AppShell({ nav, children }: { nav: ShellNav; children?: ReactNod
                 <Link
                   to={item.to}
                   aria-current={active ? "page" : undefined}
+                  {...prefetchProps(item.to)}
                   className={cn(
                     "flex min-h-14 flex-col items-center justify-center gap-0.5 text-caption font-medium",
                     active ? "text-primary" : "text-text-muted",
@@ -347,6 +350,7 @@ export function AppShell({ nav, children }: { nav: ShellNav; children?: ReactNod
                       <li key={item.to}>
                         <NavLink
                           to={item.to}
+                          {...prefetchProps(item.to)}
                           onClick={() => {
                             setMoreOpen(false);
                           }}
