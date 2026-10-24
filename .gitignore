@@ -43,3 +43,6 @@ data/
 frontend/dist-kit/
 frontend/node_modules/.cache/
 frontend/.probes/
+
+# Claude Code agent worktrees (local only)
+.claude/worktrees/
