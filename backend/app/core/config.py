@@ -18,6 +18,8 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 MIN_SECRET_KEY_BYTES = 64
+# The local mail catcher of the dev and demo stacks (never a real relay).
+DEMO_MAIL_CAPTURE_HOST = "mailpit"
 
 
 class Environment(StrEnum):
@@ -119,6 +121,12 @@ def production_problems(settings: Settings) -> list[str]:
         problems.append("SECRET_KEY must be at least 64 random bytes, base64 encoded")
     if settings.SMS_PROVIDER == "console":
         problems.append("SMS_PROVIDER=console is only allowed in development")
+    if settings.SMS_PROVIDER == "mailpit" and settings.SMTP_HOST != DEMO_MAIL_CAPTURE_HOST:
+        # The offline demo stack (`make demo-up`) delivers codes to its local Mailpit; anywhere
+        # else that would hand one-time codes to a real mail relay.
+        problems.append(
+            "SMS_PROVIDER=mailpit is only allowed with SMTP_HOST=mailpit (the offline demo stack)"
+        )
     if settings.DEBUG:
         problems.append("DEBUG must be off in production")
     if urlparse(settings.PUBLIC_ORIGIN).scheme != "https":
