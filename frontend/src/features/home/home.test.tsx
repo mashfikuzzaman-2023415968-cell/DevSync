@@ -2,7 +2,7 @@
  * recommended strip, recent bids, reputation stat cards and every data state. */
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse, type JsonBodyType } from "msw";
 import { describe, expect, it } from "vitest";
 import { server } from "@/test/server";
 import { renderRoutes } from "@/test/render";
@@ -56,7 +56,7 @@ const PROJECTS = [
 const fail = () =>
   HttpResponse.json({ error: { code: "INTERNAL", request_id: "req-2" } }, { status: 500 });
 
-function client(projects: unknown, me: object = {}) {
+function client(projects: JsonBodyType, me: object = {}) {
   server.use(
     http.get(`${API}/me`, () => HttpResponse.json({ ...ME, ...me })),
     http.get(`${API}/projects`, () => HttpResponse.json(projects)),

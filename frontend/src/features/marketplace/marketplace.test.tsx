@@ -1,7 +1,7 @@
 /** Marketplace: Find Projects (filters, results) and the project bid sheet with live eligibility. */
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse, type JsonBodyType } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { server } from "@/test/server";
 import { Probe, renderRoutes } from "@/test/render";
@@ -515,7 +515,7 @@ describe("Find Projects filters", () => {
 });
 
 describe("Project details", () => {
-  function details(body: unknown) {
+  function details(body: JsonBodyType) {
     server.use(
       http.get(`${API}/auth/csrf`, () => new HttpResponse(null, { status: 204 })),
       http.get(`${API}/public/projects/${PID}`, () => HttpResponse.json(body)),
