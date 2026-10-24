@@ -150,7 +150,7 @@ def test_bids_are_refused_after_the_bidding_deadline(api: Api, migration_url: st
         assert r.status_code == 409, r.text
         assert r.json()["error"]["code"] == "INVALID_STATE"
     # The bid is untouched and the project disappears from search; its page says it's closed.
-    mine = [b for b in api.get("/api/v1/me/bids").json() if b["id"] == bid_id]
+    mine = [b for b in api.get("/api/v1/me/bids").json()["items"] if b["id"] == bid_id]
     assert mine[0]["status"] == "ACTIVE"
     assert mine[0]["price_paisa"] == 1_800_000
     found = api.get("/api/v1/projects/search", params={"limit": 100}).json()["items"]
@@ -174,7 +174,7 @@ def test_withdraw_then_bid_again(api: Api, migration_url: str) -> None:
     assert api.delete(f"/api/v1/bids/{first}").status_code == 204
     second = _bid(api, pid, slot_id, price_paisa=1_600_000)
     assert second.status_code == 201, second.text
-    statuses = {b["id"]: b["status"] for b in api.get("/api/v1/me/bids").json()}
+    statuses = {b["id"]: b["status"] for b in api.get("/api/v1/me/bids").json()["items"]}
     assert statuses[first] == "WITHDRAWN"
     assert statuses[second.json()["id"]] == "ACTIVE"
 
@@ -648,7 +648,7 @@ def test_a_second_bid_racing_the_first_is_a_409_not_a_500(
     async def no_active_bid(*_args: object) -> None:
         return None
 
-    monkeypatch.setattr(bids_repository, "active_bid", no_active_bid)
+    monkeypatch.setattr(bids_repository, "standing_bid", no_active_bid)
     second = _bid(api, pid, slot_id)
     assert second.status_code == 409, second.text
     assert second.json()["error"]["code"] == "INVALID_STATE"

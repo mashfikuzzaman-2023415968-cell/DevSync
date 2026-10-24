@@ -28,6 +28,9 @@ from app.algorithms.cpm import (
 from app.core.audit import write_audit
 from app.core.errors import DomainError, ErrorCode, InvalidStateTransition, NotFoundError
 from app.core.settings_cache import active_settings
+from app.db.context import DbContext
+from app.db.locks import advisory_xact_lock
+from app.db.session import open_session
 from app.models.foundation import PlatformSettings
 from app.models.identity import User
 from app.models.projects import (
@@ -61,6 +64,7 @@ from app.schemas.projects import (
     SlotOut,
     SlotsReplace,
 )
+from app.services import bids as bids_svc
 from app.services.context import Ctx
 from app.services.notifications import notify_users
 
@@ -71,6 +75,18 @@ CANCELLABLE = {
     ProjectStatus.FORMING,
     ProjectStatus.TEAM_PENDING,
 }
+# Abuse control (§14.8 "maximum active projects per client (20)"): published and not yet
+# finished. Drafts don't count (they are bounded by the 10/day create limit). No §6.2 setting
+# names it, so it is a constant (DECISIONS).
+MAX_ACTIVE_PROJECTS = 20
+ACTIVE_STATUSES = (
+    ProjectStatus.BIDDING,
+    ProjectStatus.FORMING,
+    ProjectStatus.TEAM_PENDING,
+    ProjectStatus.IN_PROGRESS,
+    ProjectStatus.ON_HOLD,
+    ProjectStatus.REVIEW_WINDOW,
+)
 
 
 # --------------------------------------------------------------------------- helpers
@@ -526,6 +542,20 @@ async def publish(
     """Publish a DRAFT for bidding after the §8 guards; writes baseline v1 (DRAFT → BIDDING)."""
     project = await _load_for_write(ctx, project_id, if_match)
     _require_status(project, {EDITABLE}, "publish")
+    # Count-then-publish under a per-client lock, so two publishes at once can't pass the cap.
+    await advisory_xact_lock(ctx.db, ctx.uid)
+    active = await ctx.db.scalar(
+        select(func.count())
+        .select_from(Project)
+        .where(Project.client_id == ctx.uid, Project.status.in_(ACTIVE_STATUSES))
+    )
+    if int(active or 0) >= MAX_ACTIVE_PROJECTS:
+        raise DomainError(
+            f"You already have {MAX_ACTIVE_PROJECTS} active projects, the most allowed at once. "
+            "Finish or cancel one before publishing another.",
+            code=ErrorCode.LIMIT_REACHED,
+            extra={"limit": MAX_ACTIVE_PROJECTS},
+        )
 
     user = await ctx.db.get(User, ctx.uid)
     if user is None or user.payment_verified_at is None:
@@ -632,6 +662,21 @@ async def extend_bidding(ctx: Ctx, project_id: uuid.UUID) -> ProjectOut:
     await _audit(ctx, "project.bidding_extended", project_id, {"n": project.bidding_extensions})
     await ctx.db.commit()
     await ctx.db.refresh(project)
+    # Bidding is open again: bids filtered out at the last close become ACTIVE so their bidders
+    # can improve them (§8 "re-evaluated"). Bids are SYSTEM-written for anyone but the bidder.
+    async with open_session(DbContext.system(), job=True) as sysdb:
+        reopened = await bids_svc.reopen_bids(sysdb, project_id)
+        await sysdb.commit()
+    if reopened:
+        await notify_users(
+            reopened,
+            "BIDDING_REOPENED",
+            title="Bidding reopened on a project you bid on",
+            body=f"The client extended bidding for “{project.title}”. Your bid is open again "
+            "and you can change it until the new close time.",
+            link="/dev/bids",
+            once=False,
+        )
     return _project_out(project)
 
 

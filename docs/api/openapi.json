@@ -316,8 +316,152 @@
         "title": "BidCreate",
         "type": "object"
       },
+      "BidDetailOut": {
+        "description": "One of my bids with its project, what I may still do with it and — while bidding is open\n— how it stands against the project's own requirements (never against other bids).",
+        "properties": {
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "can_withdraw": {
+            "title": "Can Withdraw",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "days_needed": {
+            "title": "Days Needed",
+            "type": "integer"
+          },
+          "eligibility": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EligibilityOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evaluated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluated At"
+          },
+          "expected_contribution": {
+            "title": "Expected Contribution",
+            "type": "string"
+          },
+          "hours_per_week_committed": {
+            "title": "Hours Per Week Committed",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "portfolio": {
+            "items": {
+              "$ref": "#/components/schemas/PortfolioRef"
+            },
+            "title": "Portfolio",
+            "type": "array"
+          },
+          "portfolio_item_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Portfolio Item Ids",
+            "type": "array"
+          },
+          "price_paisa": {
+            "title": "Price Paisa",
+            "type": "integer"
+          },
+          "project": {
+            "$ref": "#/components/schemas/BidProject"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "project_title": {
+            "title": "Project Title",
+            "type": "string"
+          },
+          "proposal": {
+            "title": "Proposal",
+            "type": "string"
+          },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/BidReason"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "slot_id": {
+            "format": "uuid",
+            "title": "Slot Id",
+            "type": "string"
+          },
+          "slot_label": {
+            "title": "Slot Label",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "project_title",
+          "slot_id",
+          "slot_label",
+          "status",
+          "price_paisa",
+          "days_needed",
+          "proposal",
+          "expected_contribution",
+          "portfolio_item_ids",
+          "hours_per_week_committed",
+          "created_at",
+          "updated_at",
+          "version",
+          "project",
+          "portfolio",
+          "can_edit",
+          "can_withdraw"
+        ],
+        "title": "BidDetailOut",
+        "type": "object"
+      },
       "BidOut": {
-        "description": "A developer's own bid.",
+        "description": "A developer's own bid. `reasons` are filled when the bid is INELIGIBLE; `version` goes in\n`If-Match` on edits (§10.1); `evaluated_at` is when bidding closed and the bid was checked.",
         "properties": {
           "created_at": {
             "format": "date-time",
@@ -327,6 +471,18 @@
           "days_needed": {
             "title": "Days Needed",
             "type": "integer"
+          },
+          "evaluated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluated At"
           },
           "expected_contribution": {
             "title": "Expected Contribution",
@@ -366,6 +522,13 @@
             "title": "Proposal",
             "type": "string"
           },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/BidReason"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
           "slot_id": {
             "format": "uuid",
             "title": "Slot Id",
@@ -383,6 +546,10 @@
             "format": "date-time",
             "title": "Updated At",
             "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
           }
         },
         "required": [
@@ -399,9 +566,97 @@
           "portfolio_item_ids",
           "hours_per_week_committed",
           "created_at",
-          "updated_at"
+          "updated_at",
+          "version"
         ],
         "title": "BidOut",
+        "type": "object"
+      },
+      "BidProject": {
+        "description": "The project a bid is on, as its bidder may see it (published columns only).",
+        "properties": {
+          "bidding_deadline": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bidding Deadline"
+          },
+          "budget_paisa": {
+            "title": "Budget Paisa",
+            "type": "integer"
+          },
+          "deadline_days": {
+            "title": "Deadline Days",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "open_for_bids": {
+            "title": "Open For Bids",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "team_size": {
+            "title": "Team Size",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "summary",
+          "status",
+          "budget_paisa",
+          "deadline_days",
+          "team_size",
+          "bidding_deadline",
+          "open_for_bids"
+        ],
+        "title": "BidProject",
+        "type": "object"
+      },
+      "BidReason": {
+        "description": "Why a bid was filtered out, in plain words for the bidder (spec §9.2 reason codes).",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "hint": {
+            "title": "Hint",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "text",
+          "hint"
+        ],
+        "title": "BidReason",
         "type": "object"
       },
       "BidUpdate": {
@@ -1897,6 +2152,7 @@
           "METHOD_NOT_ALLOWED",
           "INVALID_STATE",
           "VERSION_CONFLICT",
+          "LIMIT_REACHED",
           "IDEMPOTENCY_CONFLICT",
           "PAYLOAD_TOO_LARGE",
           "UNSUPPORTED_MEDIA_TYPE",
@@ -2530,6 +2786,33 @@
           "score"
         ],
         "title": "NewcomerEvidence",
+        "type": "object"
+      },
+      "Page_BidOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BidOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "Page[BidOut]",
         "type": "object"
       },
       "Page_ProjectCard_": {
@@ -7685,6 +7968,24 @@
               "title": "Bid Id",
               "type": "string"
             }
+          },
+          {
+            "description": "Bid version",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bid version",
+              "title": "If-Match"
+            }
           }
         ],
         "responses": {
@@ -7816,6 +8117,172 @@
           "bids"
         ]
       },
+      "get": {
+        "description": "My own bid with its project and status; anyone else's bid is 404 (sealed, §14.5).",
+        "operationId": "bid_detail_api_v1_bids__bid_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bid_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Bid Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "can_edit": true,
+                  "can_withdraw": true,
+                  "created_at": "2026-10-21T06:00:00Z",
+                  "days_needed": 20,
+                  "expected_contribution": "Front-end components and integration.",
+                  "hours_per_week_committed": 20,
+                  "id": "9c8b7a6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+                  "portfolio": [],
+                  "portfolio_item_ids": [],
+                  "price_paisa": 1800000,
+                  "project": {
+                    "bidding_deadline": "2026-10-31T18:00:00Z",
+                    "budget_paisa": 12000000,
+                    "deadline_days": 30,
+                    "id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+                    "open_for_bids": true,
+                    "status": "BIDDING",
+                    "summary": "A web app for a restaurant to take and track orders.",
+                    "team_size": 4,
+                    "title": "Online ordering system"
+                  },
+                  "project_id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+                  "project_title": "Online ordering system",
+                  "proposal": "I'll build the React front end with tests.",
+                  "reasons": [],
+                  "slot_id": "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e",
+                  "slot_label": "React developer",
+                  "status": "ACTIVE",
+                  "updated_at": "2026-10-21T06:00:00Z",
+                  "version": 1
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/BidDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "One of my bids",
+        "tags": [
+          "bids"
+        ]
+      },
       "patch": {
         "operationId": "update_bid_api_v1_bids__bid_id__patch",
         "parameters": [
@@ -7827,6 +8294,24 @@
               "format": "uuid",
               "title": "Bid Id",
               "type": "string"
+            }
+          },
+          {
+            "description": "Bid version",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bid version",
+              "title": "If-Match"
             }
           }
         ],
@@ -7855,10 +8340,12 @@
                   "project_id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
                   "project_title": "Online ordering system",
                   "proposal": "I'll build the React front end with tests.",
+                  "reasons": [],
                   "slot_id": "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e",
                   "slot_label": "React developer",
                   "status": "ACTIVE",
-                  "updated_at": "2026-10-21T06:00:00Z"
+                  "updated_at": "2026-10-21T06:00:00Z",
+                  "version": 1
                 },
                 "schema": {
                   "$ref": "#/components/schemas/BidOut"
@@ -7995,7 +8482,7 @@
     },
     "/api/v1/captcha/challenge": {
       "get": {
-        "description": "Signed, expires in 5 minutes, each solution usable once.",
+        "description": "Signed, expires in 5 minutes, each solution usable once. Difficulty from the platform\nsettings (`captcha.max_number`).",
         "operationId": "challenge_api_v1_captcha_challenge_get",
         "responses": {
           "200": {
@@ -8916,35 +9403,111 @@
     },
     "/api/v1/me/bids": {
       "get": {
+        "description": "Newest first, cursor-paged (§10.1). `project_id`: only my bids on that project;\n`status`: only bids in that state (e.g. ACTIVE for the dashboard's open-bid count).",
         "operationId": "my_bids_api_v1_me_bids_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "ACTIVE",
+                    "WITHDRAWN",
+                    "INELIGIBLE",
+                    "SELECTED",
+                    "NOT_SELECTED",
+                    "ACCEPTED",
+                    "DECLINED",
+                    "EXPIRED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "example": [
-                  {
-                    "created_at": "2026-10-21T06:00:00Z",
-                    "days_needed": 20,
-                    "expected_contribution": "Front-end components and integration.",
-                    "hours_per_week_committed": 20,
-                    "id": "9c8b7a6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
-                    "portfolio_item_ids": [],
-                    "price_paisa": 1800000,
-                    "project_id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
-                    "project_title": "Online ordering system",
-                    "proposal": "I'll build the React front end with tests.",
-                    "slot_id": "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e",
-                    "slot_label": "React developer",
-                    "status": "ACTIVE",
-                    "updated_at": "2026-10-21T06:00:00Z"
-                  }
-                ],
+                "example": {
+                  "items": [
+                    {
+                      "created_at": "2026-10-21T06:00:00Z",
+                      "days_needed": 20,
+                      "expected_contribution": "Front-end components and integration.",
+                      "hours_per_week_committed": 20,
+                      "id": "9c8b7a6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+                      "portfolio_item_ids": [],
+                      "price_paisa": 1800000,
+                      "project_id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+                      "project_title": "Online ordering system",
+                      "proposal": "I'll build the React front end with tests.",
+                      "reasons": [],
+                      "slot_id": "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e",
+                      "slot_label": "React developer",
+                      "status": "ACTIVE",
+                      "updated_at": "2026-10-21T06:00:00Z",
+                      "version": 1
+                    }
+                  ]
+                },
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/BidOut"
-                  },
-                  "title": "Response My Bids Api V1 Me Bids Get",
-                  "type": "array"
+                  "$ref": "#/components/schemas/Page_BidOut_"
                 }
               }
             },
@@ -9017,6 +9580,23 @@
               }
             },
             "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
           },
           "429": {
             "content": {
@@ -13888,10 +14468,12 @@
                   "project_id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
                   "project_title": "Online ordering system",
                   "proposal": "I'll build the React front end with tests.",
+                  "reasons": [],
                   "slot_id": "0b7d4c1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e",
                   "slot_label": "React developer",
                   "status": "ACTIVE",
-                  "updated_at": "2026-10-21T06:00:00Z"
+                  "updated_at": "2026-10-21T06:00:00Z",
+                  "version": 1
                 },
                 "schema": {
                   "$ref": "#/components/schemas/BidOut"

@@ -5,43 +5,83 @@ from __future__ import annotations
 import uuid
 from collections import defaultdict
 from collections.abc import Sequence
+from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.bidding import AvailabilityReservation, Bid, BidStatus, ReservationStatus
 from app.models.profiles import DeveloperProfile, DeveloperSkill, PortfolioItem, SkillEvidence
 
 
-async def get_bid(db: AsyncSession, bid_id: uuid.UUID) -> Bid | None:
-    return await db.get(Bid, bid_id)
+async def get_bid(db: AsyncSession, bid_id: uuid.UUID, *, for_update: bool = False) -> Bid | None:
+    """A bid visible to the caller (RLS); `for_update` locks it so two edits can't interleave
+    between the version check and the write."""
+    if not for_update:
+        return await db.get(Bid, bid_id)
+    return await db.scalar(
+        select(Bid)
+        .where(Bid.id == bid_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
 
 
-async def active_bid(
+# A *standing* bid takes part in eligibility: ACTIVE, or INELIGIBLE after bidding closed (it can
+# become ACTIVE again when the client changes the terms or extends bidding, §8). One per developer
+# and project (index `one_standing_bid_per_developer`).
+STANDING = (BidStatus.ACTIVE, BidStatus.INELIGIBLE)
+
+
+async def standing_bid(
     db: AsyncSession, project_id: uuid.UUID, developer_id: uuid.UUID
 ) -> Bid | None:
     return await db.scalar(
         select(Bid).where(
             Bid.project_id == project_id,
             Bid.developer_id == developer_id,
-            Bid.status == BidStatus.ACTIVE,
+            Bid.status.in_(STANDING),
         )
     )
 
 
-async def list_for_developer(db: AsyncSession, developer_id: uuid.UUID) -> Sequence[Bid]:
-    return (
-        await db.scalars(
-            select(Bid).where(Bid.developer_id == developer_id).order_by(Bid.created_at.desc())
+async def count_active_for_developer(db: AsyncSession, developer_id: uuid.UUID) -> int:
+    """Open (ACTIVE) bids of one developer, for the 30-open-bids cap (§14.8)."""
+    return int(
+        await db.scalar(
+            select(func.count())
+            .select_from(Bid)
+            .where(Bid.developer_id == developer_id, Bid.status == BidStatus.ACTIVE)
         )
-    ).all()
+        or 0
+    )
 
 
-async def list_active_for_project(db: AsyncSession, project_id: uuid.UUID) -> Sequence[Bid]:
+async def page_for_developer(
+    db: AsyncSession,
+    developer_id: uuid.UUID,
+    *,
+    after: tuple[datetime, uuid.UUID] | None,
+    limit: int,
+    project_id: uuid.UUID | None = None,
+    status: BidStatus | None = None,
+) -> Sequence[Bid]:
+    """Newest first, keyset on (created_at, id) so pages never skip or repeat a bid. Reads one
+    row more than `limit` so the caller knows whether another page exists."""
+    stmt = select(Bid).where(Bid.developer_id == developer_id)
+    if project_id is not None:
+        stmt = stmt.where(Bid.project_id == project_id)
+    if status is not None:
+        stmt = stmt.where(Bid.status == status)
+    if after is not None:
+        stmt = stmt.where(tuple_(Bid.created_at, Bid.id) < tuple_(*after))
+    stmt = stmt.order_by(Bid.created_at.desc(), Bid.id.desc()).limit(limit + 1)
+    return (await db.scalars(stmt)).all()
+
+
+async def list_standing_for_project(db: AsyncSession, project_id: uuid.UUID) -> Sequence[Bid]:
     return (
-        await db.scalars(
-            select(Bid).where(Bid.project_id == project_id, Bid.status == BidStatus.ACTIVE)
-        )
+        await db.scalars(select(Bid).where(Bid.project_id == project_id, Bid.status.in_(STANDING)))
     ).all()
 
 
@@ -159,7 +199,8 @@ async def portfolio_titles(
 
 
 async def active_bidder_ids(db: AsyncSession, project_id: uuid.UUID) -> list[uuid.UUID]:
+    """Developers with a standing bid (ACTIVE or INELIGIBLE): everyone a change affects."""
     rows = await db.scalars(
-        select(Bid.developer_id).where(Bid.project_id == project_id, Bid.status == BidStatus.ACTIVE)
+        select(Bid.developer_id).where(Bid.project_id == project_id, Bid.status.in_(STANDING))
     )
     return list(rows.all())

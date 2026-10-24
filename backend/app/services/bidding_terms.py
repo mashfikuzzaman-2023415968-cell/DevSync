@@ -219,6 +219,16 @@ async def apply(
         link="/dev/bids",
         once=False,  # each change (and each project) is its own event
     )
+    if bids_svc.bidding_closed(project, ctx.now):
+        # Bidding has closed, so the bids carry a recorded verdict (§8): re-evaluate it under the
+        # new terms (an INELIGIBLE bid that now qualifies is ACTIVE again). SYSTEM session: the
+        # client may read the bids but not write them.
+        async with open_session(DbContext.system(), job=True) as sysdb:
+            locked = await sysdb.get(Project, project.id)
+            if locked is not None:
+                ev = await bids_svc.evaluate(sysdb, locked, settings, ctx.now.date())
+                bids_svc.record_evaluation(ev, ctx.now)
+                await sysdb.commit()
     view = await bids_svc.bids_view(ctx, project)
     if view.bidding.closed and not view.too_few:
         # Bidding already closed short of bids; the change fixed it, so form the team now.

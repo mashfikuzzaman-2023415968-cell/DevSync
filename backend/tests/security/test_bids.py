@@ -75,7 +75,7 @@ def test_place_edit_and_withdraw_a_bid(api: Api) -> None:
     assert edited.json()["price_paisa"] == 1_700_000
 
     # It appears in my bids.
-    assert any(b["id"] == bid_id for b in api.get("/api/v1/me/bids").json())
+    assert any(b["id"] == bid_id for b in api.get("/api/v1/me/bids").json()["items"])
 
     # Withdraw.
     assert api.delete(f"/api/v1/bids/{bid_id}").status_code == 204
@@ -100,7 +100,7 @@ def test_bids_are_sealed_between_developers(api: Api) -> None:
 
     # A different developer sees nothing of it and cannot touch it (sealed → 404).
     api.sign_in_as("DEVELOPER")
-    assert api.get("/api/v1/me/bids").json() == []
+    assert api.get("/api/v1/me/bids").json()["items"] == []
     assert api.patch(f"/api/v1/bids/{bid_id}", json={"price_paisa": 1}).status_code == 404
     assert api.delete(f"/api/v1/bids/{bid_id}").status_code == 404
 

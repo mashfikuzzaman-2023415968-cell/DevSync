@@ -11,6 +11,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -21,6 +22,19 @@ Days = Field(ge=1, le=365)
 Proposal = Field(default="", max_length=3000)
 Contribution = Field(default="", max_length=500)
 Hours = Field(default=None, ge=1, le=168)
+
+
+# The bid states of spec §8 (mirrors `models.bidding.BidStatus`), for the `status` filter.
+BidStatusName = Literal[
+    "ACTIVE",
+    "WITHDRAWN",
+    "INELIGIBLE",
+    "SELECTED",
+    "NOT_SELECTED",
+    "ACCEPTED",
+    "DECLINED",
+    "EXPIRED",
+]
 
 
 class BidCreate(StrictRequest):
@@ -48,8 +62,17 @@ class BidUpdate(StrictRequest):
     hours_per_week_committed: int | None = Field(default=None, ge=1, le=168)
 
 
+class BidReason(BaseModel):
+    """Why a bid was filtered out, in plain words for the bidder (spec §9.2 reason codes)."""
+
+    code: str
+    text: str  # what was missing, e.g. "Your price is above the project's budget"
+    hint: str  # what would help next time
+
+
 class BidOut(BaseModel):
-    """A developer's own bid."""
+    """A developer's own bid. `reasons` are filled when the bid is INELIGIBLE; `version` goes in
+    `If-Match` on edits (§10.1); `evaluated_at` is when bidding closed and the bid was checked."""
 
     id: uuid.UUID
     project_id: uuid.UUID
@@ -65,6 +88,9 @@ class BidOut(BaseModel):
     hours_per_week_committed: int
     created_at: datetime
     updated_at: datetime
+    version: int
+    evaluated_at: datetime | None = None
+    reasons: list[BidReason] = Field(default_factory=list)
 
 
 class EligibilityIn(StrictRequest):
@@ -104,6 +130,31 @@ class PortfolioRef(BaseModel):
 
     id: uuid.UUID
     title: str
+
+
+class BidProject(BaseModel):
+    """The project a bid is on, as its bidder may see it (published columns only)."""
+
+    id: uuid.UUID
+    title: str
+    summary: str
+    status: str
+    budget_paisa: int
+    deadline_days: int
+    team_size: int
+    bidding_deadline: datetime | None
+    open_for_bids: bool
+
+
+class BidDetailOut(BidOut):
+    """One of my bids with its project, what I may still do with it and — while bidding is open
+    — how it stands against the project's own requirements (never against other bids)."""
+
+    project: BidProject
+    portfolio: list[PortfolioRef]
+    can_edit: bool
+    can_withdraw: bool
+    eligibility: EligibilityOut | None = None
 
 
 class NewcomerEvidence(BaseModel):

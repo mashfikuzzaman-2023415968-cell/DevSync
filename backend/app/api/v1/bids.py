@@ -2,7 +2,9 @@
 
 Sealed: a developer only ever reads their own bids; another developer's bid is 404 (enforced in
 the service and by RLS). Bids may be placed or edited only while the project is BIDDING (409
-INVALID_STATE otherwise). Every operation declares its error responses and an example (§10.4).
+INVALID_STATE otherwise). Edits and withdrawals take `If-Match: <version>`; a stale one is 409
+`VERSION_CONFLICT` (§10.1). A developer may hold at most 30 open bids (409 `LIMIT_REACHED`, §14.8).
+Every operation declares its error responses and an example (§10.4).
 """
 
 from __future__ import annotations
@@ -10,12 +12,14 @@ from __future__ import annotations
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, Response, status
+from fastapi import APIRouter, Depends, Header, Query, Response, status
 
 from app.api.deps import acting, rate_limit
 from app.schemas.bids import (
     BidCreate,
+    BidDetailOut,
     BidOut,
+    BidStatusName,
     BidUpdate,
     ClientBidsOut,
     EligibilityIn,
@@ -23,7 +27,7 @@ from app.schemas.bids import (
     TermsChange,
     TermsPreviewOut,
 )
-from app.schemas.common import error_responses
+from app.schemas.common import Page, error_responses
 from app.services import bidding_terms
 from app.services import bids as svc
 from app.services.context import Ctx
@@ -36,6 +40,7 @@ Reader = Annotated[Ctx, Depends(acting("bid.read"))]
 ClientViewer = Annotated[Ctx, Depends(acting("bid.view"))]
 TermsWriter = Annotated[Ctx, Depends(acting("project.terms"))]
 IfMatch = Annotated[int | None, Header(alias="If-Match", description="Project version")]
+BidIfMatch = Annotated[int | None, Header(alias="If-Match", description="Bid version")]
 BID_LIMIT = [Depends(rate_limit("bid"))]
 
 _BID_ID = "9c8b7a6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d"
@@ -56,6 +61,27 @@ EX_BID = {
     "hours_per_week_committed": 20,
     "created_at": "2026-10-21T06:00:00Z",
     "updated_at": "2026-10-21T06:00:00Z",
+    "version": 1,
+    "evaluated_at": None,
+    "reasons": [],
+}
+EX_BID_DETAIL = {
+    **EX_BID,
+    "project": {
+        "id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+        "title": "Online ordering system",
+        "summary": "A web app for a restaurant to take and track orders.",
+        "status": "BIDDING",
+        "budget_paisa": 12_000_000,
+        "deadline_days": 30,
+        "team_size": 4,
+        "bidding_deadline": "2026-10-31T18:00:00Z",
+        "open_for_bids": True,
+    },
+    "portfolio": [],
+    "can_edit": True,
+    "can_withdraw": True,
+    "eligibility": None,
 }
 EX_ELIGIBILITY = {
     "eligible": False,
@@ -173,11 +199,34 @@ async def preview_eligibility(
 @router.get(
     "/me/bids",
     summary="My bids",
-    response_model=list[BidOut],
-    responses={200: _ok([EX_BID]), **error_responses(401, 403, 404)},
+    response_model=Page[BidOut],
+    responses={
+        200: _ok({"items": [EX_BID], "next_cursor": None}),
+        **error_responses(401, 403, 404, 422),
+    },
 )
-async def my_bids(ctx: Reader) -> list[BidOut]:
-    return await svc.my_bids(ctx)
+async def my_bids(
+    ctx: Reader,
+    *,
+    project_id: Annotated[uuid.UUID | None, Query()] = None,
+    status: Annotated[BidStatusName | None, Query()] = None,
+    cursor: Annotated[str | None, Query(min_length=1, max_length=200)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> Page[BidOut]:
+    """Newest first, cursor-paged (§10.1). `project_id`: only my bids on that project;
+    `status`: only bids in that state (e.g. ACTIVE for the dashboard's open-bid count)."""
+    return await svc.my_bids(ctx, cursor=cursor, limit=limit, project_id=project_id, status=status)
+
+
+@router.get(
+    "/bids/{bid_id}",
+    summary="One of my bids",
+    response_model=BidDetailOut,
+    responses={200: _ok(EX_BID_DETAIL), **error_responses(401, 403, 404, 422)},
+)
+async def bid_detail(ctx: Reader, bid_id: uuid.UUID) -> BidDetailOut:
+    """My own bid with its project and status; anyone else's bid is 404 (sealed, §14.5)."""
+    return await svc.bid_detail(ctx, bid_id)
 
 
 @router.patch(
@@ -187,8 +236,10 @@ async def my_bids(ctx: Reader) -> list[BidOut]:
     responses={200: _ok(EX_BID), **error_responses(401, 403, 404, 409, 422, 429)},
     dependencies=BID_LIMIT,
 )
-async def update_bid(ctx: Writer, bid_id: uuid.UUID, body: BidUpdate) -> BidOut:
-    return await svc.update_bid(ctx, bid_id, body)
+async def update_bid(
+    ctx: Writer, bid_id: uuid.UUID, body: BidUpdate, if_match: BidIfMatch = None
+) -> BidOut:
+    return await svc.update_bid(ctx, bid_id, body, if_match)
 
 
 @router.delete(
@@ -197,8 +248,8 @@ async def update_bid(ctx: Writer, bid_id: uuid.UUID, body: BidUpdate) -> BidOut:
     summary="Withdraw my bid",
     responses=error_responses(401, 403, 404, 409, 422),
 )
-async def withdraw_bid(ctx: Writer, bid_id: uuid.UUID) -> Response:
-    await svc.withdraw_bid(ctx, bid_id)
+async def withdraw_bid(ctx: Writer, bid_id: uuid.UUID, if_match: BidIfMatch = None) -> Response:
+    await svc.withdraw_bid(ctx, bid_id, if_match)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

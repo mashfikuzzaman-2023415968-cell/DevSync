@@ -15,6 +15,8 @@ client's view costs a fixed number of queries however many bids a project has.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -39,12 +41,14 @@ from app.algorithms.filtering import (
     classify_bid,
     explain_bid,
     filter_bids,
+    required_bids,
 )
 from app.core.audit import write_audit
 from app.core.errors import DomainError, ErrorCode, NotFoundError
 from app.core.money import format_taka
 from app.core.settings_cache import active_settings
 from app.db.context import DbContext
+from app.db.locks import advisory_xact_lock
 from app.db.session import open_session
 from app.models.bidding import Bid, BidStatus
 from app.models.identity import User
@@ -54,8 +58,11 @@ from app.repositories import bids as repo
 from app.repositories import projects as projrepo
 from app.schemas.bids import (
     BidCreate,
+    BidDetailOut,
     BiddingWindow,
     BidOut,
+    BidProject,
+    BidReason,
     BidUpdate,
     ClientBidOut,
     ClientBidsOut,
@@ -69,6 +76,7 @@ from app.schemas.bids import (
     TeamCostOut,
     Thresholds,
 )
+from app.schemas.common import Page
 from app.schemas.platform_settings import PlatformSettingsValues
 from app.services import marketplace, reputation_read
 from app.services.context import Ctx
@@ -87,6 +95,65 @@ _REASON_TEXT = {
     ReasonCode.SELF_DEALING: "Conflict of interest with this client",
     ReasonCode.NOT_SHORTLISTED: "Eligible but not in the top shortlist for this slot",
 }
+
+
+# The same reasons as the bidder reads them on My bids and the bid detail: what was missing and
+# what would help next time. Plain words, no other bidder's data (sealed, §14.5).
+_DEV_REASON: dict[ReasonCode, tuple[str, str]] = {
+    ReasonCode.LOW_PERFORMANCE: (
+        "Your performance score is below this project's minimum.",
+        "Completing projects on time with good reviews raises it.",
+    ),
+    ReasonCode.LOW_COMPETENCY: (
+        "Your competency score is below this project's minimum.",
+        "Passing skill tests and verified portfolio work raise it.",
+    ),
+    ReasonCode.TOO_SLOW: (
+        "You asked for more days than the project's deadline allows.",
+        "Bid within the deadline next time.",
+    ),
+    ReasonCode.OVER_BUDGET: (
+        "Your price is above the project's budget after the platform fee.",
+        "Check the budget before you set your price.",
+    ),
+    ReasonCode.NO_SKILL_EVIDENCE: (
+        "As a newcomer you need a passing skill test for this role's skill.",
+        "Take the skill test under Skill challenges, then bid again.",
+    ),
+    ReasonCode.SKILL_MISMATCH: (
+        "This role's skill isn't on your profile.",
+        "Bid on roles that match your skills, or add the skill to your profile.",
+    ),
+    ReasonCode.UNAVAILABLE: (
+        "You don't have enough free hours over the project's period.",
+        "Commit fewer hours a week, or bid when other work ends.",
+    ),
+    ReasonCode.SUSPENDED: (
+        "Your account isn't active.",
+        "Contact support to restore your account.",
+    ),
+    ReasonCode.SELF_DEALING: (
+        "There is a conflict of interest with this client.",
+        "Bids on your own or a related account's projects aren't allowed.",
+    ),
+}
+
+
+def developer_reasons(codes: Sequence[str]) -> list[BidReason]:
+    """Stored reason codes → plain text for the bidder (unknown codes are skipped, never echoed)."""
+    out: list[BidReason] = []
+    for code in codes:
+        try:
+            text, hint = _DEV_REASON[ReasonCode(code)]
+        except (ValueError, KeyError):
+            continue
+        out.append(BidReason(code=code, text=text, hint=hint))
+    return out
+
+
+# Abuse controls (§14.8 "maximum open bids per developer (30)"). No §6.2 setting names it, so
+# it is a constant here (DECISIONS).
+MAX_OPEN_BIDS = 30
 
 
 # Minimums Algorithm 1 relaxes when too few bids pass (the other reasons are never relaxed).
@@ -201,6 +268,7 @@ def _params(settings: PlatformSettingsValues, terms: Terms) -> FilterParams:
         shortlist_factor=f.shortlist_factor,
         shortlist_min=f.shortlist_min,
         mode=Mode(settings.algorithm.mode),
+        min_bids_factor=settings.bidding.min_bids_factor,
     )
 
 
@@ -329,6 +397,11 @@ def _bid_out(bid: Bid, context: dict[uuid.UUID, tuple[str, str]]) -> BidOut:
         hours_per_week_committed=bid.hours_per_week_committed,
         created_at=bid.created_at,
         updated_at=bid.updated_at,
+        version=bid.version,
+        evaluated_at=bid.evaluated_at,
+        reasons=developer_reasons(bid.ineligible_reasons)
+        if bid.status == BidStatus.INELIGIBLE
+        else [],
     )
 
 
@@ -342,9 +415,18 @@ async def create_bid(ctx: Ctx, project_id: uuid.UUID, body: BidCreate) -> BidOut
             fields={"slot_id": "unknown slot"},
         )
     portfolio = await _check_portfolio(ctx, body.portfolio_item_ids)
-    if await repo.active_bid(ctx.db, project_id, ctx.uid) is not None:
+    # Count-then-insert under a per-developer lock: two bids at once can't both pass the cap.
+    await advisory_xact_lock(ctx.db, ctx.uid)
+    if await repo.standing_bid(ctx.db, project_id, ctx.uid) is not None:
         raise DomainError(
             "You already have an active bid on this project.", code=ErrorCode.INVALID_STATE
+        )
+    if await repo.count_active_for_developer(ctx.db, ctx.uid) >= MAX_OPEN_BIDS:
+        raise DomainError(
+            f"You already have {MAX_OPEN_BIDS} open bids, the most allowed at once. Withdraw "
+            "one, or wait for a project to close its bidding.",
+            code=ErrorCode.LIMIT_REACHED,
+            extra={"limit": MAX_OPEN_BIDS},
         )
     bid = Bid(
         project_id=project_id,
@@ -376,18 +458,32 @@ async def create_bid(ctx: Ctx, project_id: uuid.UUID, body: BidCreate) -> BidOut
     return _bid_out(bid, await _bid_context(ctx.db, [bid]))
 
 
-async def _own_bid(ctx: Ctx, bid_id: uuid.UUID) -> Bid:
-    bid = await repo.get_bid(ctx.db, bid_id)
+async def _own_bid(ctx: Ctx, bid_id: uuid.UUID, *, for_update: bool = False) -> Bid:
+    """The caller's own bid; anyone else's (another developer's, or a client's) is 404, never
+    403, so a bid id reveals nothing (IDOR, §14.5)."""
+    bid = await repo.get_bid(ctx.db, bid_id, for_update=for_update)
     if bid is None or bid.developer_id != ctx.uid:
         raise NotFoundError
     return bid
 
 
-async def update_bid(ctx: Ctx, bid_id: uuid.UUID, body: BidUpdate) -> BidOut:
-    bid = await _own_bid(ctx, bid_id)
+def _check_version(bid: Bid, if_match: int | None) -> None:
+    if if_match is not None and bid.version != if_match:
+        raise DomainError(
+            "This bid changed since you opened it (perhaps in another tab). Reload to see the "
+            "latest version, then make your change again.",
+            code=ErrorCode.VERSION_CONFLICT,
+        )
+
+
+async def update_bid(
+    ctx: Ctx, bid_id: uuid.UUID, body: BidUpdate, if_match: int | None = None
+) -> BidOut:
+    bid = await _own_bid(ctx, bid_id, for_update=True)
     if bid.status != BidStatus.ACTIVE:
         raise DomainError("This bid can no longer be edited.", code=ErrorCode.INVALID_STATE)
     await _bidding_project(ctx, bid.project_id)
+    _check_version(bid, if_match)
     data = body.model_dump(exclude_unset=True)
     if "slot_id" in data:
         slots = {s.id for s in await projrepo.load_slots(ctx.db, bid.project_id)}
@@ -406,6 +502,7 @@ async def update_bid(ctx: Ctx, bid_id: uuid.UUID, body: BidUpdate) -> BidOut:
         bid.expected_contribution = data["expected_contribution"].strip()
     if body.portfolio_item_ids is not None:
         bid.portfolio_item_ids = await _check_portfolio(ctx, body.portfolio_item_ids)
+    bid.version += 1
     await write_audit(
         ctx.db, action="bid.update", entity_type="bid", entity_id=bid.id, actor_id=ctx.uid
     )
@@ -415,12 +512,14 @@ async def update_bid(ctx: Ctx, bid_id: uuid.UUID, body: BidUpdate) -> BidOut:
     return _bid_out(bid, await _bid_context(ctx.db, [bid]))
 
 
-async def withdraw_bid(ctx: Ctx, bid_id: uuid.UUID) -> None:
-    bid = await _own_bid(ctx, bid_id)
+async def withdraw_bid(ctx: Ctx, bid_id: uuid.UUID, if_match: int | None = None) -> None:
+    bid = await _own_bid(ctx, bid_id, for_update=True)
     if bid.status != BidStatus.ACTIVE:
         raise DomainError("This bid is not active.", code=ErrorCode.INVALID_STATE)
     await _bidding_project(ctx, bid.project_id)
+    _check_version(bid, if_match)
     bid.status = BidStatus.WITHDRAWN
+    bid.version += 1
     await write_audit(
         ctx.db, action="bid.withdraw", entity_type="bid", entity_id=bid.id, actor_id=ctx.uid
     )
@@ -428,10 +527,100 @@ async def withdraw_bid(ctx: Ctx, bid_id: uuid.UUID) -> None:
     await marketplace.forget_recommendations(ctx.uid)
 
 
-async def my_bids(ctx: Ctx) -> list[BidOut]:
-    bids = list(await repo.list_for_developer(ctx.db, ctx.uid))
-    context = await _bid_context(ctx.db, bids)
-    return [_bid_out(b, context) for b in bids]
+def _encode_bid_cursor(bid: Bid) -> str:
+    return base64.urlsafe_b64encode(f"{bid.created_at.isoformat()}|{bid.id}".encode()).decode()
+
+
+def _decode_bid_cursor(cursor: str) -> tuple[datetime, uuid.UUID]:
+    try:
+        created, bid_id = base64.urlsafe_b64decode(cursor.encode()).decode().split("|", 1)
+        at = datetime.fromisoformat(created)
+        if at.tzinfo is None:
+            raise ValueError("naive time")
+        return at, uuid.UUID(bid_id)
+    except (ValueError, binascii.Error, UnicodeDecodeError) as exc:
+        raise DomainError(
+            "That page cursor is invalid.",
+            code=ErrorCode.VALIDATION_ERROR,
+            fields={"cursor": "invalid"},
+        ) from exc
+
+
+async def my_bids(
+    ctx: Ctx,
+    *,
+    cursor: str | None = None,
+    limit: int = 20,
+    project_id: uuid.UUID | None = None,
+    status: str | None = None,
+) -> Page[BidOut]:
+    """My bids, newest first, a cursor page at a time (§10.1); `project_id` narrows to one project
+    (the bid sheet asks whether I've bid there)."""
+    after = _decode_bid_cursor(cursor) if cursor is not None else None
+    rows = list(
+        await repo.page_for_developer(
+            ctx.db,
+            ctx.uid,
+            after=after,
+            limit=limit,
+            project_id=project_id,
+            status=BidStatus(status) if status is not None else None,
+        )
+    )
+    page, more = rows[:limit], len(rows) > limit
+    context = await _bid_context(ctx.db, page)
+    return Page[BidOut](
+        items=[_bid_out(b, context) for b in page],
+        next_cursor=_encode_bid_cursor(page[-1]) if more and page else None,
+    )
+
+
+async def bid_detail(ctx: Ctx, bid_id: uuid.UUID) -> BidDetailOut:
+    """One of my bids with its project, the actions still open and its standing (§13.5 #12)."""
+    bid = await _own_bid(ctx, bid_id)
+    project = await projrepo.get_project(ctx.db, bid.project_id)
+    if project is None:  # unreachable for a published project (RLS), but fail closed
+        raise NotFoundError
+    open_now = project.status == ProjectStatus.BIDDING and not bidding_closed(project, ctx.now)
+    changeable = bid.status == BidStatus.ACTIVE and open_now
+    eligibility = None
+    if changeable:
+        slots = {s.id: s for s in await projrepo.load_slots(ctx.db, project.id)}
+        slot = slots.get(bid.slot_id)
+        if slot is not None:
+            eligibility = await _dry_run(
+                ctx,
+                project,
+                slots,
+                slot,
+                days=bid.days_needed,
+                price=bid.price_paisa,
+                hours=bid.hours_per_week_committed,
+            )
+    item_ids = [uuid.UUID(str(x)) for x in bid.portfolio_item_ids]
+    titles = await repo.portfolio_titles(ctx.db, item_ids)
+    return BidDetailOut(
+        **_bid_out(bid, await _bid_context(ctx.db, [bid])).model_dump(),
+        project=BidProject(
+            id=project.id,
+            title=project.title,
+            summary=project.summary,
+            status=project.status.value,
+            budget_paisa=project.budget_paisa,
+            deadline_days=project.deadline_days,
+            team_size=project.team_size,
+            bidding_deadline=project.bidding_deadline,
+            open_for_bids=open_now,
+        ),
+        portfolio=[
+            PortfolioRef(id=i, title=titles[i][0])
+            for i in item_ids
+            if i in titles and titles[i][1] == ctx.uid
+        ],
+        can_edit=changeable,
+        can_withdraw=changeable,
+        eligibility=eligibility,
+    )
 
 
 # --------------------------------------------------------------------------- check text
@@ -498,7 +687,6 @@ async def eligibility_preview(
     """Dry-run one draft bid against the project's own constraints. It never ranks the bid
     against other (sealed) bids, so NOT_SHORTLISTED can't appear here (§14.5)."""
     project = await _bidding_project(ctx, project_id)
-    settings = await active_settings(ctx.db)
     slots = {s.id: s for s in await projrepo.load_slots(ctx.db, project_id)}
     slot = slots.get(body.slot_id)
     if slot is None:
@@ -507,6 +695,29 @@ async def eligibility_preview(
             code=ErrorCode.VALIDATION_ERROR,
             fields={"slot_id": "unknown slot"},
         )
+    return await _dry_run(
+        ctx,
+        project,
+        slots,
+        slot,
+        days=body.days_needed,
+        price=body.price_paisa,
+        hours=await _default_hours(ctx, body.hours_per_week_committed),
+    )
+
+
+async def _dry_run(
+    ctx: Ctx,
+    project: Project,
+    slots: dict[uuid.UUID, ProjectSlot],
+    slot: ProjectSlot,
+    *,
+    days: int,
+    price: int,
+    hours: int,
+) -> EligibilityOut:
+    """The caller's own bid (draft or placed) against the project's own constraints."""
+    settings = await active_settings(ctx.db)
     terms = project_terms(project, list(slots.values()), settings)
     rep = await reputation_read.read_one(ctx.db, ctx.uid, settings)
     data = await _bidder_data(ctx.db, [ctx.uid], project.id)
@@ -516,9 +727,9 @@ async def eligibility_preview(
         slot=slot,
         rep=rep,
         data=data,
-        days=body.days_needed,
-        price=body.price_paisa,
-        commitment=await _default_hours(ctx, body.hours_per_week_committed),
+        days=days,
+        price=price,
+        commitment=hours,
         period=_period(project, ctx.now.date()),
         active=ctx.principal.is_active,
     )
@@ -578,9 +789,10 @@ async def evaluate(
     today: date,
     terms: Terms | None = None,
 ) -> Evaluation:
-    """Run Algorithm 1 over a project's active bids, optionally under changed `terms` (a
-    what-if for the too-few-bids actions). Ctx-free so the deadline job can reuse it."""
-    bids = list(await repo.list_active_for_project(db, project.id))
+    """Run Algorithm 1 over a project's standing (ACTIVE or INELIGIBLE) bids, optionally under
+    changed `terms` (a what-if for the too-few-bids actions). Ctx-free so the deadline job can
+    reuse it."""
+    bids = list(await repo.list_standing_for_project(db, project.id))
     slots = list(await projrepo.load_slots(db, project.id))
     terms = terms or project_terms(project, slots, settings)
     dev_ids = [b.developer_id for b in bids]
@@ -627,6 +839,46 @@ async def evaluate_project(
     return ev.bids, ev.result, ev.reps
 
 
+def record_evaluation(ev: Evaluation, now: datetime) -> list[Bid]:
+    """Write Algorithm 1's verdict onto the standing bids once bidding has closed (§8): a
+    filtered-out bid becomes INELIGIBLE with its reason code, an eligible one (shortlisted or
+    not; ranking against others is never shown to a bidder) is ACTIVE. The bids must come from a
+    SYSTEM session (the deadline job, or after the client changed the terms); idempotent.
+    Returns the bids that have just become INELIGIBLE, so their bidders are told once."""
+    rejected = dict(ev.result.rejected)
+    newly: list[Bid] = []
+    for bid in ev.bids:
+        reason = rejected.get(str(bid.id))
+        status = BidStatus.INELIGIBLE if reason is not None else BidStatus.ACTIVE
+        reasons = [reason.value] if reason is not None else []
+        if bid.status != status or list(bid.ineligible_reasons) != reasons:
+            if status == BidStatus.INELIGIBLE and bid.status != status:
+                newly.append(bid)
+            bid.status = status
+            bid.ineligible_reasons = reasons
+            bid.version += 1
+        bid.evaluated_at = now
+    return newly
+
+
+async def reopen_bids(db: AsyncSession, project_id: uuid.UUID) -> list[uuid.UUID]:
+    """Bidding is open again (extended): every INELIGIBLE bid goes back to ACTIVE so its bidder
+    can improve it; eligibility is live again until the next close. Returns those bidders."""
+    rows = (
+        await db.scalars(
+            select(Bid)
+            .where(Bid.project_id == project_id, Bid.status == BidStatus.INELIGIBLE)
+            .with_for_update()
+        )
+    ).all()
+    for bid in rows:
+        bid.status = BidStatus.ACTIVE
+        bid.ineligible_reasons = []
+        bid.evaluated_at = None
+        bid.version += 1
+    return [b.developer_id for b in rows]
+
+
 def coverage(ev: Evaluation) -> list[SlotCoverage]:
     """Places covered per slot, in slot-name order (stable for people and screenshots)."""
     eligible = set(ev.result.eligible)
@@ -634,7 +886,9 @@ def coverage(ev: Evaluation) -> list[SlotCoverage]:
         SlotCoverage(
             slot_id=s.id,
             slot_label=ev.slot_name(s),
-            needed=ev.terms.slot_counts.get(s.id, s.count),
+            needed=required_bids(
+                ev.terms.slot_counts.get(s.id, s.count), ev.params.min_bids_factor
+            ),
             eligible=sum(1 for b in ev.bids if b.slot_id == s.id and str(b.id) in eligible),
         )
         for s in ev.slots

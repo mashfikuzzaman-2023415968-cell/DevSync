@@ -113,6 +113,7 @@ MATRIX: dict[tuple[str, str], tuple[set[str], str, bool]] = {
     ("POST", "/api/v1/projects/{project_id}/bids"): ({DEV}, "auth", True),
     ("POST", "/api/v1/projects/{project_id}/bids/eligibility"): ({DEV}, "auth", True),
     ("GET", "/api/v1/me/bids"): ({DEV}, "auth", False),
+    ("GET", "/api/v1/bids/{bid_id}"): ({DEV}, "auth", True),
     ("PATCH", "/api/v1/bids/{bid_id}"): ({DEV}, "auth", True),
     ("DELETE", "/api/v1/bids/{bid_id}"): ({DEV}, "auth", True),
     ("GET", "/api/v1/projects/{project_id}/bids"): ({CLIENT, ADMIN}, "auth", True),
