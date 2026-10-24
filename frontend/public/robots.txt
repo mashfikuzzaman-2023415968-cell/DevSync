@@ -1,11 +1,12 @@
 # Homepage and public project pages may be indexed; private areas and the API may not.
+# Areas that must stay hidden are not listed here: Nginx and the API send
+# `X-Robots-Tag: noindex` for them instead (spec §14.17).
 User-agent: *
 Allow: /$
 Allow: /projects
 Allow: /p/
 Allow: /privacy
 Allow: /terms
-Disallow: /admin
 Disallow: /api
 Disallow: /dev
 Disallow: /client

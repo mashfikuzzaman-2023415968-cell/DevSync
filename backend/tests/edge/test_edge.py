@@ -108,6 +108,29 @@ def test_spa_fallback_serves_index(edge: httpx.Client) -> None:
     assert '<div id="root">' in r.text
 
 
+@pytest.mark.parametrize("path", ["/api/v1/health", "/api/v1/admin/session", "/admin", "/admin/x"])
+def test_api_and_admin_carry_one_noindex_header(edge: httpx.Client, path: str) -> None:
+    r = edge.get(path)
+    assert r.headers.get_list("x-robots-tag") == ["noindex, nofollow"]  # spec §14.17
+
+
+@pytest.mark.parametrize("path", ["/", "/projects", "/some/client/route"])
+def test_public_pages_stay_indexable(edge: httpx.Client, path: str) -> None:
+    assert "x-robots-tag" not in edge.get(path).headers
+
+
+def test_robots_txt_does_not_name_the_admin_area(edge: httpx.Client) -> None:
+    r = edge.get("/robots.txt")
+    assert r.status_code == 200
+    assert "admin" not in r.text.lower()
+
+
+def test_api_trailing_slash_is_a_relative_308(edge: httpx.Client) -> None:
+    r = edge.post("/api/v1/health/?x=1", follow_redirects=False)
+    assert r.status_code == 308
+    assert r.headers["location"] == "/api/v1/health?x=1"
+
+
 def test_unknown_host_is_rejected_by_api(edge: httpx.Client) -> None:
     r = edge.get("/api/v1/health", headers={"Host": "evil.example"})
     assert r.status_code == 400
