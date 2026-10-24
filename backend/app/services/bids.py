@@ -857,7 +857,9 @@ def record_evaluation(ev: Evaluation, now: datetime) -> list[Bid]:
             bid.status = status
             bid.ineligible_reasons = reasons
             bid.version += 1
-        bid.evaluated_at = now
+            bid.evaluated_at = now
+        elif bid.evaluated_at is None:
+            bid.evaluated_at = now  # first verdict; a re-run that changes nothing writes nothing
     return newly
 
 
