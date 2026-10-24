@@ -56,10 +56,14 @@ const PROJECTS = [
 const fail = () =>
   HttpResponse.json({ error: { code: "INTERNAL", request_id: "req-2" } }, { status: 500 });
 
-function client(projects: JsonBodyType, me: object = {}) {
-  server.use(
+function client(projects: JsonBodyType[], me: object = {}, nextCursor: string | null = null) {  server.use(
     http.get(`${API}/me`, () => HttpResponse.json({ ...ME, ...me })),
-    http.get(`${API}/projects`, () => HttpResponse.json(projects)),
+    // The dashboard reads one page of up to 100 projects (spec §10.1 cursor pages).
+    http.get(`${API}/projects`, ({ request }) =>
+      new URL(request.url).searchParams.get("limit") === "100"
+        ? HttpResponse.json({ items: projects, next_cursor: nextCursor })
+        : HttpResponse.json({ error: { code: "BAD_REQUEST" } }, { status: 400 }),
+    ),
   );
   return renderRoutes([{ path: "/client", element: <ClientHome /> }], "/client");
 }
@@ -82,6 +86,13 @@ function cardOf(title: string): HTMLElement {
 }
 
 describe("ClientHome", () => {
+  it("marks counts as at least when older projects are beyond the first page", async () => {
+    client(PROJECTS, {}, "older");
+    expect(await screen.findByText("Your projects")).toBeInTheDocument();
+    expect(statValue("Active projects")).toBe("3+");
+    expect(statValue("Completed")).toBe("2+");
+  });
+
   it("counts the client's real projects", async () => {
     client(PROJECTS);
     expect(await screen.findByText("Your projects")).toBeInTheDocument();
@@ -175,7 +186,9 @@ describe("ClientHome", () => {
     let failing = true;
     server.use(
       http.get(`${API}/me`, () => HttpResponse.json(ME)),
-      http.get(`${API}/projects`, () => (failing ? fail() : HttpResponse.json(PROJECTS))),
+      http.get(`${API}/projects`, () =>
+        failing ? fail() : HttpResponse.json({ items: PROJECTS, next_cursor: null }),
+      ),
     );
     renderRoutes([{ path: "/client", element: <ClientHome /> }], "/client");
     expect(await screen.findByText("Your projects didn’t load")).toBeInTheDocument();

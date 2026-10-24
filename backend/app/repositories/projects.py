@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Sequence
+from datetime import datetime
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.projects import (
@@ -39,9 +40,19 @@ async def get_project(
     return await db.scalar(stmt)
 
 
-async def list_mine(db: AsyncSession, client_id: uuid.UUID) -> Sequence[Project]:
-    """The caller's own projects, newest first."""
-    stmt = select(Project).where(Project.client_id == client_id).order_by(Project.created_at.desc())
+async def list_mine(
+    db: AsyncSession,
+    client_id: uuid.UUID,
+    *,
+    limit: int,
+    after: tuple[datetime, uuid.UUID] | None = None,
+) -> Sequence[Project]:
+    """The caller's own projects, newest first (keyset on created_at, id): at most `limit` rows
+    after `after`, the (created_at, id) of the previous page's last row."""
+    stmt = select(Project).where(Project.client_id == client_id)
+    if after is not None:
+        stmt = stmt.where(tuple_(Project.created_at, Project.id) < tuple_(*after))
+    stmt = stmt.order_by(Project.created_at.desc(), Project.id.desc()).limit(limit)
     return (await db.scalars(stmt)).all()
 
 

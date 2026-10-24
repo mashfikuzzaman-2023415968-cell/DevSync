@@ -23,6 +23,7 @@ const CANCELLABLE = new Set(["DRAFT", "BIDDING", "FORMING", "TEAM_PENDING"]);
 
 export default function MyProjectsPage() {
   const projects = useMyProjects();
+  const rows = projects.data?.pages.flatMap((page) => page.items) ?? [];
 
   const action = (
     <Button asChild>
@@ -52,7 +53,7 @@ export default function MyProjectsPage() {
             onRetry={() => void projects.refetch()}
           />
         </Card>
-      ) : (projects.data ?? []).length === 0 ? (
+      ) : rows.length === 0 ? (
         <Card>
           <EmptyState
             art={<NodeArt />}
@@ -62,13 +63,26 @@ export default function MyProjectsPage() {
           />
         </Card>
       ) : (
-        <Card className="overflow-hidden p-0">
-          <ul className="divide-y divide-border">
-            {(projects.data ?? []).map((p) => (
-              <ProjectRow key={p.id} project={p} />
-            ))}
-          </ul>
-        </Card>
+        <>
+          <Card className="overflow-hidden p-0">
+            <ul className="divide-y divide-border">
+              {rows.map((p) => (
+                <ProjectRow key={p.id} project={p} />
+              ))}
+            </ul>
+          </Card>
+          {projects.hasNextPage ? (
+            <div className="mt-6 flex justify-center">
+              <Button
+                variant="outline"
+                loading={projects.isFetchingNextPage}
+                onClick={() => void projects.fetchNextPage()}
+              >
+                Load more
+              </Button>
+            </div>
+          ) : null}
+        </>
       )}
     </>
   );

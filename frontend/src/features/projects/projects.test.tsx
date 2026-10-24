@@ -296,9 +296,47 @@ function routes(path: string, element: React.ReactNode) {
   ];
 }
 
+/** A cursor page of My projects (spec §10.1). */
+function page(items: JsonBodyType[], next_cursor: string | null = null) {
+  return { items, next_cursor };
+}
+
 describe("MyProjectsPage", () => {
+  it("loads older projects with Load more, passing the cursor", async () => {
+    const user = userEvent.setup();
+    const asked: string[] = [];
+    const row = (id: string, title: string) => ({
+      id,
+      title,
+      status: "BIDDING",
+      budget_paisa: 0,
+      team_size: 2,
+      deadline_days: 30,
+      bidding_deadline: null,
+      updated_at: "2026-10-19T06:00:00Z",
+    });
+    server.use(
+      http.get(`${API}/projects`, ({ request }) => {
+        const cursor = new URL(request.url).searchParams.get("cursor");
+        asked.push(cursor ?? "-");
+        return HttpResponse.json(
+          cursor === "c2" ? page([row("p2", "Older project")]) : page([row("p1", "Newest")], "c2"),
+        );
+      }),
+    );
+    renderRoutes(routes("/client/projects", <MyProjectsPage />), "/client/projects");
+    expect(await screen.findByRole("link", { name: "Newest" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Older project" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Load more" }));
+    expect(await screen.findByRole("link", { name: "Older project" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Newest" })).toBeInTheDocument();
+    expect(asked).toEqual(["-", "c2"]);
+    // The last page has no cursor: no more Load more.
+    expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument();
+  });
+
   it("shows the empty state when there are no projects", async () => {
-    server.use(http.get(`${API}/projects`, () => HttpResponse.json([])));
+    server.use(http.get(`${API}/projects`, () => HttpResponse.json(page([]))));
     renderRoutes(routes("/client/projects", <MyProjectsPage />), "/client/projects");
     expect(await screen.findByText("No projects yet")).toBeInTheDocument();
   });
@@ -311,7 +349,7 @@ describe("MyProjectsPage", () => {
         hits += 1;
         return hits === 1
           ? HttpResponse.json({ error: { code: "INTERNAL_ERROR" } }, { status: 500 })
-          : HttpResponse.json([]);
+          : HttpResponse.json(page([]));
       }),
     );
     renderRoutes(routes("/client/projects", <MyProjectsPage />), "/client/projects");
@@ -332,10 +370,9 @@ describe("MyProjectsPage", () => {
     });
     server.use(
       http.get(`${API}/projects`, () =>
-        HttpResponse.json([
-          row("d1", "Half-planned app", "DRAFT"),
-          row("b1", "Ordering", "BIDDING"),
-        ]),
+        HttpResponse.json(
+          page([row("d1", "Half-planned app", "DRAFT"), row("b1", "Ordering", "BIDDING")]),
+        ),
       ),
     );
     renderRoutes(routes("/client/projects", <MyProjectsPage />), "/client/projects");
@@ -357,28 +394,30 @@ describe("MyProjectsPage", () => {
     let cancelled: unknown = null;
     server.use(
       http.get(`${API}/projects`, () =>
-        HttpResponse.json([
-          {
-            id: "p1",
-            title: "Ordering system",
-            status: "BIDDING",
-            budget_paisa: 12_000_000,
-            team_size: 3,
-            deadline_days: 30,
-            bidding_deadline: "2026-11-01T00:00:00Z",
-            updated_at: "2026-10-18T00:00:00Z",
-          },
-          {
-            id: "p2",
-            title: "Legacy migration",
-            status: "COMPLETED",
-            budget_paisa: 5_000_000,
-            team_size: 2,
-            deadline_days: 14,
-            bidding_deadline: null,
-            updated_at: "2026-09-01T00:00:00Z",
-          },
-        ]),
+        HttpResponse.json(
+          page([
+            {
+              id: "p1",
+              title: "Ordering system",
+              status: "BIDDING",
+              budget_paisa: 12_000_000,
+              team_size: 3,
+              deadline_days: 30,
+              bidding_deadline: "2026-11-01T00:00:00Z",
+              updated_at: "2026-10-18T00:00:00Z",
+            },
+            {
+              id: "p2",
+              title: "Legacy migration",
+              status: "COMPLETED",
+              budget_paisa: 5_000_000,
+              team_size: 2,
+              deadline_days: 14,
+              bidding_deadline: null,
+              updated_at: "2026-09-01T00:00:00Z",
+            },
+          ]),
+        ),
       ),
       http.get(`${API}/auth/csrf`, () => new HttpResponse(null, { status: 204 })),
       http.post(`${API}/projects/p1/cancel`, async ({ request }) => {

@@ -10,10 +10,10 @@ from __future__ import annotations
 import uuid
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Header, Response, status
+from fastapi import APIRouter, Depends, Header, Query, Response, status
 
 from app.api.deps import acting, rate_limit
-from app.schemas.common import error_responses, version_conflict_response
+from app.schemas.common import Page, error_responses, version_conflict_response
 from app.schemas.projects import CancelIn as CancelBody
 from app.schemas.projects import (
     CpmNodeOut,
@@ -141,11 +141,19 @@ async def create_project(ctx: Creator, body: ProjectCreate) -> ProjectOut:
 @router.get(
     "/projects",
     summary="List my projects",
-    response_model=list[ProjectListItem],
-    responses={200: _ok(EX_LIST), **error_responses(401, 403, 404)},
+    response_model=Page[ProjectListItem],
+    responses={
+        200: _ok({"items": EX_LIST, "next_cursor": None}),
+        **error_responses(401, 403, 404, 422),
+    },
 )
-async def list_projects(ctx: Reader) -> list[ProjectListItem]:
-    return await svc.list_mine(ctx)
+async def list_projects(
+    ctx: Reader,
+    cursor: Annotated[str | None, Query(min_length=1, max_length=200)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> Page[ProjectListItem]:
+    """Newest first. Pass the previous page's `next_cursor` for the next one (§10.1)."""
+    return await svc.list_mine(ctx, cursor=cursor, limit=limit)
 
 
 @router.get(

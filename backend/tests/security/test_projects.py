@@ -86,7 +86,7 @@ def test_create_get_and_list_draft(api: Api) -> None:
     assert got.json()["title"] == "Online ordering system"
     listed = api.get("/api/v1/projects")
     assert listed.status_code == 200
-    assert any(p["id"] == created["id"] for p in listed.json())
+    assert any(p["id"] == created["id"] for p in listed.json()["items"])
 
 
 def test_create_rejects_unknown_fields(api: Api) -> None:

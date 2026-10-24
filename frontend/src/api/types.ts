@@ -38,6 +38,7 @@ export type ProjectDraft = Schemas["DraftOut"];
 export type ProjectCreate = Schemas["ProjectCreate"];
 export type ProjectUpdate = Schemas["ProjectUpdate"];
 export type ProjectListItem = Schemas["ProjectListItem"];
+export type ProjectListPage = Schemas["Page_ProjectListItem_"];
 export type ProjectStatus = ProjectListItem["status"];
 export type Slot = Schemas["SlotOut"];
 export type SlotIn = Schemas["SlotIn"];

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge, Card, CardHeader, Skeleton } from "@/components/ui/Display";
 import { EmptyState, ErrorState, PageHeader, StatCard } from "@/components/ui/Feedback";
 import { useMe } from "@/features/auth/api";
-import { useMyProjects } from "@/features/projects/api";
+import { useMyProjectsOverview } from "@/features/projects/api";
 import {
   ACTIVE_STATUSES,
   PROJECT_STATUS_TONE,
@@ -34,7 +34,7 @@ function byUpdated(a: ProjectListItem, b: ProjectListItem): number {
 export default function ClientHome() {
   const me = useMe();
   const user = me.data;
-  const projects = useMyProjects();
+  const projects = useMyProjectsOverview();
   const verified = user?.phone_verified === true && user.email_verified;
 
   const createAction = (
@@ -93,7 +93,7 @@ export default function ClientHome() {
           </Card>
           {checklist}
         </div>
-      ) : projects.data.length === 0 ? (
+      ) : projects.data.items.length === 0 ? (
         <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]">
           <Card>
             <EmptyState
@@ -110,7 +110,11 @@ export default function ClientHome() {
           {checklist}
         </div>
       ) : (
-        <Dashboard projects={projects.data} checklist={checklist} />
+        <Dashboard
+          projects={projects.data.items}
+          more={projects.data.next_cursor !== null}
+          checklist={checklist}
+        />
       )}
     </>
   );
@@ -132,8 +136,21 @@ function Loading() {
   );
 }
 
-function Dashboard({ projects, checklist }: { projects: ProjectListItem[]; checklist: ReactNode }) {
+function Dashboard({
+  projects,
+  more,
+  checklist,
+}: {
+  projects: ProjectListItem[];
+  /** Older projects exist beyond this page: the counts are lower bounds ("100+"). */
+  more: boolean;
+  checklist: ReactNode;
+}) {
   const count = (pred: (p: ProjectListItem) => boolean) => projects.filter(pred).length;
+  // With older projects beyond this page a count is a lower bound, shown as "3+".
+  const atLeast = more
+    ? { format: (v: number) => `${Math.round(v).toLocaleString("en-IN")}+` }
+    : {};
   const recent = [...projects].sort(byUpdated);
   const listed = recent.filter((p) => p.status !== "CANCELLED").slice(0, LIST_LIMIT);
   const activity = recent.slice(0, ACTIVITY_LIMIT);
@@ -141,10 +158,14 @@ function Dashboard({ projects, checklist }: { projects: ProjectListItem[]; check
   return (
     <div className="space-y-6">
       <section aria-label="Project counts" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Active projects" value={count((p) => ACTIVE_STATUSES.has(p.status))} />
-        <StatCard label="Open for bids" value={count((p) => p.status === "BIDDING")} />
-        <StatCard label="Drafts" value={count((p) => p.status === "DRAFT")} />
-        <StatCard label="Completed" value={count((p) => p.status === "COMPLETED")} />
+        <StatCard
+          {...atLeast}
+          label="Active projects"
+          value={count((p) => ACTIVE_STATUSES.has(p.status))}
+        />
+        <StatCard {...atLeast} label="Open for bids" value={count((p) => p.status === "BIDDING")} />
+        <StatCard {...atLeast} label="Drafts" value={count((p) => p.status === "DRAFT")} />
+        <StatCard {...atLeast} label="Completed" value={count((p) => p.status === "COMPLETED")} />
       </section>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]">
         <Card>

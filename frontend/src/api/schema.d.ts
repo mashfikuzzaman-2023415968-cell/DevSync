@@ -971,7 +971,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** List my projects */
+    /**
+     * List my projects
+     * @description Newest first. Pass the previous page's `next_cursor` for the next one (§10.1).
+     */
     get: operations["list_projects_api_v1_projects_get"];
     put?: never;
     /** Create a draft project */
@@ -2668,6 +2671,13 @@ export interface components {
     Page_ProjectCard_: {
       /** Items */
       items: components["schemas"]["ProjectCard"][];
+      /** Next Cursor */
+      next_cursor?: string | null;
+    };
+    /** Page[ProjectListItem] */
+    Page_ProjectListItem_: {
+      /** Items */
+      items: components["schemas"]["ProjectListItem"][];
       /** Next Cursor */
       next_cursor?: string | null;
     };
@@ -11712,7 +11722,10 @@ export interface operations {
   };
   list_projects_api_v1_projects_get: {
     parameters: {
-      query?: never;
+      query?: {
+        cursor?: string | null;
+        limit?: number;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -11726,20 +11739,22 @@ export interface operations {
         };
         content: {
           /**
-           * @example [
-           *       {
-           *         "bidding_deadline": "2026-11-05T12:00:00Z",
-           *         "budget_paisa": 12000000,
-           *         "deadline_days": 30,
-           *         "id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
-           *         "status": "BIDDING",
-           *         "team_size": 4,
-           *         "title": "Online ordering system",
-           *         "updated_at": "2026-10-19T06:00:00Z"
-           *       }
-           *     ]
+           * @example {
+           *       "items": [
+           *         {
+           *           "bidding_deadline": "2026-11-05T12:00:00Z",
+           *           "budget_paisa": 12000000,
+           *           "deadline_days": 30,
+           *           "id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+           *           "status": "BIDDING",
+           *           "team_size": 4,
+           *           "title": "Online ordering system",
+           *           "updated_at": "2026-10-19T06:00:00Z"
+           *         }
+           *       ]
+           *     }
            */
-          "application/json": components["schemas"]["ProjectListItem"][];
+          "application/json": components["schemas"]["Page_ProjectListItem_"];
         };
       };
       /** @description Please sign in to continue. */
@@ -11812,6 +11827,24 @@ export interface operations {
            *     }
            */
           "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
         };
       };
       /** @description Too many requests. Please wait and try again. */

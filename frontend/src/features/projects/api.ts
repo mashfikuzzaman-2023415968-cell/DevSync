@@ -1,5 +1,5 @@
 /** Project and CPM-planner data hooks (spec §7.3, §9.10, §10.2 Projects). */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { refreshMe } from "@/features/auth/api";
 import type {
@@ -13,7 +13,7 @@ import type {
   Project,
   ProjectCreate,
   ProjectDraft,
-  ProjectListItem,
+  ProjectListPage,
   ProjectUpdate,
   PublishIn,
   Slot,
@@ -30,10 +30,31 @@ export const keys = {
   draft: (id: string) => ["projects", id, "draft"] as const,
 };
 
+function myProjectsPath(cursor: string | null, limit?: number): string {
+  const p = new URLSearchParams();
+  if (limit !== undefined) p.set("limit", String(limit));
+  if (cursor) p.set("cursor", cursor);
+  const qs = p.toString();
+  return `/projects${qs ? `?${qs}` : ""}`;
+}
+
+/** My projects, newest first, a cursor page at a time ("Load more", spec §10.1). */
 export function useMyProjects() {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: keys.list,
-    queryFn: () => api<ProjectListItem[]>("/projects"),
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) => api<ProjectListPage>(myProjectsPath(pageParam)),
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
+  });
+}
+
+/** The dashboard's view: the newest `OVERVIEW_LIMIT` projects in one page. `more` says the
+ * client has older ones too, so counts drawn from these are "at least". */
+export const OVERVIEW_LIMIT = 100;
+export function useMyProjectsOverview() {
+  return useQuery({
+    queryKey: [...keys.list, "overview"] as const,
+    queryFn: () => api<ProjectListPage>(myProjectsPath(null, OVERVIEW_LIMIT)),
   });
 }
 

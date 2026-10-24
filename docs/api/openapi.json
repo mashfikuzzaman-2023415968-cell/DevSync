@@ -2902,6 +2902,33 @@
         "title": "Page[ProjectCard]",
         "type": "object"
       },
+      "Page_ProjectListItem_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectListItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "Page[ProjectListItem]",
+        "type": "object"
+      },
       "PlanEdge": {
         "description": "A finish-to-start dependency between two plan nodes (by node key).",
         "properties": {
@@ -13375,29 +13402,60 @@
     },
     "/api/v1/projects": {
       "get": {
+        "description": "Newest first. Pass the previous page's `next_cursor` for the next one (§10.1).",
         "operationId": "list_projects_api_v1_projects_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "example": [
-                  {
-                    "bidding_deadline": "2026-11-05T12:00:00Z",
-                    "budget_paisa": 12000000,
-                    "deadline_days": 30,
-                    "id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
-                    "status": "BIDDING",
-                    "team_size": 4,
-                    "title": "Online ordering system",
-                    "updated_at": "2026-10-19T06:00:00Z"
-                  }
-                ],
+                "example": {
+                  "items": [
+                    {
+                      "bidding_deadline": "2026-11-05T12:00:00Z",
+                      "budget_paisa": 12000000,
+                      "deadline_days": 30,
+                      "id": "7a0f6b2c-1d3e-4f5a-8b6c-9d0e1f2a3b4c",
+                      "status": "BIDDING",
+                      "team_size": 4,
+                      "title": "Online ordering system",
+                      "updated_at": "2026-10-19T06:00:00Z"
+                    }
+                  ]
+                },
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ProjectListItem"
-                  },
-                  "title": "Response List Projects Api V1 Projects Get",
-                  "type": "array"
+                  "$ref": "#/components/schemas/Page_ProjectListItem_"
                 }
               }
             },
@@ -13470,6 +13528,23 @@
               }
             },
             "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
           },
           "429": {
             "content": {

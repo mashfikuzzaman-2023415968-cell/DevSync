@@ -10,6 +10,8 @@ audited and committed at the end. Money is integer paisa.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -47,6 +49,7 @@ from app.models.projects import (
 from app.repositories import projects as repo
 from app.repositories.bids import active_bidder_ids
 from app.repositories.profiles import existing_skill_ids
+from app.schemas.common import Page
 from app.schemas.projects import (
     CpmNodeOut,
     CpmPreviewOut,
@@ -261,9 +264,45 @@ async def get_project(ctx: Ctx, project_id: uuid.UUID) -> ProjectOut:
     return _project_out(await _load_for_read(ctx, project_id))
 
 
-async def list_mine(ctx: Ctx) -> list[ProjectListItem]:
-    projects = await repo.list_mine(ctx.db, ctx.uid)
-    return [ProjectListItem.model_validate(p, from_attributes=True) for p in projects]
+_LIST_CURSOR_KIND = "mine"
+
+
+def _list_cursor(project: Project) -> str:
+    raw = f"{_LIST_CURSOR_KIND}|{project.created_at.isoformat()}|{project.id}".encode()
+    return base64.urlsafe_b64encode(raw).decode()
+
+
+def _bad_list_cursor() -> DomainError:
+    return DomainError(
+        "That page cursor is invalid.",
+        code=ErrorCode.VALIDATION_ERROR,
+        fields={"cursor": "invalid"},
+    )
+
+
+def _decode_list_cursor(cursor: str) -> tuple[datetime, uuid.UUID]:
+    """(created_at, id) of the previous page's last project; anything else is a 422."""
+    try:
+        kind, at, pid = base64.urlsafe_b64decode(cursor.encode()).decode().split("|", 2)
+        created_at, project_id = datetime.fromisoformat(at), uuid.UUID(pid)
+    except (ValueError, binascii.Error, UnicodeDecodeError) as exc:
+        raise _bad_list_cursor() from exc
+    if kind != _LIST_CURSOR_KIND or created_at.tzinfo is None:
+        raise _bad_list_cursor()
+    return created_at, project_id
+
+
+async def list_mine(
+    ctx: Ctx, *, cursor: str | None = None, limit: int = 20
+) -> Page[ProjectListItem]:
+    """The client's projects, newest first, one cursor page at a time (§10.1)."""
+    after = _decode_list_cursor(cursor) if cursor is not None else None
+    rows = await repo.list_mine(ctx.db, ctx.uid, limit=limit + 1, after=after)
+    page, more = rows[:limit], len(rows) > limit
+    return Page[ProjectListItem](
+        items=[ProjectListItem.model_validate(p, from_attributes=True) for p in page],
+        next_cursor=_list_cursor(page[-1]) if more and page else None,
+    )
 
 
 async def update_draft(
