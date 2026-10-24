@@ -96,9 +96,13 @@ Marketplace is developer-only and read-only; it never returns any bid data (seal
   → projects matching the developer's skills (§9.16). (Developer.)
 - `GET /public/projects` · `GET /public/projects/{id}` → the public marketplace: open projects with
   limited columns and, for one project, its slots; never any bid data. (Anyone.)
-- `POST /projects/{id}/bids` → place a sealed bid (one ACTIVE per project; only while BIDDING, else
-  409 `INVALID_STATE`). `GET /me/bids`. `PATCH /bids/{id}` · `DELETE /bids/{id}` (withdraw). All
-  developer-owned; another developer's bid is 404. (Developer.)
+- `POST /projects/{id}/bids` → place a sealed bid (one standing bid per project; only while
+  BIDDING, else 409 `INVALID_STATE`; at most 30 open bids per developer, else 409
+  `LIMIT_REACHED`, §14.8). `GET /me/bids?project_id=&status=&cursor=&limit=` → cursor page of my
+  bids, newest first. `GET /bids/{id}` → one of my bids with its project, the actions still open
+  and, while bidding is open, how it stands against the project's requirements.
+  `PATCH /bids/{id}` · `DELETE /bids/{id}` (withdraw), both with `If-Match: <version>` (stale →
+  409 `VERSION_CONFLICT`). All developer-owned; another developer's bid is 404. (Developer.)
 - `POST /projects/{id}/bids/eligibility` → dry-run Algorithm 1 for the bid sheet's live preview
   (per-constraint pass/fail + reason; not persisted, D45). (Developer.)
 - `GET /projects/{id}/bids` → all bids on the caller's own project with reputation (C, P) and the

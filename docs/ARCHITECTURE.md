@@ -131,7 +131,9 @@ RQ jobs reload their data and re-check permissions; they never trust the queue p
 | `lifecycle.expire` | 5 min | low | Removes expired sessions, OTPs, email tokens, idempotency keys |
 | `uploads.cleanup` | 1 h | low | Orphan and deleted uploads (§14.9) |
 | `attempts.expire` | 1 min | default | Scores skill-test attempts whose deadline passed |
-| `bidding.deadline` | 5 min | default | Closes bidding (→ FORMING, or too-few-bids notice), shortfall reminder at 7 days, auto-cancel at 14 days (D54) |
+| `bidding.deadline` | 5 min | default | Closes bidding (→ FORMING, or too-few-bids notice + email), marks filtered-out bids INELIGIBLE, shortfall reminder at 7 days, auto-cancel at 14 days (D54) |
+| `bids.new_notices` | 1 h | default | One in-app notice per project for the bids placed since its last notice (§12 "batched hourly") |
+| `bids.daily_digest` | 08:00 Dhaka | low | One email per client summarising the previous Dhaka day's new bids (§12) |
 
 In-app notifications are written by SYSTEM sessions (`services/notifications.py`); the inbox
 UI arrives in Phase 9.
@@ -168,7 +170,7 @@ Vite + React 18 + TypeScript (strict), in `frontend/src`.
 
 ## 7. Data model
 
-Seven migrations (`backend/alembic/versions/0001`–`0007`) create 36 tables, grouped as:
+Nine migrations (`backend/alembic/versions/0001`–`0009`) create 36 tables, grouped as:
 
 | Group | Tables | Phase |
 |---|---|---|
@@ -176,7 +178,7 @@ Seven migrations (`backend/alembic/versions/0001`–`0007`) create 36 tables, gr
 | Identity | `users`, `sessions`, `otp_codes`, `email_tokens`, `totp_credentials`, `recovery_codes`, `devices_seen`, `notifications`, `email_outbox` | 1 |
 | Profiles and tests | `skills`, `developer_profiles`, `developer_skills`, `client_profiles`, `files`, `portfolio_items`, `portfolio_images`, `certificates`, `external_reviews`, `question_bank`, `skill_tests`, `test_attempts`, `skill_evidence` | 3 |
 | Projects and planning | `projects`, `project_slots`, `milestones`, `milestone_skills`, `milestone_dependencies`, `plan_baselines`, `plan_change_requests` | 4 |
-| Bidding | `bids`, `availability_reservations`, `reputation_snapshots` (+ project search vector, bidding terms in 0007) | 5 |
+| Bidding | `bids`, `availability_reservations`, `reputation_snapshots` (+ project search vector, bidding terms in 0007, best verified score in 0008, bid version/evaluation and `captcha.max_number` in 0009) | 5 |
 
 Money is `BIGINT` paisa everywhere; times are `timestamptz` (UTC) and shown in Asia/Dhaka.
 The ERD is regenerated from the SQLAlchemy models with `make erd` →

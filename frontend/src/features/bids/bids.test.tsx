@@ -255,6 +255,7 @@ describe("BidDetailPage", () => {
     await user.click(await screen.findByRole("button", { name: "Withdraw bid" }));
     const dialog = await screen.findByRole("alertdialog");
     await user.click(within(dialog).getByRole("button", { name: "Withdraw bid" }));
+    // "elsewhere" is the catch-all route's probe: the page navigated away to /dev/bids.
     expect(await screen.findByText("elsewhere")).toBeInTheDocument();
     expect(ifMatch).toBe("4");
   });
