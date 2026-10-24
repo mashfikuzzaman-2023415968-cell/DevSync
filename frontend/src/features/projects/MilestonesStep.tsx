@@ -318,7 +318,6 @@ function PreviewBody({
       </Alert>
     );
   }
-  const graphNodes = result.nodes.map((n) => ({ key: n.key, name: n.name, critical: n.critical }));
   const critical = result.nodes.filter((n) => n.critical).length;
   return (
     <div className="flex flex-col gap-4">
@@ -344,7 +343,9 @@ function PreviewBody({
           deadlineDays={deadlineDays}
         />
       )}
-      {view === "graph" && <DependencyGraph nodes={graphNodes} edges={edges} />}
+      {view === "graph" && (
+        <DependencyGraph nodes={result.nodes} edges={edges} startDate={startDate} />
+      )}
       {view === "table" && <CpmTable nodes={result.nodes} />}
     </div>
   );

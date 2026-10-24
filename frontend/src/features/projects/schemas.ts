@@ -95,3 +95,14 @@ export function takaProblem(raw: string, min: number): string | undefined {
   if (Math.abs(taka * 100 - Math.round(taka * 100)) > 1e-6) return "Use at most 2 decimals.";
   return undefined;
 }
+
+/** Problem with the bonus pool percentage, or undefined when it's fine: 0 to 50% of the budget,
+ * whole or with one decimal. */
+export function bonusPctProblem(raw: string): string | undefined {
+  const text = raw.trim();
+  if (text === "") return "Enter a percentage, or turn the bonus pool off.";
+  if (!/^\d+(\.\d)?$/.test(text) || Number(text) > 50) {
+    return "Use 0 to 50%, with at most one decimal.";
+  }
+  return undefined;
+}

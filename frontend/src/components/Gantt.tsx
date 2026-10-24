@@ -7,8 +7,9 @@
  * latest finish; the critical path is rose, slack milestones indigo. Finish-to-start
  * dependencies are drawn as elbow arrows from a predecessor's end to its successor's start.
  *
- * With a start date the axis shows real dates (months over days, or week starts when zoomed
- * out); without one it counts days from the start, matching the CPM table. A dashed deadline
+ * With a start date the axis shows real dates (months over days, week starts when zoomed out,
+ * or month starts for long plans); without one it counts days, weeks or 30-day months from the
+ * start, matching the CPM table. A dashed deadline
  * line and, once work has started, a "today" line give context. Hovering, focusing or tapping a
  * bar shows its dates, slack and dependencies in a live region under the chart.
  * Bars are keyboard-focusable with a text label; `CpmTable` is the table alternative.
@@ -20,7 +21,7 @@ import { cn } from "@/lib/cn";
 import { formatDate, formatDays } from "@/lib/format";
 
 export type GanttEdge = readonly [from: string, to: string];
-export type GanttZoom = "days" | "weeks";
+export type GanttZoom = "days" | "weeks" | "months";
 
 export interface GanttProps {
   nodes: CpmNode[];
@@ -32,7 +33,7 @@ export interface GanttProps {
   today?: number | null;
   /** Deadline in days from start; drawn as a dashed line. */
   deadlineDays?: number | null;
-  /** Initial zoom; by default days for plans up to 45 days, weeks beyond. */
+  /** Initial zoom; by default days for plans up to 45 days, weeks up to 180, months beyond. */
   zoom?: GanttZoom;
   className?: string | undefined;
 }
@@ -41,9 +42,12 @@ const ROW_H = 44;
 const BAR_H = 18;
 const HEADER_H = 40;
 const PAD_END = 24;
-const DAY_W: Record<GanttZoom, number> = { days: 28, weeks: 10 };
+const DAY_W: Record<GanttZoom, number> = { days: 28, weeks: 10, months: 4 };
 const MAX_DAY_W = 64;
 const AUTO_WEEKS_AFTER = 45;
+const AUTO_MONTHS_AFTER = 180;
+/** Without a start date a "month" is a 30-day block. */
+const MONTH_DAYS = 30;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /** The calendar date `day` days after an ISO start date (UTC, like the stored offsets). */
@@ -69,13 +73,42 @@ interface Tick {
   x: number;
   label: string;
   anchor: "start" | "middle";
+  /** Month ticks: the calendar year, added to the label of the first visible tick and of each
+   * tick that starts a new year ("Nov 2026", "Dec", "Jan 2027"). */
+  year?: number;
 }
 
-/** Axis labels: a top row (months or "Days from start") and a bottom row (days or weeks). */
+/** Axis labels: a top row (months or "Days from start") and a bottom row (days, weeks or
+ * months). */
 function axis(duration: number, zoom: GanttZoom, startDate: string | null) {
   const top: Tick[] = [];
   const bottom: Tick[] = [];
   const lines: number[] = [];
+  if (zoom === "months") {
+    if (!startDate) top.push({ x: 0, label: "Months", anchor: "start" });
+    for (let d = 0; d <= duration; d += 1) {
+      if (startDate) {
+        const date = dayToDate(startDate, d);
+        if (d === 0 || date.getUTCDate() === 1) {
+          lines.push(d);
+          if (d < duration) {
+            bottom.push({
+              x: d,
+              label: MONTHS[date.getUTCMonth()] ?? "",
+              anchor: "start",
+              year: date.getUTCFullYear(),
+            });
+          }
+        }
+      } else if (d % MONTH_DAYS === 0) {
+        lines.push(d);
+        if (d < duration) {
+          bottom.push({ x: d, label: `Month ${String(d / MONTH_DAYS + 1)}`, anchor: "start" });
+        }
+      }
+    }
+    return { top, bottom, lines };
+  }
   if (startDate) {
     for (let d = 0; d <= duration; d += 1) {
       const date = dayToDate(startDate, d);
@@ -128,6 +161,16 @@ function spaced(ticks: Tick[], x: (d: number) => number, gap: number): Tick[] {
   return out;
 }
 
+/** Month ticks name their year on the first visible tick and wherever a new year begins. */
+function withYears(ticks: Tick[]): Tick[] {
+  let year: number | undefined;
+  return ticks.map((t) => {
+    if (t.year === undefined || t.year === year) return t;
+    year = t.year;
+    return { ...t, label: `${t.label} ${String(t.year)}` };
+  });
+}
+
 /** Elbow path from a predecessor's finish to a successor's start (finish-to-start link). */
 function linkPath(x1: number, y1: number, x2: number, y2: number): string {
   const out = 6;
@@ -173,13 +216,17 @@ export function Gantt({
   const [chosenZoom, setZoom] = useState<GanttZoom | null>(initialZoom ?? null);
   const [active, setActive] = useState<string | null>(null);
   const [scrollRef, available] = useWidth<HTMLDivElement>();
-  // Until the viewer picks one: weeks for long plans, or when days would need more than two
-  // screens of scrolling (phones).
-  const zoom: GanttZoom =
-    chosenZoom ??
-    (duration > AUTO_WEEKS_AFTER || (available > 0 && duration * DAY_W.days > available * 2)
-      ? "weeks"
-      : "days");
+  // Until the viewer picks one: weeks for long plans, months for very long ones, or the next
+  // zoom out whenever the current one would need more than two screens of scrolling (phones).
+  const tooWide = (z: GanttZoom) => available > 0 && duration * DAY_W[z] > available * 2;
+  const autoZoom = (): GanttZoom => {
+    if (duration > AUTO_MONTHS_AFTER) return "months";
+    if (duration > AUTO_WEEKS_AFTER || tooWide("days")) {
+      return tooWide("weeks") ? "months" : "weeks";
+    }
+    return "days";
+  };
+  const zoom: GanttZoom = chosenZoom ?? autoZoom();
 
   // Stretch short plans to the available width; never squeeze below the zoom's day width.
   const dayWidth = Math.min(
@@ -195,8 +242,9 @@ export function Gantt({
     () => axis(duration, zoom, startDate),
     [duration, zoom, startDate],
   );
-  // Day numbers need ~18 px each; week labels ("16 Nov", "Week 3") about 44 px.
-  const bottomGap = zoom === "days" ? 18 : 44;
+  // Day numbers need ~18 px each; week labels ("16 Nov", "Week 3") about 44 px; month labels
+  // ("Nov 2026", "Month 3") about 64 px.
+  const bottomGap = zoom === "days" ? 18 : zoom === "weeks" ? 44 : 64;
   const index = useMemo(() => new Map(nodes.map((n, i) => [n.key, i])), [nodes]);
   const byKey = useMemo(() => new Map(nodes.map((n) => [n.key, n])), [nodes]);
   const links = edges.flatMap(([from, to]) => {
@@ -227,6 +275,7 @@ export function Gantt({
           segments={[
             { value: "days", label: "Days" },
             { value: "weeks", label: "Weeks" },
+            { value: "months", label: "Months" },
           ]}
         />
       </div>
@@ -339,16 +388,19 @@ export function Gantt({
                     {t.label}
                   </text>
                 ))}
-              {spaced(bottom, x, bottomGap).map((t) => (
-                <text
-                  key={`b${String(t.x)}`}
-                  x={x(t.x) + (t.anchor === "start" ? 4 : 0)}
-                  y={34}
-                  textAnchor={t.anchor}
-                >
-                  {t.label}
-                </text>
-              ))}
+              {withYears(spaced(bottom, x, bottomGap))
+                // A month label needs room to its right; one starting at the very end is dropped.
+                .filter((t, i) => i === 0 || zoom !== "months" || x(t.x) + 60 <= chartW)
+                .map((t) => (
+                  <text
+                    key={`b${String(t.x)}`}
+                    x={x(t.x) + (t.anchor === "start" ? 4 : 0)}
+                    y={34}
+                    textAnchor={t.anchor}
+                  >
+                    {t.label}
+                  </text>
+                ))}
             </g>
 
             {/* Deadline and today */}

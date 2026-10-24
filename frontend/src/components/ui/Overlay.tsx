@@ -182,6 +182,9 @@ interface SheetProps {
   /** Full height (menus, "More" sheets). */
   full?: boolean;
   hideTitle?: boolean;
+  /** Where focus goes on close when the sheet has no trigger (call `preventDefault` and focus
+   * the element that opened it); without a trigger Radix would otherwise drop focus. */
+  onCloseAutoFocus?: (event: Event) => void;
 }
 
 export function Sheet({
@@ -195,6 +198,7 @@ export function Sheet({
   side = "right",
   full = false,
   hideTitle = false,
+  onCloseAutoFocus,
 }: SheetProps) {
   return (
     <DialogPrimitive.Root {...controlled(open, onOpenChange)}>
@@ -203,6 +207,7 @@ export function Sheet({
         <DialogPrimitive.Overlay className={overlayClass} />
         <DialogPrimitive.Content
           {...(description ? {} : { "aria-describedby": undefined })}
+          {...(onCloseAutoFocus ? { onCloseAutoFocus } : {})}
           className={cn(
             "fixed z-50 flex flex-col border-border bg-surface shadow-lg",
             side === "right" &&

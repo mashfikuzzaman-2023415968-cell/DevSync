@@ -75,7 +75,6 @@ export default function PlanPage() {
     startDate && STARTED.has(project.data?.status ?? "")
       ? Math.floor((Date.now() - new Date(startDate).getTime()) / DAY_MS)
       : null;
-  const graphNodes = nodes.map((n) => ({ key: n.key, name: n.name, critical: n.critical }));
 
   return (
     <>
@@ -141,10 +140,15 @@ export default function PlanPage() {
           <Card>
             <CardHeader
               title="Dependencies"
-              description="How the milestones depend on one another."
+              description="How the milestones depend on one another. Select one to see its schedule."
             />
             <div className="p-5">
-              <DependencyGraph nodes={graphNodes} edges={edges} />
+              <DependencyGraph
+                nodes={nodes}
+                edges={edges}
+                startDate={startDate}
+                budgetPaisa={project.data?.budget_paisa ?? null}
+              />
             </div>
           </Card>
         </div>

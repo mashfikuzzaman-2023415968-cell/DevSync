@@ -5,6 +5,11 @@
  * step publishes the draft for bidding, asking the client to acknowledge the risk if the plan
  * runs past the deadline (DECISIONS D40).
  *
+ * The Budget step shows where the money goes: the platform fee (`pay.platform_fee_bp`, sent with
+ * the plan preview), what reaches the team, and an optional bonus pool set as a percentage of
+ * the budget. The Review step shows the generated plan — Gantt or table, the critical path and
+ * the warnings (a dependency loop, shares that don't total 100%, a plan past the deadline).
+ *
  * The address carries the draft and the step (`/client/projects/new?draft=<id>&step=3`), so
  * leaving and coming back, reloading, or "Continue editing" in My projects reopens the draft
  * where the client left off (D55). A plain visit to `/client/projects/new` starts a new one.
@@ -22,17 +27,21 @@ import {
 } from "react-router";
 import type { CpmPreview, PlanPreviewIn, Project, ProjectDraft } from "@/api/types";
 import { api, ApiError } from "@/api/client";
+import { CpmTable } from "@/components/CpmTable";
+import { Gantt, type GanttEdge } from "@/components/Gantt";
 import { Button, IconButton } from "@/components/ui/Button";
-import { Checkbox } from "@/components/ui/Choice";
-import { Card, CardHeader, Skeleton } from "@/components/ui/Display";
+import { Checkbox, Switch } from "@/components/ui/Choice";
+import { Badge, Card, CardHeader, Skeleton } from "@/components/ui/Display";
 import { Alert, EmptyState, ErrorState, PageHeader, Stepper } from "@/components/ui/Feedback";
 import { Field, FormField, Textarea } from "@/components/ui/Field";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Select } from "@/components/ui/Select";
 import { Dialog } from "@/components/ui/Overlay";
 import { toast } from "@/components/ui/toast-store";
 import { useMe } from "@/features/auth/api";
 import { useSkills } from "@/features/profile/api";
 import { formatDays, formatMoney } from "@/lib/format";
+import { afterFee, bpOf, bpPercent } from "@/lib/money";
 import { MilestonesStep } from "./MilestonesStep";
 import {
   useCreateProject,
@@ -45,7 +54,9 @@ import {
   useVerifyPaymentMethod,
 } from "./api";
 import {
+  bonusPctProblem,
   newKey,
+  SHARE_TOTAL_BP,
   takaProblem,
   textLength,
   toPaisa,
@@ -95,6 +106,27 @@ function resumeIndex(d: ProjectDraft, requested: string | null): number {
   return Math.min(wanted - 1, firstIncomplete, STEPS.length - 1);
 }
 
+/** The bonus pool as a percentage of the budget, one decimal at most (0 when there's none). */
+function bonusPercent(bonusPaisa: number, budgetPaisa: number): number {
+  if (bonusPaisa <= 0 || budgetPaisa <= 0) return 0;
+  return Math.min(50, Math.round((bonusPaisa * 1000) / budgetPaisa) / 10);
+}
+
+/** The preview request for the wizard's milestone rows (keys are the rows' keys). */
+function previewBody(rows: MilestoneRow[], teamSize: number): PlanPreviewIn {
+  return {
+    milestones: rows.map((m) => ({
+      key: m.key,
+      name: m.name,
+      duration_days: m.duration_days,
+      share_bp: m.share_bp,
+      predecessor_keys: m.predecessor_keys,
+    })),
+    team_size: teamSize,
+    slot_count: teamSize,
+  };
+}
+
 /** An ISO instant as the local "YYYY-MM-DDTHH:mm" a datetime-local input expects. */
 function toLocalInput(iso: string): string {
   const d = new Date(iso);
@@ -134,9 +166,12 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
   ]);
   const [budgetTaka, setBudgetTaka] = useState("");
   const [serverFields, setServerFields] = useState<Record<string, string>>({});
-  const [bonusTaka, setBonusTaka] = useState("0");
+  const [bonusOn, setBonusOn] = useState(false);
+  const [bonusPct, setBonusPct] = useState("");
   const [biddingDeadline, setBiddingDeadline] = useState("");
   const [cpm, setCpm] = useState<CpmPreview | null>(null);
+  const [cpmFailed, setCpmFailed] = useState(false);
+  const [planView, setPlanView] = useState<"gantt" | "table">("gantt");
   const [ack, setAck] = useState(false);
   // Unsaved-changes prompt (spec §13.5 screen 21): edits made since the last saved step.
   const [dirty, setDirty] = useState(false);
@@ -183,32 +218,43 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
       );
     }
     setBudgetTaka(p.budget_paisa > 0 ? String(p.budget_paisa / 100) : "");
-    setBonusTaka(String(p.bonus_pool_paisa / 100));
+    // The pool is stored in paisa; the wizard edits it as a percentage of the budget.
+    setBonusOn(p.bonus_pool_paisa > 0);
+    setBonusPct(
+      p.bonus_pool_paisa > 0 ? String(bonusPercent(p.bonus_pool_paisa, p.budget_paisa)) : "",
+    );
     setBiddingDeadline(p.bidding_deadline ? toLocalInput(p.bidding_deadline) : "");
     setStep(resumeIndex(d, resumeStep));
     setHydrated(true);
     // The schedule check (deadline warning, planned duration) normally comes from the
     // Milestones step; a draft reopened past it needs it too.
     if (d.milestones.length > 0) {
-      const body: PlanPreviewIn = {
-        milestones: d.milestones.map((m) => ({
-          key: m.id,
-          name: m.name,
-          duration_days: m.duration_days,
-          share_bp: m.share_bp,
-          predecessor_keys: d.dependencies
-            .filter((x) => x.successor_id === m.id)
-            .map((x) => x.predecessor_id),
-        })),
-        team_size: p.team_size,
-        slot_count: p.team_size,
-      };
-      api<CpmPreview>(`/projects/${p.id}/plan/preview`, { method: "POST", body }).then(
-        setCpm,
-        () => undefined,
-      );
+      const rows = d.milestones.map((m): MilestoneRow => ({
+        key: m.id,
+        name: m.name,
+        duration_days: m.duration_days,
+        share_bp: m.share_bp,
+        skill_ids: m.skill_ids,
+        predecessor_keys: d.dependencies
+          .filter((x) => x.successor_id === m.id)
+          .map((x) => x.predecessor_id),
+      }));
+      void checkSchedule(p.id, rows, p.team_size);
     }
   }, [hydrated, resume.data, resumeStep]);
+
+  /** Re-run the schedule check (CPM, warnings, platform fee) for the saved plan. */
+  async function checkSchedule(projectId: string, rows: MilestoneRow[], size: number) {
+    setCpmFailed(false);
+    try {
+      const body = previewBody(rows, size);
+      setCpm(
+        await api<CpmPreview>(`/projects/${projectId}/plan/preview`, { method: "POST", body }),
+      );
+    } catch {
+      setCpmFailed(true);
+    }
+  }
 
   // Keep the address in step with the wizard, so leaving and coming back resumes here.
   useEffect(() => {
@@ -335,11 +381,14 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
         );
         await putDeps.mutateAsync(deps);
         await refreshVersion(d);
+        // The Budget and Review steps use this plan's result (fee, warnings, Gantt), even if the
+        // live preview hadn't answered yet when the client pressed Continue.
+        void checkSchedule(d.id, milestones, teamSize);
       } else if (current === 4) {
         await patch(
           {
             budget_paisa: toPaisa(Number(budgetTaka)),
-            bonus_pool_paisa: toPaisa(Number(bonusTaka || "0")),
+            bonus_pool_paisa: bonusPaisa,
             bidding_deadline: biddingDeadline ? new Date(biddingDeadline).toISOString() : null,
           },
           d,
@@ -382,10 +431,18 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
   });
   const budgetProblem = takaProblem(budgetTaka, 1);
   if (budgetProblem) problems.budget_paisa = budgetProblem;
-  const bonusProblem = takaProblem(bonusTaka, 0);
+  const bonusProblem = bonusOn ? bonusPctProblem(bonusPct) : undefined;
   if (bonusProblem) problems.bonus_pool_paisa = bonusProblem;
   if (biddingInPast) problems.bidding_deadline = "Choose a time in the future.";
   const fieldError = (key: string): string | undefined => problems[key] ?? serverFields[key];
+  // Money previews, all integer paisa (spec §9.12 funding rule: the fee comes off the budget,
+  // the bonus pool is funded on top of it).
+  const budgetPaisa = budgetTaka.trim() !== "" && !budgetProblem ? toPaisa(Number(budgetTaka)) : 0;
+  const bonusPaisa =
+    bonusOn && bonusPct.trim() !== "" && !bonusProblem
+      ? bpOf(budgetPaisa, Math.round(Number(bonusPct) * 100))
+      : 0;
+  const feeBp = cpm?.platform_fee_bp ?? null;
   const stepFields: string[][] = [
     ["title", "summary"],
     ["requirements", "description", "deadline_days"],
@@ -408,12 +465,20 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
         totalShareBp === 10_000 &&
         !cpm?.cycle?.length
       );
-    if (step === 4) return budgetTaka.trim() !== "" && Number(budgetTaka) >= 1;
+    if (step === 4) {
+      return budgetTaka.trim() !== "" && Number(budgetTaka) >= 1 && (!bonusOn || bonusPct !== "");
+    }
     return true;
   })();
 
   const skillOptions = (skills.data ?? []).map((s) => ({ value: s.id, label: s.name }));
   const exceeds = cpm != null && cpm.duration > deadlineDays;
+  const cycle = cpm?.cycle && cpm.cycle.length > 0 ? cpm.cycle : null;
+  const sharesOff = (cpm?.total_share_bp ?? totalShareBp) !== SHARE_TOTAL_BP;
+  const planEdges: GanttEdge[] = milestones.flatMap((m) =>
+    m.predecessor_keys.map((p): GanttEdge => [p, m.key]),
+  );
+  const criticalCount = cpm?.nodes.filter((n) => n.critical).length ?? 0;
 
   if (!hydrated) {
     const err = resume.error;
@@ -693,17 +758,6 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
               placeholder="e.g. 120000"
             />
             <Field
-              label="Bonus pool (৳, optional)"
-              type="number"
-              inputMode="numeric"
-              min={0}
-              error={fieldError("bonus_pool_paisa")}
-              value={bonusTaka}
-              onChange={(e) => {
-                edit(setBonusTaka)(e.target.value);
-              }}
-            />
-            <Field
               label="Bidding closes (optional)"
               type="datetime-local"
               min={toLocalInput(new Date().toISOString())}
@@ -714,47 +768,170 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
                 edit(setBiddingDeadline)(e.target.value);
               }}
             />
+            <div className="sm:col-span-2">
+              <Switch
+                label="Add a bonus pool"
+                description="Rewards great work. It’s funded once at the start, on top of the budget, and what isn’t paid out comes back to you."
+                checked={bonusOn}
+                onCheckedChange={(on) => {
+                  setDirty(true);
+                  setBonusOn(on);
+                  // Start from the platform's suggested size (setting pay.bonus_pool_bp).
+                  if (on && bonusPct === "") {
+                    setBonusPct(String((cpm?.bonus_pool_bp ?? 1000) / 100));
+                  }
+                }}
+              />
+            </div>
+            {bonusOn && (
+              <Field
+                label="Bonus pool (% of budget)"
+                type="number"
+                inputMode="decimal"
+                min={0}
+                max={50}
+                step={0.1}
+                required
+                hint="From 0 to 50%, with at most one decimal."
+                error={fieldError("bonus_pool_paisa")}
+                value={bonusPct}
+                onChange={(e) => {
+                  edit(setBonusPct)(e.target.value);
+                }}
+              />
+            )}
+            <div className="sm:col-span-2">
+              <MoneyBreakdown
+                budgetPaisa={budgetPaisa}
+                feeBp={feeBp}
+                feeFailed={cpmFailed}
+                bonusPaisa={bonusOn ? bonusPaisa : null}
+                bonusPct={bonusOn && !bonusProblem && bonusPct !== "" ? Number(bonusPct) : null}
+              />
+            </div>
           </div>
         </Card>
       )}
 
       {step === 5 && (
-        <Card className="max-w-2xl">
-          <CardHeader
-            title="Review and publish"
-            description="Publishing opens the project for bids. You can still cancel later."
-          />
-          <div className="p-5">
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-body-sm">
-              <Summary label="Title" value={title || "—"} />
-              <Summary label="Team size" value={String(teamSize)} />
-              <Summary label="Milestones" value={String(milestones.length)} />
-              <Summary label="Deadline" value={formatDays(deadlineDays)} />
-              <Summary label="Planned duration" value={cpm ? formatDays(cpm.duration) : "—"} />
-              <Summary
-                label="Budget"
-                value={budgetTaka ? formatMoney(toPaisa(Number(budgetTaka))) : "—"}
-              />
-            </dl>
-            {exceeds && (
-              <Alert tone="warning" title="The plan runs past your deadline" className="mt-5">
-                The critical path is {formatDays(cpm.duration)}, longer than your{" "}
-                {formatDays(deadlineDays)} deadline. You can still publish, but developers may not
-                be able to meet it.
-                <div className="mt-3">
-                  <Checkbox
-                    checked={ack}
-                    onCheckedChange={(v) => {
-                      setAck(v === true);
-                    }}
-                    label="I understand the schedule risk and want to publish anyway"
+        <div className="flex flex-col gap-6">
+          <Card className="max-w-2xl">
+            <CardHeader
+              title="Review and publish"
+              description="Publishing opens the project for bids. You can still cancel later."
+            />
+            <div className="p-5">
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-body-sm">
+                <Summary label="Title" value={title || "—"} />
+                <Summary label="Team size" value={String(teamSize)} />
+                <Summary label="Milestones" value={String(milestones.length)} />
+                <Summary label="Deadline" value={formatDays(deadlineDays)} />
+                <Summary label="Planned duration" value={cpm ? formatDays(cpm.duration) : "—"} />
+                <Summary
+                  label="Budget"
+                  value={budgetTaka ? formatMoney(toPaisa(Number(budgetTaka))) : "—"}
+                />
+                <Summary
+                  label="Bonus pool"
+                  value={bonusPaisa > 0 ? formatMoney(bonusPaisa) : "None"}
+                />
+              </dl>
+              {exceeds && (
+                <Alert tone="warning" title="The plan runs past your deadline" className="mt-5">
+                  The critical path is {formatDays(cpm.duration)}, longer than your{" "}
+                  {formatDays(deadlineDays)} deadline. You can still publish, but developers may not
+                  be able to meet it.
+                  <div className="mt-3">
+                    <Checkbox
+                      checked={ack}
+                      onCheckedChange={(v) => {
+                        setAck(v === true);
+                      }}
+                      label="I understand the schedule risk and want to publish anyway"
+                    />
+                  </div>
+                </Alert>
+              )}
+              <PaymentMethod verified={paymentVerified} />
+            </div>
+          </Card>
+          <Card>
+            <CardHeader
+              title="Plan"
+              description="The critical-path schedule developers will bid on. Rose bars can’t slip without moving the finish."
+              action={
+                cpm && !cycle ? (
+                  <SegmentedControl<"gantt" | "table">
+                    label="Plan view"
+                    size="sm"
+                    value={planView}
+                    onChange={setPlanView}
+                    segments={[
+                      { value: "gantt", label: "Gantt" },
+                      { value: "table", label: "Table" },
+                    ]}
                   />
+                ) : undefined
+              }
+            />
+            <div className="flex flex-col gap-4 p-5">
+              {cpm ? (
+                <>
+                  {!cycle && (
+                    <div className="flex flex-wrap gap-2">
+                      <Badge tone="neutral">Duration {formatDays(cpm.duration)}</Badge>
+                      <Badge tone="danger">
+                        {criticalCount} critical {criticalCount === 1 ? "milestone" : "milestones"}
+                      </Badge>
+                      <Badge tone={sharesOff ? "warning" : "success"}>
+                        Shares {bpPercent(cpm.total_share_bp)}
+                      </Badge>
+                    </div>
+                  )}
+                  {cycle && (
+                    <Alert tone="danger" title="These milestones depend on each other in a loop">
+                      Go back to Milestones and remove a dependency in the chain {cycle.join(" → ")}
+                      , so the work can be scheduled.
+                    </Alert>
+                  )}
+                  {sharesOff && (
+                    <Alert tone="warning" title="Milestone shares don’t add up to 100%">
+                      They total {bpPercent(cpm.total_share_bp)}. Go back to Milestones and adjust
+                      them, so the whole budget is paid out by milestone.
+                    </Alert>
+                  )}
+                  {!cycle &&
+                    (planView === "gantt" ? (
+                      <Gantt
+                        nodes={cpm.nodes}
+                        edges={planEdges}
+                        startDate={startDate || null}
+                        deadlineDays={deadlineDays}
+                      />
+                    ) : (
+                      <CpmTable nodes={cpm.nodes} />
+                    ))}
+                </>
+              ) : cpmFailed ? (
+                <ErrorState
+                  title="We couldn’t check the schedule"
+                  onRetry={() => {
+                    if (draft) void checkSchedule(draft.id, milestones, teamSize);
+                  }}
+                />
+              ) : (
+                <div
+                  aria-busy="true"
+                  aria-label="Checking the schedule"
+                  className="flex flex-col gap-3"
+                >
+                  <Skeleton className="h-6 w-64" />
+                  <Skeleton className="h-40 w-full" />
                 </div>
-              </Alert>
-            )}
-            <PaymentMethod verified={paymentVerified} />
-          </div>
-        </Card>
+              )}
+            </div>
+          </Card>
+        </div>
       )}
 
       <div className="sticky bottom-0 mt-6 flex items-center justify-between gap-3 border-t border-border bg-bg/90 py-4 backdrop-blur">
@@ -776,7 +953,9 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
         ) : (
           <PublishButton
             projectId={draftId}
-            disabled={!draft || !paymentVerified || (exceeds && !ack)}
+            disabled={
+              !draft || !paymentVerified || (exceeds && !ack) || cycle !== null || sharesOff
+            }
             ack={ack}
             onDone={(id) => {
               setPublished(true);
@@ -865,6 +1044,62 @@ function PaymentMethod({ verified }: { verified: boolean }) {
         </Button>
       </div>
     </Alert>
+  );
+}
+
+/** Where the client's money goes: fee off the budget, the rest to the team, the bonus on top. */
+function MoneyBreakdown({
+  budgetPaisa,
+  feeBp,
+  feeFailed,
+  bonusPaisa,
+  bonusPct,
+}: {
+  budgetPaisa: number;
+  feeBp: number | null;
+  /** The fee could not be loaded (the schedule check failed). */
+  feeFailed: boolean;
+  bonusPaisa: number | null;
+  bonusPct: number | null;
+}) {
+  if (budgetPaisa <= 0) {
+    return (
+      <p className="rounded-lg bg-surface-2 p-4 text-body-sm text-text-muted">
+        Enter a budget to see the platform fee and what reaches the team.
+      </p>
+    );
+  }
+  const team = feeBp === null ? null : afterFee(budgetPaisa, feeBp);
+  const pending = feeFailed ? "Not available right now" : "Checking…";
+  return (
+    <section aria-label="Where the money goes" className="rounded-lg bg-surface-2 p-4">
+      <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2 text-body-sm">
+        <dt className="text-text-muted">Budget</dt>
+        <dd className="text-right font-medium tabular text-text">{formatMoney(budgetPaisa)}</dd>
+        <dt className="text-text-muted">
+          Platform fee{feeBp === null ? "" : ` (${bpPercent(feeBp)})`}
+        </dt>
+        <dd className="text-right font-medium tabular text-text">
+          {team === null ? pending : formatMoney(budgetPaisa - team)}
+        </dd>
+        <dt className="text-text-muted">Reaches the team, paid by milestone</dt>
+        <dd className="text-right font-semibold tabular text-text">
+          {team === null ? pending : formatMoney(team)}
+        </dd>
+        {bonusPaisa !== null && (
+          <>
+            <dt className="text-text-muted">
+              Bonus pool{bonusPct === null ? "" : ` (${String(bonusPct)}%)`}
+            </dt>
+            <dd className="text-right font-medium tabular text-text">{formatMoney(bonusPaisa)}</dd>
+          </>
+        )}
+        <dt className="border-t border-border pt-2 font-medium text-text">You fund in total</dt>
+        <dd className="border-t border-border pt-2 text-right font-semibold tabular text-text">
+          {formatMoney(budgetPaisa + (bonusPaisa ?? 0))}
+        </dd>
+      </dl>
+    </section>
   );
 }
 

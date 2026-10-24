@@ -4,12 +4,27 @@
  * Custom SVG (no graph library): a left-to-right layered DAG. Each milestone sits in the layer
  * one past its latest predecessor (longest-path layering, matching the CPM topological order);
  * edges are finish-to-start. Nodes and edges on the critical path are drawn in danger (rose) so
- * the longest chain reads at a glance. Purely presentational — the caller supplies the edges.
+ * the longest chain reads at a glance. The caller supplies the edges.
+ *
+ * Clicking a milestone (or pressing Enter or Space on it) opens a panel with its schedule —
+ * duration, earliest/latest start and finish (with dates once a start date is known), slack —
+ * its share of the budget, and what it depends on and what depends on it. The panel is a side
+ * sheet, and a bottom sheet on phones.
  */
-import { useId, useMemo } from "react";
+import { useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import type { CpmNode } from "@/api/types";
+import { Badge } from "@/components/ui/Display";
+import { Sheet } from "@/components/ui/Overlay";
+import { useMediaQuery } from "@/design/preferences";
 import { cn } from "@/lib/cn";
+import { formatDate, formatDays, formatMoney } from "@/lib/format";
+import { bpOf, bpPercent } from "@/lib/money";
 
-export interface GraphNode {
+/** A milestone in the graph. The schedule fields and the budget share are optional: without
+ * them the panel shows only the name and the dependencies. A `CpmNode` fits as it is. */
+export interface GraphNode extends Partial<
+  Pick<CpmNode, "es" | "ef" | "ls" | "lf" | "slack" | "share_bp">
+> {
   key: string;
   name: string;
   critical: boolean;
@@ -86,15 +101,34 @@ function layout(nodes: GraphNode[], edges: GraphEdge[]) {
 export function DependencyGraph({
   nodes,
   edges,
+  startDate = null,
+  budgetPaisa = null,
   className,
 }: {
   nodes: GraphNode[];
   edges: GraphEdge[];
+  /** Project start date (ISO), so the panel can show calendar dates. */
+  startDate?: string | null;
+  /** Project budget in paisa, so the panel can show the share as an amount. */
+  budgetPaisa?: number | null;
   className?: string | undefined;
 }) {
   const titleId = useId();
+  const hintId = useId();
   const { placed, width, height } = useMemo(() => layout(nodes, edges), [nodes, edges]);
   const pos = new Map(placed.map((p) => [p.key, p]));
+  const [selected, setSelected] = useState<string | null>(null);
+  // The node that opened the panel gets focus back when it closes.
+  const opener = useRef<SVGGElement | null>(null);
+  const wide = useMediaQuery("(min-width: 768px)");
+  const selectedNode = selected ? nodes.find((n) => n.key === selected) : undefined;
+  const open = (key: string) => (e: KeyboardEvent<SVGGElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault(); // Space would scroll the page
+      opener.current = e.currentTarget;
+      setSelected(key);
+    }
+  };
 
   return (
     <div className={cn("overflow-x-auto", className)}>
@@ -109,6 +143,7 @@ export function DependencyGraph({
         <title id={titleId}>
           Dependency graph: {nodes.length} milestones; the critical path is shown in red.
         </title>
+        <desc id={hintId}>Press Enter to see this milestone’s schedule and dependencies.</desc>
         <g fill="none" strokeWidth="1.5">
           {edges.map(([from, to], i) => {
             const a = pos.get(from);
@@ -137,7 +172,13 @@ export function DependencyGraph({
             tabIndex={0}
             role="group"
             aria-label={n.critical ? `${n.name}, on the critical path` : n.name}
-            className="group outline-none"
+            aria-describedby={hintId}
+            onClick={(e) => {
+              opener.current = e.currentTarget;
+              setSelected(n.key);
+            }}
+            onKeyDown={open(n.key)}
+            className="group cursor-pointer outline-none"
           >
             <rect
               x={n.x}
@@ -156,7 +197,10 @@ export function DependencyGraph({
               rx="10"
               fill="none"
               strokeWidth="2"
-              className="stroke-primary opacity-0 group-focus-visible:opacity-100"
+              className={cn(
+                "stroke-primary group-focus-visible:opacity-100",
+                selected === n.key ? "opacity-100" : "opacity-0",
+              )}
             />
             <title>{n.name}</title>
             <text
@@ -178,7 +222,142 @@ export function DependencyGraph({
           </g>
         ))}
       </svg>
+      <Sheet
+        open={selectedNode !== undefined}
+        onOpenChange={(o) => {
+          if (!o) setSelected(null);
+        }}
+        side={wide ? "right" : "bottom"}
+        onCloseAutoFocus={(e) => {
+          if (opener.current?.isConnected) {
+            e.preventDefault();
+            opener.current.focus();
+          }
+        }}
+        title={selectedNode?.name ?? "Milestone"}
+        description={selectedNode ? summary(selectedNode) : undefined}
+      >
+        {selectedNode ? (
+          <MilestonePanel
+            node={selectedNode}
+            nodes={nodes}
+            edges={edges}
+            startDate={startDate}
+            budgetPaisa={budgetPaisa}
+          />
+        ) : null}
+      </Sheet>
     </div>
+  );
+}
+
+function summary(node: GraphNode): string {
+  if (node.critical) return "On the critical path, so any delay moves the finish date.";
+  if (node.slack !== undefined) {
+    return `Can slip ${formatDays(node.slack)} without delaying the finish.`;
+  }
+  return "Not on the critical path.";
+}
+
+/** Day `day` of the plan as text, with its calendar date when the start date is known. */
+function dayText(day: number, startDate: string | null): string {
+  if (!startDate) return `Day ${String(day)}`;
+  const d = new Date(startDate);
+  d.setUTCDate(d.getUTCDate() + day);
+  return `Day ${String(day)} (${formatDate(d)})`;
+}
+
+function MilestonePanel({
+  node,
+  nodes,
+  edges,
+  startDate,
+  budgetPaisa,
+}: {
+  node: GraphNode;
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  startDate: string | null;
+  budgetPaisa: number | null;
+}) {
+  const names = new Map(nodes.map((n) => [n.key, n.name]));
+  const listed = (keys: string[]) =>
+    keys.map((k) => names.get(k)).filter((n): n is string => Boolean(n));
+  const after = listed(edges.filter(([, to]) => to === node.key).map(([from]) => from));
+  const before = listed(edges.filter(([from]) => from === node.key).map(([, to]) => to));
+  const { es, ef, ls, lf, slack } = node;
+  const share = node.share_bp ?? null;
+  const shareText =
+    share === null
+      ? null
+      : budgetPaisa && budgetPaisa > 0
+        ? `${bpPercent(share)} (${formatMoney(bpOf(budgetPaisa, share))})`
+        : bpPercent(share);
+  // Finishes are the last working day, like the Gantt's ranges (offsets are [start, finish)).
+  const lastDay = (finish: number, start: number) => Math.max(start, finish - 1);
+
+  return (
+    <div className="flex flex-col gap-5 text-body-sm">
+      <div>
+        {node.critical ? (
+          <Badge tone="danger">Critical path</Badge>
+        ) : (
+          <Badge tone="info">Has slack</Badge>
+        )}
+      </div>
+      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2">
+        {es !== undefined && ef !== undefined && (
+          <>
+            <Row label="Duration" value={formatDays(ef - es)} />
+            <Row label="Earliest start" value={dayText(es, startDate)} />
+            <Row label="Earliest finish" value={dayText(lastDay(ef, es), startDate)} />
+          </>
+        )}
+        {ls !== undefined && lf !== undefined && (
+          <>
+            <Row label="Latest start" value={dayText(ls, startDate)} />
+            <Row label="Latest finish" value={dayText(lastDay(lf, ls), startDate)} />
+          </>
+        )}
+        {slack !== undefined && (
+          <Row label="Slack" value={slack === 0 ? "None" : formatDays(slack)} />
+        )}
+        {shareText !== null && <Row label="Share of budget" value={shareText} />}
+      </dl>
+      <section>
+        <h3 className="mb-1 font-medium text-text">Depends on</h3>
+        {after.length > 0 ? (
+          <ul className="list-inside list-disc text-text">
+            {after.map((n) => (
+              <li key={n}>{n}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-text-muted">Nothing, so it can start right away.</p>
+        )}
+      </section>
+      <section>
+        <h3 className="mb-1 font-medium text-text">Needed by</h3>
+        {before.length > 0 ? (
+          <ul className="list-inside list-disc text-text">
+            {before.map((n) => (
+              <li key={n}>{n}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-text-muted">Nothing waits for it, so it ends the plan.</p>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <>
+      <dt className="text-text-muted">{label}</dt>
+      <dd className="font-medium tabular text-text">{value}</dd>
+    </>
   );
 }
 
