@@ -14,7 +14,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 
 from app.core.config import get_settings, validate_production
 from app.core.logging import configure_logging, get_logger
-from app.jobs import bidding_jobs, email_jobs, profile_jobs, tasks
+from app.jobs import bid_notice_jobs, bidding_jobs, email_jobs, profile_jobs, tasks
 from app.jobs.queues import get_queue
 
 log = get_logger(__name__)
@@ -24,6 +24,8 @@ EXPIRE_INTERVAL_MINUTES = 5
 UPLOADS_CLEANUP_HOURS = 1
 ATTEMPTS_EXPIRE_MINUTES = 1
 BIDDING_DEADLINE_MINUTES = 5
+NEW_BID_NOTICE_HOURS = 1
+BID_DIGEST_HOUR = 8  # Asia/Dhaka, the morning after
 
 
 def enqueue_ping() -> None:
@@ -54,6 +56,16 @@ def enqueue_attempts_expire() -> None:
 def enqueue_bidding_deadline() -> None:
     """Close projects whose bidding deadline passed (→ FORMING, or notify too-few-bids)."""
     get_queue("default").enqueue(bidding_jobs.bidding_deadline, job_timeout=120, result_ttl=3600)
+
+
+def enqueue_new_bid_notices() -> None:
+    """Hourly in-app "new bids on your project" notices (§12, batched hourly)."""
+    get_queue("default").enqueue(bid_notice_jobs.new_bid_notices, job_timeout=120, result_ttl=3600)
+
+
+def enqueue_bid_digests() -> None:
+    """Daily email digest of yesterday's new bids (§12)."""
+    get_queue("low").enqueue(bid_notice_jobs.bid_digests, job_timeout=300, result_ttl=86400)
 
 
 def build_scheduler() -> BlockingScheduler:
@@ -99,6 +111,23 @@ def build_scheduler() -> BlockingScheduler:
         "interval",
         minutes=BIDDING_DEADLINE_MINUTES,
         id="bidding.deadline",
+        coalesce=True,
+        max_instances=1,
+    )
+    scheduler.add_job(
+        enqueue_new_bid_notices,
+        "interval",
+        hours=NEW_BID_NOTICE_HOURS,
+        id="bids.new_notices",
+        coalesce=True,
+        max_instances=1,
+    )
+    scheduler.add_job(
+        enqueue_bid_digests,
+        "cron",
+        hour=BID_DIGEST_HOUR,
+        minute=0,
+        id="bids.daily_digest",
         coalesce=True,
         max_instances=1,
     )

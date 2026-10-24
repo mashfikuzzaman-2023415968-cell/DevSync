@@ -7,6 +7,11 @@ standards, raise budget, reduce team, cancel). A shortfall left alone gets one r
 after bidding closed, and the project closes on its own (CANCELLED, free) after 14 days, telling
 the client and every bidder (D54). Runs as SYSTEM in a worker; re-runs are idempotent
 (a formed project is no longer BIDDING, and the too-few notification is created at most once).
+
+When bidding closes the verdict is recorded on the bids (§8): a filtered-out bid becomes
+INELIGIBLE with its reason, and its bidder is told once per closing (in-app, linking to the bid).
+The client's "bidding closed" and "too few bids" notices also go out by email (§12), in the same
+transaction as the notice, so each is sent once.
 """
 
 from __future__ import annotations
@@ -21,12 +26,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import write_audit
 from app.core.clock import get_clock, to_display
+from app.core.config import get_settings
 from app.core.settings_cache import active_settings
 from app.db.context import DbContext
 from app.db.session import open_session
+from app.models.identity import User, UserStatus
 from app.models.projects import Project, ProjectStatus
 from app.repositories import bids as bidrepo
 from app.services import bids as bids_svc
+from app.services import outbox
 from app.services.notifications import notify, notify_once
 
 log = structlog.get_logger(__name__)
@@ -35,6 +43,7 @@ _TOO_FEW = "TOO_FEW_BIDS"
 _REMINDER = "TOO_FEW_BIDS_REMINDER"
 _CLOSED = "BIDDING_CLOSED"
 _AUTO_CLOSED = "PROJECT_CANCELLED"
+_INELIGIBLE = "BID_INELIGIBLE"
 AUTO_CLOSE_REASON = "Closed automatically: not enough eligible bids two weeks after bidding closed."
 
 
@@ -71,6 +80,17 @@ async def close_due_bidding() -> dict[str, int]:
             ev = await bids_svc.evaluate(db, project, settings, now.date())
             result = ev.result
             link = f"/client/projects/{project.id}/bids"
+            for bid in bids_svc.record_evaluation(ev, now):
+                await notify_once(
+                    db,
+                    bid.developer_id,
+                    _INELIGIBLE,
+                    title="Your bid was filtered out",
+                    body=f"Bidding for “{project.title}” closed and your bid didn't meet its "
+                    "requirements. See why on the bid.",
+                    link=f"/dev/bids/{bid.id}",
+                    since=project.bidding_deadline,
+                )
             if result.too_few:
                 short = ", ".join(
                     f"{c.slot_label} needs {c.needed - c.eligible} more"
@@ -89,6 +109,13 @@ async def close_due_bidding() -> dict[str, int]:
                     since=project.bidding_deadline,
                 ):
                     notified_too_few += 1
+                    await _email_client(
+                        db,
+                        project,
+                        "too_few_bids",
+                        link,
+                        shortfall=short or "the team is short",
+                    )
                 overdue = now - (project.bidding_deadline or now)  # the query excludes None
                 if overdue >= bids_svc.AUTO_CLOSE_AFTER:
                     await _auto_close(db, project, now)
@@ -111,7 +138,7 @@ async def close_due_bidding() -> dict[str, int]:
             else:
                 project.status = ProjectStatus.FORMING
                 project.version += 1  # a tab holding the old version gets a conflict
-                await notify_once(
+                if await notify_once(
                     db,
                     project.client_id,
                     _CLOSED,
@@ -119,7 +146,8 @@ async def close_due_bidding() -> dict[str, int]:
                     body="You have enough eligible bids. Start team formation to build your team.",
                     link=link,
                     since=project.bidding_deadline,
-                )
+                ):
+                    await _email_client(db, project, "bidding_closed", link)
                 moved_to_forming += 1
             await db.commit()
     log.info(
@@ -129,6 +157,27 @@ async def close_due_bidding() -> dict[str, int]:
         auto_closed=auto_closed,
     )
     return {"formed": moved_to_forming, "too_few": notified_too_few, "auto_closed": auto_closed}
+
+
+async def _email_client(
+    db: AsyncSession, project: Project, template: str, link: str, **extra: str
+) -> None:
+    """Email the project's client in this transaction (outbox), only while their account is
+    active; the app link is made absolute with the public origin."""
+    client = await db.get(User, project.client_id)
+    if client is None or client.status != UserStatus.ACTIVE:
+        return
+    await outbox.enqueue(
+        db,
+        to=str(client.email),
+        template=template,
+        payload={
+            "name": client.display_name,
+            "project": project.title,
+            "link": f"{get_settings().PUBLIC_ORIGIN}{link}",
+            **extra,
+        },
+    )
 
 
 async def _auto_close(db: AsyncSession, project: Project, now: datetime) -> None:

@@ -77,6 +77,30 @@ TEMPLATES: dict[str, EmailTemplate] = {
         html="<p>Hi $name,</p><p>Your password was changed and other devices were signed out. "
         'If this wasn\'t you, <a href="$link">reset it now</a>.</p>',
     ),
+    # Bidding (spec §12: "Bidding deadline reached / too few bids" and the daily new-bid digest).
+    "bidding_closed": EmailTemplate(
+        subject="Bidding closed: ready to form your team",
+        text="Hi $name,\n\nBidding for “$project” has closed and you have enough eligible bids. "
+        "Start team formation: $link",
+        html="<p>Hi $name,</p><p>Bidding for “$project” has closed and you have enough eligible "
+        'bids.</p><p><a href="$link">Start team formation</a></p>',
+    ),
+    "too_few_bids": EmailTemplate(
+        subject="Not enough eligible bids yet",
+        text="Hi $name,\n\nBidding for “$project” closed without enough eligible bids "
+        "($shortfall). You can extend bidding, lower the minimum standards, raise the budget, "
+        "reduce the team or cancel for free: $link",
+        html="<p>Hi $name,</p><p>Bidding for “$project” closed without enough eligible bids "
+        "($shortfall).</p><p>You can extend bidding, lower the minimum standards, raise the "
+        'budget, reduce the team or cancel for free.</p><p><a href="$link">See your options</a>'
+        "</p>",
+    ),
+    "new_bids_digest": EmailTemplate(
+        subject="New bids on your projects",
+        text="Hi $name,\n\nNew sealed bids on $date: $summary.\n\nReview them: $link",
+        html="<p>Hi $name,</p><p>New sealed bids on $date: $summary.</p>"
+        '<p><a href="$link">Review them</a></p>',
+    ),
 }
 
 
