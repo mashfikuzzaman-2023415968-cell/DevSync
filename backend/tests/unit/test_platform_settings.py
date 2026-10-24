@@ -18,7 +18,8 @@ pytestmark = pytest.mark.unit
 SEED_DIR = Path(__file__).resolve().parents[2] / "alembic" / "seed"
 SEED_V1 = SEED_DIR / "platform_settings_v1.json"
 SEED_V2 = SEED_DIR / "platform_settings_v2.json"
-SEED = SEED_DIR / "platform_settings_v3.json"
+SEED_V3 = SEED_DIR / "platform_settings_v3.json"
+SEED = SEED_DIR / "platform_settings_v4.json"
 
 
 def doc_with(path: str, value: Any) -> dict[str, Any]:
@@ -64,6 +65,12 @@ def test_seed_snapshot_equals_schema_defaults_and_validates() -> None:
     validate_settings(seed)
 
 
+def test_v3_snapshot_still_validates_with_the_captcha_default_filled_in() -> None:
+    v3 = json.loads(SEED_V3.read_text(encoding="utf-8"))
+    assert "captcha" not in v3
+    assert validate_settings(v3).captcha.max_number == 50_000
+
+
 def test_defaults_serialize_decimals_as_strings() -> None:
     doc = default_settings_document()
     assert doc["pay"]["q_max"] == "0.25"  # type: ignore[index]
@@ -92,6 +99,9 @@ def test_defaults_serialize_decimals_as_strings() -> None:
         ("algorithm.mode", "matlab"),
         ("ratelimit.login", [{"limit": 0, "window_seconds": 60}]),
         ("ratelimit.sse_concurrent", 0),
+        ("captcha.max_number", 999),  # too easy: a bot solves it at once
+        ("captcha.max_number", 1_000_001),  # too slow for phones
+        ("bidding.min_bids_factor", "-0.1"),
     ],
 )
 def test_invalid_settings_are_rejected(path: str, value: Any) -> None:
@@ -107,6 +117,14 @@ def test_unknown_keys_are_rejected() -> None:
         validate_settings(doc)
 
 
-@pytest.mark.parametrize(("path", "value"), [("rep.kappa_ext", "0.51"), ("rep.alpha_x", "0.49")])
+@pytest.mark.parametrize(
+    ("path", "value"),
+    [
+        ("rep.kappa_ext", "0.51"),
+        ("rep.alpha_x", "0.49"),
+        ("captcha.max_number", 1_000),
+        ("captcha.max_number", 1_000_000),
+    ],
+)
 def test_boundary_values_just_inside_are_accepted(path: str, value: str) -> None:
     validate_settings(doc_with(path, value))

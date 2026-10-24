@@ -21,7 +21,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.algorithms.reputation import NewcomerInputs, newcomer_snapshot
+from app.algorithms.reputation import NewcomerInputs, NewcomerParams, newcomer_snapshot
 from app.models.identity import User
 from app.models.profiles import DeveloperProfile, Skill, SkillEvidence
 from app.models.reputation import ReputationSnapshot
@@ -90,6 +90,19 @@ async def _evidence_domains(db: AsyncSession, developer_id: uuid.UUID, pass_mark
     return len(rows.all())
 
 
+def newcomer_params(settings: PlatformSettingsValues) -> NewcomerParams:
+    """The active `rep.*` values the newcomer starting values use (never hard-coded, §6.2)."""
+    rep = settings.rep
+    return NewcomerParams(
+        f=rep.f_default,
+        g=rep.g,
+        gamma0_base=rep.gamma0_base,
+        gamma0_per_verification=rep.gamma0_per_verification,
+        gamma0_max=rep.gamma0_max,
+        neutral=rep.neutral,
+    )
+
+
 async def _computed_newcomer(
     db: AsyncSession, developer_id: uuid.UUID, settings: PlatformSettingsValues
 ) -> ReputationView:
@@ -100,7 +113,8 @@ async def _computed_newcomer(
             verified_items=await _verified_items(db, developer_id),
             evidence_domains=await _evidence_domains(db, developer_id, settings.newcomer.pass_mark),
             newcomer_review_beta=beta,
-        )
+        ),
+        newcomer_params(settings),
     )
     return ReputationView(
         developer_id=developer_id,

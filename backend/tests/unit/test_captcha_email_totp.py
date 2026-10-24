@@ -12,10 +12,13 @@ import pyotp
 import pytest
 from altcha import v1 as altcha_v1
 
+from app.api.v1 import captcha as captcha_api
 from app.core import captcha
+from app.core.config import Environment
 from app.core.ratelimit import RateLimited, hash_key
 from app.integrations.email import build_message, render, validate_address
 from app.jobs.email_jobs import backoff
+from app.schemas.platform_settings import CaptchaSettings, PlatformSettingsValues
 from app.services.auth.login import verify_totp_code
 from tests.conftest import make_settings
 
@@ -195,3 +198,25 @@ def test_rate_limit_helpers() -> None:
     exc = RateLimited(0)
     assert exc.retry_after == 1
     assert exc.status_code == 429
+
+
+def test_difficulty_comes_from_the_caller_except_in_tests() -> None:
+    assert captcha.create_challenge(KEY, max_number=2_000)["max_number"] == 2_000
+    assert captcha.create_challenge(KEY)["max_number"] == captcha.DEFAULT_MAX_NUMBER
+    # The test environment always uses a minimal difficulty, whatever the setting says.
+    hard = captcha.create_challenge(KEY, test_mode=True, max_number=900_000)
+    assert hard["max_number"] == captcha.TEST_MAX_NUMBER
+
+
+async def test_the_challenge_endpoint_reads_captcha_max_number(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_settings(_db: object) -> PlatformSettingsValues:
+        return PlatformSettingsValues(captcha=CaptchaSettings(max_number=123_456))
+
+    monkeypatch.setattr(captcha_api, "active_settings", fake_settings)
+    dev = make_settings(DEVSYNC_ENV=Environment.DEVELOPMENT)
+    out = await captcha_api.challenge(dev, db=None)  # type: ignore[arg-type]
+    assert out.max_number == 123_456
+    test = await captcha_api.challenge(make_settings(), db=None)  # type: ignore[arg-type]
+    assert test.max_number == captcha.TEST_MAX_NUMBER

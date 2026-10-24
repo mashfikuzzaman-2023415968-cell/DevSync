@@ -209,9 +209,6 @@ CYCLE_MILESTONES = [
 # Wizard step (1-based) of the Milestones step, for the cycle draft's direct link.
 MILESTONES_STEP = 4
 
-_F = Decimal("0.7")
-_G = (Decimal("0.5"), Decimal("0.25"), Decimal("0.25"))
-
 
 def demo_passwords(slugs: list[str], fixed: str | None) -> dict[str, str]:
     """One password per account: random (printed once) unless a rehearsal password is given."""
@@ -285,11 +282,14 @@ async def _make_users(settings: Settings, pw: dict[str, str]) -> dict[str, uuid.
 async def _seed_reputation(ids: dict[str, uuid.UUID]) -> None:
     data = json.loads((SEED_DIR / "stage1_reputation.json").read_text())
     async with open_session(DbContext.system(), job=True) as db:
+        # C (Eq. 4) and P (Eq. 12) with the active `rep.f_default` / `rep.g` (§6.2).
+        rep = (await active_settings(db)).rep
+        f, (g1, g2, g3) = rep.f_default, rep.g
         for slug in EXPERIENCED:
             r = data[slug]
             omega, x, beta, mu, t = (Decimal(str(r[k])) for k in ("omega", "x", "beta", "mu", "t"))
-            c = _F * omega + (Decimal(1) - _F) * x
-            p = _G[0] * beta + _G[1] * mu + _G[2] * t
+            c = f * omega + (Decimal(1) - f) * x
+            p = g1 * beta + g2 * mu + g3 * t
             db.add(
                 ReputationSnapshot(
                     developer_id=ids[slug],

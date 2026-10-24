@@ -7,7 +7,8 @@ exactly. Validation rules come from the paper's constraints (§9.1.2):
 
 Keys added beyond the §6.2 table (DECISIONS.md D8): `rep.newcomer_review`,
 `algorithm.mode`, `filter.newcomer_competency_check`, `filter.shortlist_min`,
-`fitness.include_performance`, `fitness.use_skill_competency`.
+`fitness.include_performance`, `fitness.use_skill_competency`; `captcha.max_number` (§14.16
+"difficulty from settings").
 """
 
 from __future__ import annotations
@@ -245,6 +246,13 @@ class RateLimitSettings(_Group):
     login_lock_minutes: int = Field(15, ge=1, le=1440)
 
 
+class CaptchaSettings(_Group):
+    """ALTCHA proof-of-work difficulty (§14.16): the largest number the browser may have to try.
+    Bounded so a mistake can neither switch the check off nor freeze slow phones."""
+
+    max_number: int = Field(50_000, ge=1_000, le=1_000_000)
+
+
 class AlgorithmSettings(_Group):
     """`devsync` (product) or `pcs_replication` (paper only, §9.0)."""
 
@@ -270,6 +278,7 @@ class PlatformSettingsValues(_Group):
     alerts: AlertSettings = AlertSettings()
     bidding: BiddingSettings = BiddingSettings()
     algorithm: AlgorithmSettings = AlgorithmSettings()
+    captcha: CaptchaSettings = CaptchaSettings()
     ratelimit: RateLimitSettings = RateLimitSettings()
 
 

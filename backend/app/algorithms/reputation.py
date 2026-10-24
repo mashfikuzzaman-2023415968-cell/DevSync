@@ -44,28 +44,46 @@ class Snapshot:
     distinct_clients: int
 
 
-# Default reputation weights (spec §9.1.2 / §6.2): C = f·ω + (1−f)·X; P = g1·β + g2·μ + g3·T.
-_F = Decimal("0.7")
-_G1, _G2, _G3 = Decimal("0.5"), Decimal("0.25"), Decimal("0.25")
+@dataclass(frozen=True)
+class NewcomerParams:
+    """The `rep.*` platform settings the starting values use (§6.2); defaults equal the spec's.
+
+    The service passes the active settings, so an admin change takes effect without a deploy;
+    the defaults exist only so tests and the seed can call this with the spec's values."""
+
+    f: Decimal = Decimal("0.7")  # rep.f_default, Eq. 4
+    g: tuple[Decimal, Decimal, Decimal] = (Decimal("0.5"), Decimal("0.25"), Decimal("0.25"))
+    gamma0_base: Decimal = Decimal("0.40")  # rep.gamma0_base
+    gamma0_per_verification: Decimal = Decimal("0.05")  # rep.gamma0_per_verification
+    gamma0_max: Decimal = Decimal("0.60")  # rep.gamma0_max
+    neutral: Decimal = Decimal("0.5")  # rep.neutral: Γ_m⁰, μ and T with no history
 
 
-def newcomer_snapshot(inp: NewcomerInputs) -> Snapshot:
+# ω⁰ = min(0.5, 0.2 × D) is fixed by §9.1.3 (no setting key names it).
+_OMEGA0_PER_DOMAIN = Decimal("0.2")
+_OMEGA0_MAX = Decimal("0.5")
+
+
+def newcomer_snapshot(inp: NewcomerInputs, params: NewcomerParams | None = None) -> Snapshot:
     """Starting reputation for a developer with no completed projects (spec §9.1.3).
 
-    Γ⁰ = min(0.60, 0.40 + 0.05 × verified items); Γ_m⁰ = 0.5; ω⁰ = min(0.5, 0.2 × evidence
-    domains); μ = T = 0.5; β = newcomer_review. X = Γ⁰ and X_m = Γ_m⁰ (Eq. 2/3 at n = 0). Then
-    C (Eq. 4) and P (Eq. 12) with the default weights.
+    Γ⁰ = min(gamma0_max, gamma0_base + gamma0_per_verification × verified items) (0.60, 0.40,
+    0.05 by default); Γ_m⁰ = neutral; ω⁰ = min(0.5, 0.2 × evidence domains); μ = T = neutral;
+    β = newcomer_review. X = Γ⁰ and X_m = Γ_m⁰ (Eq. 2/3 at n = 0). Then C = f·ω + (1−f)·X
+    (Eq. 4) and P = g1·β + g2·μ + g3·T (Eq. 12) with the `rep.*` weights.
     """
-    gamma0 = min(Decimal("0.60"), Decimal("0.40") + Decimal("0.05") * inp.verified_items)
-    gamma_m0 = Decimal("0.5")
-    omega = min(Decimal("0.5"), Decimal("0.2") * inp.evidence_domains)
-    mu = Decimal("0.5")
-    t = Decimal("0.5")
+    prm = params or NewcomerParams()
+    gamma0 = min(prm.gamma0_max, prm.gamma0_base + prm.gamma0_per_verification * inp.verified_items)
+    gamma_m0 = prm.neutral
+    omega = min(_OMEGA0_MAX, _OMEGA0_PER_DOMAIN * inp.evidence_domains)
+    mu = prm.neutral
+    t = prm.neutral
     beta = inp.newcomer_review_beta
     x = gamma0
     xm = gamma_m0
-    c = _F * omega + (Decimal(1) - _F) * x
-    p = _G1 * beta + _G2 * mu + _G3 * t
+    g1, g2, g3 = prm.g
+    c = prm.f * omega + (Decimal(1) - prm.f) * x
+    p = g1 * beta + g2 * mu + g3 * t
     return Snapshot(
         omega=_q(omega),
         x=_q(x),

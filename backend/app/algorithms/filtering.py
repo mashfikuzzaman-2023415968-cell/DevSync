@@ -20,7 +20,9 @@ rounded to two decimals so repeated −0.05 steps stay exact (0.45 → 0.40 → 
 from __future__ import annotations
 
 import enum
+import math
 from dataclasses import dataclass
+from decimal import Decimal
 
 _EPS = 1e-9
 
@@ -105,6 +107,10 @@ class FilterParams:
     shortlist_factor: int = 3
     shortlist_min: int = 6
     mode: Mode = Mode.DEVSYNC
+    # `bidding.min_bids_factor` (§6.2): enough means ≥ factor × team size eligible bids, and
+    # ≥ factor × count per slot. Never fewer than the places themselves (a factor below 1 can't
+    # let a team form short). Decimal, so 1.1 × 10 is exactly 11 (a float gives 11.000…02 → 12).
+    min_bids_factor: Decimal = Decimal("1.0")
 
 
 @dataclass(frozen=True)
@@ -176,14 +182,23 @@ def classify_bid(
     return next((reason for reason in _PRECEDENCE if reason in failures), None)
 
 
-def _sufficient(eligible: list[BidInput], project: ProjectInput, team_size: int) -> bool:
-    if len(eligible) < team_size:
+def required_bids(places: int, factor: Decimal) -> int:
+    """Eligible bids needed for `places` places: ⌈factor × places⌉, never below `places`
+    (`bidding.min_bids_factor`, §6.2 "need ≥ team size eligible bids" at the default 1.0)."""
+    return max(places, math.ceil(factor * places))
+
+
+def _sufficient(eligible: list[BidInput], project: ProjectInput, params: FilterParams) -> bool:
+    if len(eligible) < required_bids(params.team_size, params.min_bids_factor):
         return False
     per_slot: dict[str, int] = dict.fromkeys(project.slots, 0)
     for b in eligible:
         if b.slot_id in per_slot:
             per_slot[b.slot_id] += 1
-    return all(per_slot[s] >= spec.count for s, spec in project.slots.items())
+    return all(
+        per_slot[s] >= required_bids(spec.count, params.min_bids_factor)
+        for s, spec in project.slots.items()
+    )
 
 
 def _order_key(bid: BidInput, advancement: Advancement) -> float | int:
@@ -213,7 +228,7 @@ def filter_bids(bids: list[BidInput], project: ProjectInput, params: FilterParam
         if params.mode is Mode.PCS_REPLICATION:
             if eligible or not bids:  # the paper re-initializes only when S' is empty
                 break
-        elif not bids or _sufficient(eligible, project, params.team_size):
+        elif not bids or _sufficient(eligible, project, params):
             break  # nobody to relax for: no "minimums relaxed" on a project without bids
 
     # Final reasons at the thresholds we settled on.
@@ -241,8 +256,11 @@ def filter_bids(bids: list[BidInput], project: ProjectInput, params: FilterParam
     for b in eligible:
         if b.slot_id in per_slot:
             per_slot[b.slot_id] += 1
-    shortfall = {s: max(0, spec.count - per_slot[s]) for s, spec in project.slots.items()}
-    too_few = not _sufficient(eligible, project, params.team_size)
+    shortfall = {
+        s: max(0, required_bids(spec.count, params.min_bids_factor) - per_slot[s])
+        for s, spec in project.slots.items()
+    }
+    too_few = not _sufficient(eligible, project, params)
 
     return FilterResult(
         eligible=tuple(b.bid_id for b in eligible),

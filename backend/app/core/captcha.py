@@ -39,11 +39,15 @@ class CaptchaError(DomainError):
     code = ErrorCode.CAPTCHA_FAILED
 
 
-def create_challenge(hmac_key: str, *, test_mode: bool = False) -> dict[str, Any]:
-    """New signed challenge as a JSON-ready dict."""
+def create_challenge(
+    hmac_key: str, *, test_mode: bool = False, max_number: int = DEFAULT_MAX_NUMBER
+) -> dict[str, Any]:
+    """New signed challenge as a JSON-ready dict. `max_number` is the difficulty
+    (`captcha.max_number` in the platform settings, §14.16); the test environment always uses a
+    minimal one so suites stay fast."""
     options = altcha_v1.ChallengeOptions(
         algorithm="SHA-256",
-        max_number=TEST_MAX_NUMBER if test_mode else DEFAULT_MAX_NUMBER,
+        max_number=TEST_MAX_NUMBER if test_mode else max_number,
         hmac_key=hmac_key,
         expires=datetime.now(UTC) + timedelta(seconds=CHALLENGE_TTL_SECONDS),
     )
