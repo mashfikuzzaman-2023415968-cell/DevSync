@@ -315,8 +315,11 @@ def test_oversized_upload_is_refused(api: Api) -> None:
 def test_upload_needs_a_file_field(api: Api) -> None:
     api.sign_in_as("DEVELOPER")
     item = new_item(api)
-    r = api.post(f"/api/v1/me/portfolio/{item['id']}/images", data={"note": "x"})
+    r = api.post(f"/api/v1/me/portfolio/{item['id']}/images", files={"note": (None, "x")})
     assert r.status_code == 422
+    # Not multipart at all: refused before the route (spec §10.1, multipart only on uploads).
+    r = api.post(f"/api/v1/me/portfolio/{item['id']}/images", data={"note": "x"})
+    assert r.status_code == 415
 
 
 def test_json_endpoints_keep_the_small_body_limit(api: Api) -> None:

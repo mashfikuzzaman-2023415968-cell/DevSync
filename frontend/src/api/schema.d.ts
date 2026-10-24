@@ -4023,6 +4023,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -4174,6 +4192,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -4385,6 +4421,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -4490,6 +4544,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -4610,6 +4682,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -4744,6 +4834,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -4870,6 +4978,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Too many requests. Please wait and try again. */
       429: {
         headers: {
@@ -4971,6 +5097,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -5101,6 +5245,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -5274,6 +5436,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -5404,6 +5584,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -5498,6 +5696,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -5610,6 +5826,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -5752,6 +5986,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Too many requests. Please wait and try again. */
       429: {
         headers: {
@@ -5828,6 +6080,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -6078,6 +6348,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -6201,6 +6489,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -6383,6 +6689,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -6510,6 +6834,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -6812,6 +7154,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -6987,6 +7347,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -7139,6 +7517,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -7868,6 +8264,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -8332,6 +8746,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -8453,6 +8885,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -8622,6 +9072,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -8878,6 +9346,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -9158,6 +9644,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -9463,6 +9967,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -9591,6 +10113,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -9710,6 +10250,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -10011,6 +10569,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -10170,6 +10746,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -10291,6 +10885,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -10450,6 +11062,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -10634,6 +11264,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -10790,6 +11438,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -10925,6 +11591,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -11202,6 +11886,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -11803,6 +12505,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -11972,6 +12692,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -12211,6 +12949,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -12396,6 +13152,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -12782,6 +13556,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -12943,6 +13735,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -13124,6 +13934,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -13284,6 +14112,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -13660,6 +14506,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -13821,6 +14685,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -14157,6 +15039,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -14333,6 +15233,24 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Some fields need attention. */
       422: {
         headers: {
@@ -14488,6 +15406,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }
@@ -15172,6 +16108,24 @@ export interface operations {
            *       "error": {
            *         "code": "PAYLOAD_TOO_LARGE",
            *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
            *         "request_id": "req_123"
            *       }
            *     }

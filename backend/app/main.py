@@ -6,8 +6,7 @@ first, so they are added in reverse below:
 1. Request id (+ one access-log line per request)  2. Trusted host  3. Body size limit
 4. Security headers (then the admin network allowlist and the trailing-slash 308, which answer
    before any session or database work)  5. Session load  6. CSRF  7. Rate limit
-8. Timeout guard  9. Router  10. Exception handlers
-
+7b. JSON body rules  8. Timeout guard  9. Router  10. Exception handlers
 The test-only router is mounted only when DEVSYNC_ENV=test (spec §16.2, §14.18); startup
 re-checks the finished route table and refuses to run if it is present anywhere else.
 """
@@ -47,6 +46,7 @@ from app.core.config import (
     validate_production,
 )
 from app.core.errors import install_exception_handlers
+from app.core.json_body import JsonBodyMiddleware
 from app.core.logging import configure_logging
 from app.core.metrics import MetricsMiddleware, metrics_endpoint
 from app.core.middleware import (
@@ -82,7 +82,10 @@ _GLOBAL_RESPONSES = {
     "429": ("RATE_LIMITED", "Too many requests. Please wait and try again."),
     "413": ("PAYLOAD_TOO_LARGE", "The request is too large."),
 }
-_UNSAFE_RESPONSES = {"403": ("CSRF_FAILED", "Your session form expired. Refresh and try again.")}
+_UNSAFE_RESPONSES = {
+    "403": ("CSRF_FAILED", "Your session form expired. Refresh and try again."),
+    "415": ("UNSUPPORTED_MEDIA_TYPE", "Send the request body as JSON."),
+}
 _NO_GLOBAL_LIMIT = ("/api/v1/health",)
 
 
@@ -180,6 +183,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # Added innermost → outermost.
     app.add_middleware(UnhandledExceptionMiddleware)  # 10 (safety net for unknown errors)
     app.add_middleware(TimeoutMiddleware)  # 8
+    # JSON-only bodies, depth ≤ 20, no NaN/Infinity (§10.1, §14.7); inside the body-size limit.
+    app.add_middleware(JsonBodyMiddleware)  # 7b
     # The test-only router (DEVSYNC_ENV=test) is outside the per-IP limit so E2E helpers keep
     # working; it does not exist in any other environment.
     test_prefix = (f"{API_PREFIX}/__test__",) if settings.DEVSYNC_ENV is Environment.TEST else ()
