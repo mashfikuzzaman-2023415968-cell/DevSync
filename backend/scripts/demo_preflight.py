@@ -1,7 +1,13 @@
-"""Pre-presentation checks, ~30 minutes before a demo (spec §17.0): Docker is up, the HTTPS edge
-answers, there is enough disk, the seed is loaded, and the seeded client can actually sign in
-through the login API (the `.local` demo emails once failed validation there, D54). Run on the
-host: `make demo-preflight`.
+"""Pre-presentation checks, ~30 minutes before a demo (spec §17.0): Docker is up, the demo stack
+runs two API replicas in production mode, the HTTPS edge answers with a trusted certificate,
+Mailpit (where codes arrive) answers, there is enough disk, the seed is loaded, and the seeded
+client can actually sign in through the login API (the `.local` demo emails once failed
+validation there, D54). Run on the host: `make demo-preflight`.
+
+Certificate trust: the edge's certificate is verified against the system trust store plus the
+mkcert root (`mkcert -CAROOT`) when mkcert is installed. An untrusted certificate fails the check
+when mkcert is installed (fix: `mkcert -install && make certs FORCE=1`); without mkcert the
+openssl self-signed fallback (D3) is reported as a warning, since browsers will show a warning.
 
 Network checks go through the running edge (`https://localhost`) rather than the database, so no
 DB port needs exposing. Exits non-zero if any check fails.
@@ -21,8 +27,14 @@ import urllib.request
 from pathlib import Path
 
 EDGE = "https://localhost"
+MAILPIT = "http://127.0.0.1:8025"
 MIN_FREE_GB = 2.0
+MIN_API_REPLICAS = 2
 ROOT = Path(__file__).resolve().parent.parent.parent
+# OpenSSL verify codes (X509_V_ERR_*) that mean "not signed by a CA we trust".
+SELF_SIGNED = {18, 19}  # depth-zero self-signed; self-signed in chain
+UNKNOWN_ISSUER = {20, 21}  # issuer not in the trust store (mkcert root not installed)
+_TRUSTED: list[bool] = [False]
 
 
 def _ok(label: str, passed: bool, detail: str = "") -> bool:
@@ -30,11 +42,94 @@ def _ok(label: str, passed: bool, detail: str = "") -> bool:
     return passed
 
 
+def _warn(label: str, detail: str) -> bool:
+    print(f"  [WARN] {label}: {detail}")
+    return True
+
+
+def _mkcert_root() -> Path | None:
+    """The mkcert root CA file, when mkcert is installed and has created one."""
+    if shutil.which("mkcert") is None:
+        return None
+    try:
+        caroot = subprocess.run(
+            ["mkcert", "-CAROOT"], capture_output=True, text=True, check=True, timeout=5
+        ).stdout.strip()
+    except (subprocess.SubprocessError, OSError):
+        return None
+    root = Path(caroot) / "rootCA.pem"
+    return root if root.is_file() else None
+
+
+def _verified_context() -> ssl.SSLContext:
+    """System trust store plus the mkcert root; hostname checked."""
+    ctx = ssl.create_default_context()
+    root = _mkcert_root()
+    if root is not None:
+        ctx.load_verify_locations(cafile=str(root))
+    return ctx
+
+
 def _tls() -> ssl.SSLContext:
+    """Verified once the certificate is known to be trusted; otherwise (an untrusted cert was
+    already reported) unverified, so the remaining checks still run. Demo data only."""
+    if _TRUSTED[0]:
+        return _verified_context()
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE  # dev/demo cert is locally trusted; demo accounts only
+    ctx.verify_mode = ssl.CERT_NONE
     return ctx
+
+
+def check_certificate() -> bool:
+    """Is the edge's certificate trusted for `localhost`? (§17.0: certificate trust.)"""
+    label = "Certificate trusted"
+    mkcert = shutil.which("mkcert") is not None
+    try:
+        with urllib.request.urlopen(  # noqa: S310 - fixed https URL
+            f"{EDGE}/api/v1/health", timeout=5, context=_verified_context()
+        ):
+            pass
+    except urllib.error.URLError as exc:
+        reason = exc.reason
+        if not isinstance(reason, ssl.SSLCertVerificationError):
+            return _ok(label, False, f"edge unreachable ({type(reason).__name__})")
+        code = reason.verify_code
+        if code in SELF_SIGNED:
+            what = "self-signed certificate (openssl fallback, D3)"
+        elif code in UNKNOWN_ISSUER:
+            what = "issued by a CA this machine doesn't trust (mkcert root not installed?)"
+        else:
+            what = f"not trusted: {reason.verify_message}"
+        if mkcert:
+            return _ok(label, False, f"{what}; run `mkcert -install && make certs FORCE=1`")
+        return _warn(
+            label, f"{what}; browsers will warn. Install mkcert, then `make certs FORCE=1`"
+        )
+    _TRUSTED[0] = True
+    return _ok(label, True, "valid for localhost" + (" (mkcert)" if mkcert else ""))
+
+
+def _api_replicas() -> int:
+    """Running containers of the demo stack's `api` service."""
+    out = subprocess.run(
+        [
+            "docker", "ps", "-q",
+            "--filter", "label=com.docker.compose.project=devsync",
+            "--filter", "label=com.docker.compose.service=api",
+            "--filter", "status=running",
+        ],
+        capture_output=True, text=True, check=True, timeout=10,
+    ).stdout  # fmt: skip
+    return len(out.split())
+
+
+def _status(url: str, context: ssl.SSLContext | None = None) -> int:
+    try:
+        with urllib.request.urlopen(url, timeout=5, context=context) as r:  # noqa: S310
+            return int(r.status)
+    except urllib.error.HTTPError as exc:
+        return int(exc.code)
 
 
 def _get_json(path: str) -> object:
@@ -98,6 +193,19 @@ def main() -> int:
     except (subprocess.CalledProcessError, FileNotFoundError):
         checks.append(_ok("Docker is running", False, "start Docker Desktop"))
 
+    try:
+        replicas = _api_replicas()
+        checks.append(
+            _ok(
+                "Two API replicas (demo stack)",
+                replicas >= MIN_API_REPLICAS,
+                f"{replicas} running"
+                + ("" if replicas >= MIN_API_REPLICAS else ": `make demo-up`"),
+            )
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        checks.append(_ok("Two API replicas (demo stack)", False, type(exc).__name__))
+
     free_gb = shutil.disk_usage("/").free / 1e9
     checks.append(_ok("Disk space", free_gb >= MIN_FREE_GB, f"{free_gb:.1f} GB free"))
 
@@ -106,6 +214,23 @@ def main() -> int:
         checks.append(_ok("HTTPS edge answers", isinstance(health, dict)))
     except Exception as exc:
         checks.append(_ok("HTTPS edge answers", False, f"{type(exc).__name__}: run `make demo-up`"))
+    checks.append(check_certificate())
+
+    try:
+        # API docs exist only in development: a 404 means the real (production) settings.
+        docs = _status(f"{EDGE}/api/v1/docs", _tls())
+        checks.append(
+            _ok("Production settings", docs == 404, "API docs off" if docs == 404 else
+                f"API docs answer {docs}: this is the development stack (`make demo-up`)")
+        )  # fmt: skip
+    except Exception as exc:
+        checks.append(_ok("Production settings", False, type(exc).__name__))
+
+    try:
+        mail = _status(f"{MAILPIT}/api/v1/info")
+        checks.append(_ok("Mailpit answers (texts and emails)", mail == 200, MAILPIT))
+    except Exception as exc:
+        checks.append(_ok("Mailpit answers (texts and emails)", False, type(exc).__name__))
 
     try:
         page = _get_json("/api/v1/public/projects?q=ordering")
