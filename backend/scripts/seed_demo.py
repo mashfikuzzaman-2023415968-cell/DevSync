@@ -3,9 +3,17 @@
 STAGE=1 (Demo 1, after Phase 5) loads the "Online ordering system" project in BIDDING with the
 documented 12 sealed bids — 10 eligible, Shakib `TOO_SLOW`, Lamia `NO_SKILL_EVIDENCE` — plus the
 client (payment verified), 9 experienced developers with fixed reputation snapshots (§18.4) and
-3 newcomers with skill evidence. The script then runs Algorithm 1 over the seeded bids and
-asserts the documented eligible/ineligible counts, so the data can't drift (the gate relies on
-this). Run inside the worker container: `make seed-demo STAGE=1`.
+3 newcomers with skill evidence. Every developer has a real profile (headline, bio, hours,
+skills with levels, §18.1), the experienced ones portfolio items and verified test scores, and
+Rahim his client profile (Rahim's Kitchen). A DRAFT project whose milestones depend on each other
+in a loop shows cycle detection in the wizard, and a second BIDDING project has too few bids.
+The script then runs Algorithm 1 over the seeded bids and asserts the documented
+eligible/ineligible counts, so the data can't drift (the gate relies on this). Run inside the
+worker container: `make seed-demo STAGE=1`.
+
+Passwords are random per account and printed once (§18.1); `make demo-reset` saves the output to
+`runs/demos/accounts-N.txt` (gitignored, owner-only). For rehearsals, `DEMO_PASSWORD` (12+
+characters) gives every demo account that one password.
 """
 
 from __future__ import annotations
@@ -13,6 +21,8 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
+import secrets
 import sys
 import uuid
 from contextlib import AbstractAsyncContextManager
@@ -32,9 +42,11 @@ from app.db.session import open_session
 from app.models.bidding import Bid, BidStatus
 from app.models.identity import User
 from app.models.profiles import (
+    ClientProfile,
     DeveloperProfile,
     DeveloperSkill,
     EvidenceSource,
+    PortfolioItem,
     Skill,
     SkillEvidence,
 )
@@ -43,7 +55,7 @@ from app.models.reputation import ReputationSnapshot
 from app.services import bids as bids_svc
 from app.services.testing.seed import create_user
 
-_PW = "demo password strong 1!"
+MIN_FIXED_PASSWORD = 12
 
 SEED_DIR = Path(__file__).resolve().parent / "seed_data"
 
@@ -83,6 +95,97 @@ BIDS = [
     # Shakib needs 31 days > the 30-day deadline → TOO_SLOW.
     ("shakib", "Testing", 31, 1_800_000, ["Testing"]),
 ]
+# §18.1 profiles: slug → (headline, bio, hours a week, {skill: self level 1–5}). Every bid
+# commits 20 hours a week, so nobody has fewer free hours than that.
+PROFILES: dict[str, tuple[str, str, int, dict[str, int]]] = {
+    "arif": ("Full-stack developer: React, FastAPI and PostgreSQL",
+             "Eight shipped projects for five clients, from clinic booking to pharmacy stock. "
+             "I like small teams, clear milestones and weekly demos.",
+             40, {"React": 5, "FastAPI": 4, "PostgreSQL": 4}),
+    "nusrat": ("React developer focused on fast, accessible interfaces",
+               "Six projects of front-end work: booking flows, dashboards and forms that work "
+               "with a screen reader. I write the component tests too.",
+               35, {"React": 5, "UI/UX": 4, "Testing": 3}),
+    "tanvir": ("Backend developer: FastAPI services and clean APIs",
+               "Typed REST APIs with FastAPI and PostgreSQL, with tests and docs from day one. "
+               "Four projects so far, mostly logistics.",
+               30, {"FastAPI": 4, "PostgreSQL": 3, "DevOps": 3}),
+    "sadia": ("Database engineer: PostgreSQL schemas, reports and tuning",
+              "Schemas that stay fast as the data grows: indexing, migrations and reporting "
+              "queries. Three projects for schools and retailers.",
+              30, {"PostgreSQL": 5, "FastAPI": 3}),
+    "rafi": ("PostgreSQL developer and data pipelines",
+             "Data modelling, imports and nightly reports in PostgreSQL, with some Docker and CI "
+             "work on the side.",
+             25, {"PostgreSQL": 4, "DevOps": 3}),
+    "imran": ("QA engineer: automated and manual testing",
+              "Seven testing projects, all for one long-term client in microfinance: test plans, "
+              "regression suites and release checks.",
+              30, {"Testing": 4, "React": 2}),
+    "farhan": ("Python developer: FastAPI and payment integrations",
+               "APIs and third-party integrations (payments, SMS, maps) in FastAPI. Three "
+               "projects for three clients.",
+               30, {"FastAPI": 4, "Node.js": 3}),
+    "shakib": ("Tester for web and mobile apps",
+               "Web and Flutter app testing with written test plans. Four projects; working on "
+               "my delivery times.",
+               25, {"Testing": 4, "Flutter": 3}),
+    "zahid": ("QA and test automation",
+              "Two projects of end-to-end testing with Playwright, keen to take on more.",
+              20, {"Testing": 3}),
+    "nadia": ("Front-end developer: React, new to DevSync",
+              "Recent graduate building React apps; passed the React skill test with 85%.",
+              30, {"React": 4, "UI/UX": 3}),
+    "mehjabin": ("QA tester: test plans and automation",
+                 "Careful tester new to DevSync; passed the Testing skill test with 90%.",
+                 25, {"Testing": 4}),
+    "lamia": ("Backend developer learning databases",
+              "FastAPI developer new to DevSync (FastAPI test 75%), growing into PostgreSQL.",
+              30, {"FastAPI": 3, "PostgreSQL": 2}),
+}  # fmt: skip
+# Verified test scores of the experienced developers (the newcomers' are in NEWCOMERS). Filtering
+# reads only the newcomers' evidence; experienced developers pass on their fixed snapshots.
+EXPERIENCED_EVIDENCE: dict[str, dict[str, Decimal]] = {
+    "arif": {"React": Decimal("0.90"), "FastAPI": Decimal("0.80")},
+    "nusrat": {"React": Decimal("0.95")},
+    "tanvir": {"FastAPI": Decimal("0.80")},
+    "sadia": {"PostgreSQL": Decimal("0.85")},
+    "rafi": {"PostgreSQL": Decimal("0.75")},
+    "imran": {"Testing": Decimal("0.80")},
+    "farhan": {"FastAPI": Decimal("0.70")},
+    "shakib": {"Testing": Decimal("0.70")},
+    "zahid": {"Testing": Decimal("0.70")},
+}
+# Portfolio items of the experienced developers: slug → [(title, description, skills)]. No links
+# or images, so the offline demo never reaches out.
+PORTFOLIO: dict[str, list[tuple[str, str, list[str]]]] = {
+    "arif": [
+        ("Pharmacy stock and orders", "Stock levels, expiry alerts and supplier orders for a "
+         "chain of four pharmacies.", ["React", "FastAPI", "PostgreSQL"]),
+        ("Clinic booking app", "Patients book, move and cancel visits; staff see the day's "
+         "queue.", ["React", "PostgreSQL"]),
+    ],
+    "nusrat": [
+        ("Bus ticket booking", "Seat picker and checkout used on phones, keyboard and screen "
+         "reader friendly.", ["React", "UI/UX"]),
+        ("NGO donations dashboard", "Monthly donations and programme spending at a glance.",
+         ["React"]),
+    ],
+    "tanvir": [("Courier tracking API", "Parcel events, rider assignment and delivery proofs.",
+                ["FastAPI", "PostgreSQL"])],
+    "sadia": [("School results database", "Results, transcripts and term reports for 2,000 "
+               "students.", ["PostgreSQL"])],
+    "rafi": [("Garment order reports", "Nightly imports and buyer reports for a garments "
+              "exporter.", ["PostgreSQL"])],
+    "imran": [("Microfinance app regression suite", "Release checks for loan and savings "
+               "flows.", ["Testing"])],
+    "farhan": [("Payment gateway integration", "Card and mobile-wallet payments with "
+                "webhooks.", ["FastAPI"])],
+    "shakib": [("Grocery app test plan", "Test plan and bug reports for a Flutter grocery app.",
+                ["Testing", "Flutter"])],
+    "zahid": [("Booking site end-to-end tests", "Playwright tests for a hotel booking site.",
+               ["Testing"])],
+}  # fmt: skip
 # §18.2 milestones (name, days, share_bp, predecessor indices).
 MILESTONES = [
     ("Requirements & design", 4, 1000, []),
@@ -92,9 +195,53 @@ MILESTONES = [
     ("Integration", 3, 1000, [2, 3]),
     ("Testing & launch", 4, 1000, [4]),
 ]
+# The DRAFT with a deliberate dependency loop (§18.4): Order queue → Kitchen screen → Ready
+# alerts → Order queue. Reopened in the wizard, the Milestones step shows the loop and blocks
+# "Continue" until one dependency is removed.
+CYCLE_DRAFT = "Kitchen display system"
+CYCLE_MILESTONES = [
+    ("Requirements", 3, 1500, []),
+    ("Order queue", 5, 2500, [0, 3]),
+    ("Kitchen screen", 6, 3000, [1]),
+    ("Ready alerts", 3, 2000, [2]),
+    ("Launch", 2, 1000, [3]),
+]
+# Wizard step (1-based) of the Milestones step, for the cycle draft's direct link.
+MILESTONES_STEP = 4
 
 _F = Decimal("0.7")
 _G = (Decimal("0.5"), Decimal("0.25"), Decimal("0.25"))
+
+
+def demo_passwords(slugs: list[str], fixed: str | None) -> dict[str, str]:
+    """One password per account: random (printed once) unless a rehearsal password is given."""
+    fixed = (fixed or "").strip()
+    if fixed and len(fixed) < MIN_FIXED_PASSWORD:
+        raise SystemExit(f"DEMO_PASSWORD must be at least {MIN_FIXED_PASSWORD} characters")
+    return {slug: fixed or secrets.token_urlsafe(12) for slug in slugs}
+
+
+def check_seed_data() -> None:
+    """Every bid's skills are listed on the bidder's profile (Lamia's PostgreSQL too: her
+    ineligibility must stay NO_SKILL_EVIDENCE, not SKILL_MISMATCH); evidence and portfolio
+    skills are ones the developer lists; shares add up; hours cover a bid's 20 a week."""
+    for slug, slot, _days, _price, declared in BIDS:
+        missing = {slot, *declared} - set(PROFILES[slug][3])
+        if missing:
+            raise SystemExit(f"seed data: {slug} bids on skills not on the profile: {missing}")
+    for slug, scores in EXPERIENCED_EVIDENCE.items():
+        if set(scores) - set(PROFILES[slug][3]):
+            raise SystemExit(f"seed data: {slug} has evidence for an unlisted skill")
+    for slug, items in PORTFOLIO.items():
+        if any(set(skills) - set(PROFILES[slug][3]) for _t, _d, skills in items):
+            raise SystemExit(f"seed data: {slug} has a portfolio item with an unlisted skill")
+    if set(PROFILES) != set(EXPERIENCED) | set(NEWCOMERS):
+        raise SystemExit("seed data: every developer needs exactly one profile")
+    if any(hours < 20 for _h, _b, hours, _s in PROFILES.values()):
+        raise SystemExit("seed data: every developer needs at least 20 free hours a week")
+    for plan in (MILESTONES, CYCLE_MILESTONES):
+        if sum(m[2] for m in plan) != 10_000:
+            raise SystemExit("seed data: milestone shares must add up to 100%")
 
 
 def _as(uid: uuid.UUID, role: str) -> AbstractAsyncContextManager[AsyncSession]:
@@ -102,11 +249,11 @@ def _as(uid: uuid.UUID, role: str) -> AbstractAsyncContextManager[AsyncSession]:
 
 
 async def _skill_ids(db: AsyncSession) -> dict[str, uuid.UUID]:
-    rows = await db.scalars(select(Skill).where(Skill.name.in_([*SLOTS, "FastAPI"])))
+    rows = await db.scalars(select(Skill))
     return {s.name: s.id for s in rows}
 
 
-async def _make_users(settings: Settings) -> dict[str, uuid.UUID]:
+async def _make_users(settings: Settings, pw: dict[str, str]) -> dict[str, uuid.UUID]:
     ids: dict[str, uuid.UUID] = {}
     people = {**EXPERIENCED, **{k: v[0] for k, v in NEWCOMERS.items()}}
     for i, (slug, name) in enumerate(people.items(), start=1):
@@ -115,7 +262,7 @@ async def _make_users(settings: Settings) -> dict[str, uuid.UUID]:
             role="DEVELOPER",
             email=f"{slug}@devsync.local",
             phone=f"+88017{10000000 + i}",
-            password=_PW,
+            password=pw[slug],
             display_name=name,
             verified=True,
             with_totp=False,
@@ -126,7 +273,7 @@ async def _make_users(settings: Settings) -> dict[str, uuid.UUID]:
         role="CLIENT",
         email="rahim@devsync.local",
         phone="+8801799999999",
-        password=_PW,
+        password=pw["rahim"],
         display_name="Rahim (Rahim's Kitchen)",
         verified=True,
         with_totp=False,
@@ -162,31 +309,59 @@ async def _seed_reputation(ids: dict[str, uuid.UUID]) -> None:
 
 
 async def _seed_dev_data(ids: dict[str, uuid.UUID], skills: dict[str, uuid.UUID]) -> None:
-    declared: dict[str, set[str]] = {}
-    for slug, _slot, _days, _price, dev_skills in BIDS:
-        declared[slug] = set(dev_skills)
-    now = get_clock().now()
-    for slug, skill_names in declared.items():
-        # A developer declares their own skills (RLS owner policy).
+    """Profiles, listed skills and portfolios, written by each developer (RLS owner policies),
+    then verified test scores."""
+    for slug, (headline, bio, hours, levels) in PROFILES.items():
         async with _as(ids[slug], "DEVELOPER") as db:
             db.add(
-                DeveloperProfile(user_id=ids[slug], headline="Seeded developer", hours_per_week=40)
-            )
-            for name in skill_names:
-                db.add(DeveloperSkill(user_id=ids[slug], skill_id=skills[name], self_level=4))
-            await db.commit()
-    # Newcomer skill evidence is written as SYSTEM, like the skill-test scoring definer (§9.1).
-    async with open_session(DbContext.system(), job=True) as db:
-        for slug, (_name, skill, score) in NEWCOMERS.items():
-            db.add(
-                SkillEvidence(
-                    user_id=ids[slug],
-                    skill_id=skills[skill],
-                    source=EvidenceSource.TEST,
-                    score=score,
-                    at=now,
+                DeveloperProfile(
+                    user_id=ids[slug], headline=headline, bio=bio, hours_per_week=hours
                 )
             )
+            for name, level in levels.items():
+                db.add(DeveloperSkill(user_id=ids[slug], skill_id=skills[name], self_level=level))
+            for pos, (title, description, item_skills) in enumerate(PORTFOLIO.get(slug, [])):
+                db.add(
+                    PortfolioItem(
+                        user_id=ids[slug],
+                        title=title,
+                        description=description,
+                        skill_ids=[skills[n] for n in item_skills],
+                        position=pos,
+                    )
+                )
+            await db.commit()
+    # Test scores are written as SYSTEM, like the skill-test scoring definer (§9.1).
+    now = get_clock().now()
+    scores = {slug: dict(EXPERIENCED_EVIDENCE.get(slug, {})) for slug in PROFILES}
+    for slug, (_name, skill, score) in NEWCOMERS.items():
+        scores[slug][skill] = score
+    async with open_session(DbContext.system(), job=True) as db:
+        for slug, per_skill in scores.items():
+            for skill, score in per_skill.items():
+                db.add(
+                    SkillEvidence(
+                        user_id=ids[slug],
+                        skill_id=skills[skill],
+                        source=EvidenceSource.TEST,
+                        score=score,
+                        at=now,
+                    )
+                )
+        await db.commit()
+
+
+async def _seed_client_profile(rahim: uuid.UUID) -> None:
+    """Rahim's organisation (§18.1), written by Rahim (RLS owner policy)."""
+    async with _as(rahim, "CLIENT") as db:
+        db.add(
+            ClientProfile(
+                user_id=rahim,
+                organization="Rahim's Kitchen",
+                description="A family restaurant in Dhanmondi, Dhaka, moving its phone orders "
+                "online and planning a display for the kitchen.",
+            )
+        )
         await db.commit()
 
 
@@ -224,26 +399,62 @@ async def _seed_project(
             db.add(slot)
             await db.flush()
             slot_ids[name] = slot.id
-        milestones: list[Milestone] = []
-        for pos, (mname, days, share, _preds) in enumerate(MILESTONES):
-            m = Milestone(
-                project_id=project.id, name=mname, duration_days=days, share_bp=share, position=pos
-            )
-            db.add(m)
-            await db.flush()
-            milestones.append(m)
-        for pos, (_mname, _days, _share, preds) in enumerate(MILESTONES):
-            for pre in preds:
-                db.add(
-                    MilestoneDependency(
-                        project_id=project.id,
-                        predecessor_id=milestones[pre].id,
-                        successor_id=milestones[pos].id,
-                    )
-                )
+        await _add_plan(db, project.id, MILESTONES)
         pid = project.id
         await db.commit()
     return pid, slot_ids
+
+
+async def _add_plan(
+    db: AsyncSession, project_id: uuid.UUID, plan: list[tuple[str, int, int, list[int]]]
+) -> None:
+    """Milestones and their finish-to-start dependencies, straight into the tables."""
+    milestones: list[Milestone] = []
+    for pos, (mname, days, share, _preds) in enumerate(plan):
+        m = Milestone(
+            project_id=project_id, name=mname, duration_days=days, share_bp=share, position=pos
+        )
+        db.add(m)
+        await db.flush()
+        milestones.append(m)
+    for pos, (_mname, _days, _share, preds) in enumerate(plan):
+        for pre in preds:
+            db.add(
+                MilestoneDependency(
+                    project_id=project_id,
+                    predecessor_id=milestones[pre].id,
+                    successor_id=milestones[pos].id,
+                )
+            )
+
+
+async def _seed_cycle_draft(rahim: uuid.UUID, skills: dict[str, uuid.UUID]) -> uuid.UUID:
+    """A DRAFT whose milestones form a loop, for showing cycle detection (§18.4). Written straight
+    to the tables: the plan endpoints would (rightly) refuse to save the loop. No budget yet, so
+    the draft is unfinished and can't be published."""
+    async with _as(rahim, "CLIENT") as db:
+        project = Project(
+            client_id=rahim,
+            title=CYCLE_DRAFT,
+            summary="Orders appear on a kitchen screen and staff mark them ready.",
+            requirements="A screen in the kitchen, alerts at the counter, keeps working offline.",
+            budget_paisa=0,
+            deadline_days=20,
+            team_size=2,
+            status=ProjectStatus.DRAFT,
+        )
+        db.add(project)
+        await db.flush()
+        for name in ("React", "FastAPI"):
+            db.add(
+                ProjectSlot(
+                    project_id=project.id, skill_id=skills[name], label=f"{name} developer", count=1
+                )
+            )
+        await _add_plan(db, project.id, CYCLE_MILESTONES)
+        pid = project.id
+        await db.commit()
+    return pid
 
 
 async def _seed_bids(
@@ -332,13 +543,13 @@ async def _seed_too_few(ids: dict[str, uuid.UUID], skills: dict[str, uuid.UUID])
         await db.commit()
 
 
-async def _make_admin(settings: Settings) -> dict[str, str]:
+async def _make_admin(settings: Settings, password: str) -> dict[str, str]:
     res = await create_user(
         settings,
         role="ADMIN",
         email="admin@devsync.local",
         phone=None,
-        password=_PW,
+        password=password,
         display_name="Administrator",
         verified=True,
         with_totp=True,
@@ -346,36 +557,50 @@ async def _make_admin(settings: Settings) -> dict[str, str]:
     return {"totp_secret": res["totp_secret"] or ""}
 
 
-def _print_accounts(admin: dict[str, str]) -> None:
-    """Print the demo accounts once (the Makefile tees this to runs/demos/accounts-1.txt)."""
+def _print_accounts(
+    admin: dict[str, str], pw: dict[str, str], origin: str, cycle_id: uuid.UUID
+) -> None:
+    """Print the demo accounts once (`make demo-reset` saves this to runs/demos/accounts-1.txt).
+    `make demo-preflight` reads the `client` line: role, email, password."""
     print("=== DEMO ACCOUNTS (STAGE 1) ===")
-    print(f"client       rahim@devsync.local            {_PW}")
+    print(f"client       rahim@devsync.local            {pw['rahim']}")
     for slug in EXPERIENCED:
-        print(f"developer    {slug}@devsync.local{' ' * (18 - len(slug))}{_PW}")
+        print(f"developer    {slug}@devsync.local{' ' * (18 - len(slug))}{pw[slug]}")
     for slug in NEWCOMERS:
-        print(f"newcomer     {slug}@devsync.local{' ' * (18 - len(slug))}{_PW}")
+        print(f"newcomer     {slug}@devsync.local{' ' * (18 - len(slug))}{pw[slug]}")
     print(
-        f"admin        admin@devsync.local            {_PW}   TOTP secret: {admin['totp_secret']}"
+        f"admin        admin@devsync.local            {pw['admin']}   "
+        f"TOTP secret: {admin['totp_secret']}"
     )
     print("=== END DEMO ACCOUNTS ===")
+    print(
+        f"cycle draft  {origin}/client/projects/new?draft={cycle_id}&step={MILESTONES_STEP}"
+        f"  (as Rahim: '{CYCLE_DRAFT}', milestones in a loop)"
+    )
+    print("codes        texts and emails arrive in Mailpit: http://127.0.0.1:8025")
 
 
 async def seed_stage1() -> None:
+    check_seed_data()
     settings = get_settings()
     async with open_session(DbContext.system(), job=True) as db:
         skills = await _skill_ids(db)
-    missing = [s for s in SLOTS if s not in skills]
+    needed = {n for p in PROFILES.values() for n in p[3]} | set(SLOTS)
+    missing = sorted(needed - set(skills))
     if missing:
         raise SystemExit(f"skills not seeded: {missing}; run migrations first")
-    ids = await _make_users(settings)
-    admin = await _make_admin(settings)
+    pw = demo_passwords([*PROFILES, "rahim", "admin"], os.environ.get("DEMO_PASSWORD"))
+    ids = await _make_users(settings, pw)
+    admin = await _make_admin(settings, pw["admin"])
     await _seed_reputation(ids)
     await _seed_dev_data(ids, skills)
+    await _seed_client_profile(ids["rahim"])
     pid, slot_ids = await _seed_project(ids, skills)
     await _seed_bids(ids, pid, slot_ids)
     await _seed_too_few(ids, skills)
+    cycle_id = await _seed_cycle_draft(ids["rahim"], skills)
     await _assert_filter(pid)
-    _print_accounts(admin)
+    _print_accounts(admin, pw, settings.PUBLIC_ORIGIN.rstrip("/"), cycle_id)
 
 
 def main() -> int:
