@@ -251,6 +251,9 @@ class CpmNodeOut(BaseModel):
     lf: int
     slack: int
     critical: bool
+    share_bp: int | None = Field(
+        default=None, description="The milestone's share of the budget in basis points."
+    )
 
 
 class CpmPreviewOut(BaseModel):
@@ -263,6 +266,14 @@ class CpmPreviewOut(BaseModel):
     cycle: list[str] | None = None
     total_share_bp: int
     warnings: list[str]
+    platform_fee_bp: int = Field(
+        description="Platform fee in basis points (setting `pay.platform_fee_bp`), so the "
+        "wizard can show what reaches the team."
+    )
+    bonus_pool_bp: int = Field(
+        description="Suggested bonus pool in basis points of the budget (setting "
+        "`pay.bonus_pool_bp`), the wizard's starting value when the client turns the pool on."
+    )
 
 
 class PlanEdge(BaseModel):

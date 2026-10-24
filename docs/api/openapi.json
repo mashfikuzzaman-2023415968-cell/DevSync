@@ -1275,6 +1275,18 @@
             "title": "Name",
             "type": "string"
           },
+          "share_bp": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The milestone's share of the budget in basis points.",
+            "title": "Share Bp"
+          },
           "slack": {
             "title": "Slack",
             "type": "integer"
@@ -1296,6 +1308,11 @@
       "CpmPreviewOut": {
         "description": "CPM result for a plan: schedule, duration, all critical paths and plan warnings.",
         "properties": {
+          "bonus_pool_bp": {
+            "description": "Suggested bonus pool in basis points of the budget (setting `pay.bonus_pool_bp`), the wizard's starting value when the client turns the pool on.",
+            "title": "Bonus Pool Bp",
+            "type": "integer"
+          },
           "critical_paths": {
             "items": {
               "items": {
@@ -1335,6 +1352,11 @@
             "title": "Nodes",
             "type": "array"
           },
+          "platform_fee_bp": {
+            "description": "Platform fee in basis points (setting `pay.platform_fee_bp`), so the wizard can show what reaches the team.",
+            "title": "Platform Fee Bp",
+            "type": "integer"
+          },
           "total_share_bp": {
             "title": "Total Share Bp",
             "type": "integer"
@@ -1353,7 +1375,9 @@
           "nodes",
           "critical_paths",
           "total_share_bp",
-          "warnings"
+          "warnings",
+          "platform_fee_bp",
+          "bonus_pool_bp"
         ],
         "title": "CpmPreviewOut",
         "type": "object"
@@ -14398,6 +14422,7 @@
                     "lf": 4,
                     "ls": 0,
                     "name": "Requirements & design",
+                    "share_bp": 1000,
                     "slack": 0
                   }
                 ],
@@ -15136,6 +15161,7 @@
                       "lf": 4,
                       "ls": 0,
                       "name": "Requirements & design",
+                      "share_bp": 1000,
                       "slack": 0
                     }
                   ]
@@ -15286,6 +15312,7 @@
             "content": {
               "application/json": {
                 "example": {
+                  "bonus_pool_bp": 1000,
                   "critical_paths": [
                     [
                       "Requirements & design",
@@ -15306,9 +15333,11 @@
                       "lf": 4,
                       "ls": 0,
                       "name": "Requirements & design",
+                      "share_bp": 1000,
                       "slack": 0
                     }
                   ],
+                  "platform_fee_bp": 500,
                   "total_share_bp": 10000,
                   "warnings": []
                 },

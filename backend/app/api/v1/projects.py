@@ -97,7 +97,7 @@ EX_MILESTONES = [
 ]
 EX_NODES = [
     {"key": "m1", "name": "Requirements & design", "es": 0, "ef": 4, "ls": 0, "lf": 4,
-     "slack": 0, "critical": True}
+     "slack": 0, "critical": True, "share_bp": 1000}
 ]  # fmt: skip
 EX_PREVIEW = {
     "feasible": True,
@@ -108,6 +108,8 @@ EX_PREVIEW = {
     "cycle": None,
     "total_share_bp": 10000,
     "warnings": [],
+    "platform_fee_bp": 500,
+    "bonus_pool_bp": 1000,
 }  # fmt: skip
 EX_PLAN = {
     "baseline_version": 1,

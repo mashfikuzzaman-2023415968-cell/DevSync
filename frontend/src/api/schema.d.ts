@@ -1968,6 +1968,11 @@ export interface components {
       ls: number;
       /** Name */
       name: string;
+      /**
+       * Share Bp
+       * @description The milestone's share of the budget in basis points.
+       */
+      share_bp?: number | null;
       /** Slack */
       slack: number;
     };
@@ -1976,6 +1981,11 @@ export interface components {
      * @description CPM result for a plan: schedule, duration, all critical paths and plan warnings.
      */
     CpmPreviewOut: {
+      /**
+       * Bonus Pool Bp
+       * @description Suggested bonus pool in basis points of the budget (setting `pay.bonus_pool_bp`), the wizard's starting value when the client turns the pool on.
+       */
+      bonus_pool_bp: number;
       /** Critical Paths */
       critical_paths: string[][];
       /** Cycle */
@@ -1986,6 +1996,11 @@ export interface components {
       feasible: boolean;
       /** Nodes */
       nodes: components["schemas"]["CpmNodeOut"][];
+      /**
+       * Platform Fee Bp
+       * @description Platform fee in basis points (setting `pay.platform_fee_bp`), so the wizard can show what reaches the team.
+       */
+      platform_fee_bp: number;
       /** Total Share Bp */
       total_share_bp: number;
       /** Warnings */
@@ -12777,6 +12792,7 @@ export interface operations {
            *         "lf": 4,
            *         "ls": 0,
            *         "name": "Requirements & design",
+           *         "share_bp": 1000,
            *         "slack": 0
            *       }
            *     ]
@@ -13493,6 +13509,7 @@ export interface operations {
            *           "lf": 4,
            *           "ls": 0,
            *           "name": "Requirements & design",
+           *           "share_bp": 1000,
            *           "slack": 0
            *         }
            *       ]
@@ -13634,6 +13651,7 @@ export interface operations {
         content: {
           /**
            * @example {
+           *       "bonus_pool_bp": 1000,
            *       "critical_paths": [
            *         [
            *           "Requirements & design",
@@ -13654,9 +13672,11 @@ export interface operations {
            *           "lf": 4,
            *           "ls": 0,
            *           "name": "Requirements & design",
+           *           "share_bp": 1000,
            *           "slack": 0
            *         }
            *       ],
+           *       "platform_fee_bp": 500,
            *       "total_share_bp": 10000,
            *       "warnings": []
            *     }

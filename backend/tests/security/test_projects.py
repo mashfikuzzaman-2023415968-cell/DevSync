@@ -248,6 +248,58 @@ def test_preview_warns_on_bad_shares_and_cycle(api: Api) -> None:
     assert out["cycle"]
 
 
+def test_preview_reports_platform_fee_and_shares(api: Api) -> None:
+    """The wizard's Budget step shows the platform fee from the active settings (§6.2,
+    `pay.platform_fee_bp`), and the plan panel shows each milestone's budget share."""
+    api.sign_in_as("CLIENT")
+    pid = _create_draft(api)["id"]
+    out = api.post(f"/api/v1/projects/{pid}/plan/preview", json={"milestones": ORDERING}).json()
+    assert out["platform_fee_bp"] == 500  # the seeded default: 5%
+    assert out["bonus_pool_bp"] == 1000  # the suggested pool: 10%
+    shares = {n["key"]: n["share_bp"] for n in out["nodes"]}
+    assert shares == {m["key"]: m["share_bp"] for m in ORDERING}
+    # A cycle has no schedule but still reports the fee, so the wizard never loses it.
+    cyclic = [
+        {"key": "a", "duration_days": 2, "share_bp": 5000, "predecessor_keys": ["b"]},
+        {"key": "b", "duration_days": 2, "share_bp": 5000, "predecessor_keys": ["a"]},
+    ]
+    out = api.post(f"/api/v1/projects/{pid}/plan/preview", json={"milestones": cyclic}).json()
+    assert out["platform_fee_bp"] == 500
+
+
+def test_preview_fee_follows_the_settings(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The fee is read from the settings, never hard-coded."""
+    from app.schemas.platform_settings import PlatformSettingsValues  # noqa: PLC0415
+    from app.services import projects as svc  # noqa: PLC0415
+
+    values = PlatformSettingsValues()
+    values = values.model_copy(
+        update={
+            "pay": values.pay.model_copy(update={"platform_fee_bp": 750, "bonus_pool_bp": 1500})
+        }
+    )
+
+    async def fake_settings(_db: object) -> PlatformSettingsValues:
+        return values
+
+    monkeypatch.setattr(svc, "active_settings", fake_settings)
+    api.sign_in_as("CLIENT")
+    pid = _create_draft(api)["id"]
+    out = api.post(f"/api/v1/projects/{pid}/plan/preview", json={"milestones": ORDERING}).json()
+    assert out["platform_fee_bp"] == 750
+    assert out["bonus_pool_bp"] == 1500
+
+
+def test_preview_refuses_other_clients_project(api: Api) -> None:
+    """The fee rides on the owner's preview only; another client's project stays a 404."""
+    api.sign_in_as("CLIENT")
+    pid = _create_draft(api)["id"]
+    api.sign_in_as("CLIENT")
+    r = api.post(f"/api/v1/projects/{pid}/plan/preview", json={"milestones": ORDERING})
+    assert r.status_code == 404
+    assert "platform_fee_bp" not in r.text
+
+
 def test_preview_warns_when_over_deadline(api: Api) -> None:
     api.sign_in_as("CLIENT")
     pid = _create_draft(api, deadline_days=5)["id"]
@@ -408,6 +460,9 @@ def test_get_plan_returns_schedule(api: Api) -> None:
     edges = r.json()["edges"]
     assert edges == [{"predecessor": m[0]["id"], "successor": m[1]["id"]}]
     assert {e["predecessor"] for e in edges} <= {n["key"] for n in r.json()["nodes"]}
+    # Each node carries its budget share for the milestone panel.
+    shares = {n["key"]: n["share_bp"] for n in r.json()["nodes"]}
+    assert shares == {m[0]["id"]: 6000, m[1]["id"]: 4000}
 
 
 # --------------------------------------------------------------------------- IDOR / sealing

@@ -172,7 +172,10 @@ def _milestone_inputs(
     ]
 
 
-def _cpm_nodes(result: CpmResult, names: dict[str, str]) -> list[CpmNodeOut]:
+def _cpm_nodes(
+    result: CpmResult, names: dict[str, str], shares: dict[str, int] | None = None
+) -> list[CpmNodeOut]:
+    shares = shares or {}
     return [
         CpmNodeOut(
             key=key,
@@ -183,6 +186,7 @@ def _cpm_nodes(result: CpmResult, names: dict[str, str]) -> list[CpmNodeOut]:
             lf=node.lf,
             slack=node.slack,
             critical=node.critical,
+            share_bp=shares.get(key),
         )
         for key, node in result.nodes.items()
     ]
@@ -385,7 +389,7 @@ async def replace_dependencies(
     )
     await ctx.db.commit()
     names = {str(m.id): m.name for m in milestones}
-    return _cpm_nodes(result, names)
+    return _cpm_nodes(result, names, {str(m.id): m.share_bp for m in milestones})
 
 
 def _compute_or_cycle(
@@ -438,7 +442,9 @@ async def plan_preview(ctx: Ctx, project_id: uuid.UUID, data: PlanPreviewIn) -> 
         for m in data.milestones
     ]
     names = {m.key: m.name for m in data.milestones}
+    shares = {m.key: m.share_bp for m in data.milestones}
     total_share = sum(m.share_bp for m in data.milestones)
+    pay = (await active_settings(ctx.db)).pay
     warnings: list[str] = []
     try:
         result = compute_cpm(inputs)
@@ -452,6 +458,8 @@ async def plan_preview(ctx: Ctx, project_id: uuid.UUID, data: PlanPreviewIn) -> 
             cycle=cycle,
             total_share_bp=total_share,
             warnings=[f"Dependency cycle: {' → '.join(cycle)}."],
+            platform_fee_bp=pay.platform_fee_bp,
+            bonus_pool_bp=pay.bonus_pool_bp,
         )
     except CpmValidationError as exc:
         # Duplicate keys, a milestone after itself, an unknown predecessor: the request is
@@ -476,11 +484,13 @@ async def plan_preview(ctx: Ctx, project_id: uuid.UUID, data: PlanPreviewIn) -> 
     return CpmPreviewOut(
         feasible=True,
         duration=result.duration,
-        nodes=_cpm_nodes(result, names),
+        nodes=_cpm_nodes(result, names, shares),
         critical_paths=[[names.get(k, k) for k in path] for path in result.critical_paths],
         cycle=None,
         total_share_bp=total_share,
         warnings=warnings,
+        platform_fee_bp=pay.platform_fee_bp,
+        bonus_pool_bp=pay.bonus_pool_bp,
     )
 
 
@@ -491,11 +501,12 @@ async def get_plan(ctx: Ctx, project_id: uuid.UUID) -> PlanOut:
     deps = await repo.load_dependencies(ctx.db, project_id)
     result = _compute_or_cycle(milestones, deps)
     names = {str(m.id): m.name for m in milestones}
+    shares = {str(m.id): m.share_bp for m in milestones}
     baseline = await repo.latest_baseline(ctx.db, project_id)
     return PlanOut(
         baseline_version=baseline.version if baseline else None,
         duration=result.duration,
-        nodes=_cpm_nodes(result, names),
+        nodes=_cpm_nodes(result, names, shares),
         # The dependency graph needs the edges too (spec §13.5 screen 22); keys match node keys.
         edges=[
             PlanEdge(predecessor=str(d.predecessor_id), successor=str(d.successor_id)) for d in deps
