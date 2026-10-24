@@ -11,7 +11,15 @@
  */
 import { ArrowLeft, ArrowRight, CircleCheck, CreditCard, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useBlocker, useLocation, useNavigate, useSearchParams } from "react-router";
+import {
+  Link,
+  NavigationType,
+  useBlocker,
+  useLocation,
+  useNavigate,
+  useNavigationType,
+  useSearchParams,
+} from "react-router";
 import type { CpmPreview, PlanPreviewIn, Project, ProjectDraft } from "@/api/types";
 import { api, ApiError } from "@/api/client";
 import { Button, IconButton } from "@/components/ui/Button";
@@ -36,7 +44,15 @@ import {
   useUpdateProject,
   useVerifyPaymentMethod,
 } from "./api";
-import { newKey, toPaisa, type MilestoneRow, type SlotRow } from "./schemas";
+import {
+  newKey,
+  takaProblem,
+  textLength,
+  toPaisa,
+  wholeIn,
+  type MilestoneRow,
+  type SlotRow,
+} from "./schemas";
 
 const STEPS = [
   { label: "Info" },
@@ -58,11 +74,14 @@ const isOwn = (state: unknown) => (state as { wizard?: boolean } | null)?.wizard
 
 export default function CreateProjectPage() {
   const location = useLocation();
+  const navigationType = useNavigationType();
   const [params] = useSearchParams();
-  // Every visit from outside (sidebar, My projects, back/forward) mounts a fresh wizard; the
-  // wizard's own URL updates keep the same instance.
+  // Every visit from outside (sidebar, My projects) and every browser back/forward mounts a
+  // fresh wizard on the draft in the address; the wizard's own URL updates (replace, marked
+  // OWN) keep the same instance. Back/forward restores OWN from history, hence the POP check.
   const [mountKey, setMountKey] = useState(location.key);
-  if (!isOwn(location.state) && mountKey !== location.key) setMountKey(location.key);
+  const fromOutside = navigationType === NavigationType.Pop || !isOwn(location.state);
+  if (fromOutside && mountKey !== location.key) setMountKey(location.key);
   return <Wizard key={mountKey} resumeId={params.get("draft")} resumeStep={params.get("step")} />;
 }
 
@@ -114,6 +133,7 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
     },
   ]);
   const [budgetTaka, setBudgetTaka] = useState("");
+  const [serverFields, setServerFields] = useState<Record<string, string>>({});
   const [bonusTaka, setBonusTaka] = useState("0");
   const [biddingDeadline, setBiddingDeadline] = useState("");
   const [cpm, setCpm] = useState<CpmPreview | null>(null);
@@ -122,11 +142,12 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
   const [dirty, setDirty] = useState(false);
   const [published, setPublished] = useState(false);
   const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
+    ({ currentLocation, nextLocation, historyAction }) =>
       dirty &&
       !published &&
       (currentLocation.pathname !== nextLocation.pathname ||
-        (currentLocation.search !== nextLocation.search && !isOwn(nextLocation.state))),
+        (currentLocation.search !== nextLocation.search &&
+          (historyAction === NavigationType.Pop || !isOwn(nextLocation.state)))),
   );
 
   // Reopen a saved draft (D55): load it once, then the wizard owns the state.
@@ -272,6 +293,7 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
   /** Save the current step; returns false (and shows an error) if it could not be saved. */
   async function saveStep(current: number): Promise<boolean> {
     setError(null);
+    setServerFields({});
     try {
       const d = await ensureDraft();
       if (current === 0) {
@@ -327,6 +349,8 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
       return true;
     } catch (e) {
       setError(problem(e));
+      // Show each field the server refused next to that field, not just in the banner.
+      if (e instanceof ApiError) setServerFields(e.fields);
       return false;
     }
   }
@@ -341,18 +365,50 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
 
   const biddingInPast = biddingDeadline !== "" && new Date(biddingDeadline).getTime() <= Date.now();
 
+  // Field problems, with the server's limits (§7.3), shown as the client types. Keys are the
+  // server's field names, so a refused value from the server lands in the same place.
+  const problems: Record<string, string> = {};
+  const titleLength = textLength(title.trim());
+  if (title.trim() && titleLength < 5) problems.title = "Use at least 5 characters.";
+  if (titleLength > 120) problems.title = "Use at most 120 characters.";
+  if (textLength(summary) > 300) problems.summary = "Use at most 300 characters.";
+  if (textLength(requirements) > 5000) problems.requirements = "Use at most 5,000 characters.";
+  if (textLength(description) > 10000) problems.description = "Use at most 10,000 characters.";
+  if (!wholeIn(deadlineDays, 1, 365)) {
+    problems.deadline_days = "Use a whole number of days from 1 to 365.";
+  }
+  slots.forEach((r, i) => {
+    if (!wholeIn(r.count, 1, 10)) problems[`slots.${String(i)}.count`] = "Use 1 to 10.";
+  });
+  const budgetProblem = takaProblem(budgetTaka, 1);
+  if (budgetProblem) problems.budget_paisa = budgetProblem;
+  const bonusProblem = takaProblem(bonusTaka, 0);
+  if (bonusProblem) problems.bonus_pool_paisa = bonusProblem;
+  if (biddingInPast) problems.bidding_deadline = "Choose a time in the future.";
+  const fieldError = (key: string): string | undefined => problems[key] ?? serverFields[key];
+  const stepFields: string[][] = [
+    ["title", "summary"],
+    ["requirements", "description", "deadline_days"],
+    slots.map((_, i) => `slots.${String(i)}.count`),
+    [],
+    ["budget_paisa", "bonus_pool_paisa", "bidding_deadline"],
+    [],
+  ];
+  const stepOk = (stepFields[step] ?? []).every((k) => problems[k] === undefined);
+
   // Step-local validity gates "Continue".
   const canContinue = (() => {
-    if (step === 0) return title.trim().length >= 5;
+    if (!stepOk) return false;
+    if (step === 0) return titleLength >= 5;
     if (step === 2) return teamSize >= 2 && teamSize <= 10 && slots.every((r) => r.skill_id);
     if (step === 3)
       return (
         milestones.length > 0 &&
-        milestones.every((m) => m.name.trim()) &&
+        milestones.every((m) => m.name.trim() && wholeIn(m.duration_days, 1, 365)) &&
         totalShareBp === 10_000 &&
         !cpm?.cycle?.length
       );
-    if (step === 4) return Number(budgetTaka) >= 1 && !biddingInPast;
+    if (step === 4) return budgetTaka.trim() !== "" && Number(budgetTaka) >= 1;
     return true;
   })();
 
@@ -437,9 +493,13 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
                 edit(setTitle)(e.target.value);
               }}
               placeholder="e.g. Online ordering system"
-              maxLength={120}
+              error={fieldError("title")}
             />
-            <FormField label="One-line summary" hint="Shown in the marketplace list.">
+            <FormField
+              label="One-line summary"
+              hint="Shown in the marketplace list."
+              error={fieldError("summary")}
+            >
               {(a11y) => (
                 <Textarea
                   {...a11y}
@@ -460,7 +520,11 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
         <Card className="max-w-2xl">
           <CardHeader title="Requirements and deadline" />
           <div className="flex flex-col gap-4 p-5">
-            <FormField label="Requirements" hint="What done looks like, constraints, must-haves.">
+            <FormField
+              label="Requirements"
+              hint="What done looks like, constraints, must-haves."
+              error={fieldError("requirements")}
+            >
               {(a11y) => (
                 <Textarea
                   {...a11y}
@@ -473,7 +537,7 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
                 />
               )}
             </FormField>
-            <FormField label="Background (optional)">
+            <FormField label="Background (optional)" error={fieldError("description")}>
               {(a11y) => (
                 <Textarea
                   {...a11y}
@@ -494,6 +558,7 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
                 min={1}
                 max={365}
                 required
+                error={fieldError("deadline_days")}
                 value={deadlineDays}
                 onChange={(e) => {
                   edit(setDeadlineDays)(Number(e.target.value));
@@ -547,6 +612,7 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
                       inputMode="numeric"
                       min={1}
                       max={10}
+                      error={fieldError(`slots.${String(i)}.count`)}
                       value={r.count}
                       onChange={(e) => {
                         setDirty(true);
@@ -619,6 +685,7 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
               inputMode="numeric"
               min={1}
               required
+              error={fieldError("budget_paisa")}
               value={budgetTaka}
               onChange={(e) => {
                 edit(setBudgetTaka)(e.target.value);
@@ -630,6 +697,7 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
               type="number"
               inputMode="numeric"
               min={0}
+              error={fieldError("bonus_pool_paisa")}
               value={bonusTaka}
               onChange={(e) => {
                 edit(setBonusTaka)(e.target.value);
@@ -640,7 +708,7 @@ function Wizard({ resumeId, resumeStep }: { resumeId: string | null; resumeStep:
               type="datetime-local"
               min={toLocalInput(new Date().toISOString())}
               hint="Leave empty to close bidding a few days after publishing."
-              error={biddingInPast ? "Choose a time in the future." : undefined}
+              error={fieldError("bidding_deadline")}
               value={biddingDeadline}
               onChange={(e) => {
                 edit(setBiddingDeadline)(e.target.value);

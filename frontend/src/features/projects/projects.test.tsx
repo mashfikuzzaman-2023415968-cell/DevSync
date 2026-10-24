@@ -870,6 +870,80 @@ describe("CreateProjectPage — resuming a draft (D55)", () => {
     expect(screen.getByRole("button", { name: /Continue/ })).toBeDisabled();
   });
 
+  it("goes back to the earlier draft with the browser's Back button", async () => {
+    const { router } = wizardAt("/client/projects/new?draft=p1&step=2", {
+      project: draftProject,
+      slots: [],
+      milestones: [],
+      dependencies: [],
+    });
+    expect(await screen.findByText("Requirements and deadline")).toBeInTheDocument();
+    // The wizard moves a step, so it rewrites the address itself (?draft=p1&step=1).
+    await userEvent.click(screen.getByRole("button", { name: /Back/ }));
+    await waitFor(() => {
+      expect(router.state.location.search).toBe("?draft=p1&step=1");
+    });
+    await act(async () => {
+      await router.navigate("/client/projects/new"); // sidebar "Create project"
+    });
+    expect(await screen.findByLabelText(/Project title/)).toHaveValue("");
+    await act(async () => {
+      await router.navigate(-1); // browser Back
+    });
+    // The draft comes back, not the empty wizard.
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Project title/)).toHaveValue("Ordering system");
+    });
+  });
+
+  it("says what's wrong with each number before sending it", async () => {
+    const user = userEvent.setup();
+    wizardAt("/client/projects/new?draft=p1&step=2", {
+      project: draftProject,
+      slots: [{ id: "s1", skill_id: "s-react", count: 2, label: "" }],
+      milestones: [],
+      dependencies: [],
+    });
+    const deadline = await screen.findByLabelText(/Deadline \(days\)/);
+    await user.clear(deadline);
+    expect(
+      await screen.findByText("Use a whole number of days from 1 to 365."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Continue/ })).toBeDisabled();
+    await user.type(deadline, "400");
+    expect(screen.getByText("Use a whole number of days from 1 to 365.")).toBeInTheDocument();
+    await user.clear(deadline);
+    await user.type(deadline, "30");
+    expect(screen.queryByText("Use a whole number of days from 1 to 365.")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Continue/ })).toBeEnabled();
+  });
+
+  it("shows the server's field errors next to the fields", async () => {
+    const user = userEvent.setup();
+    wizardAt("/client/projects/new?draft=p1&step=2", {
+      project: draftProject,
+      slots: [],
+      milestones: [],
+      dependencies: [],
+    });
+    server.use(
+      http.patch(`${API}/projects/p1`, () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: "VALIDATION_ERROR",
+              message: "Some fields need attention.",
+              fields: { requirements: "Keep it under 5,000 characters." },
+            },
+          },
+          { status: 422 },
+        ),
+      ),
+    );
+    await user.click(await screen.findByRole("button", { name: /Continue/ }));
+    expect(await screen.findByText("Keep it under 5,000 characters.")).toBeInTheDocument();
+  });
+
   it("explains a draft that no longer exists", async () => {
     wizardAt(
       "/client/projects/new?draft=p1&step=2",

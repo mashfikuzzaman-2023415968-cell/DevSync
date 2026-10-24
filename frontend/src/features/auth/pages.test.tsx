@@ -152,6 +152,36 @@ describe("Forgot and reset password", () => {
     expect(await screen.findByText(/Your password is changed/)).toBeInTheDocument();
     expect(body).toEqual({ token: "abc123", new_password: "a fresh passphrase 9" });
   });
+
+  it("says why the server refused the new password", async () => {
+    server.use(
+      csrf(),
+      http.post("*/api/v1/auth/password/reset", () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: "PASSWORD_REJECTED",
+              message: "Choose a stronger password.",
+              fields: { password: "This password appears in lists of leaked passwords." },
+            },
+          },
+          { status: 422 },
+        ),
+      ),
+    );
+    renderRoutes(
+      [{ path: "/reset-password", element: <ResetPasswordPage /> }],
+      "/reset-password?token=abc123",
+    );
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("New password"), "password1234");
+    await user.type(screen.getByLabelText("Repeat new password"), "password1234");
+    await user.click(screen.getByRole("button", { name: "Save new password" }));
+    expect(
+      await screen.findByText("This password appears in lists of leaked passwords."),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("New password")).toHaveAttribute("aria-invalid", "true");
+  });
 });
 
 describe("VerifyEmailPage", () => {

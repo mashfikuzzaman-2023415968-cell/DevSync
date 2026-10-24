@@ -118,11 +118,44 @@ describe("profile schemas", () => {
   it("accepts https only and GitHub username rules", () => {
     expect(isHttpsUrl("")).toBe(true);
     expect(isHttpsUrl("https://example.com/a?b=1")).toBe(true);
-    for (const bad of ["http://example.com", "javascript:alert(1)", "https://", "https://a b.com"])
+    expect(isHttpsUrl("https://shop.example.com:8443/work/it")).toBe(true);
+    // Same rule as the server: these used to pass the form and fail on save.
+    for (const bad of [
+      "http://example.com",
+      "javascript:alert(1)",
+      "https://",
+      "https://a b.com",
+      "https://example.com?ref=x",
+      "https://example.com#work",
+      "https://my_site.example.com",
+      "https://example.com/it's",
+    ])
       expect(isHttpsUrl(bad)).toBe(false);
     expect(isGithubUsername("nadia-dev")).toBe(true);
-    for (const bad of ["-x", "x-", "a--b", "a_b", "a".repeat(40)])
+    expect(isGithubUsername("a--b")).toBe(true); // GitHub and the server allow it
+    for (const bad of ["-x", "x-", "a_b", "a".repeat(40)])
       expect(isGithubUsername(bad)).toBe(false);
+  });
+
+  it("counts text and ratings the way the server does", () => {
+    // 2,000 precomposed "য়" are 4,000 characters for the server (NFC splits each in two).
+    const bangla = aboutSchema.safeParse({
+      headline: "",
+      bio: "য়".repeat(1001),
+      hours_per_week: 20,
+      github_username: "",
+      timezone: "Asia/Dhaka",
+      visibility: "PUBLIC",
+    });
+    expect(bangla.success).toBe(false);
+    // 41 emoji are 41 characters (the browser's own count says 82).
+    expect(
+      itemSchema.safeParse({ title: "🙂".repeat(41), description: "", url: "", skill_ids: [] })
+        .success,
+    ).toBe(true);
+    const review = { source: "Upwork", scale: 5, project_date: "2026-01-01" };
+    expect(reviewSchema.safeParse({ ...review, rating: 4.88 }).success).toBe(true);
+    expect(reviewSchema.safeParse({ ...review, rating: 4.875 }).success).toBe(false);
   });
 
   it("bounds hours, headline length and review dates", () => {

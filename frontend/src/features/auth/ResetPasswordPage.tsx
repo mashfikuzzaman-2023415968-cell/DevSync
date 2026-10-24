@@ -30,7 +30,8 @@ export default function ResetPasswordPage() {
       await reset.mutateAsync({ token, new_password: values.new_password });
       setDone(true);
     } catch (e) {
-      if (!applyFieldErrors(e, form.setError, ["new_password"])) setError(messageFor(e));
+      if (!applyFieldErrors(e, form.setError, ["new_password"], { password: "new_password" }))
+        setError(messageFor(e));
     }
   });
 

@@ -18,10 +18,14 @@ export function applyFieldErrors<T extends FieldValues>(
   error: unknown,
   setError: UseFormSetError<T>,
   known: readonly Path<T>[],
+  /** Server field name → form field, where they differ (e.g. the server's password rules say
+   * "password" for a form's "new_password"). */
+  aliases: Partial<Record<string, Path<T>>> = {},
 ): boolean {
   if (!(error instanceof ApiError)) return false;
   let matched = false;
-  for (const [field, message] of Object.entries(error.fields)) {
+  for (const [serverField, message] of Object.entries(error.fields)) {
+    const field = aliases[serverField] ?? serverField;
     const name = known.find((k) => k === field);
     if (name) {
       setError(name, { type: "server", message });

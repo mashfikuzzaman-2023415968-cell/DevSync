@@ -1,5 +1,8 @@
 /** Create-project form validation, mirroring backend/app/schemas/projects.py (server decides). */
 import { z } from "zod";
+import { textLength } from "@/lib/text";
+
+export { textLength };
 import "@/features/auth/schemas"; // applies z.config({ jitless: true }) for the strict CSP
 
 export const infoSchema = z.object({
@@ -74,4 +77,21 @@ let counter = 0;
 export function newKey(): string {
   counter += 1;
   return `m${String(counter)}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+/** A whole number within [min, max] (Number("") is 0 and "2.5" isn't whole: both refused). */
+export function wholeIn(value: number, min: number, max: number): boolean {
+  return Number.isInteger(value) && value >= min && value <= max;
+}
+
+/** Problem with a taka amount typed in a form, or undefined when it's fine (server: integer
+ * paisa from `min` to 10,000,000,000). */
+export function takaProblem(raw: string, min: number): string | undefined {
+  if (raw.trim() === "") return undefined;
+  const taka = Number(raw);
+  if (!Number.isFinite(taka) || taka < min || taka > 100_000_000) {
+    return `Use an amount from ৳${String(min)} to ৳100,000,000.`;
+  }
+  if (Math.abs(taka * 100 - Math.round(taka * 100)) > 1e-6) return "Use at most 2 decimals.";
+  return undefined;
 }

@@ -3,6 +3,7 @@
  * readers; the field shakes 4 px twice when an error appears (catalogue §13.2) and the
  * message fades in below. Inputs use 16 px text on phones and the right keyboard hints.
  */
+import { textLength } from "@/lib/text";
 import { motion, useAnimationControls } from "framer-motion";
 import {
   cloneElement,
@@ -140,7 +141,9 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
   ref,
 ) {
   const invalid = rest["aria-invalid"] === true || rest["aria-invalid"] === "true";
-  const length = String(value ?? defaultValue ?? "").length;
+  // Counted like the server (code points after NFC), so "2000 / 2000" means what it says for
+  // Bangla text and emoji too.
+  const length = textLength(String(value ?? defaultValue ?? ""));
   return (
     <div>
       <textarea

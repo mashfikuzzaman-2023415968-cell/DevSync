@@ -19,7 +19,10 @@ describe("auth form schemas mirror the backend limits", () => {
     ["display_name", ""],
     ["display_name", "x".repeat(81)],
     ["email", "not-an-email"],
-    ["phone", "01712345678"],
+    ["phone", "+88012345"],
+    ["phone", "+8802123456789"],
+    ["phone", "12345"],
+    ["password", "   short    "],
     ["password", "short"],
     ["password", "x".repeat(129)],
     ["accept_terms", false],
@@ -27,6 +30,15 @@ describe("auth form schemas mirror the backend limits", () => {
     const result = registerSchema.safeParse({ ...valid, [field]: value });
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path[0]).toBe(field);
+  });
+
+  it.each([
+    ["+88001712345678", "+8801712345678"], // the "+880" prefill, then the local number
+    ["01712345678", "+8801712345678"],
+    ["+880 1712-345678", "+8801712345678"],
+    ["+447911123456", "+447911123456"],
+  ])("reads the phone %s as %s, like the server", (written, stored) => {
+    expect(registerSchema.parse({ ...valid, phone: written }).phone).toBe(stored);
   });
 
   it("login, reset and change-password rules", () => {

@@ -29,6 +29,7 @@ import {
 } from "@/features/bids/api";
 import { CHECK_LABEL } from "@/features/bids/bidText";
 import { usePortfolio } from "@/features/profile/api";
+import { takaProblem, wholeIn } from "@/features/projects/schemas";
 import { usePublicProject } from "./api";
 
 const PREVIEW_DELAY_MS = 500;
@@ -56,7 +57,23 @@ export default function ProjectBidPage() {
 
   const existing = (myBids.data ?? []).find((b) => b.project_id === id && b.status === "ACTIVE");
   const slots = project.data?.slots ?? [];
-  const ready = slotId && Number(priceTaka) > 0 && Number(days) > 0;
+  // Field problems with the server's limits (§10 bids), keyed by the server's field names.
+  const [serverFields, setServerFields] = useState<Record<string, string>>({});
+  const problems: Record<string, string> = {};
+  const priceProblem = takaProblem(priceTaka, 0.01);
+  if (priceProblem) problems.price_paisa = priceProblem;
+  if (days !== "" && !wholeIn(Number(days), 1, 365)) {
+    problems.days_needed = "Use a whole number of days from 1 to 365.";
+  }
+  if (hours !== "" && !wholeIn(Number(hours), 1, 168)) {
+    problems.hours_per_week_committed = "Use a whole number of hours from 1 to 168.";
+  }
+  const fieldError = (key: string): string | undefined => problems[key] ?? serverFields[key];
+  const ready =
+    slotId && Number(priceTaka) > 0 && Number(days) > 0 && Object.keys(problems).length === 0;
+  // Only items still in my portfolio: one deleted since the bid was placed would be refused.
+  const ownIds = new Set((portfolio.data ?? []).map((item) => item.id));
+  const attached = portfolio.data ? portfolioIds.filter((x) => ownIds.has(x)) : portfolioIds;
   const hoursValue = Number(hours) > 0 ? Number(hours) : undefined;
   const previewKey = `${slotId}|${priceTaka}|${days}|${hours}`;
   const runPreview = preview.mutate;
@@ -123,6 +140,7 @@ export default function ProjectBidPage() {
     setHours(String(existing.hours_per_week_committed));
     setContribution(existing.expected_contribution);
     setPortfolioIds(existing.portfolio_item_ids);
+    setServerFields({});
     setEditing(true);
   }
 
@@ -137,7 +155,7 @@ export default function ProjectBidPage() {
           days_needed: Number(days),
           proposal: proposal.trim(),
           expected_contribution: contribution.trim(),
-          portfolio_item_ids: portfolioIds,
+          portfolio_item_ids: attached,
           ...(hoursValue ? { hours_per_week_committed: hoursValue } : {}),
         },
       },
@@ -151,6 +169,7 @@ export default function ProjectBidPage() {
           });
         },
         onError: (e) => {
+          if (e instanceof ApiError) setServerFields(e.fields);
           toast({
             tone: "danger",
             title: "Could not update the bid",
@@ -169,7 +188,7 @@ export default function ProjectBidPage() {
         days_needed: Number(days),
         proposal: proposal.trim(),
         expected_contribution: contribution.trim(),
-        portfolio_item_ids: portfolioIds,
+        portfolio_item_ids: attached,
         ...(hoursValue ? { hours_per_week_committed: hoursValue } : {}),
       },
       {
@@ -181,6 +200,7 @@ export default function ProjectBidPage() {
           });
         },
         onError: (e) => {
+          if (e instanceof ApiError) setServerFields(e.fields);
           toast({
             tone: "danger",
             title: "Could not place the bid",
@@ -324,6 +344,7 @@ export default function ProjectBidPage() {
                     type="number"
                     inputMode="numeric"
                     min={1}
+                    error={fieldError("price_paisa")}
                     value={priceTaka}
                     onChange={(e) => {
                       setPriceTaka(e.target.value);
@@ -335,6 +356,7 @@ export default function ProjectBidPage() {
                     inputMode="numeric"
                     min={1}
                     max={365}
+                    error={fieldError("days_needed")}
                     value={days}
                     onChange={(e) => {
                       setDays(e.target.value);
@@ -364,6 +386,7 @@ export default function ProjectBidPage() {
                     min={1}
                     max={168}
                     hint="Defaults to 20 or your profile hours."
+                    error={fieldError("hours_per_week_committed")}
                     value={hours}
                     onChange={(e) => {
                       setHours(e.target.value);
@@ -391,7 +414,7 @@ export default function ProjectBidPage() {
                             key={item.id}
                             label={item.title}
                             checked={checked}
-                            disabled={!checked && portfolioIds.length >= MAX_PORTFOLIO}
+                            disabled={!checked && attached.length >= MAX_PORTFOLIO}
                             onCheckedChange={(on) => {
                               setPortfolioIds((ids) =>
                                 on === true ? [...ids, item.id] : ids.filter((x) => x !== item.id),

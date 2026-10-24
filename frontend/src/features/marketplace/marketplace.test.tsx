@@ -295,4 +295,65 @@ describe("ProjectBidPage", () => {
     expect(await screen.findByText("We couldn’t check whether you’ve bid")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Place sealed bid/ })).not.toBeInTheDocument();
   });
+
+  it("checks price, days and hours with the server's limits", async () => {
+    const user = userEvent.setup();
+    base();
+    routes("/dev/projects/:id", <ProjectBidPage />, `/dev/projects/${PID}`);
+    await user.type(await screen.findByLabelText("Days you need"), "1.5");
+    expect(
+      await screen.findByText("Use a whole number of days from 1 to 365."),
+    ).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Hours a week"), "200");
+    expect(screen.getByText("Use a whole number of hours from 1 to 168.")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Your price (৳)"), "0.004");
+    expect(screen.getByText("Use an amount from ৳0.01 to ৳100,000,000.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Place sealed bid/ })).toBeDisabled();
+  });
+
+  it("leaves out a deleted portfolio item when a bid is edited", async () => {
+    const user = userEvent.setup();
+    let patched: Record<string, unknown> | null = null;
+    const bid = {
+      id: "b1",
+      project_id: PID,
+      slot_id: SLOT,
+      status: "ACTIVE",
+      price_paisa: 1_800_000,
+      days_needed: 20,
+      proposal: "",
+      expected_contribution: "",
+      portfolio_item_ids: ["kept", "deleted"],
+      hours_per_week_committed: 20,
+      created_at: "2026-10-21T06:00:00Z",
+      updated_at: "2026-10-21T06:00:00Z",
+    };
+    base();
+    server.use(
+      http.get(`${API}/me/bids`, () => HttpResponse.json([bid])),
+      http.get(`${API}/me/portfolio`, () =>
+        HttpResponse.json([
+          {
+            id: "kept",
+            title: "Shop",
+            description: "",
+            url: null,
+            skill_ids: [],
+            position: 0,
+            images: [],
+          },
+        ]),
+      ),
+      http.patch(`${API}/bids/b1`, async ({ request }) => {
+        patched = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json(bid);
+      }),
+    );
+    routes("/dev/projects/:id", <ProjectBidPage />, `/dev/projects/${PID}`);
+    await user.click(await screen.findByRole("button", { name: "Edit bid" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => {
+      expect(patched?.portfolio_item_ids).toEqual(["kept"]);
+    });
+  });
 });

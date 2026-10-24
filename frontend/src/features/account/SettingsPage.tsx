@@ -223,7 +223,11 @@ function PasswordCard() {
       form.reset();
       setNotice({ tone: "success", text: "Password changed. Your other devices were signed out." });
     } catch (e) {
-      if (!applyFieldErrors(e, form.setError, ["current_password", "new_password"]))
+      if (
+        !applyFieldErrors(e, form.setError, ["current_password", "new_password"], {
+          password: "new_password",
+        })
+      )
         setNotice({ tone: "danger", text: messageFor(e) });
     }
   });

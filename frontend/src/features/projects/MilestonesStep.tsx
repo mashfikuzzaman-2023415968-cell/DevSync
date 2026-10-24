@@ -21,7 +21,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { cn } from "@/lib/cn";
 import { formatDays } from "@/lib/format";
 import { usePlanPreview } from "./api";
-import { newKey, SHARE_TOTAL_BP, type MilestoneRow } from "./schemas";
+import { newKey, SHARE_TOTAL_BP, wholeIn, type MilestoneRow } from "./schemas";
 import { TagPicker } from "./TagPicker";
 
 type PreviewView = "gantt" | "graph" | "table";
@@ -56,7 +56,8 @@ export function MilestonesStep({
 
   const totalBp = milestones.reduce((s, m) => s + (m.share_bp || 0), 0);
   const ready =
-    milestones.length > 0 && milestones.every((m) => m.name.trim() && m.duration_days > 0);
+    milestones.length > 0 &&
+    milestones.every((m) => m.name.trim() && wholeIn(m.duration_days, 1, 365));
 
   // Debounced preview: the request key changes only when the plan changes.
   const planKey = JSON.stringify(
@@ -174,6 +175,9 @@ export function MilestonesStep({
                           onChange={(e) => {
                             update(m.key, { duration_days: Number(e.target.value) });
                           }}
+                          error={
+                            wholeIn(m.duration_days, 1, 365) ? undefined : "Use 1 to 365 days."
+                          }
                         />
                       </div>
                       <div className="sm:col-span-1">

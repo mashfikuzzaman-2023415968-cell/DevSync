@@ -8,8 +8,9 @@ z.config({ jitless: true });
 export const email = z.email("Enter a valid email address.").max(254);
 export const password = z
   .string()
-  .min(10, "Use at least 10 characters.")
-  .max(128, "Use at most 128 characters.");
+  .max(128, "Use at most 128 characters.")
+  // The server ignores spaces at either end, so they don't count towards the minimum.
+  .refine((v) => v.trim().length >= 10, "Use at least 10 characters (not counting end spaces).");
 /** Same rules as the server: "01712345678" and "+880" + "01712345678" (the prefill plus the
  * local number) both mean +8801712345678; Bangladeshi numbers must be mobiles. */
 export function normalisePhone(raw: string): string {

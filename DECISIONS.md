@@ -607,3 +607,23 @@ changes made elsewhere. The test countdown uses the clock offset measured when t
 verified score, as bidding uses it (migration 0008). Review dates compare Dhaka calendar dates.
 *Client.* A sign-in drops every cached query of the previous user; a failed `/me` shows an error
 with retry instead of the sign-in page.
+
+**D57 · Fixes from the second logic audit (Taeen, 2026-10-24).**
+*Public projects.* `/projects` was still the Phase 2 placeholder (always "no projects"); it now
+lists `GET /public/projects` with search and "Load more", and `/p/:id` shows one project (public
+columns only) with "Sign in to bid" returning to the bid sheet.
+*Jobs.* The email job claims a batch (lease + attempt counted) and commits before SMTP, then
+records each result on its own — no transaction stays open across SMTP, so a slow server can't
+get the same emails resent every run and the retry limit always applies. The deadline job handles
+one project per transaction, row locked and re-checked (SKIP LOCKED); every project write locks
+the row too, so a cancel or extension can't be overwritten. Moving to FORMING bumps the version.
+The reminder's date is in Dhaka time.
+*Validation.* Messages lose Pydantic's "Value error, " prefix. PATCH /projects refuses null for
+required fields and a close time without a time zone (422, not 500). Phones: "+880"+"01…" and
+"01…" mean +8801…, and Bangladeshi numbers must be mobiles (both sides). The wizard and bid sheet
+check every number with the server's limits and show the server's field errors next to the
+field; text limits count code points after NFC like the server; URL and GitHub rules equal the
+server's regexes; ratings have at most 2 decimals; password minimums ignore end spaces; reset and
+change password show the server's reason. Share totals keep one decimal.
+*Today's changes.* Browser back/forward into a draft reopens it; a bid edit drops deleted
+portfolio items; a request losing the rotation lock doesn't refresh the old token.

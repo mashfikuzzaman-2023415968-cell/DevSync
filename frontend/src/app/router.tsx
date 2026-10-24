@@ -82,6 +82,13 @@ const publicPages: RouteObject[] = [
     }),
   },
   {
+    path: "p/:id",
+    handle: { title: "Project" },
+    lazy: async () => ({
+      Component: (await import("@/features/public/PublicProjectPage")).default,
+    }),
+  },
+  {
     path: "d/:id",
     handle: { title: "Developer profile" },
     lazy: async () => ({

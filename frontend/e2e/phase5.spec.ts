@@ -382,3 +382,27 @@ test("after the bidding deadline the bid sheet is closed @e2e", async ({ page, b
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page.locator(`a[href="/dev/projects/${projectId}"]`)).toHaveCount(0);
 });
+
+test("a guest finds a published project on Browse projects and opens it @e2e", async ({
+  page,
+  browser,
+  baseURL,
+}) => {
+  const base = baseURL ?? "";
+  await apiSignIn(page, base, "CLIENT", "Rahim");
+  const projectId = await createOrderingProject(page, base, { publish: true });
+  // A signed-out visitor in a separate browser context.
+  const guestContext = await browser.newContext({ ignoreHTTPSErrors: true, baseURL: base });
+  const guest = await guestContext.newPage();
+  await guest.goto("/projects");
+  const link = guest.locator(`a[href="/p/${projectId}"]`);
+  await expect(link).toBeVisible();
+  await link.click();
+  await guest.waitForURL((url) => url.pathname === `/p/${projectId}`);
+  await expect(guest.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(guest.getByRole("link", { name: "Sign in to bid" })).toHaveAttribute(
+    "href",
+    `/login?return_to=${encodeURIComponent(`/dev/projects/${projectId}`)}`,
+  );
+  await guestContext.close();
+});

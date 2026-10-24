@@ -51,6 +51,22 @@ export function useRecommended() {
   });
 }
 
+/** The public list of projects open for bids (anyone; spec §13.5 #6). */
+export function usePublicProjects(q: string) {
+  return useInfiniteQuery({
+    queryKey: ["public-projects", q] as const,
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) => {
+      const p = new URLSearchParams();
+      if (q) p.set("q", q);
+      if (pageParam) p.set("cursor", pageParam);
+      const qs = p.toString();
+      return api<ProjectCardPage>(`/public/projects${qs ? `?${qs}` : ""}`);
+    },
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
+  });
+}
+
 /** A single open project with its slots, for the bid sheet (works for guests and developers). */
 export function usePublicProject(id: string) {
   return useQuery({
