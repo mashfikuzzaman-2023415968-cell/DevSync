@@ -130,5 +130,15 @@ demo-preflight: ## Pre-presentation checks (Docker, replicas, ports, cert trust,
 demo-check: ## Full Demo-N readiness: gates, seed, walkthrough x3 on 4 browsers, report (§17.0)
 	@python3 backend/scripts/demo_check.py --demo $(or $(DEMO),1)
 
-fuzz zap load chaos experiments backup restore-drill docs deps-update ledger-report: ## Arrive in later phases
+# Contract fuzzing (spec §16.1, §16.6): schemathesis against the OpenAPI document — anonymous,
+# signed in as each role, and the stateful create → publish → bid → edit → withdraw sequence —
+# plus the hypothesis property tests of the algorithms. Seeded, so two runs generate the same
+# requests. FUZZ_EXAMPLES / FUZZ_AUTH_EXAMPLES / FUZZ_STATEFUL_EXAMPLES change the budget
+# (the gate's step 11 uses the defaults: 200 per operation anonymous, 20 per role, 8 sequences).
+fuzz: test-stack-up ## Contract fuzzing (schemathesis) + property tests on the test stack
+	$(COMPOSE_TEST) run --rm -T \
+	  -e FUZZ_EXAMPLES -e FUZZ_AUTH_EXAMPLES -e FUZZ_STATEFUL_EXAMPLES -e FUZZ_STATEFUL_STEPS \
+	  tests pytest -q -p no:cacheprovider -m "fuzz or property" $(PYTEST_ARGS)
+
+zap load chaos experiments backup restore-drill docs deps-update ledger-report: ## Arrive in later phases
 	@echo "make $@: available from the phase that builds it (see DEVSYNC_BUILD_SPEC.md §16.6 / §17)"
