@@ -1,4 +1,22 @@
-/** Human text for Algorithm 1 reason codes and checks (spec §9.2), shared by the bid views. */
+/** Human text for Algorithm 1 reason codes and checks (spec §9.2) and bid statuses, shared by
+ * the bid views and the developer dashboard. */
+import type { Tone } from "@/components/ui/Display";
+
+export const BID_STATUS_TONE: Record<string, Tone> = {
+  ACTIVE: "info",
+  WITHDRAWN: "neutral",
+  INELIGIBLE: "warning",
+  SELECTED: "success",
+  NOT_SELECTED: "neutral",
+  ACCEPTED: "success",
+  DECLINED: "danger",
+  EXPIRED: "neutral",
+};
+
+/** "NOT_SELECTED" → "Not selected". */
+export function bidStatusLabel(status: string): string {
+  return status.charAt(0) + status.slice(1).toLowerCase().replace(/_/g, " ");
+}
 
 export const REASON_TEXT: Record<string, string> = {
   LOW_PERFORMANCE: "Performance below the minimum",

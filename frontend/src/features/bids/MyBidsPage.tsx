@@ -5,25 +5,11 @@
 import { Link } from "react-router";
 import { NodeArt } from "@/components/brand/NodeArt";
 import { Button } from "@/components/ui/Button";
-import { Badge, Card, Skeleton, type Tone } from "@/components/ui/Display";
+import { Badge, Card, Skeleton } from "@/components/ui/Display";
 import { EmptyState, ErrorState, PageHeader } from "@/components/ui/Feedback";
 import { formatDays, formatMoney } from "@/lib/format";
 import { useMyBids } from "./api";
-
-const TONE: Record<string, Tone> = {
-  ACTIVE: "info",
-  WITHDRAWN: "neutral",
-  INELIGIBLE: "warning",
-  SELECTED: "success",
-  NOT_SELECTED: "neutral",
-  ACCEPTED: "success",
-  DECLINED: "danger",
-  EXPIRED: "neutral",
-};
-
-function label(status: string): string {
-  return status.charAt(0) + status.slice(1).toLowerCase().replace(/_/g, " ");
-}
+import { BID_STATUS_TONE, bidStatusLabel } from "./bidText";
 
 export default function MyBidsPage() {
   const bids = useMyBids();
@@ -68,7 +54,9 @@ export default function MyBidsPage() {
                     {b.slot_label}, {formatMoney(b.price_paisa)} for {formatDays(b.days_needed)}
                   </p>
                 </div>
-                <Badge tone={TONE[b.status] ?? "neutral"}>{label(b.status)}</Badge>
+                <Badge tone={BID_STATUS_TONE[b.status] ?? "neutral"}>
+                  {bidStatusLabel(b.status)}
+                </Badge>
               </li>
             ))}
           </ul>

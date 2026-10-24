@@ -5,7 +5,7 @@ import { Link, useParams } from "react-router";
 import { ApiError, fileUrl } from "@/api/client";
 import type { PublicProfile } from "@/api/types";
 import { Button } from "@/components/ui/Button";
-import { Avatar, Badge, Card, CardHeader, Skeleton } from "@/components/ui/Display";
+import { Avatar, Badge, Card, CardHeader, NewcomerBadge, Skeleton } from "@/components/ui/Display";
 import { EmptyState, ErrorState, RingProgress } from "@/components/ui/Feedback";
 import { useMe } from "@/features/auth/api";
 import { SiteFooter } from "@/features/landing/SiteFooter";
@@ -14,6 +14,64 @@ import { formatDate, formatScore } from "@/lib/format";
 import { useDeveloper } from "./api";
 
 const LEVEL_WORDS = ["", "Learning", "Basic", "Comfortable", "Strong", "Expert"];
+
+/** Reputation summary (spec §13.5 #7): C and P on 0–100, the newcomer badge, and the
+ * development-only "seeded" note (D48). Guests get no values (D55). */
+function ReputationCard({ p }: { p: PublicProfile }) {
+  const rep = p.reputation ?? null;
+  return (
+    <Card>
+      <CardHeader
+        title="Reputation"
+        description="From completed DevSync projects, out of 100."
+        action={rep?.is_newcomer ? <NewcomerBadge /> : null}
+      />
+      {rep === null ? (
+        <p className="p-5 text-body-sm text-text-muted">
+          <Link
+            to={`/login?return_to=${encodeURIComponent(`/d/${p.id}`)}`}
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            Sign in
+          </Link>{" "}
+          to see this developer’s competency and performance.
+        </p>
+      ) : rep.competency === null || rep.performance === null ? (
+        <div className="p-5">
+          <p className="text-body font-semibold text-text">Building a record</p>
+          <p className="mt-1 text-body-sm text-text-muted">
+            Scores appear after the first completed project. Newcomers get a fair first chance
+            through skill tests.
+          </p>
+        </div>
+      ) : (
+        <div className="p-5">
+          <dl className="grid grid-cols-2 gap-4">
+            <div>
+              <dt className="text-body-sm text-text-muted">Competency</dt>
+              <dd className="mt-1 text-h3 font-semibold tabular text-text">
+                {formatScore(Number(rep.competency))}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-body-sm text-text-muted">Performance</dt>
+              <dd className="mt-1 text-h3 font-semibold tabular text-text">
+                {formatScore(Number(rep.performance))}
+              </dd>
+            </div>
+          </dl>
+          <p className="mt-3 text-caption text-text-muted">
+            Competency weighs the range of work and communication; performance weighs reviews,
+            repeat clients and punctuality.
+          </p>
+          {rep.seeded ? (
+            <p className="mt-2 text-caption text-text-muted">Seeded for the demo.</p>
+          ) : null}
+        </div>
+      )}
+    </Card>
+  );
+}
 
 function Profile({ p, isMe }: { p: PublicProfile; isMe: boolean }) {
   const names = new Map(p.skills.map((s) => [s.skill_id, s.name]));
@@ -134,6 +192,7 @@ function Profile({ p, isMe }: { p: PublicProfile; isMe: boolean }) {
           </section>
         </div>
         <aside className="space-y-6">
+          <ReputationCard p={p} />
           <Card>
             <CardHeader title="Verified scores" description="From timed DevSync skill tests." />
             {p.verified_scores.length ? (

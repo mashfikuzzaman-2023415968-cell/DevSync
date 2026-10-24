@@ -246,6 +246,7 @@ export function useDeleteExternalReview() {
 export function useDeveloper(id: string, signedIn: boolean) {
   return useQuery({
     queryKey: [...keys.developer(id), signedIn],
+    enabled: id !== "",
     retry: false,
     queryFn: () => api<PublicProfile>(signedIn ? `/developers/${id}` : `/public/developers/${id}`),
   });

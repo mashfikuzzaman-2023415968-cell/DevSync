@@ -10,31 +10,16 @@ import type { ProjectListItem } from "@/api/types";
 import { ApiError } from "@/api/client";
 import { NodeArt } from "@/components/brand/NodeArt";
 import { Button } from "@/components/ui/Button";
-import { Badge, Card, Skeleton, type Tone } from "@/components/ui/Display";
+import { Badge, Card, Skeleton } from "@/components/ui/Display";
 import { Dialog } from "@/components/ui/Overlay";
 import { EmptyState, ErrorState, PageHeader } from "@/components/ui/Feedback";
 import { Field, FormField, Textarea } from "@/components/ui/Field";
 import { toast } from "@/components/ui/toast-store";
 import { formatDate, formatDays, formatMoney } from "@/lib/format";
 import { useCancelProject, useMyProjects } from "./api";
-
-const STATUS_TONE: Record<string, Tone> = {
-  DRAFT: "neutral",
-  BIDDING: "info",
-  FORMING: "info",
-  TEAM_PENDING: "warning",
-  IN_PROGRESS: "primary",
-  ON_HOLD: "warning",
-  REVIEW_WINDOW: "warning",
-  COMPLETED: "success",
-  CANCELLED: "danger",
-};
+import { PROJECT_STATUS_TONE, projectStatusLabel } from "./status";
 
 const CANCELLABLE = new Set(["DRAFT", "BIDDING", "FORMING", "TEAM_PENDING"]);
-
-function label(status: string): string {
-  return status.charAt(0) + status.slice(1).toLowerCase().replace(/_/g, " ");
-}
 
 export default function MyProjectsPage() {
   const projects = useMyProjects();
@@ -104,7 +89,9 @@ function ProjectRow({ project: p }: { project: ProjectListItem }) {
           >
             {p.title}
           </Link>
-          <Badge tone={STATUS_TONE[p.status] ?? "neutral"}>{label(p.status)}</Badge>
+          <Badge tone={PROJECT_STATUS_TONE[p.status] ?? "neutral"}>
+            {projectStatusLabel(p.status)}
+          </Badge>
         </div>
         <p className="mt-1 text-body-sm text-text-muted">
           Budget {formatMoney(p.budget_paisa)}, team of {p.team_size}, {formatDays(p.deadline_days)}{" "}
