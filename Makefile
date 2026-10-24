@@ -4,13 +4,15 @@
 SHELL := /bin/bash
 COMPOSE      := docker compose -f docker-compose.yml -f docker-compose.dev.yml
 COMPOSE_TEST := docker compose -p devsync-test -f docker-compose.yml -f docker-compose.test.yml
+# Demo-day stack (spec §17.0): production settings, two API replicas, offline (Mailpit).
+COMPOSE_DEMO := docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.demo.yml
 PYTEST       := $(COMPOSE_TEST) run --rm tests pytest
 PHASE ?= $(shell p=$$(cat .phase 2>/dev/null); [ "$$p" = "none" -o -z "$$p" ] && echo 0 || echo $$p)
 
 .DEFAULT_GOAL := help
 .PHONY: help env certs up down logs migrate build lock openapi seed-demo create-admin \
 	test test-unit test-backend test-frontend e2e a11y visual visual-update stills security fuzz zap \
-	load chaos gate demo-check demo-up demo-reset demo-preflight erd experiments backup \
+	load chaos gate demo-check demo-up demo-down demo-reset demo-preflight erd experiments backup \
 	restore-drill docs test-stack-up test-stack-down deps-update ledger-report
 
 help: ## Show this help
@@ -96,23 +98,33 @@ create-admin: ## Create an administrator (prints TOTP setup and recovery codes o
 	$(COMPOSE) run --rm worker python scripts/create_admin.py
 
 DEMO_STAGE ?= $(or $(STAGE),1)
+# Seeded passwords are random and printed once; DEMO_PASSWORD=… (12+ characters) gives every
+# demo account that one password for rehearsals.
+DEMO_ACCOUNTS = runs/demos/accounts-$(DEMO_STAGE).txt
 
-seed-demo: ## Load demo data for a stage: make seed-demo STAGE=1 (spec §18)
-	$(COMPOSE) run --rm worker python scripts/seed_demo.py --stage $(DEMO_STAGE)
+# The demo targets run one-off containers with --no-deps, so they never recreate a running
+# stack's services (Postgres must be up: `make demo-up`).
+seed-demo: ## Load demo data for a stage on the demo stack: make seed-demo STAGE=1 (spec §18)
+	@mkdir -p runs/demos
+	umask 077; $(COMPOSE_DEMO) run --rm --no-deps -T -e DEMO_PASSWORD worker \
+	  python scripts/seed_demo.py --stage $(DEMO_STAGE) | tee $(DEMO_ACCOUNTS); exit $${PIPESTATUS[0]}
 
 demo-reset: ## Reset and reload the demo seed (prints accounts): make demo-reset STAGE=1
-	$(COMPOSE) run --rm migrate
-	$(COMPOSE) run --rm --entrypoint python migrate scripts/demo_reset.py
-	@mkdir -p runs/demos
-	$(COMPOSE) run --rm worker python scripts/seed_demo.py --stage $(DEMO_STAGE) \
-	  | tee runs/demos/accounts-$(DEMO_STAGE).txt
+	$(COMPOSE_DEMO) run --rm --no-deps migrate
+	$(COMPOSE_DEMO) run --rm --no-deps --entrypoint python migrate scripts/demo_reset.py
+	@rm -f $(DEMO_ACCOUNTS)
+	@$(MAKE) --no-print-directory seed-demo STAGE=$(DEMO_STAGE)
 
-demo-up: ## Start the demo stack and load the seed: make demo-up STAGE=1 (spec §17.0)
-	$(COMPOSE) up -d --build --wait
+demo-up: ## Start the production-style demo stack and load the seed: make demo-up STAGE=1 (§17.0)
+	@test -s infra/nginx/certs/dev.crt || infra/nginx/make-certs.sh
+	$(COMPOSE_DEMO) up -d --build --wait
 	@$(MAKE) --no-print-directory demo-reset STAGE=$(DEMO_STAGE)
-	@echo "Demo ready: https://localhost   Mailpit: http://127.0.0.1:8025   accounts: runs/demos/accounts-$(DEMO_STAGE).txt"
+	@echo "Demo ready: https://localhost   Mailpit (emails and texts): http://127.0.0.1:8025   accounts: $(DEMO_ACCOUNTS)"
 
-demo-preflight: ## Pre-presentation checks (Docker, ports, disk, cert, seed integrity)
+demo-down: ## Stop the demo stack (data kept; `make up` returns to development)
+	$(COMPOSE_DEMO) down
+
+demo-preflight: ## Pre-presentation checks (Docker, replicas, ports, cert trust, disk, seed)
 	@python3 backend/scripts/demo_preflight.py --stage $(DEMO_STAGE)
 
 demo-check: ## Full Demo-N readiness: gates, seed, walkthrough x3 on 4 browsers, report (§17.0)

@@ -1,0 +1,37 @@
+# Demo-day overlay (spec §17.0 "Demo-day environment"), on top of docker-compose.prod.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.demo.yml …
+# (`make demo-up STAGE=N`). Production settings and startup validation, HTTPS with the
+# certificate from `make certs`, two API replicas behind Nginx, the workers and the scheduler,
+# and nothing that needs the internet: email and text messages both land in the local Mailpit
+# (http://127.0.0.1:8025). `make up` (development) is unchanged.
+x-demo-env: &demo-env
+  DEVSYNC_ENV: production
+  # Texts go to Mailpit as emails; production validation allows this only with SMTP_HOST=mailpit.
+  SMS_PROVIDER: mailpit
+  SMTP_HOST: mailpit
+  SMTP_PORT: "1025"
+  # Two workers per replica: 2 replicas × 2 workers fit the team laptops' memory and the
+  # Postgres connection limit (the prod default 2×CPU+1 would start 33 per replica, D5).
+  GUNICORN_WORKERS: "2"
+
+services:
+  api:
+    environment: *demo-env
+    deploy:
+      replicas: 2
+
+  worker:
+    environment: *demo-env
+
+  scheduler:
+    environment: *demo-env
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "127.0.0.1:8025:8025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    networks: [app]
+    restart: unless-stopped
