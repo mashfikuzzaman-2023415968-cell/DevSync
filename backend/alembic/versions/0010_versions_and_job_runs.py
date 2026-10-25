@@ -9,8 +9,8 @@
   DELETE so `lifecycle.expire` can prune old system run records (nobody else may delete), and an
   index for that prune and for the admin's newest-first listing.
 
-Revision ID: 0009_versions_and_job_runs
-Revises: 0008_public_best_score
+Revision ID: 0010_versions_and_job_runs
+Revises: 0009_bid_rules
 Create Date: 2026-10-24 00:00:00.000000+00:00
 """
 
@@ -19,8 +19,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0009_versions_and_job_runs"
-down_revision: str | None = "0008_public_best_score"
+revision: str = "0010_versions_and_job_runs"
+down_revision: str | None = "0009_bid_rules"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

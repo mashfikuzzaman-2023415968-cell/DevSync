@@ -170,7 +170,7 @@ Vite + React 18 + TypeScript (strict), in `frontend/src`.
 
 ## 7. Data model
 
-Nine migrations (`backend/alembic/versions/0001`–`0009`) create 36 tables, grouped as:
+Ten migrations (`backend/alembic/versions/0001`–`0010`) create 36 tables, grouped as:
 
 | Group | Tables | Phase |
 |---|---|---|
@@ -178,7 +178,7 @@ Nine migrations (`backend/alembic/versions/0001`–`0009`) create 36 tables, gro
 | Identity | `users`, `sessions`, `otp_codes`, `email_tokens`, `totp_credentials`, `recovery_codes`, `devices_seen`, `notifications`, `email_outbox` | 1 |
 | Profiles and tests | `skills`, `developer_profiles`, `developer_skills`, `client_profiles`, `files`, `portfolio_items`, `portfolio_images`, `certificates`, `external_reviews`, `question_bank`, `skill_tests`, `test_attempts`, `skill_evidence` | 3 |
 | Projects and planning | `projects`, `project_slots`, `milestones`, `milestone_skills`, `milestone_dependencies`, `plan_baselines`, `plan_change_requests` | 4 |
-| Bidding | `bids`, `availability_reservations`, `reputation_snapshots` (+ project search vector, bidding terms in 0007, best verified score in 0008, bid version/evaluation and `captcha.max_number` in 0009) | 5 |
+| Bidding | `bids`, `availability_reservations`, `reputation_snapshots` (+ project search vector, bidding terms in 0007, best verified score in 0008, bid version/evaluation and `captcha.max_number` in 0009, profile versions and job-run policy in 0010) | 5 |
 
 Money is `BIGINT` paisa everywhere; times are `timestamptz` (UTC) and shown in Asia/Dhaka.
 The ERD is regenerated from the SQLAlchemy models with `make erd` →

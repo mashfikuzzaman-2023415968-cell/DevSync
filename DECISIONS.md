@@ -685,3 +685,127 @@ rehearsals, and `make demo-check` generates its own and passes it by name only. 
 the walkthrough pass a timed test through the UI. `make demo-preflight` verifies the edge
 certificate against the system store plus the mkcert root: FAIL when mkcert is installed and the
 certificate is untrusted, WARN (self-signed, D3) when it isn't.
+
+**D62 · Hardening before Demo 1 (Taeen, 2026-10-26; spec §14.12, §14.17, §14.18, §10.1).**
+*(a) Mailpit in production.* Startup refuses Mailpit (`SMTP_HOST=mailpit` or
+`SMS_PROVIDER=mailpit`) under `DEVSYNC_ENV=production` unless `DEMO_STACK=1`, which only
+`docker-compose.demo.yml` sets and which is honoured only when `PUBLIC_ORIGIN` is localhost,
+127.0.0.1 or ::1 — so a copied variable cannot turn on mail capture on a real deployment, and
+production must name a real relay. D61's offline demo is unchanged.
+*(b)* Startup also refuses auto-reload and debug switches (`--reload*`, `--debug`,
+`UVICORN_RELOAD`, `GUNICORN_CMD_ARGS --reload`, debug/trace log levels) and any `/__test__` or
+`test_seed` route outside `DEVSYNC_ENV=test`; the worker and scheduler run the same validation.
+*(c) `ADMIN_ALLOWED_CIDRS`* is enforced twice: Nginx renders it into a `geo` block at container
+start (a bad entry stops Nginx) and the API checks the address it trusts (`X-Forwarded-For` only
+from `TRUSTED_PROXY_IPS`, right-most entry). Admin API requests from other networks get the
+ordinary JSON 404 with identical headers, before any session or database work. The `/admin` SPA
+route is served like any other SPA path, because a different answer would confirm the area
+exists. Both lists are validated at startup in every environment; malformed entries, `*` and
+networks with host bits set are refused.
+*(d) noindex.* Admin pages and all API responses carry `X-Robots-Tag: noindex, nofollow`;
+robots.txt no longer names `/admin`.
+*(e) Access log.* One structured line per request: method, route template, status, `duration_ms`,
+`request_id` and a keyed 16-hex hash of the user id. Raw paths, query strings, headers and bodies
+are never logged.
+*(f)* API paths with a trailing slash get a relative 308 to the canonical path (query kept);
+suspicious paths are never redirected and Starlette's absolute 307 slash redirect is off.
+*(g)* Base images are pinned by digest to the versions already in use, each at least 14 days old
+(D51); the builds still run `apt-get upgrade`, so security fixes still apply.
+*(h)* mypy strict now covers every `app.services.auth` module.
+
+**D63 · Abuse-control caps are constants, not settings (Taeen, 2026-10-26; spec §14.8).**
+§14.8 names "maximum open bids per developer (30)" and "maximum active projects per client (20)"
+but §6.2 has no key for either, so they live as `services/bids.MAX_OPEN_BIDS` and
+`services/projects.MAX_ACTIVE_PROJECTS` rather than inventing settings keys. Both are counted
+inside the writing transaction under a per-user advisory lock (`app/db/locks.py`), so two
+requests at once cannot both pass; exceeding either is 409 `LIMIT_REACHED` with the number in the
+message. "Active" projects are BIDDING, FORMING, TEAM_PENDING, IN_PROGRESS, ON_HOLD and
+REVIEW_WINDOW; drafts are bounded by the 10/day create limit instead. Withdrawn and ineligible
+bids do not count as open.
+
+**D64 · Bids carry a recorded verdict once bidding closes (Taeen, 2026-10-26; spec §8).**
+While bidding is open, eligibility is only ever evaluated live (the client's view, the
+developer's dry run). When the deadline job closes bidding — or a terms change re-evaluates
+afterwards — Algorithm 1's verdict is written onto the standing bids: filtered out → `INELIGIBLE`
+with the reason code, otherwise `ACTIVE`, with `evaluated_at`. Shortlist rank is never recorded
+on a bid (it would leak other sealed bids). Extending bidding sets every INELIGIBLE bid back to
+ACTIVE, clears its reasons and tells the bidder, so the bid can be improved. Because an
+INELIGIBLE bid can become ACTIVE again, the partial unique index becomes
+`one_standing_bid_per_developer` over `status IN ('ACTIVE','INELIGIBLE')` (migration 0009);
+WITHDRAWN rows are still kept (D49).
+
+**D65 · Developers see reasons in plain language, clients see the trace (Taeen, 2026-10-26; spec §13.5 #12).**
+The bidder's `BidOut.reasons` maps each stored Algorithm 1 code to a sentence plus a hint; a code
+the server doesn't recognise is dropped rather than echoed. The client keeps the per-check trace
+of D54. The bid detail page `/dev/bids/:id` shows the bid, its project, the status timeline,
+those reasons and — while bidding is open — the same dry run the bid sheet uses, never a ranking
+against other bids. Another user's bid is 404 from the server.
+
+**D66 · Optimistic concurrency and paging (Taeen, 2026-10-26; spec §10.1).**
+Bids, whole-set plan replaces (`slots`, `milestones`, `dependencies`) and both profile PATCHes
+take `If-Match`; a mismatch is 409 `VERSION_CONFLICT` (the spec's code, not 412) and nothing is
+written, the row being locked for the check-and-write. A replace's body is a list, so the new
+version comes back in an `X-Version` header that the wizard chains into the next save instead of
+re-reading the project. Profiles get their own `version` column (migration 0010); a profile never
+saved reports version 0, so the first save sends `If-Match: 0`, and the row is created with
+`ON CONFLICT DO NOTHING` + `FOR UPDATE` so two first saves race safely. The client serialises
+autosaves and, on a 409, re-reads and offers "Reload" rather than overwriting another tab.
+`GET /me/bids` and `GET /projects` are cursor pages (`{items, next_cursor}`, keyset on
+`(created_at, id)`, limit ≤ 100); a cursor minted for another list is 422. Both lists offer
+"Load more", and the client dashboard reads one page of 100 and shows its counts as lower bounds
+("3+") when older projects exist.
+
+**D67 · New-bid notices and the daily digest (Taeen, 2026-10-26; spec §11, §12).**
+`bids.new_notices` runs hourly and writes one in-app notice per project covering the bids placed
+since that project's last notice; the notice's own `created_at` is the watermark and bids newer
+than one minute wait for the next run, so a bid still committing is never skipped.
+`bids.daily_digest` runs at 08:00 Asia/Dhaka and emails each client a summary of the previous
+Dhaka calendar day; the outbox payload carries that date, so a retry or a second scheduler cannot
+send it twice. The bidding-deadline job emails "bidding closed" and "too few bids" (with the
+per-slot shortfall) in the same transaction as the in-app notice, and tells each newly-ineligible
+bidder once per closing. Suspended or deleted accounts receive nothing.
+
+**D68 · CAPTCHA difficulty and the remaining literals come from settings (Taeen, 2026-10-26; spec §6.2, §14.16).**
+`captcha.max_number` (settings v4, default 50 000, bounded 1 000–1 000 000 so a mistake can
+neither switch the check off nor freeze slow phones) replaces the hard-coded ALTCHA difficulty;
+`DEVSYNC_ENV=test` still forces the minimal difficulty. CAPTCHA now also guards the OTP send and
+the email-verification resend (§14.16). `bidding.min_bids_factor` drives Algorithm 1's "enough
+bids" test — `required_bids(places, factor) = max(places, ceil(factor × places))` in `Decimal`, so
+1.1 × 10 is exactly 11 — for `too_few`, the shortfall and the relaxation loop. The newcomer
+starting values take `rep.f_default`, `rep.g`, `rep.gamma0_*` and `rep.neutral` from the active
+settings through a pure `NewcomerParams`, so `algorithms/` stays pure; the demo seed uses the
+same values instead of its own copies.
+
+**D69 · Request bodies, job runs, review edits and nav prefetch (Taeen, 2026-10-26; spec §10.1, §7.8, §11, §10.2, §13.7).**
+*(a)* `JsonBodyMiddleware` is the single place enforcing "JSON only": a non-empty body on
+`/api/v1` that is not `application/json` (UTF-8) is 415; multipart is accepted only on POSTs to
+the upload endpoints. Nesting deeper than 20 levels is 422, decided by a linear byte scan
+**before** parsing, so a deep body never reaches the recursive parser; `NaN`/`Infinity` are 422.
+Requests to a path or method no route serves pass through untouched, so unknown routes stay 404
+and unsupported methods 405.
+*(b)* Two new 401 codes, `SESSION_EXPIRED` and `ACCOUNT_SUSPENDED`, are returned only when the
+request carried a session cookie that no longer signs anyone in; anonymous requests keep the
+uniform `UNAUTHENTICATED`, and a DELETED account reads as expired so deletion isn't disclosed.
+Login refuses a suspended account only after the correct password (no enumeration). The client
+drops cached data and goes to `/login?return_to=…&reason=…`, rendering only the two known
+reasons; any 503 opens `/maintenance`, whose "Try again" reloads the validated `return_to`.
+*(c)* `jobs.run_recorded()` writes a RUNNING row before a §11 job and SUCCEEDED/FAILED after it,
+each in its own SYSTEM transaction; `error_code` stores the exception's class name only, never
+its message. A crash leaves a RUNNING row that `lifecycle.expire` closes as FAILED/`ABANDONED`
+after an hour and prunes after 7 days (system runs only). Migration 0010 adds the missing
+SYSTEM-only DELETE policy and an index on `(type, created_at)`. The Phase 0 `ping` heartbeat is
+deliberately not recorded: it is not a §11 job and must work without the database.
+*(d)* `PATCH /me/external-reviews/{id}` changes `source`, `rating`+`scale` and `project_date`
+while the review is PENDING; a verified or rejected one is 409 `INVALID_STATE` with
+`allowed_actions: ["delete"]`. The evidence file never changes here.
+*(e)* `app/prefetch.ts` holds a null-prototype table of built nav destinations → the module the
+router imports, used on hover, focus and touch; each chunk is fetched at most once and a failed
+prefetch is forgotten. A test fails if a built destination is missing from the table.
+
+**D70 · The gate confirms the fuzz suite instead of running it twice (Taeen, 2026-10-26; spec §16.5).**
+The schemathesis tests carry the `fuzz` marker but are not deselected by the backend-tests step,
+so they already run there with their full example budget and count towards coverage. The
+API-contract step therefore reads that run's JUnit report and fails closed when the suite did not
+run or any case failed, rather than re-running the gate's most expensive suite. The alternative
+considered — halving the authenticated example budget (20 → 10) to pay for the second run — was
+rejected: it would weaken a test threshold to fit the gate's time budget.
