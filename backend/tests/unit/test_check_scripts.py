@@ -103,3 +103,62 @@ def test_openapi_lint_public_operations_need_no_auth_errors() -> None:
         "responses": {"200": {"content": {"application/json": {"example": {}}}}},
     }
     assert lint({"paths": {"/api/v1/health": {"get": public}}}) == []
+
+
+# --------------------------------------------------------------- gate: fuzz suite confirmation
+
+
+def _junit(tmp_path: Path, body: str) -> Path:
+    report = tmp_path / "junit-backend.xml"
+    report.write_text(f"<testsuites><testsuite>{body}</testsuite></testsuites>", encoding="utf-8")
+    return report
+
+
+def test_fuzz_results_counts_the_schemathesis_cases(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from scripts import phase_gate  # noqa: PLC0415
+
+    _junit(
+        tmp_path,
+        '<testcase classname="tests.api.test_schemathesis" name="a"/>'
+        '<testcase classname="tests.api.test_schemathesis" name="b"/>'
+        '<testcase classname="tests.unit.test_money" name="c"/>',
+    )
+    monkeypatch.setattr(phase_gate, "RUNS", tmp_path)
+    assert phase_gate._fuzz_results() == (2, 0)
+
+
+def test_fuzz_results_reports_failures(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from scripts import phase_gate  # noqa: PLC0415
+
+    _junit(
+        tmp_path,
+        '<testcase classname="tests.api.test_schemathesis" name="a">'
+        '<failure message="boom"/></testcase>'
+        '<testcase classname="tests.api.test_schemathesis" name="b">'
+        '<error message="boom"/></testcase>'
+        '<testcase classname="tests.api.test_schemathesis" name="c"/>',
+    )
+    monkeypatch.setattr(phase_gate, "RUNS", tmp_path)
+    assert phase_gate._fuzz_results() == (3, 2)
+
+
+def test_fuzz_results_without_a_report_fails_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from scripts import phase_gate  # noqa: PLC0415
+
+    monkeypatch.setattr(phase_gate, "RUNS", tmp_path)
+    with pytest.raises(phase_gate.StepFailed, match="no JUnit report"):
+        phase_gate._fuzz_results()
+
+
+def test_fuzz_results_is_zero_when_the_suite_did_not_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from scripts import phase_gate  # noqa: PLC0415
+
+    _junit(tmp_path, '<testcase classname="tests.unit.test_money" name="c"/>')
+    monkeypatch.setattr(phase_gate, "RUNS", tmp_path)
+    assert phase_gate._fuzz_results() == (0, 0)
