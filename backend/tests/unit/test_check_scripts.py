@@ -103,3 +103,43 @@ def test_openapi_lint_public_operations_need_no_auth_errors() -> None:
         "responses": {"200": {"content": {"application/json": {"example": {}}}}},
     }
     assert lint({"paths": {"/api/v1/health": {"get": public}}}) == []
+
+
+# --------------------------------------------------------------- gate: failed command output
+
+
+def test_a_failed_gate_command_keeps_its_whole_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from scripts import phase_gate  # noqa: PLC0415
+
+    monkeypatch.setattr(phase_gate, "RUNS", tmp_path / "gates")
+    monkeypatch.setattr(phase_gate, "ROOT", tmp_path)
+    # The cause is printed first, then more than 25 lines of summary: the report's tail alone
+    # would lose it.
+    script = (
+        "print('ROOT CAUSE: undocumented 400'); [print(f'line {i}') for i in range(40)]; exit(3)"
+    )
+    with pytest.raises(phase_gate.StepFailed) as failed:
+        phase_gate.run(["python3", "-c", script])
+    message = str(failed.value)
+    assert "exited 3" in message
+    shown_tail = message.split("\n", 1)[1]  # the first line repeats the command itself
+    assert "ROOT CAUSE" not in shown_tail  # printed before the 25-line tail
+    assert shown_tail.splitlines()[-1] == "line 39"
+    saved = sorted((tmp_path / "gates").glob("failed-*.log"))
+    assert len(saved) == 1
+    assert str(saved[0].relative_to(tmp_path)) in message
+    text = saved[0].read_text(encoding="utf-8")
+    assert "ROOT CAUSE: undocumented 400" in text
+    assert "line 39" in text
+
+
+def test_a_passing_gate_command_saves_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from scripts import phase_gate  # noqa: PLC0415
+
+    monkeypatch.setattr(phase_gate, "RUNS", tmp_path / "gates")
+    phase_gate.run(["python3", "-c", "print('ok')"])
+    assert not (tmp_path / "gates").exists()

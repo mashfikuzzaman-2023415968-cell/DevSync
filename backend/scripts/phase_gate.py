@@ -120,6 +120,16 @@ class NotApplicable(Exception):  # noqa: N818
 ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
 
+def _save_failed_output(cmd: list[str], output: str) -> str:
+    """Keep a failed command's whole output: the tail shown in the report often stops short of
+    the cause (pytest prints each failure's detail before its summary)."""
+    RUNS.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
+    path = RUNS / f"failed-{stamp}.log"
+    path.write_text(f"$ {shlex.join(cmd)}\n\n{output}", encoding="utf-8")
+    return str(path.relative_to(ROOT))
+
+
 def run(
     cmd: list[str],
     *,
@@ -152,7 +162,10 @@ def run(
         proc.stdout = ANSI_ESCAPE.sub("", proc.stdout)
     if check and proc.returncode != 0:
         tail = "\n".join((proc.stdout or "").strip().splitlines()[-25:])
-        raise StepFailed(f"`{' '.join(cmd[:6])}…` exited {proc.returncode}\n{tail}")
+        saved = _save_failed_output(cmd, proc.stdout or "")
+        raise StepFailed(
+            f"`{' '.join(cmd[:6])}…` exited {proc.returncode} (full output: {saved})\n{tail}"
+        )
     return proc
 
 
