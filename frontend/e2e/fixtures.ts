@@ -162,7 +162,7 @@ export const ORDERING_PLAN: [string, number, number, string[]][] = [
 export async function createOrderingProject(
   page: Page,
   baseURL: string,
-  { publish = false }: { publish?: boolean } = {},
+  { publish = false, title = "Online ordering system" }: { publish?: boolean; title?: string } = {},
 ): Promise<string> {
   const req = page.request;
   const ok = async (r: Awaited<ReturnType<APIRequestContext["get"]>>) => {
@@ -175,7 +175,7 @@ export async function createOrderingProject(
     await req.post("/api/v1/projects", {
       headers: await csrfHeaders(req, baseURL),
       data: {
-        title: "Online ordering system",
+        title,
         summary: "Customers order online; staff track orders.",
         description: "",
         requirements: "Ordering, simulated payments and order tracking.",

@@ -102,7 +102,9 @@ export default function PublicProjectPage() {
                 {p.bidding_deadline ? (
                   <div>
                     <dt className="text-text-muted">Bids close</dt>
-                    <dd className="font-medium text-text">{formatDate(p.bidding_deadline)}</dd>
+                    <dd className="font-medium text-text" data-volatile>
+                      {formatDate(p.bidding_deadline)}
+                    </dd>
                   </div>
                 ) : null}
               </dl>

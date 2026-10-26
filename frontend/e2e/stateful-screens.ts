@@ -27,6 +27,14 @@ export interface StatefulScreen {
   name: string;
   /** Build the state the screen needs; returns how to open it. */
   prepare: (page: Page, baseURL: string) => Promise<Reach>;
+  /**
+   * The screen's own content differs on every run, so it gets no pixel baseline: the timed test
+   * draws ten questions at random per attempt (`test_questions_are_random_per_attempt` holds the
+   * server to that), and questions of different lengths change every card's height, which masking
+   * cannot hide. The visual run still opens the screen; the axe scan and the responsive matrix
+   * cover it in full.
+   */
+  randomContent?: boolean;
 }
 
 /** Open a screen described by `Reach` (and wait for the page to settle). */
@@ -98,6 +106,7 @@ export const STATEFUL_SCREENS: StatefulScreen[] = [
   {
     // The timed skill test, with the countdown running and the first question shown.
     name: "timed-test",
+    randomContent: true,
     prepare: async (page, baseURL) => {
       await apiSignIn(page, baseURL, "DEVELOPER", "Nadia Rahman");
       await page.goto("/dev/challenges");
@@ -121,6 +130,24 @@ export const STATEFUL_SCREENS: StatefulScreen[] = [
       await apiSignIn(page, baseURL, "CLIENT", "Rahim Uddin");
       return { path: `/d/${dev.userId}` };
     },
+  },
+  {
+    // The public list (§13.5 #6). The test database keeps every project earlier runs published,
+    // so the plain list grows run by run; searching for one freshly published project's own
+    // title gives the same single card every time.
+    name: "public-projects",
+    prepare: async (page, baseURL) => {
+      await apiSignIn(page, baseURL, "CLIENT", "Rahim Uddin");
+      const title = `Ordering system ${String(Date.now())}`;
+      await createOrderingProject(page, baseURL, { publish: true, title });
+      await page.request.post("/api/v1/auth/logout", {
+        headers: await csrfHeaders(page.request, baseURL),
+      });
+      await page.context().clearCookies();
+      return { path: `/projects?q=${encodeURIComponent(title)}` };
+    },
+    // The title carries the run's timestamp, so the card's heading differs every run.
+    randomContent: true,
   },
   {
     // One public project, as a signed-out visitor sees it before signing in to bid (§13.5 #12).

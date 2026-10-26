@@ -78,9 +78,11 @@ describe("VerifyPage", () => {
     );
     renderRoutes([{ path: "/verify", element: <VerifyPage /> }], "/verify");
     const user = userEvent.setup();
-    expect(
-      await screen.findByText(/Enter the code we sent to \+8801712345678/),
-    ).toBeInTheDocument();
+    // The number sits in its own element (masked in the visual baselines), so the sentence and
+    // the number are matched together rather than as one text node.
+    expect(await screen.findByText(/Enter the code we sent to/)).toHaveTextContent(
+      "Enter the code we sent to +8801712345678.",
+    );
     expect(screen.getByRole("button", { name: /Send a new code in/ })).toBeDisabled();
     await user.keyboard("999999");
     await user.click(screen.getByRole("button", { name: "Verify phone" }));

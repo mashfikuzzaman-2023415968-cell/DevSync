@@ -76,7 +76,10 @@ for (const scheme of ["light", "dark"] as const) {
         ["register-details", "/register?role=client"],
         ["forgot-password", "/forgot-password"],
         ["reset-password", "/reset-password?token=example"],
-        ["public-projects", "/projects"],
+        // The live list grows with every run, so the pixel baseline is the page around an
+        // empty result; the list with a card is covered by the stateful screen, axe and the
+        // responsive matrix.
+        ["public-projects-empty", "/projects?q=zzzz-no-such-project"],
         ["not-found", "/missing"],
       ] as const) {
         await resetLimits(page.request);
@@ -191,6 +194,9 @@ for (const scheme of ["light", "dark"] as const) {
         const reach = await screen.prepare(page, baseURL ?? "");
         await prepare(page, scheme, width);
         await openScreen(page, reach);
+        // Opening it is the check for a screen whose own content is drawn at random; a pixel
+        // baseline would differ on every run (see `randomContent`).
+        if (screen.randomContent) continue;
         // Emails, ids, countdowns and "active 3 minutes ago" differ on every run.
         await snap(page, `${screen.name}-${scheme}-${String(width)}`, ["[data-volatile]"]);
       }

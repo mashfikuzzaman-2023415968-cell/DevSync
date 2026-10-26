@@ -3980,6 +3980,24 @@ export interface operations {
           "application/json": components["schemas"]["AnswerAccepted"];
         };
       };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Please sign in to continue. */
       401: {
         headers: {
@@ -4378,6 +4396,24 @@ export interface operations {
         };
         content?: never;
       };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Please sign in to continue. */
       401: {
         headers: {
@@ -4682,6 +4718,24 @@ export interface operations {
           "application/json": components["schemas"]["LoginResponse"];
         };
       };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Please sign in to continue. */
       401: {
         headers: {
@@ -4825,6 +4879,24 @@ export interface operations {
            *     }
            */
           "application/json": components["schemas"]["LoginResponse"];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
         };
       };
       /** @description Please sign in to continue. */
@@ -5209,6 +5281,24 @@ export interface operations {
         };
         content?: never;
       };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Please sign in to continue. */
       401: {
         headers: {
@@ -5559,6 +5649,24 @@ export interface operations {
         };
         content?: never;
       };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Please sign in to continue. */
       401: {
         headers: {
@@ -5712,6 +5820,24 @@ export interface operations {
            *     }
            */
           "application/json": components["schemas"]["AcceptedResponse"];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
         };
       };
       /** @description Your account can't do this. */
@@ -6098,6 +6224,24 @@ export interface operations {
           "application/json": components["schemas"]["AcceptedResponse"];
         };
       };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Your account can't do this. */
       403: {
         headers: {
@@ -6470,6 +6614,24 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
       };
       /** @description Please sign in to continue. */
       401: {
@@ -7304,6 +7466,24 @@ export interface operations {
           "application/json": components["schemas"]["BidOut"];
         };
       };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Please sign in to continue. */
       401: {
         headers: {
@@ -7534,6 +7714,24 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
       };
       /** @description Your account can't do this. */
       403: {
@@ -8237,6 +8435,24 @@ export interface operations {
            *     }
            */
           "application/json": components["schemas"]["MeResponse"];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
         };
       };
       /** @description Please sign in to continue. */
@@ -9036,6 +9252,24 @@ export interface operations {
           "application/json": components["schemas"]["CertificateOut"];
         };
       };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Please sign in to continue. */
       401: {
         headers: {
@@ -9331,6 +9565,24 @@ export interface operations {
            *     }
            */
           "application/json": components["schemas"]["ClientProfileOut"];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
         };
       };
       /** @description Please sign in to continue. */
@@ -9652,6 +9904,24 @@ export interface operations {
            *     }
            */
           "application/json": components["schemas"]["DeveloperProfileOut"];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
         };
       };
       /** @description Please sign in to continue. */
@@ -10304,6 +10574,24 @@ export interface operations {
           "application/json": components["schemas"]["ExternalReviewOut"];
         };
       };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Please sign in to continue. */
       401: {
         headers: {
@@ -10764,6 +11052,24 @@ export interface operations {
           "application/json": components["schemas"]["PortfolioItemOut"];
         };
       };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Please sign in to continue. */
       401: {
         headers: {
@@ -10957,6 +11263,24 @@ export interface operations {
            *     ]
            */
           "application/json": components["schemas"]["PortfolioItemOut"][];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
         };
       };
       /** @description Please sign in to continue. */
@@ -11280,6 +11604,24 @@ export interface operations {
            *     }
            */
           "application/json": components["schemas"]["PortfolioItemOut"];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
         };
       };
       /** @description Please sign in to continue. */
@@ -11811,6 +12153,24 @@ export interface operations {
           "application/json": components["schemas"]["DeveloperSkillOut"][];
         };
       };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Please sign in to continue. */
       401: {
         headers: {
@@ -12127,6 +12487,24 @@ export interface operations {
            *     }
            */
           "application/json": components["schemas"]["ProjectOut"];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
         };
       };
       /** @description Please sign in to continue. */
@@ -12917,6 +13295,24 @@ export interface operations {
           "application/json": components["schemas"]["ProjectOut"];
         };
       };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Please sign in to continue. */
       401: {
         headers: {
@@ -13167,6 +13563,24 @@ export interface operations {
           "application/json": components["schemas"]["ClientBidsOut"];
         };
       };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Please sign in to continue. */
       401: {
         headers: {
@@ -13375,6 +13789,24 @@ export interface operations {
            *     }
            */
           "application/json": components["schemas"]["TermsPreviewOut"];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
         };
       };
       /** @description Please sign in to continue. */
@@ -13774,6 +14206,24 @@ export interface operations {
           "application/json": components["schemas"]["BidOut"];
         };
       };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Please sign in to continue. */
       401: {
         headers: {
@@ -13958,6 +14408,24 @@ export interface operations {
            *     }
            */
           "application/json": components["schemas"]["EligibilityOut"];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
         };
       };
       /** @description Please sign in to continue. */
@@ -14152,6 +14620,24 @@ export interface operations {
           "application/json": components["schemas"]["ProjectOut"];
         };
       };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Please sign in to continue. */
       401: {
         headers: {
@@ -14340,6 +14826,24 @@ export interface operations {
            *     ]
            */
           "application/json": components["schemas"]["CpmNodeOut"][];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
         };
       };
       /** @description Please sign in to continue. */
@@ -14920,6 +15424,24 @@ export interface operations {
           "application/json": components["schemas"]["MilestoneOut"][];
         };
       };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Please sign in to continue. */
       401: {
         headers: {
@@ -15285,6 +15807,24 @@ export interface operations {
           "application/json": components["schemas"]["CpmPreviewOut"];
         };
       };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Please sign in to continue. */
       401: {
         headers: {
@@ -15459,6 +15999,24 @@ export interface operations {
            *     }
            */
           "application/json": components["schemas"]["ProjectOut"];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
         };
       };
       /** @description Please sign in to continue. */
@@ -15644,6 +16202,24 @@ export interface operations {
            *     ]
            */
           "application/json": components["schemas"]["SlotOut"][];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
         };
       };
       /** @description Please sign in to continue. */

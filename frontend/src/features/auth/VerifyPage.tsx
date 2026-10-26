@@ -100,7 +100,8 @@ export default function VerifyPage() {
               }}
             >
               <p className="text-body-sm text-text-muted">
-                Enter the code we sent to {user.phone_e164 ?? "your phone"}.
+                Enter the code we sent to{" "}
+                <span data-volatile>{user.phone_e164 ?? "your phone"}</span>.
               </p>
               <OtpInput label="Verification code" value={code} onChange={setCode} focusFirst />
               <div className="flex flex-wrap items-center gap-3">
@@ -129,7 +130,8 @@ export default function VerifyPage() {
           {user.email_verified ? null : (
             <div className="mt-3 space-y-3">
               <p className="text-body-sm text-text-muted">
-                Open the link we sent to {user.email}. It expires in 24 hours.
+                Open the link we sent to <span data-volatile>{user.email}</span>. It expires in 24
+                hours.
               </p>
               <Button
                 variant="secondary"

@@ -167,7 +167,7 @@ function ProjectTile({ project: p }: { project: ProjectCard }) {
       </dl>
       {p.bidding_deadline ? (
         <p className="mt-3 text-caption text-text-muted">
-          Bids close {formatDate(p.bidding_deadline)}
+          Bids close <span data-volatile>{formatDate(p.bidding_deadline)}</span>
         </p>
       ) : null}
     </Card>
