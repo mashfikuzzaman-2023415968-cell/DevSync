@@ -803,9 +803,11 @@ router imports, used on hover, focus and touch; each chunk is fetched at most on
 prefetch is forgotten. A test fails if a built destination is missing from the table.
 
 **D70 · The gate confirms the fuzz suite instead of running it twice (Taeen, 2026-10-26; spec §16.5).**
-The schemathesis tests carry the `fuzz` marker but are not deselected by the backend-tests step,
-so they already run there with their full example budget and count towards coverage. The
-API-contract step therefore reads that run's JUnit report and fails closed when the suite did not
-run or any case failed, rather than re-running the gate's most expensive suite. The alternative
-considered — halving the authenticated example budget (20 → 10) to pay for the second run — was
-rejected: it would weaken a test threshold to fit the gate's time budget.
+The schemathesis tests carry the `fuzz` marker, which the backend-tests step did not deselect,
+so the gate ran its most expensive suite twice. The backend-tests step now deselects it and the
+API-contract step runs it once, with its full example budget. Backend coverage without the fuzz
+tests is 95.8 % against a floor of 85 %, so nothing is lost by leaving them out of that run. Two
+alternatives were rejected: halving the authenticated example budget (20 → 10) to pay for the
+second run, which would weaken a test threshold to fit the gate's time budget; and confirming the
+first run from its JUnit report, which meant parsing XML in the gate (semgrep's
+`use-defused-xml-parse`, and a parser we would rather not add a dependency for).

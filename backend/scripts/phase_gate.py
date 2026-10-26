@@ -32,7 +32,6 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from xml.etree import ElementTree
 
 ROOT = Path(__file__).resolve().parents[2]
 FRONTEND = ROOT / "frontend"
@@ -458,7 +457,9 @@ def step_backend_tests(g: Gate) -> str:
             "-p",
             "no:cacheprovider",
             "-m",
-            "not perf and not chaos",
+            # The fuzz suite runs once, in the API-contract step; including it here would run
+            # the gate's most expensive suite twice (coverage without it: 95.8%, floor 85%).
+            "not perf and not chaos and not fuzz",
             "--cov=app",
             "--cov-branch",
             f"--cov-report=json:{report}",
@@ -493,36 +494,16 @@ def step_security_suite(g: Gate) -> str:
     return proc.stdout.strip().splitlines()[-1]
 
 
-def _fuzz_results() -> tuple[int, int]:
-    """(tests, failures) of the fuzz suite inside the backend-tests run (step "Backend tests").
-
-    The fuzz tests carry the `fuzz` marker but are not deselected there, so they already ran —
-    with their full example budget and counting towards coverage. Re-running them here would
-    double the gate's most expensive step, so this reads that run's JUnit report instead.
-    """
-    report = RUNS / "junit-backend.xml"
-    if not report.exists():
-        raise StepFailed("backend tests wrote no JUnit report; cannot confirm the fuzz suite ran")
-    tree = ElementTree.parse(report)  # noqa: S314  (our own report, written by pytest)
-    cases = [
-        case
-        for case in tree.iter("testcase")
-        if "test_schemathesis" in (case.get("classname") or "")
-    ]
-    failed = [c for c in cases if c.find("failure") is not None or c.find("error") is not None]
-    return len(cases), len(failed)
-
-
 def step_api_contract(g: Gate) -> str:
     in_tests(["python", "scripts/check_openapi.py"], no_deps=True)
     if g.phase < 1:
         return "contract lint + committed openapi.json match; fuzzing from phase 1"
-    total, failed = _fuzz_results()
-    if total == 0:
-        raise StepFailed("the fuzz (schemathesis) suite did not run in the backend tests step")
-    if failed:
-        raise StepFailed(f"{failed} of {total} schemathesis test(s) failed in the backend tests")
-    return f"contract lint, openapi.json match, schemathesis clean ({total} runs)"
+    proc = in_tests(["pytest", "-q", "-p", "no:cacheprovider", "-m", "fuzz"])
+    if "no tests ran" in proc.stdout or " passed" not in proc.stdout:
+        raise StepFailed("the fuzz (schemathesis) suite is empty")
+    return (
+        f"contract lint, openapi.json match, schemathesis: {proc.stdout.strip().splitlines()[-1]}"
+    )
 
 
 def step_frontend_tests(g: Gate) -> str:
