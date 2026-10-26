@@ -19,7 +19,7 @@ from app.core.security import (
     constant_time_equals,
     generate_otp,
     generate_token,
-    hash_password,
+    hash_password_async,
     password_problems,
     token_digest,
 )
@@ -65,7 +65,7 @@ async def register(
 ) -> None:
     """Create a PENDING account (or quietly notify the existing owner). Commits."""
     reject_weak_password(password, [email, display_name, phone])
-    password_hash = hash_password(password)  # always hashed: uniform timing
+    password_hash = await hash_password_async(password)  # always hashed: uniform timing
     db = deps.db
     user_id = await repo.create_pending_user(
         db,

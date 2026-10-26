@@ -17,7 +17,12 @@ from sqlalchemy import delete, select
 from app.core.audit import write_audit
 from app.core.clock import get_clock
 from app.core.config import Settings
-from app.core.security import encrypt, generate_recovery_codes, hash_password
+from app.core.security import (
+    encrypt,
+    generate_recovery_codes,
+    hash_password_async,
+    hash_passwords_async,
+)
 from app.db.context import DbContext
 from app.db.session import open_session
 from app.models.identity import (
@@ -55,11 +60,12 @@ async def create_user(
 ) -> dict[str, Any]:
     """Create a user (ACTIVE when `verified`); admins get TOTP + recovery codes."""
     now = get_clock().now()
+    password_hash = await hash_password_async(password)  # before the transaction opens
     async with open_session(DbContext.system(), job=True) as db:
         user = User(
             email=email,
             phone_e164=phone,
-            password_hash=hash_password(password),
+            password_hash=password_hash,
             role=UserRole(role),
             status=UserStatus.ACTIVE if verified else UserStatus.PENDING,
             display_name=display_name,
@@ -85,7 +91,8 @@ async def create_user(
                 )
             )
             codes = generate_recovery_codes()
-            db.add_all(RecoveryCode(user_id=user.id, code_hash=hash_password(c)) for c in codes)
+            code_hashes = await hash_passwords_async(codes)
+            db.add_all(RecoveryCode(user_id=user.id, code_hash=h) for h in code_hashes)
             result.update(totp_secret=secret, recovery_codes=codes)
         await write_audit(
             db,

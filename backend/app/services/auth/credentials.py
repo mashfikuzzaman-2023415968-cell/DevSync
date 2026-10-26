@@ -24,9 +24,10 @@ from app.core.security import (
     encrypt,
     generate_recovery_codes,
     generate_token,
-    hash_password,
+    hash_password_async,
+    hash_passwords_async,
     token_digest,
-    verify_password,
+    verify_password_async,
 )
 from app.core.sessions import SessionData, SessionPolicy, SessionStore
 from app.models.identity import EmailTokenPurpose, TotpCredential, UserStatus
@@ -82,7 +83,7 @@ async def reset_password(deps: AuthDeps, token: str, new_password: str, now: dat
     if user is None:
         raise DomainError(code=ErrorCode.TOKEN_INVALID)
     reject_weak_password(new_password, [str(user.email), user.display_name])
-    user.password_hash = hash_password(new_password)
+    user.password_hash = await hash_password_async(new_password)
     user.failed_login_count = 0
     user.locked_until = None
     store = SessionStore(deps.redis, SessionPolicy(deps.settings))
@@ -113,10 +114,10 @@ async def change_password(
 ) -> tuple[str, SessionData]:
     """Change password; other sessions are revoked and this one is rotated. Commits."""
     user = await repo.get_user(deps.db, principal.user_id)
-    if user is None or not verify_password(user.password_hash, current_password).ok:
+    if user is None or not (await verify_password_async(user.password_hash, current_password)).ok:
         raise AuthError(code=ErrorCode.INVALID_CREDENTIALS)
     reject_weak_password(new_password, [str(user.email), user.display_name])
-    user.password_hash = hash_password(new_password)
+    user.password_hash = await hash_password_async(new_password)
     store = SessionStore(deps.redis, SessionPolicy(deps.settings))
     token, data = session
     revoked = await store.revoke_all(deps.db, user.id, now, except_id=data.session_id)
@@ -200,7 +201,7 @@ async def totp_confirm(
     credential.last_used_step = step
     codes = generate_recovery_codes()
     await repo.replace_recovery_codes(
-        deps.db, principal.user_id, [hash_password(c) for c in codes], now
+        deps.db, principal.user_id, await hash_passwords_async(codes), now
     )
     store = SessionStore(deps.redis, SessionPolicy(deps.settings))
     token, data = session
@@ -225,7 +226,7 @@ async def regenerate_recovery_codes(
         raise DomainError(code=ErrorCode.STEP_UP_REQUIRED)
     codes = generate_recovery_codes()
     await repo.replace_recovery_codes(
-        deps.db, principal.user_id, [hash_password(c) for c in codes], now
+        deps.db, principal.user_id, await hash_passwords_async(codes), now
     )
     await write_audit(
         deps.db,

@@ -8,11 +8,13 @@
 - TOTP secrets: AES-256-GCM with a key derived from SECRET_KEY via HKDF, so a
   database dump alone does not reveal second factors.
 
-Every function here is pure apart from reading the bundled password list once.
+Every function here is pure apart from reading the bundled password list once. The `*_async`
+password functions run the same Argon2 work on a small thread pool, off the event loop.
 """
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import contextlib
 import gzip
@@ -20,6 +22,8 @@ import hashlib
 import hmac
 import re
 import secrets
+from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -45,6 +49,14 @@ _hasher = PasswordHasher(time_cost=3, memory_cost=64 * 1024, parallelism=2, hash
 # A real Argon2id hash used to spend the same time when the account does not exist,
 # so login timing does not reveal whether an email is registered (§14.4).
 _DUMMY_HASH = _hasher.hash("dummy-password-for-timing-equalisation")
+
+# Argon2 is slow on purpose (64 MiB and a large share of a second per call). Called from a request
+# on the event loop it stalls every other request on that worker: during the browser tests a
+# burst of sign-ins and seeded accounts (ten recovery codes each) held workers past gunicorn's
+# 30-second heartbeat and got them killed. argon2-cffi releases the GIL, so a small pool hashes in
+# parallel, and its size bounds the memory hashing can take at once.
+PASSWORD_HASH_THREADS = 4
+_hash_pool = ThreadPoolExecutor(max_workers=PASSWORD_HASH_THREADS, thread_name_prefix="argon2")
 
 
 # --------------------------------------------------------------------------- passwords
@@ -74,6 +86,23 @@ def verify_password(stored_hash: str | None, password: str) -> PasswordCheck:
     except (VerifyMismatchError, VerificationError, InvalidHashError):
         return PasswordCheck(ok=False)
     return PasswordCheck(ok=True, needs_rehash=_hasher.check_needs_rehash(stored_hash))
+
+
+async def hash_password_async(password: str) -> str:
+    """`hash_password` on the hashing pool, so the event loop keeps serving other requests."""
+    return await asyncio.get_running_loop().run_in_executor(_hash_pool, hash_password, password)
+
+
+async def hash_passwords_async(passwords: Sequence[str]) -> list[str]:
+    """Several hashes (recovery codes) on the hashing pool, in their input order."""
+    return list(await asyncio.gather(*(hash_password_async(p) for p in passwords)))
+
+
+async def verify_password_async(stored_hash: str | None, password: str) -> PasswordCheck:
+    """`verify_password` on the hashing pool (same constant-time behaviour)."""
+    return await asyncio.get_running_loop().run_in_executor(
+        _hash_pool, verify_password, stored_hash, password
+    )
 
 
 @lru_cache(maxsize=1)

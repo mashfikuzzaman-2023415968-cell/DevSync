@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
+from collections.abc import Coroutine
+from typing import Any
+
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+from app.core import security
 from app.core.security import (
     DecryptionError,
     constant_time_equals,
@@ -147,3 +152,62 @@ def test_aead_round_trip_and_tamper_detection() -> None:
         decrypt(derive_key("other-key", "totp"), blob, b"user-1")
     with pytest.raises(DecryptionError, match="short"):
         decrypt(key, b"123", b"user-1")
+
+
+# ------------------------------------------------------------- password hashing off the loop
+
+
+async def _ticks_during(work: Coroutine[Any, Any, object]) -> int:
+    """How many times a 5 ms ticker ran on the event loop while `work` was awaited."""
+    ticks = 0
+    done = False
+
+    async def ticker() -> None:
+        nonlocal ticks
+        while not done:
+            await asyncio.sleep(0.005)
+            ticks += 1
+
+    task = asyncio.create_task(ticker())
+    await asyncio.sleep(0)  # let the ticker start
+    try:
+        await work
+        during = ticks  # read before the ticker is resumed to stop it
+    finally:
+        done = True
+        await task
+    return during
+
+
+@pytest.mark.asyncio
+async def test_hashing_off_the_loop_lets_other_requests_run() -> None:
+    # Argon2 takes far longer than 5 ms, so a loop that keeps serving gets many ticks in.
+    assert await _ticks_during(security.hash_password_async("correct horse battery")) >= 3
+
+
+@pytest.mark.asyncio
+async def test_hashing_on_the_loop_would_starve_it() -> None:
+    # The failure this guards against: the same work done inline gives the ticker no turn.
+    async def inline() -> None:
+        security.hash_password("correct horse battery")
+
+    assert await _ticks_during(inline()) == 0
+
+
+@pytest.mark.asyncio
+async def test_async_hash_and_verify_agree_with_the_sync_ones() -> None:
+    stored = await security.hash_password_async("correct horse battery")
+    assert security.verify_password(stored, "correct horse battery").ok
+    assert (await security.verify_password_async(stored, "correct horse battery")).ok
+    assert not (await security.verify_password_async(stored, "wrong horse battery")).ok
+    # A missing account still costs a verify and fails (timing equalisation, §14.4).
+    assert not (await security.verify_password_async(None, "anything at all")).ok
+
+
+@pytest.mark.asyncio
+async def test_many_hashes_keep_their_order() -> None:
+    codes = [f"code-{i}" for i in range(security.RECOVERY_CODE_COUNT)]
+    hashes = await security.hash_passwords_async(codes)
+    assert len(hashes) == len(codes)
+    for code, stored in zip(codes, hashes, strict=True):
+        assert security.verify_password(stored, code).ok

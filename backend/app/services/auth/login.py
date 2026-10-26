@@ -31,9 +31,9 @@ from app.core.redirects import safe_redirect
 from app.core.security import (
     DecryptionError,
     decrypt,
-    hash_password,
+    hash_password_async,
     normalize_recovery_code,
-    verify_password,
+    verify_password_async,
 )
 from app.core.sessions import SessionData, SessionPolicy, SessionStore
 from app.core.settings_cache import active_settings
@@ -127,7 +127,7 @@ async def login(
         await _check_captcha(deps, captcha_payload, honeypot, started_at_ms)
 
     record = await repo.login_lookup(db, email)
-    check = verify_password(record.password_hash if record else None, password)
+    check = await verify_password_async(record.password_hash if record else None, password)
 
     if record is not None and record.locked_until is not None and record.locked_until > now:
         minutes = max(1, int((record.locked_until - now).total_seconds() // 60) + 1)
@@ -163,7 +163,7 @@ async def login(
     user.first_failed_login_at = None
     user.locked_until = None
     if check.needs_rehash:
-        user.password_hash = hash_password(password)
+        user.password_hash = await hash_password_async(password)
 
     if record.role == "ADMIN":
         credential = await repo.totp_credential(db, record.id)
@@ -407,7 +407,7 @@ async def check_second_factor(
     if recovery_code is not None:
         normalized = normalize_recovery_code(recovery_code)
         for row in await repo.unused_recovery_codes(deps.db, user_id):
-            if verify_password(row.code_hash, normalized).ok:
+            if (await verify_password_async(row.code_hash, normalized)).ok:
                 row.used_at = now
                 await write_audit(
                     deps.db,
