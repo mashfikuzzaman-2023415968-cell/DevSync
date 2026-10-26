@@ -43,6 +43,8 @@ pytestmark = [pytest.mark.security, pytest.mark.api]
 
 APP_DIR = Path(__file__).resolve().parents[2] / "app"
 MINUTE, HOUR, DAY = 60, 3600, 86_400
+# Sending or resending a code is a public form, so it carries the bot check (D68, §14.16).
+BOT_OK = {"captcha": "test-bypass"}
 
 # §14.8 rows that have no endpoint yet → the phase that builds (and must test) them.
 PENDING_SCOPES = {
@@ -338,18 +340,19 @@ def test_otp_send_limits_per_minute_and_hour(
         _age("otp_send", seconds)
 
     later(MINUTE + 1)  # past the code sent at registration
-    assert api.post("/api/v1/auth/otp/send").status_code == 204
-    _assert_limited(api.post("/api/v1/auth/otp/send"), MINUTE)  # 1 per 60 s
+    assert api.post("/api/v1/auth/otp/send", json=BOT_OK).status_code == 204
+    _assert_limited(api.post("/api/v1/auth/otp/send", json=BOT_OK), MINUTE)  # 1 per 60 s
     later(MINUTE + 1)
-    assert api2.post("/api/v1/auth/otp/send").status_code == 204  # another user's phone
+    # another user's phone
+    assert api2.post("/api/v1/auth/otp/send", json=BOT_OK).status_code == 204
     for _ in range(4):
-        assert api.post("/api/v1/auth/otp/send").status_code == 204
+        assert api.post("/api/v1/auth/otp/send", json=BOT_OK).status_code == 204
         later(MINUTE + 1)
-    limited = api.post("/api/v1/auth/otp/send")  # a 6th code within the hour
+    limited = api.post("/api/v1/auth/otp/send", json=BOT_OK)  # a 6th code within the hour
     _assert_limited(limited, HOUR)
     assert int(limited.headers["Retry-After"]) > MINUTE
     later(HOUR)
-    assert api.post("/api/v1/auth/otp/send").status_code == 204
+    assert api.post("/api/v1/auth/otp/send", json=BOT_OK).status_code == 204
     assert _otp(api, phone)
 
 
@@ -375,7 +378,7 @@ def test_otp_verify_limit_and_attempts_per_code(
     # Past the service's 60-second resend cooldown (app clock).
     later = clock.FrozenClock(clock.get_clock().now() + timedelta(seconds=MINUTE + 1))
     monkeypatch.setattr(clock, "_clock", later)
-    assert api.post("/api/v1/auth/otp/send").status_code == 204  # a fresh code
+    assert api.post("/api/v1/auth/otp/send", json=BOT_OK).status_code == 204  # a fresh code
     fresh = _otp(api, phone)
     assert api.post("/api/v1/auth/otp/verify", json={"code": fresh}).status_code == 204
 
