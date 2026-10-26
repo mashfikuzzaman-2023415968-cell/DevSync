@@ -33,9 +33,7 @@ SEED_V4 = Path(__file__).resolve().parent.parent / "seed" / "platform_settings_v
 
 
 def upgrade() -> None:
-    op.add_column(
-        "bids", sa.Column("version", sa.Integer(), server_default="1", nullable=False)
-    )
+    op.add_column("bids", sa.Column("version", sa.Integer(), server_default="1", nullable=False))
     op.add_column("bids", sa.Column("evaluated_at", sa.DateTime(timezone=True), nullable=True))
     op.drop_index("one_active_bid_per_developer", table_name="bids")
     op.create_index(
