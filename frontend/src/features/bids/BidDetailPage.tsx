@@ -259,17 +259,13 @@ function StatusCard({ bid, onChanged }: { bid: BidDetail; onChanged: () => void 
         {bid.can_edit || bid.can_withdraw ? (
           <div className="mt-5 flex flex-wrap gap-2">
             {bid.can_edit ? (
-              <Button asChild variant="outline" size="sm">
+              <Button asChild variant="outline">
                 <Link to={`/dev/projects/${bid.project.id}`}>Edit bid</Link>
               </Button>
             ) : null}
             {bid.can_withdraw ? (
               <ConfirmDialog
-                trigger={
-                  <Button variant="destructive" size="sm">
-                    Withdraw bid
-                  </Button>
-                }
+                trigger={<Button variant="destructive">Withdraw bid</Button>}
                 title="Withdraw this bid?"
                 description="The client will no longer see it. You can place a new bid while bidding is open."
                 confirmLabel="Withdraw bid"
@@ -336,7 +332,7 @@ function ProjectCard({ bid }: { bid: BidDetail }) {
           ) : null}
         </dl>
         {p.status === "BIDDING" ? (
-          <Button asChild variant="ghost" size="sm" className="mt-4">
+          <Button asChild variant="ghost" className="mt-4">
             <Link to={`/dev/projects/${p.id}`}>View project</Link>
           </Button>
         ) : null}

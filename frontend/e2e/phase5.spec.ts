@@ -406,3 +406,59 @@ test("a guest finds a published project on Browse projects and opens it @e2e", a
   );
   await guestContext.close();
 });
+
+test("a developer opens a bid's own page, withdraws there, and nobody else can open it @e2e", async ({
+  browser,
+  page,
+  baseURL,
+}) => {
+  await apiSignIn(page, baseURL ?? "", "CLIENT", "Rahim");
+  const projectId = await createOrderingProject(page, baseURL ?? "", { publish: true });
+
+  // Developer A bids, then reaches the bid's page from My bids (§13.5 #12).
+  const ctxA = await browser.newContext({ ignoreHTTPSErrors: true, baseURL: baseURL ?? "" });
+  const a = await ctxA.newPage();
+  const watchA = await watchPage(a, new URL(baseURL ?? "").origin);
+  await apiSignIn(a, baseURL ?? "", "DEVELOPER", "Developer A");
+  await a.goto(`/dev/projects/${projectId}`);
+  await a.getByRole("combobox").click();
+  await a
+    .getByRole("option", { name: /FastAPI/ })
+    .first()
+    .click();
+  await optionChosen(a);
+  await a.getByLabel(/Your price/).fill("22000");
+  await a.getByLabel(/Days you need/).fill("18");
+  await a.getByRole("button", { name: "Place sealed bid" }).click();
+  await expect(a.getByText("Bid placed").first()).toBeVisible();
+
+  await a.goto("/dev/bids");
+  await a.getByRole("link", { name: "Online ordering system" }).first().click();
+  await expect(a).toHaveURL(/\/dev\/bids\/[0-9a-f-]{36}$/);
+  const bidPath = new URL(a.url()).pathname;
+  await expect(a.getByRole("heading", { level: 1, name: "Online ordering system" })).toBeVisible();
+  await expect(a.getByText("What you offered")).toBeVisible();
+  await expect(a.getByText(/22,000/).first()).toBeVisible();
+  expect(await checkScreen(a, "bid detail")).toEqual([]);
+
+  // Developer B opens A's bid by its address: the server answers as if it didn't exist.
+  const ctxB = await browser.newContext({ ignoreHTTPSErrors: true, baseURL: baseURL ?? "" });
+  const b = await ctxB.newPage();
+  await apiSignIn(b, baseURL ?? "", "DEVELOPER", "Developer B");
+  await b.goto(bidPath);
+  await expect(b.getByRole("heading", { name: "Bid not found" })).toBeVisible();
+  await expect(b.getByText(/22,000/)).toHaveCount(0);
+
+  // A withdraws from the bid's own page; the page then offers no further actions.
+  await a.setViewportSize({ width: 1440, height: 900 });
+  await a.getByRole("button", { name: "Withdraw bid" }).click();
+  await a.getByRole("alertdialog").getByRole("button", { name: "Withdraw bid" }).click();
+  await expect(a.getByText("Bid withdrawn").first()).toBeVisible();
+  await expect(a.getByRole("button", { name: "Withdraw bid" })).toHaveCount(0);
+  await expect(a.getByRole("link", { name: "Edit bid" })).toHaveCount(0);
+  expect(watchA.consoleErrors, watchA.consoleErrors.join("\n")).toEqual([]);
+  expect(await watchA.violations()).toEqual([]);
+
+  await ctxA.close();
+  await ctxB.close();
+});
