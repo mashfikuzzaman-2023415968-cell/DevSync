@@ -21,9 +21,19 @@ async function prepare(page: Page, scheme: "light" | "dark", width: number) {
   await page.setViewportSize({ width, height: 900 });
 }
 
+/** Text that differs on every run (a seeded account's email and phone, ids, times) gets a fixed
+ * stand-in before the capture. Masking alone isn't enough: the mask follows the element, and an
+ * address with one digit more — or digits of different widths — wraps or widens differently. */
+const VOLATILE_STAND_IN = "volatile";
+
 async function snap(page: Page, name: string, mask: string[] = []) {
   await page.waitForLoadState("networkidle");
   await page.evaluate(() => document.fonts.ready);
+  if (mask.includes("[data-volatile]")) {
+    await page.locator("[data-volatile]").evaluateAll((els, text) => {
+      for (const el of els) el.textContent = text;
+    }, VOLATILE_STAND_IN);
+  }
   await expect(page).toHaveScreenshot(`${name}.png`, {
     fullPage: true,
     animations: "disabled",
