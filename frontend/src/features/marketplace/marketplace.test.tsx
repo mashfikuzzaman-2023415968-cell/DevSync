@@ -37,7 +37,7 @@ const DETAIL = {
   milestones: [],
   schedule: null,
 };
-const SLOT_API = "1c8e5d2f-3a4b-4c5d-9e0f-1a2b3c4d5e6f";
+const BACKEND_SLOT = "1c8e5d2f-3a4b-4c5d-9e0f-1a2b3c4d5e6f";
 const PLAN_DAYS = 15;
 const M1 = "m-design";
 const M2 = "m-build";
@@ -46,7 +46,7 @@ const PLANNED_DETAIL = {
   client: { name: "Dhaka Bites Ltd" },
   // The API slot comes first from the server; my skill (React) should still be listed first.
   slots: [
-    { id: SLOT_API, label: "", skill: "FastAPI", skill_id: "s-fastapi", count: 1 },
+    { id: BACKEND_SLOT, label: "", skill: "FastAPI", skill_id: "s-fastapi", count: 1 },
     ...DETAIL.slots,
   ],
   milestones: [
