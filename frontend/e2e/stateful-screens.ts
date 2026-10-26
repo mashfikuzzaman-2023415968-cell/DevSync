@@ -50,10 +50,21 @@ export const STATEFUL_SCREENS: StatefulScreen[] = [
     // The page the email link opens, with a real (single-use) token.
     name: "verify-email",
     prepare: async (page, baseURL) => {
-      const user = await seedUser(page.request, baseURL, "DEVELOPER", "Nadia Rahman", {
+      // Seeding an account writes no email, so ask for one: the resend needs the pending
+      // account's own session and the bot check the endpoint requires (D68).
+      const user = await apiSignIn(page, baseURL, "DEVELOPER", "Nadia Rahman", {
         verified: false,
       });
+      const sent = await page.request.post("/api/v1/auth/email/resend", {
+        headers: await csrfHeaders(page.request, baseURL),
+        data: { captcha: "test-bypass" },
+      });
+      if (!sent.ok())
+        throw new Error(
+          `verification email not sent: ${String(sent.status())} ${await sent.text()}`,
+        );
       const link = await lastLink(page.request, user.email, "verify_email");
+      if (!link) throw new Error(`no verify_email link for ${user.email}`);
       const url = new URL(link);
       return { path: `${url.pathname}${url.search}` };
     },

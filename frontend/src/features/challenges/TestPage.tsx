@@ -20,6 +20,7 @@ import { messageFor } from "@/features/auth/errors";
 import { useAnswer, useAttempt, useSubmitAttempt, type TimedAttempt } from "@/features/profile/api";
 import { formatScore } from "@/lib/format";
 import { cn } from "@/lib/cn";
+import { inlineCode } from "@/lib/inlineCode";
 
 function Result({ attempt, result }: { attempt: Attempt; result: AttemptResult | undefined }) {
   const score = Number(result?.score ?? attempt.score ?? 0);
@@ -109,12 +110,17 @@ function Running({
         <RadioGroup
           key={question.id}
           cards
-          legend={<span className="text-lead font-semibold text-text">{question.text}</span>}
+          legend={
+            <span className="text-lead font-semibold text-text">{inlineCode(question.text)}</span>
+          }
           value={
             attempt.answers[question.id] !== undefined ? String(attempt.answers[question.id]) : ""
           }
           onValueChange={choose}
-          options={question.options.map((text, i) => ({ value: String(i), label: text }))}
+          options={question.options.map((text, i) => ({
+            value: String(i),
+            label: inlineCode(text),
+          }))}
         />
       </Card>
       <nav aria-label="Questions" className="flex flex-wrap gap-2">
