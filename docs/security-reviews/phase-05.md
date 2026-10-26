@@ -65,3 +65,32 @@ vulnerabilities. Its one low-confidence note was applied anyway: the client's bi
 only portfolio items owned by the bid's own developer, so a bid placed before finding 6 was fixed
 can't surface another developer's item title.
 
+
+## Review of the Demo 1 completion work (`main...wizard-drafts`, 2026-10-26)
+
+A full `/security-review` of the ~80 commits that completed Phases 0–5 for Demo 1 (D55–D70) found
+**no high-confidence vulnerabilities** (findings filtered at confidence ≥ 8/10). It covered, in
+particular: the `SESSION_EXPIRED` / `ACCOUNT_SUSPENDED` codes (only for a presented cookie;
+suspended only after the right password), CAPTCHA on OTP send and email resend, the JSON-body
+middleware (415, depth, NaN, multipart only on upload paths), the admin network allowlist in
+Nginx and the API (`X-Forwarded-For` trusted only from `TRUSTED_PROXY_IPS`), the trailing-slash
+308 (relative, same-origin only), the access log (route templates and a keyed user hash, never
+raw paths, queries, headers or bodies), the startup refusals (Mailpit outside the localhost demo
+stack, reload/debug flags, test routes), `GET /bids/{id}` (another developer's bid → 404) and the
+bid If-Match and cursor paging, the public project details (client name for signed-in callers
+only, via a two-column SYSTEM read after the caller's own session found the project; never bid
+data), reputation on public profiles (null for guests), `PATCH /me/external-reviews/{id}`, the
+job-run records (exception class only), the notice and digest jobs, the Mailpit SMS sender, the
+`/maintenance` and login `reason` handling, and the inline-code renderer (React children, no HTML).
+
+Security-relevant defects found and fixed while merging and running the gate in the same round:
+
+| Finding | Fix |
+|---|---|
+| Per-loop Redis client cache keyed by `id(loop)`; a new loop reused a dead loop's client and a request spun a core in the rate limiter (found as a hung gate run) | Keyed by the loop object in a `WeakKeyDictionary`; maintenance-notification handshake off; regression test fails on the old code |
+| `libbrotli1` CVE-2026-111497 (HIGH) in the Nginx image: the cached `apt-get upgrade` layer predated the fix | Image rebuilt; Trivy 0 HIGH/CRITICAL on both images. Residual: a cached update layer can go stale again — rebuild with `--no-cache` before a deployment |
+| Upload endpoints did not declare 400 for a malformed multipart body (contract, found by authenticated fuzzing) | 400 documented for multipart bodies as for JSON |
+| Gate parsed XML with the stdlib parser (semgrep `use-defused-xml-parse`) | XML parsing removed; the fuzz suite runs once, in the contract step (D70) |
+| Advisory lock guarding the bid/project caps had no test | Six tests; the waiting test fails against a no-op lock |
+
+Unresolved high findings from this round: 0.
