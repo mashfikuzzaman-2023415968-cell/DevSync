@@ -44,9 +44,11 @@ export function parseReason(value: string | null): SignedOutReason | null {
 }
 
 export const SIGNED_OUT_MESSAGES: Record<SignedOutReason, { title: string; body: string }> = {
+  // The server only knows the session no longer works: it may have timed out, or been ended
+  // from another device ("Sign out of every device"), so the wording holds for both.
   session_expired: {
-    title: "Your session expired",
-    body: "For your security we sign you out after a while without activity. Sign in again to pick up where you left off.",
+    title: "You’ve been signed out",
+    body: "Your session ended: it timed out, or you signed out on another device. Sign in again to pick up where you left off.",
   },
   account_suspended: {
     title: "This account is suspended",

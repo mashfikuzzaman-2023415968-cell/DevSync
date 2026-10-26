@@ -52,7 +52,8 @@ def test_unknown_or_expired_cookie_is_session_expired_once(api: Api) -> None:
     r = api.get("/api/v1/me")
     assert r.status_code == 401
     assert _code(r) == "SESSION_EXPIRED"
-    assert "expired" in r.json()["error"]["message"]
+    # Worded for both a timeout and a sign-out from another device; the code says which case.
+    assert "session ended" in r.json()["error"]["message"]
     # The cookie was cleared, so the next request is simply anonymous.
     assert _code(api.get("/api/v1/me")) == "UNAUTHENTICATED"
 

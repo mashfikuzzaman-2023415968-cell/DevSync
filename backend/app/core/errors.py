@@ -90,7 +90,7 @@ STATUS_BY_CODE: dict[ErrorCode, int] = {
 SAFE_MESSAGES: dict[ErrorCode, str] = {
     ErrorCode.BAD_REQUEST: "The request could not be understood.",
     ErrorCode.UNAUTHENTICATED: "Please sign in to continue.",
-    ErrorCode.SESSION_EXPIRED: "Your session expired. Sign in again to continue.",
+    ErrorCode.SESSION_EXPIRED: "Your session ended. Sign in again to continue.",
     ErrorCode.ACCOUNT_SUSPENDED: "This account is suspended. Contact support if you think this "
     "is a mistake.",
     ErrorCode.ROLE_NOT_ALLOWED: "Your account can't do this.",

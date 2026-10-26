@@ -159,7 +159,7 @@ describe("a session that ends while the app is open", () => {
     const user = userEvent.setup();
     const { router } = renderRoutes(shell(), "/client/x");
     await user.click(await screen.findByRole("button", { name: "Load projects" }));
-    expect(await screen.findByText("Your session expired")).toBeInTheDocument();
+    expect(await screen.findByText("You’ve been signed out")).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/login");
     const params = new URLSearchParams(router.state.location.search);
     expect(params.get("return_to")).toBe("/client/x");

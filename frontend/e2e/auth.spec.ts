@@ -119,7 +119,10 @@ test("signing out of every device ends the other browser's session @e2e", async 
   await a.getByRole("alertdialog").getByRole("button", { name: "Sign out everywhere" }).click();
   await expect(a).toHaveURL(/\/$/);
   await b.goto("/settings");
-  await expect(b).toHaveURL(/\/login\?return_to=%2Fsettings$/);
+  // The other browser is sent to sign in, back to where it was, and told why (D69).
+  await expect(b).toHaveURL(/\/login\?return_to=%2Fsettings&reason=session_expired$/);
+  await expect(b.getByText("You’ve been signed out")).toBeVisible();
+  await expect(b.getByText(/you signed out on another device/)).toBeVisible();
   await first.close();
   await second.close();
 });
