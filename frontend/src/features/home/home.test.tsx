@@ -56,7 +56,8 @@ const PROJECTS = [
 const fail = () =>
   HttpResponse.json({ error: { code: "INTERNAL", request_id: "req-2" } }, { status: 500 });
 
-function client(projects: JsonBodyType[], me: object = {}, nextCursor: string | null = null) {  server.use(
+function client(projects: JsonBodyType[], me: object = {}, nextCursor: string | null = null) {
+  server.use(
     http.get(`${API}/me`, () => HttpResponse.json({ ...ME, ...me })),
     // The dashboard reads one page of up to 100 projects (spec §10.1 cursor pages).
     http.get(`${API}/projects`, ({ request }) =>
