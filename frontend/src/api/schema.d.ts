@@ -8919,6 +8919,24 @@ export interface operations {
           "application/json": components["schemas"]["CertificateOut"];
         };
       };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Please sign in to continue. */
       401: {
         headers: {
@@ -10238,6 +10256,24 @@ export interface operations {
            *     }
            */
           "application/json": components["schemas"]["ExternalReviewOut"];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
         };
       };
       /** @description Please sign in to continue. */
@@ -11799,6 +11835,24 @@ export interface operations {
            *     }
            */
           "application/json": components["schemas"]["PortfolioItemOut"];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
         };
       };
       /** @description Please sign in to continue. */

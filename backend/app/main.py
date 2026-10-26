@@ -86,9 +86,11 @@ _UNSAFE_RESPONSES = {
     "403": ("CSRF_FAILED", "Your session form expired. Refresh and try again."),
     "415": ("UNSUPPORTED_MEDIA_TYPE", "Send the request body as JSON."),
 }
-# A JSON body that can't be decoded (invalid UTF-8 or JSON syntax) is refused by the framework
-# before validation; found by the authenticated contract fuzzing (CSRF no longer stops it first).
-_JSON_BODY_RESPONSES = {"400": ("BAD_REQUEST", "The request could not be understood.")}
+# A body that can't be decoded is refused before validation: invalid UTF-8 or JSON syntax, or a
+# malformed multipart upload (a part without headers, a stray CR). Found by the authenticated
+# contract fuzzing, once CSRF no longer stopped those requests first.
+_BODY_DECODE_RESPONSES = {"400": ("BAD_REQUEST", "The request could not be understood.")}
+_DECODED_BODIES = ("application/json", "multipart/form-data")
 _NO_GLOBAL_LIMIT = ("/api/v1/health",)
 
 
@@ -103,8 +105,9 @@ def _with_global_responses(app: FastAPI) -> Callable[[], dict[str, Any]]:
                 extra = {} if path.startswith(_NO_GLOBAL_LIMIT) else dict(_GLOBAL_RESPONSES)
                 if method in {"post", "put", "patch", "delete"}:
                     extra.update(_UNSAFE_RESPONSES)
-                if "application/json" in op.get("requestBody", {}).get("content", {}):
-                    extra.update(_JSON_BODY_RESPONSES)
+                content = op.get("requestBody", {}).get("content", {})
+                if any(kind in content for kind in _DECODED_BODIES):
+                    extra.update(_BODY_DECODE_RESPONSES)
                 for status, (code, message) in extra.items():
                     op.setdefault("responses", {}).setdefault(status, {
                         "description": message,
