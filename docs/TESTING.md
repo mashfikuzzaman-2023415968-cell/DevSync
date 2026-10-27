@@ -62,20 +62,20 @@ of each package are listed.
 
 | Package | Modules | Tests (files, static count) | Coverage |
 |---|---|---|---|
-| `app` | 1 | `api/test_app.py` (16), `security/test_rate_limits.py` (14), `api/test_schemathesis.py` (3), `security/test_authz_matrix.py` (2) | 96.5 % |
-| `app/algorithms` | 5 | `algorithms/test_filtering.py` (32), `algorithms/test_cpm.py` (15), `algorithms/test_forecast.py` (11), `property/test_filtering_properties.py` (8), `security/test_profile_reputation.py` (8), `algorithms/test_availability.py` (7), … (3 more) | 99.3 % |
+| `app` | 1 | `unit/test_startup_refusal.py` (18), `api/test_app.py` (16), `api/test_http_hardening.py` (16), `security/test_rate_limits.py` (14), `unit/test_config.py` (9), `security/test_admin_network.py` (6), … (2 more) | 97.3 % |
+| `app/algorithms` | 5 | `algorithms/test_filtering.py` (32), `algorithms/test_cpm.py` (15), `algorithms/test_forecast.py` (11), `algorithms/test_settings_driven.py` (11), `property/test_filtering_properties.py` (8), `security/test_profile_reputation.py` (8), … (5 more) | 99.3 % |
 | `app/api` | 1 | — | 94.6 % |
-| `app/api/v1` | 13 | `security/test_projects.py` (40), `security/test_profiles_files.py` (24), `integration/test_rls_profiles.py` (14), `security/test_marketplace_details.py` (12), `unit/test_captcha_email_totp.py` (12), `security/test_bids.py` (11), … (7 more) | 97.8 % |
-| `app/core` | 20 | `security/test_login_sessions.py` (32), `security/test_profiles_files.py` (24), `api/test_app.py` (16), `unit/test_security.py` (16), `integration/test_rls.py` (15), `security/test_registration_verification.py` (15), … (23 more) | 93.4 % |
-| `app/db` | 3 | `integration/test_rls.py` (15), `integration/test_rls_profiles.py` (14), `integration/test_foundation_db.py` (11), `integration/test_sessions_ratelimit.py` (11), `jobs/test_bidding_deadline.py` (11), `jobs/test_profile_jobs.py` (5), … (4 more) | 98.0 % |
-| `app/integrations` | 2 | `unit/test_captcha_email_totp.py` (12), `unit/test_sms.py` (10), `jobs/test_email_jobs.py` (4) | 79.3 % |
-| `app/jobs` | 7 | `unit/test_captcha_email_totp.py` (12), `jobs/test_bidding_deadline.py` (11), `jobs/test_profile_jobs.py` (5), `jobs/test_email_jobs.py` (4), `jobs/test_ping.py` (4) | 93.5 % |
-| `app/models` | 6 | `security/test_projects.py` (40), `unit/test_uploads.py` (38), `security/test_bidding_followups.py` (25), `security/test_profiles_files.py` (24), `integration/test_rls_profiles.py` (14), `integration/test_foundation_db.py` (11), … (10 more) | 100.0 % |
-| `app/repositories` | 5 | `security/test_projects.py` (40), `security/test_bidding_followups.py` (25), `security/test_profiles_files.py` (24), `integration/test_rls.py` (15), `integration/test_rls_profiles.py` (14), `security/test_bids.py` (11), … (4 more) | 98.9 % |
-| `app/schemas` | 9 | `security/test_projects.py` (40), `security/test_profiles_files.py` (24), `integration/test_rls_profiles.py` (14), `security/test_marketplace_details.py` (12), `integration/test_foundation_db.py` (11), `security/test_bids.py` (11), … (9 more) | 99.4 % |
-| `app/services` | 15 | `security/test_projects.py` (40), `security/test_profiles_files.py` (24), `api/test_app.py` (16), `integration/test_rls_profiles.py` (14), `security/test_marketplace_details.py` (12), `integration/test_foundation_db.py` (11), … (10 more) | 92.5 % |
-| `app/services/auth` | 5 | `security/test_login_sessions.py` (32), `security/test_registration_verification.py` (15), `unit/test_captcha_email_totp.py` (12) | 94.7 % |
-| `app/services/testing` | 1 | `unit/test_question_bank_seed.py` (3) | 62.0 % |
+| `app/api/v1` | 13 | `security/test_projects.py` (40), `security/test_profiles_files.py` (24), `unit/test_startup_refusal.py` (18), `integration/test_rls_profiles.py` (14), `unit/test_captcha_email_totp.py` (14), `security/test_marketplace_details.py` (12), … (10 more) | 97.9 % |
+| `app/core` | 21 | `security/test_login_sessions.py` (32), `security/test_profiles_files.py` (24), `unit/test_security.py` (20), `unit/test_startup_refusal.py` (18), `security/test_registration_verification.py` (17), `api/test_app.py` (16), … (31 more) | 94.6 % |
+| `app/db` | 4 | `integration/test_rls.py` (15), `integration/test_rls_profiles.py` (14), `integration/test_foundation_db.py` (11), `integration/test_sessions_ratelimit.py` (11), `jobs/test_bidding_deadline.py` (11), `jobs/test_bid_notices.py` (10), … (11 more) | 98.1 % |
+| `app/integrations` | 2 | `unit/test_captcha_email_totp.py` (14), `unit/test_sms.py` (10), `jobs/test_email_jobs.py` (4) | 89.9 % |
+| `app/jobs` | 9 | `unit/test_captcha_email_totp.py` (14), `security/test_bid_rules.py` (12), `jobs/test_bidding_deadline.py` (11), `jobs/test_bid_notices.py` (10), `jobs/test_job_runs.py` (7), `jobs/test_profile_jobs.py` (5), … (2 more) | 96.9 % |
+| `app/models` | 6 | `security/test_projects.py` (40), `unit/test_uploads.py` (38), `security/test_bidding_followups.py` (25), `security/test_profiles_files.py` (24), `integration/test_rls_profiles.py` (14), `integration/test_foundation_db.py` (11), … (15 more) | 100.0 % |
+| `app/repositories` | 5 | `security/test_projects.py` (40), `security/test_bidding_followups.py` (25), `security/test_profiles_files.py` (24), `integration/test_rls.py` (15), `integration/test_rls_profiles.py` (14), `security/test_bids.py` (11), … (5 more) | 98.9 % |
+| `app/schemas` | 9 | `security/test_projects.py` (40), `security/test_profiles_files.py` (24), `integration/test_rls_profiles.py` (14), `unit/test_captcha_email_totp.py` (14), `security/test_marketplace_details.py` (12), `algorithms/test_settings_driven.py` (11), … (13 more) | 99.4 % |
+| `app/services` | 15 | `security/test_projects.py` (40), `security/test_profiles_files.py` (24), `api/test_app.py` (16), `integration/test_rls_profiles.py` (14), `security/test_marketplace_details.py` (12), `algorithms/test_settings_driven.py` (11), … (13 more) | 93.1 % |
+| `app/services/auth` | 5 | `security/test_login_sessions.py` (32), `security/test_registration_verification.py` (17), `unit/test_captcha_email_totp.py` (14) | 94.3 % |
+| `app/services/testing` | 1 | `unit/test_question_bank_seed.py` (3) | 67.9 % |
 | `app/uploads` | 6 | `unit/test_uploads.py` (38), `unit/test_errors.py` (8), `jobs/test_profile_jobs.py` (5), `unit/test_client_errors.py` (5) | 100.0 % |
 
 ### Frontend (`frontend/src` → Vitest)
@@ -87,23 +87,23 @@ phase threshold on statements, branches, functions and lines.
 
 | Area | Modules reached | Tests that import them (static count) |
 |---|---|---|
-| `frontend/src/api` | 2 | `projects.test.tsx` (56), `plan-features.test.tsx` (22), `client.test.ts` (8), `shell.test.tsx` (7), `app.test.ts` (6) |
-| `frontend/src/app` | 5 | `guards.test.tsx` (8), `shell.test.tsx` (7), `LoginPage.test.tsx` (7), `app.test.ts` (6) |
-| `frontend/src/components` | 34 | `projects.test.tsx` (56), `plan-features.test.tsx` (22), `marketplace.test.tsx` (21), `profile.test.tsx` (21), `primitives.test.tsx` (20), `home.test.tsx` (16), … (15 more) |
+| `frontend/src/api` | 2 | `projects.test.tsx` (57), `plan-features.test.tsx` (22), `client.test.ts` (8), `sessionEnded.test.tsx` (8), `shell.test.tsx` (7), `app.test.ts` (6) |
+| `frontend/src/app` | 7 | `guards.test.tsx` (8), `sessionEnded.test.tsx` (8), `shell.test.tsx` (7), `LoginPage.test.tsx` (7), `app.test.ts` (6), `prefetch.test.ts` (5) |
+| `frontend/src/components` | 34 | `projects.test.tsx` (57), `profile.test.tsx` (26), `marketplace.test.tsx` (24), `plan-features.test.tsx` (22), `primitives.test.tsx` (20), `bids.test.tsx` (18), … (17 more) |
 | `frontend/src/content` | 1 | `sample.test.ts` (2) |
-| `frontend/src/design` | 4 | `projects.test.tsx` (56), `plan-features.test.tsx` (22), `marketplace.test.tsx` (21), `profile.test.tsx` (21), `primitives.test.tsx` (20), `pages.test.tsx` (14), … (12 more) |
-| `frontend/src/features/account` | 1 | `profile.test.tsx` (21), `pages.test.tsx` (14), `settings.test.tsx` (9) |
-| `frontend/src/features/admin` | 4 | `pages.test.tsx` (14), `guards.test.tsx` (8), `LoginPage.test.tsx` (7) |
-| `frontend/src/features/auth` | 13 | `profile.test.tsx` (21), `pages.test.tsx` (14), `settings.test.tsx` (9), `LoginPage.test.tsx` (7), `schemas.test.ts` (5), `RegisterPage.test.tsx` (4), … (2 more) |
-| `frontend/src/features/bids` | 6 | `marketplace.test.tsx` (21), `home.test.tsx` (16), `pages.test.tsx` (14), `bids.test.tsx` (9), `cache.test.tsx` (2) |
-| `frontend/src/features/challenges` | 2 | `profile.test.tsx` (21) |
-| `frontend/src/features/home` | 4 | `home.test.tsx` (16), `pages.test.tsx` (14) |
-| `frontend/src/features/landing` | 22 | `profile.test.tsx` (21), `pages.test.tsx` (14), `landing.test.tsx` (13), `public.test.tsx` (8), `reputation.test.tsx` (5) |
-| `frontend/src/features/marketplace` | 4 | `marketplace.test.tsx` (21), `home.test.tsx` (16), `pages.test.tsx` (14), `public.test.tsx` (8) |
-| `frontend/src/features/profile` | 10 | `projects.test.tsx` (56), `plan-features.test.tsx` (22), `marketplace.test.tsx` (21), `profile.test.tsx` (21), `home.test.tsx` (16), `pages.test.tsx` (14), … (2 more) |
-| `frontend/src/features/projects` | 8 | `projects.test.tsx` (56), `plan-features.test.tsx` (22), `home.test.tsx` (16) |
+| `frontend/src/design` | 4 | `projects.test.tsx` (57), `profile.test.tsx` (26), `marketplace.test.tsx` (24), `plan-features.test.tsx` (22), `primitives.test.tsx` (20), `bids.test.tsx` (18), … (14 more) |
+| `frontend/src/features/account` | 1 | `profile.test.tsx` (26), `pages.test.tsx` (15), `settings.test.tsx` (9) |
+| `frontend/src/features/admin` | 4 | `pages.test.tsx` (15), `guards.test.tsx` (8), `sessionEnded.test.tsx` (8), `LoginPage.test.tsx` (7) |
+| `frontend/src/features/auth` | 13 | `profile.test.tsx` (26), `pages.test.tsx` (15), `settings.test.tsx` (9), `guards.test.tsx` (8), `sessionEnded.test.tsx` (8), `shell.test.tsx` (7), … (6 more) |
+| `frontend/src/features/bids` | 7 | `marketplace.test.tsx` (24), `bids.test.tsx` (18), `home.test.tsx` (17), `pages.test.tsx` (15), `guards.test.tsx` (8), `sessionEnded.test.tsx` (8), … (4 more) |
+| `frontend/src/features/challenges` | 2 | `profile.test.tsx` (26) |
+| `frontend/src/features/home` | 4 | `home.test.tsx` (17), `pages.test.tsx` (15), `guards.test.tsx` (8), `sessionEnded.test.tsx` (8), `shell.test.tsx` (7), `LoginPage.test.tsx` (7), … (1 more) |
+| `frontend/src/features/landing` | 22 | `profile.test.tsx` (26), `pages.test.tsx` (15), `landing.test.tsx` (13), `public.test.tsx` (8), `reputation.test.tsx` (5) |
+| `frontend/src/features/marketplace` | 4 | `marketplace.test.tsx` (24), `home.test.tsx` (17), `pages.test.tsx` (15), `guards.test.tsx` (8), `sessionEnded.test.tsx` (8), `public.test.tsx` (8), … (3 more) |
+| `frontend/src/features/profile` | 10 | `projects.test.tsx` (57), `profile.test.tsx` (26), `marketplace.test.tsx` (24), `plan-features.test.tsx` (22), `home.test.tsx` (17), `pages.test.tsx` (15), … (7 more) |
+| `frontend/src/features/projects` | 8 | `projects.test.tsx` (57), `plan-features.test.tsx` (22), `home.test.tsx` (17), `guards.test.tsx` (8), `sessionEnded.test.tsx` (8), `shell.test.tsx` (7), … (2 more) |
 | `frontend/src/features/public` | 2 | `public.test.tsx` (8) |
-| `frontend/src/lib` | 10 | `projects.test.tsx` (56), `plan-features.test.tsx` (22), `marketplace.test.tsx` (21), `profile.test.tsx` (21), `primitives.test.tsx` (20), `home.test.tsx` (16), … (18 more) |
+| `frontend/src/lib` | 12 | `projects.test.tsx` (57), `profile.test.tsx` (26), `marketplace.test.tsx` (24), `plan-features.test.tsx` (22), `primitives.test.tsx` (20), `bids.test.tsx` (18), … (21 more) |
 
 ### Modules without tests of their own (reviewed exceptions)
 
@@ -115,10 +115,8 @@ covered nor listed here.
 | `app/api/deps.py` | FastAPI dependencies (session, CSRF-safe acting context, rate-limit keys) run on every API request; tests/security/test_authz_matrix.py drives every route × role through them. |
 | `app/api/v1/auth.py` | Route layer of the auth services; covered end to end by tests/security/test_login_sessions.py, test_registration_verification.py and test_admin_totp.py. |
 | `app/api/v1/me.py` | Account reads used by tests/security/test_registration_verification.py (status, verification flags) and the profile suites. |
-| `app/api/v1/test_seed.py` | Test-only router, mounted only when DEVSYNC_ENV=test (§16.2). Every API test's fixtures and the E2E suite use it; it is never part of a built image. |
 | `app/core/idempotency.py` | Idempotency keys for money endpoints; Phase 10 builds the endpoints that use them and tests replay there (the module is unused until then, 0 % coverage, noted in docs/TESTING.md). |
 | `app/core/metrics.py` | Prometheus middleware; tests/api/test_app.py asserts /metrics is served with route templates and tests/edge/test_edge.py that Nginx blocks it from outside. |
-| `app/core/netutil.py` | valid_ip() guards the `inet` columns; exercised through session and audit writes in tests/security/test_login_sessions.py and tests/integration/test_foundation_db.py. |
 | `app/db/base.py` | Declarative base, naming conventions and column mixins — no behaviour of its own; every model and migration test (tests/integration/test_foundation_db.py) loads it. |
 | `app/jobs/worker.py` | RQ worker entry point (queues, connection, signal handling); the jobs suite runs tasks with a SimpleWorker, and the stack's worker container is exercised by the gate's E2E run. |
 | `app/schemas/common.py` | Shared response and error-envelope helpers; tests/unit/test_errors.py checks the envelope and scripts/check_openapi.py the documented responses they generate. |

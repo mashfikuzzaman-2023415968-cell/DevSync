@@ -2,10 +2,10 @@
 
 ## Current state
 - **Current owner:** Salwa Baki (backend developer), Phases 4–5, from 2026-10-18 (hand-off from Mashfikuzzaman Taeen: `docs/handoffs/handoff-01-taeen-to-salwa.md`); Phase 5 gate finished by Taeen.
-- **Current phase:** 5 done, follow-ups (D54) merged into `main` and `phase-5` re-tagged on 2026-10-23 by Taeen (local; push to GitHub pending a token). Next: push, then Phase 6.
-- **Last gate result:** `PHASE 5 GATE: PASS` (2026-10-23 12:15 UTC, Taeen's laptop, branch `gantt-polish`): backend 839 tests (95.3% coverage), security suite 278, frontend 306, E2E 184 × 3 on chromium/firefox/webkit/mobile, visual 130 baselines, Lighthouse desktop 100 / mobile 94.
-- **In progress:** Gantt polish on branch `gantt-polish` (gate PASS, awaiting Taeen's approval to merge and push): real dates on the axis, dependency arrows, legend, day/week zoom, a today line once work is under way, full milestone names (no 20-character cut) and a details line; the dependency graph wraps names and its nodes are keyboard stops.
-- **Very next step:** merge `gantt-polish` into `main` and push (token from Taeen); `make demo-up` before Demo 1 (Mon 2 Nov 2026, Phases 0–5); then Phase 6 (start by moving to Node 22 LTS, see Known issues).
+- **Current phase:** 5 done. The Demo 1 completion work (spec gaps, two logic audits, D55–D70) is finished on branch `wizard-drafts`, 81 commits ahead of `main` (`main` = `origin/main` = `f8d9ee4`, which already includes `gantt-polish`). `make demo-check DEMO=1` passed on 2026-10-27; waiting for Taeen's approval to merge into `main` and push.
+- **Last gate result:** `PHASE 5 GATE: PASS` (2026-10-27 01:21 UTC, Taeen's laptop, branch `wizard-drafts` at `dea8e40`): backend 1215 tests (95.9% coverage), security suite 443, schemathesis 426, frontend 458 (81.1% lines), E2E 204 × 3 on chromium/firefox/webkit/mobile, axe 6, visual 184 baselines, Lighthouse desktop 100/100/96/100, mobile 94/100/96/100; Demo 1 walkthrough 12/12 (4 browsers × 3).
+- **In progress:** nothing; `wizard-drafts` is complete and waiting to be merged.
+- **Very next step:** fast-forward `main` to `wizard-drafts` and push (token from Taeen); run `make demo-preflight` again about 30 minutes before Demo 1 (Mon 2 Nov 2026, Phases 0–5); then Phase 6 (start by moving to Node 22 LTS, see Known issues).
 - **Open human tasks:** review the 128 drafted test questions (D34); tester's human check of the Phase 3, 4 and 5 security reviews; sanity-check D39 (simulated payment-method verification).
 
 ## Phase table
@@ -23,6 +23,16 @@
 | Finished (UTC) | Phase | Result | Tests |
 |---|---|---|---|
 <!-- gate-log -->
+| 2026-10-27T01:21:22+00:00 | phase 5 | PASS | backend 1215 / frontend 458 tests |
+| 2026-10-26T16:36:47+00:00 | phase 5 | FAIL (step 11) | backend 1209 / frontend - tests |
+| 2026-10-26T14:03:03+00:00 | phase 5 | FAIL (step 11) | backend 1202 / frontend - tests |
+| 2026-10-26T12:41:23+00:00 | phase 5 | FAIL (step 7) | backend - / frontend - tests |
+| 2026-10-26T12:10:24+00:00 | phase 5 | FAIL (step 6) | backend - / frontend - tests |
+| 2026-10-26T11:10:14+00:00 | phase 5 | FAIL (step 5) | backend - / frontend - tests |
+| 2026-10-26T08:32:28+00:00 | phase 5 | FAIL (step 5) | backend - / frontend - tests |
+| 2026-10-26T07:33:51+00:00 | phase 5 | FAIL (step 3) | backend - / frontend - tests |
+| 2026-10-24T05:03:15+00:00 | phase 5 | FAIL (step 7) | backend - / frontend - tests |
+| 2026-10-23T19:22:37+00:00 | phase 5 | FAIL (step 13) | backend 865 / frontend 334 tests |
 | 2026-10-23T12:15:25+00:00 | phase 5 | PASS | backend 839 / frontend 306 tests |
 | 2026-10-23T10:36:53+00:00 | phase 5 | FAIL (step 13) | backend 839 / frontend 306 tests |
 | 2026-10-23T08:19:31+00:00 | phase 5 | FAIL (step 5) | backend 839 / frontend 305 tests |
@@ -69,7 +79,7 @@
 
 ## Known issues
 - This laptop runs Apache on port 80: for `make up`, set `HTTP_PORT=8080` in `.env` or stop Apache.
-- `make certs` produced a self-signed certificate; install mkcert before Demo 1 (D3).
+- `make certs` produced a self-signed certificate; install mkcert before Demo 1 (D3). Still open on 2026-10-27: `make demo-preflight` warns, and browsers will show a certificate warning until `mkcert -install && make certs FORCE=1` (then restart nginx).
 - Node 20 is end-of-life and unpatched for CVE-2026-111497 ("Node2Shell", Brotli); not exposed at runtime (no Node in the served images, Nginx builds only the Brotli encoder), but move the laptops and the edge build stage to Node 22 LTS at the start of Phase 6 (D15).
 - Tester's human check of `docs/security-reviews/phase-00.md` to `phase-03.md` is pending (Sara).
 - The 128 skill-test questions need a human accuracy review (D34).
@@ -77,8 +87,42 @@
 - The 2021 STI paper is cited without a link (no DOI found); add the IEEE Xplore URL when known.
 - Existing dev databases: run `make migrate` (migration 0002); create an admin with `make create-admin`.
 - Phase 5 known limitations (D54): TOO_SLOW compares with the whole-project deadline, not the slot's milestones (the paper's simplification); availability must be re-checked when invitations are accepted (Phase 8); bid prices stay visible to the client during bidding (spec), sealed from other developers.
+- Docker's build cache can keep an old `apt-get` layer: on 2026-10-26 a cached layer held a `libbrotli1` with a HIGH CVE that Trivy failed. Build images for a demo or a deployment with `--no-cache` (the demo stack was rebuilt that way on 2026-10-27).
+- The full gate needs about 3 GB of free memory (7 GB laptop): close Chrome first. Under swap pressure WebKit E2E runs time out, and those failures say nothing about the code.
 
 ## Session log (newest first)
+### 2026-10-24 to 2026-10-27 — Taeen (with Claude Code), Demo 1 completion on `wizard-drafts`
+- Closed the gaps from a review of Phases 0–5 against the spec and from two logic audits (D55–D70):
+  - drafts in the create-project wizard reopen where the client left off;
+  - reputation summary on profiles;
+  - project details with the plan and a mini Gantt, plus role and hours filters;
+  - fee, bonus pool and budget shares in the planning screens;
+  - bid verdicts recorded when bidding closes;
+  - reasons in plain language for developers, the full trace for clients;
+  - optimistic concurrency and paging;
+  - new-bid notices and the daily digest;
+  - CAPTCHA difficulty read from settings;
+  - request-body errors, job runs, review edits and nav prefetch;
+  - hardening (D62);
+  - the Demo 1 stack, texts and walkthrough tooling (D61).
+- Tests went from 839 to 1215 on the backend and 306 to 458 on the frontend; visual baselines from 130 to 184. The regression baseline was raised to match.
+- Root causes found on the way to a clean gate, each fixed with tests:
+  - Redis clients were cached by `id(loop)`. A reused id handed a new event loop a dead loop's client, which hung the backend tests. The cache is now keyed by the loop itself.
+  - Argon2 hashing ran on the event loop, causing gunicorn WORKER TIMEOUTs and 502s under WebKit E2E. It now runs on a bounded thread pool.
+  - Two migrations were both numbered 0009; the later one is now 0010.
+  - The `libbrotli1` CVE came from a stale build-cache layer, fixed by a `--no-cache` rebuild.
+  - A multipart 400 response was undocumented in OpenAPI.
+  - Visual baselines depended on volatile text, now replaced by stand-ins or masked.
+- The gate now keeps a failed command's whole output in `runs/gates/failed-<stamp>.log`.
+- The security review addendum (`docs/security-reviews/phase-05.md`) has no high findings.
+- `make demo-check DEMO=1` passed:
+  - gate: every step PASS except DAST, which is N/A until Phase 9;
+  - walkthrough 12/12;
+  - no API worker timeouts or kills.
+- Demo stack rebuilt with `--no-cache` (Trivy: 0 HIGH/CRITICAL on both images) and started with `make demo-up STAGE=1`. `make demo-preflight` reported everything OK except one warning: the certificate is self-signed because mkcert is not installed (see Known issues).
+  - OK: 2 API replicas, HTTPS edge, API docs off, Mailpit, seed loaded, demo client signs in.
+- Not merged or pushed: waiting for Taeen's approval.
+
 ### 2026-10-23 — Taeen (with Claude Code), Gantt polish
 - Pushed `main`, `phase-5`, `phase-5-followups` and the `phase-5` tag after the Demo 1 readiness check passed.
 - Gantt (`components/Gantt.tsx`): date axis (months over days, week starts when zoomed out; days from start without a start date), finish-to-start arrows, legend, Days/Weeks zoom (weeks for long plans and phones), today line for IN_PROGRESS/ON_HOLD/REVIEW_WINDOW, names in an HTML column wrapped to two lines, a live details line on hover/focus/tap. Dependency graph names wrap to two lines; nodes are focus stops (axe `scrollable-region-focusable` once the graph scrolls). 15 new unit tests; 6 plan-page visual baselines regenerated.
