@@ -144,6 +144,11 @@ describe("ProjectBidPage", () => {
       http.get(`${API}/public/projects/${PID}`, () => HttpResponse.json(DETAIL)),
       http.get(`${API}/me/bids`, () => HttpResponse.json({ items: [], next_cursor: null })),
       http.get(`${API}/me/portfolio`, () => HttpResponse.json([])),
+      // An experienced developer: no role assessment needed (its own tests are in
+      // features/assessment).
+      http.get(`${API}/projects/${PID}/slots/:slot/assessment`, () =>
+        HttpResponse.json({ status: "NOT_REQUIRED", message: "", rules_version: 1 }),
+      ),
     );
   }
 

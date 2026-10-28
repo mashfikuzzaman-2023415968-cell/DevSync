@@ -17,9 +17,32 @@ export function Verdict({ bid }: { bid: ClientBid }) {
   return <Badge tone="warning">{reasonText(bid.reasons)}</Badge>;
 }
 
+const OUTCOME_WORD = {
+  PASSED: "passed",
+  NOT_PASSED: "not passed",
+  ENDED_EARLY: "ended early",
+  VOIDED: "voided by an admin",
+  EXPIRED: "expired",
+} as const;
+
+/** The client's line for a newcomer's role assessment (role assessment spec §8.5): the result
+ * only — never answers, focus events or flags. */
+export function assessmentLine(bid: ClientBid): string | null {
+  const a = bid.newcomer_evidence?.assessment;
+  if (!a) return null;
+  const parts = [`Role assessment: ${String(a.score)}, ${OUTCOME_WORD[a.outcome]}`];
+  if (a.strongest) parts.push(`strongest: ${a.strongest.toLowerCase()}`);
+  if (a.weakest) parts.push(`weakest: ${a.weakest.toLowerCase()}`);
+  parts.push(`taken ${formatDate(a.taken_at)}`);
+  return parts.join("; ");
+}
+
 function verdictSentence(bid: ClientBid): string {
-  if (bid.newcomer_evidence && bid.eligible) {
-    return `Eligible through the newcomer rule: ${bid.newcomer_evidence.skill} test ${formatPercent(bid.newcomer_evidence.score)}.`;
+  const evidence = bid.newcomer_evidence;
+  if (evidence && bid.eligible) {
+    return evidence.kind === "ROLE"
+      ? `Eligible through the newcomer rule: passed the role assessment with ${String(evidence.assessment?.score ?? "")}.`
+      : `Eligible through the newcomer rule: ${evidence.skill} practice test ${formatPercent(evidence.score)}.`;
   }
   if (bid.eligible && bid.shortlisted) return "Meets every requirement of your project.";
   if (bid.eligible) {
@@ -38,6 +61,11 @@ export function BidExplanation({ bid }: { bid: ClientBid }) {
           {bid.is_newcomer ? <NewcomerBadge /> : null}
         </div>
         <p className="text-body-sm text-text">{verdictSentence(bid)}</p>
+        {assessmentLine(bid) ? (
+          <p className="text-body-sm text-text-muted" data-testid="assessment-line">
+            {assessmentLine(bid)}
+          </p>
+        ) : null}
         <Button asChild variant="outline">
           <Link to={`/d/${bid.developer_id}`}>View {bid.developer_name}’s profile</Link>
         </Button>

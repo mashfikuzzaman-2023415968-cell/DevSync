@@ -68,7 +68,7 @@ export function SkillsCard({
     <Card>
       <CardHeader
         title="Skills"
-        description="Rate yourself from 1 (learning) to 5 (expert). A passed skill test shows as verified."
+        description="Rate yourself from 1 (learning) to 5 (expert). Practice-test results show on your profile."
         action={<SaveIndicator state={state} onRetry={() => void save(levels)} />}
       />
       <ul className="divide-y divide-border">

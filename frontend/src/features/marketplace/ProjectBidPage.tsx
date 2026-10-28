@@ -37,6 +37,11 @@ import { BID_STATUS_TONE, CHECK_LABEL, bidStatusLabel } from "@/features/bids/bi
 import { useDeveloperProfile, usePortfolio } from "@/features/profile/api";
 import { takaProblem, wholeIn } from "@/features/projects/schemas";
 import { usePublicProject } from "./api";
+import { assessmentKeys, useSlotAssessment, type TimedAssessment } from "@/features/assessment/api";
+import { AssessmentRunner } from "@/features/assessment/AssessmentRunner";
+import { AssessmentStatusCard, canBid } from "@/features/assessment/AssessmentStatusCard";
+import { useBidDraft } from "@/features/assessment/useBidDraft";
+import { useQueryClient } from "@tanstack/react-query";
 
 const PREVIEW_DELAY_MS = 500;
 const MAX_PORTFOLIO = 3;
@@ -51,11 +56,26 @@ export default function ProjectBidPage() {
   const [editing, setEditing] = useState(false);
   const preview = useEligibilityPreview(id);
 
-  const [slotId, setSlotId] = useState("");
-  const [priceTaka, setPriceTaka] = useState("");
-  const [days, setDays] = useState("");
-  const [proposal, setProposal] = useState("");
-  const [hours, setHours] = useState("");
+  // The draft survives the role assessment and a reload of this tab (role assessment §11.2).
+  const { draft, update: updateDraft, clear: clearDraft } = useBidDraft(id);
+  const { slotId, priceTaka, days, proposal, hours } = draft;
+  const setSlotId = (slot: string) => {
+    updateDraft({ slotId: slot });
+  };
+  const setPriceTaka = (price: string) => {
+    updateDraft({ priceTaka: price });
+  };
+  const setDays = (value: string) => {
+    updateDraft({ days: value });
+  };
+  const setProposal = (text: string) => {
+    updateDraft({ proposal: text });
+  };
+  const setHours = (value: string) => {
+    updateDraft({ hours: value });
+  };
+  const [running, setRunning] = useState<TimedAssessment | null>(null);
+  const qc = useQueryClient();
   const [contribution, setContribution] = useState("");
   const [portfolioIds, setPortfolioIds] = useState<string[]>([]);
   const portfolio = usePortfolio();
@@ -74,6 +94,10 @@ export default function ProjectBidPage() {
   );
   const knowsSkills = profile.isSuccess;
   const chosen = slots.find((s) => s.id === slotId);
+  // A newcomer bids on a passed role assessment for the chosen role (§8.3); the server enforces
+  // it too, this only keeps the button honest.
+  const assessment = useSlotAssessment(id, slotId, Boolean(slotId) && !existing);
+  const assessmentAllows = existing ? true : canBid(assessment.data);
   // Field problems with the server's limits (§10 bids), keyed by the server's field names.
   const [serverFields, setServerFields] = useState<Record<string, string>>({});
   const problems: Record<string, string> = {};
@@ -222,6 +246,7 @@ export default function ProjectBidPage() {
       },
       {
         onSuccess: () => {
+          clearDraft();
           toast({
             tone: "success",
             title: "Bid placed",
@@ -229,6 +254,9 @@ export default function ProjectBidPage() {
           });
         },
         onError: (e) => {
+          if (e instanceof ApiError && e.code === "ROLE_ASSESSMENT_REQUIRED") {
+            void qc.invalidateQueries({ queryKey: assessmentKeys.status(id, slotId) });
+          }
           if (e instanceof ApiError) setServerFields(e.fields);
           toast({
             tone: "danger",
@@ -424,6 +452,9 @@ export default function ProjectBidPage() {
                     />
                   )}
                 </FormField>
+                {chosen && !existing ? (
+                  <AssessmentStatusCard projectId={id} slotId={chosen.id} onRun={setRunning} />
+                ) : null}
                 {knowsSkills && chosen && !mySkills.has(chosen.skill_id) ? (
                   <Alert tone="warning" title="Not one of your skills">
                     {`This role needs ${chosen.skill}, which isn’t on your profile, so the bid would be filtered out. Add the skill to your profile, or choose a role that matches your skills.`}
@@ -535,15 +566,35 @@ export default function ProjectBidPage() {
                     </Button>
                   </div>
                 ) : (
-                  <Button loading={create.isPending} disabled={!ready} onClick={placeBid}>
-                    Place sealed bid
-                  </Button>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      loading={create.isPending}
+                      disabled={!ready || !assessmentAllows}
+                      onClick={placeBid}
+                    >
+                      Place sealed bid
+                    </Button>
+                    {ready && !assessmentAllows && assessment.data ? (
+                      <p className="text-body-sm text-text-muted">
+                        Pass the role assessment above to place this bid.
+                      </p>
+                    ) : null}
+                  </div>
                 )}
               </div>
             )}
           </div>
         </Card>
       </div>
+      {running ? (
+        <AssessmentRunner
+          attempt={running}
+          onClose={() => {
+            setRunning(null);
+            void qc.invalidateQueries({ queryKey: assessmentKeys.status(id, slotId) });
+          }}
+        />
+      ) : null}
     </>
   );
 }

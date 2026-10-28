@@ -148,9 +148,9 @@ export default function DeveloperHome() {
                     to: "/dev/profile",
                   },
                   {
-                    label: "Take a skill test",
+                    label: "Take a practice test",
                     done: passedTest,
-                    hint: "A good score lets you be considered before you have reviews.",
+                    hint: "Get ready for the role assessments newcomers take before bidding.",
                     to: "/dev/challenges",
                   },
                 ]}

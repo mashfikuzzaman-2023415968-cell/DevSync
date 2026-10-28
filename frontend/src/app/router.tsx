@@ -161,16 +161,23 @@ export const routes: RouteObject[] = [
           },
           {
             path: "dev/challenges",
-            handle: { title: "Skill challenges" },
+            handle: { title: "Practice tests" },
             lazy: async () => ({
               Component: (await import("@/features/challenges/ChallengesPage")).default,
             }),
           },
           {
             path: "dev/challenges/test/:attemptId",
-            handle: { title: "Skill test" },
+            handle: { title: "Practice test" },
             lazy: async () => ({
               Component: (await import("@/features/challenges/TestPage")).default,
+            }),
+          },
+          {
+            path: "dev/assessments/:attemptId",
+            handle: { title: "Role assessment" },
+            lazy: async () => ({
+              Component: (await import("@/features/assessment/AssessmentPage")).default,
             }),
           },
           {

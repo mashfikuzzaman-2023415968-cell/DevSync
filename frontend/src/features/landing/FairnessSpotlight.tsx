@@ -87,8 +87,8 @@ export function FairnessSpotlight() {
           <RevealItem>
             <p className="mt-4 text-lead text-text-muted">
               With DevSync the client turns a dial: keep at least that many places for newcomers who
-              passed a skill test. The team is still chosen for quality, and DevSync shows what the
-              choice costs.
+              passed the role assessment. The team is still chosen for quality, and DevSync shows
+              what the choice costs.
             </p>
           </RevealItem>
         </Reveal>

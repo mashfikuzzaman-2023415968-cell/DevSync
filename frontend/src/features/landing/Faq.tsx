@@ -21,7 +21,7 @@ export const FAQ = [
   {
     id: "newcomers",
     q: "How do newcomers get selected?",
-    a: "A client can keep a number of team places for newcomers. Newcomers qualify through a timed skill test, so they’re judged on what they can do rather than on reviews they haven’t had the chance to earn.",
+    a: "A client can keep a number of team places for newcomers. Newcomers qualify through a short role assessment for the role they bid on, the same for everyone bidding for it, so they’re judged on what they can do rather than on reviews they haven’t had the chance to earn.",
   },
   {
     id: "monitoring",

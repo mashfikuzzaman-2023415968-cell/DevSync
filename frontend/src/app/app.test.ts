@@ -83,7 +83,7 @@ describe("navigation (spec §13.4)", () => {
       "Find projects",
       "My bids",
       "My projects",
-      "Skill challenges",
+      "Practice tests",
       "Profile & portfolio",
       "Reputation",
       "Earnings",

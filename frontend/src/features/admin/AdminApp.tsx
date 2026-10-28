@@ -5,6 +5,7 @@ import { ComingSoonPage } from "@/app/ErrorPages";
 import { NotFoundPage } from "@/app/ErrorPages";
 import { AppShell } from "@/components/shell/AppShell";
 import AdminHome from "./AdminHome";
+import { AssessmentDetailPage, AssessmentQueue } from "./assessments/AssessmentsAdmin";
 import { ADMIN_NAV } from "./nav";
 
 export default function AdminApp() {
@@ -12,6 +13,8 @@ export default function AdminApp() {
     <AppShell nav={ADMIN_NAV}>
       <Routes>
         <Route index element={<AdminHome />} />
+        <Route path="assessments" element={<AssessmentQueue />} />
+        <Route path="assessments/:attemptId" element={<AssessmentDetailPage />} />
         {ADMIN_NAV.sidebar
           .filter((item) => item.phase !== undefined && item.to.startsWith("/admin/"))
           .map((item) => (

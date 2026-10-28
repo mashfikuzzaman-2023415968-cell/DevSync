@@ -424,7 +424,7 @@ describe("ClientBidsPage", () => {
     await user.click(nadia as HTMLElement);
     const second = await screen.findByRole("dialog", { name: "Nadia Rahman" });
     expect(
-      within(second).getByText("Eligible through the newcomer rule: React test 85%."),
+      within(second).getByText("Eligible through the newcomer rule: React practice test 85%."),
     ).toBeInTheDocument();
     expect(within(second).getByText("Kitchen orders app")).toBeInTheDocument();
     expect(within(second).getByText("React front end with tests.")).toBeInTheDocument();

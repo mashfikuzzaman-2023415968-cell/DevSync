@@ -2,6 +2,7 @@
 import {
   BadgeCheck,
   ChartPie,
+  ClipboardCheck,
   CreditCard,
   FileClock,
   Flag,
@@ -23,6 +24,7 @@ const sidebar: NavItem[] = [
   { label: "Users", to: "/admin/users", icon: Users, phase: 12 },
   { label: "Projects", to: "/admin/projects", icon: FolderKanban, phase: 12 },
   { label: "Team formation runs", to: "/admin/formation-runs", icon: Workflow, phase: 7 },
+  { label: "Role assessments", to: "/admin/assessments", icon: ClipboardCheck },
   { label: "Integrity flags", to: "/admin/flags", icon: Flag, phase: 11 },
   { label: "Platform alerts", to: "/admin/alerts", icon: Siren, phase: 12 },
   { label: "Disputes", to: "/admin/disputes", icon: Gavel, phase: 12 },

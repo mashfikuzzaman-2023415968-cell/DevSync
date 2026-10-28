@@ -101,6 +101,9 @@ export interface RequestOptions {
   headers?: Record<string, string>;
   /** Sees the response headers of a successful request (e.g. a plan replace's `X-Version`). */
   onHeaders?: (headers: Headers) => void;
+  /** Let the request outlive the page (a role assessment leave sent while the tab is hidden or
+   * unloading, role assessment spec §7.4); unlike `sendBeacon` it carries our headers. */
+  keepalive?: boolean;
 }
 
 /** The server refused a change because the resource changed since it was loaded (If-Match). */
@@ -180,6 +183,7 @@ async function send<T>(
       credentials: "same-origin",
       body: options.body === undefined ? null : JSON.stringify(options.body),
       signal: controller.signal,
+      keepalive: options.keepalive ?? false,
     });
   } catch {
     window.dispatchEvent(new CustomEvent(NETWORK_EVENT, { detail: { online: false } }));

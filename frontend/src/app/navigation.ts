@@ -64,10 +64,10 @@ const developer: NavItem[] = [
   { label: "My bids", to: "/dev/bids", icon: Gavel },
   { label: "My projects", to: "/dev/projects", icon: FolderKanban, phase: 9 },
   {
-    label: "Skill challenges",
+    label: "Practice tests",
     to: "/dev/challenges",
     icon: ListChecks,
-    keywords: ["test", "quiz", "verified score"],
+    keywords: ["test", "quiz", "practice", "skill challenges"],
   },
   {
     label: "Profile & portfolio",

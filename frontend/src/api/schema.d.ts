@@ -4,6 +4,167 @@
  */
 
 export interface paths {
+  "/api/v1/admin/assessments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Role assessment attempts (review queue)
+     * @description Newest first, at most 200; filter by flag, start date and skill.
+     */
+    get: operations["list_attempts_api_v1_admin_assessments_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/admin/assessments/{attempt_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * A role assessment attempt in full
+     * @description Focus events, gaps, per-question correctness and response times, and the result.
+     */
+    get: operations["attempt_detail_api_v1_admin_assessments__attempt_id__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/admin/assessments/{attempt_id}/review": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Mark a role assessment reviewed
+     * @description Takes a flagged attempt out of the queue without voiding it.
+     */
+    post: operations["mark_reviewed_api_v1_admin_assessments__attempt_id__review_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/admin/assessments/{attempt_id}/void": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Void a role assessment
+     * @description Needs a step-up. The result stops counting, bids relying on it are re-evaluated and their
+     *     bidders told, and the developer may retake at once.
+     */
+    post: operations["void_attempt_api_v1_admin_assessments__attempt_id__void_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/admin/question-bank": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Question bank
+     * @description With answers, explanations and verification records (admins only).
+     */
+    get: operations["list_questions_api_v1_admin_question_bank_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/admin/question-bank/{question_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Edit a draft question
+     * @description Drafts only: an approved question is retired and replaced by a new version.
+     */
+    patch: operations["edit_question_api_v1_admin_question_bank__question_id__patch"];
+    trace?: never;
+  };
+  "/api/v1/admin/question-bank/{question_id}/approve": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Approve a question
+     * @description Human approval (HUMAN_APPROVED, named after you).
+     */
+    post: operations["approve_question_api_v1_admin_question_bank__question_id__approve_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/admin/question-bank/{question_id}/retire": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Retire a question
+     * @description Never below a practice test's question count.
+     */
+    post: operations["retire_question_api_v1_admin_question_bank__question_id__retire_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/admin/session": {
     parameters: {
       query?: never;
@@ -18,6 +179,171 @@ export interface paths {
     get: operations["admin_session_api_v1_admin_session_get"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/admin/users/{user_id}/accommodation": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Grant assessment extra time
+     * @description 25 % or 50 % extra time (0 removes it) for assessments started from now on. Step-up.
+     */
+    post: operations["set_accommodation_api_v1_admin_users__user_id__accommodation_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/assessment-attempts/{attempt_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * A role assessment attempt
+     * @description State, position, deadline and server time; the current question only with a valid window
+     *     token. An attempt whose time ran out is scored first.
+     */
+    get: operations["get_attempt_api_v1_assessment_attempts__attempt_id__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/assessment-attempts/{attempt_id}/answer": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Answer the current question
+     * @description Locks your answer (or a skip, `choice: null`) to the current question and moves on; there
+     *     is no going back. After the last question the attempt is scored.
+     */
+    post: operations["answer_api_v1_assessment_attempts__attempt_id__answer_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/assessment-attempts/{attempt_id}/finish": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Finish a role assessment early
+     * @description Ends the attempt now; questions not answered count as wrong.
+     */
+    post: operations["finish_api_v1_assessment_attempts__attempt_id__finish_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/assessment-attempts/{attempt_id}/focus-events": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Report leaving the assessment
+     * @description One leave (idempotent by `seq`): the first is a warning; reaching the limit ends the
+     *     attempt, which is scored but can't count as a pass.
+     */
+    post: operations["focus_event_api_v1_assessment_attempts__attempt_id__focus_events_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/assessment-attempts/{attempt_id}/heartbeat": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Assessment heartbeat
+     * @description Keeps the server's clock and yours in step; long gaps are recorded, never counted as a
+     *     leave.
+     */
+    post: operations["heartbeat_api_v1_assessment_attempts__attempt_id__heartbeat_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/assessment-attempts/{attempt_id}/result": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Role assessment result
+     * @description Your score per competency and overall; never the answers.
+     */
+    get: operations["get_result_api_v1_assessment_attempts__attempt_id__result_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/assessment-attempts/{attempt_id}/resume": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Resume a role assessment
+     * @description A new window token for your open attempt (after a reload or on another device); the old
+     *     window's next request gets ATTEMPT_MOVED. The deadline doesn't change.
+     */
+    post: operations["resume_api_v1_assessment_attempts__attempt_id__resume_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -949,6 +1275,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/me/role-assessments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * My role assessments
+     * @description Every scored role assessment of yours, newest first.
+     */
+    get: operations["my_history_api_v1_me_role_assessments_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/me/skills": {
     parameters: {
       query?: never;
@@ -1275,6 +1621,48 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/projects/{project_id}/slots/{slot_id}/assessment": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Role assessment status for a slot
+     * @description Whether you need a role assessment to bid for this role, what it covers and where you
+     *     stand. Developers only: clients and admins get 403 ROLE_NOT_ALLOWED.
+     */
+    get: operations["slot_status_api_v1_projects__project_id__slots__slot_id__assessment_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/projects/{project_id}/slots/{slot_id}/assessment/attempts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Start a role assessment
+     * @description Starts the attempt after you accept the rules (`consent`, `rules_version`). An open attempt
+     *     for the same role is resumed instead (200). The window token is returned once.
+     */
+    post: operations["start_api_v1_projects__project_id__slots__slot_id__assessment_attempts_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/public/developers/{developer_id}": {
     parameters: {
       query?: never;
@@ -1430,6 +1818,36 @@ export interface components {
       /** Message */
       message: string;
     };
+    /** AccommodationIn */
+    AccommodationIn: {
+      /**
+       * Extra Time Pct
+       * @enum {integer}
+       */
+      extra_time_pct: 0 | 25 | 50;
+      /**
+       * Note
+       * @default
+       */
+      note: string;
+    };
+    /** AccommodationOut */
+    AccommodationOut: {
+      /** Extra Time Pct */
+      extra_time_pct: number;
+      /**
+       * Granted At
+       * Format: date-time
+       */
+      granted_at: string;
+      /** Note */
+      note: string;
+      /**
+       * User Id
+       * Format: uuid
+       */
+      user_id: string;
+    };
     /**
      * AdminSessionResponse
      * @description Admin's own security status (also proves the admin area is hidden from others).
@@ -1463,18 +1881,239 @@ export interface components {
        */
       question_id: string;
     };
-    /**
-     * AnswerIn
-     * @description Choose an option (0–3) for one question of the attempt.
-     */
-    AnswerIn: {
-      /** Choice */
-      choice: number;
+    /** AnswerOut */
+    AnswerOut: {
+      /** Current Index */
+      current_index: number;
+      question?: components["schemas"]["QuestionOut"] | null;
+      result?: components["schemas"]["AssessmentResultOut"] | null;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "NEXT" | "SCORED";
+      /** Total */
+      total: number;
+    };
+    /** AnswerTraceOut */
+    AnswerTraceOut: {
+      /** Answered At */
+      answered_at: string | null;
+      /**
+       * Choice
+       * @description 0–3, or null when skipped or not reached.
+       */
+      choice: number | null;
+      /** Competency */
+      competency: string | null;
+      /** Correct */
+      correct: boolean;
+      /** Difficulty */
+      difficulty: number;
+      /** Index */
+      index: number;
       /**
        * Question Id
        * Format: uuid
        */
       question_id: string;
+      /**
+       * Seconds
+       * @description Time since the previous answer (or the start).
+       */
+      seconds: number | null;
+      /** Slug */
+      slug: string | null;
+    };
+    /**
+     * AssessmentLineOut
+     * @description A newcomer's role assessment as the client sees it (role assessment spec §8.5): the
+     *     result only — never answers, focus events or flags.
+     */
+    AssessmentLineOut: {
+      /**
+       * Outcome
+       * @enum {string}
+       */
+      outcome: "PASSED" | "NOT_PASSED" | "ENDED_EARLY" | "VOIDED" | "EXPIRED";
+      /**
+       * Score
+       * @description 0–100
+       */
+      score: number;
+      /** Strongest */
+      strongest: string | null;
+      /**
+       * Taken At
+       * Format: date-time
+       */
+      taken_at: string;
+      /** Weakest */
+      weakest: string | null;
+    };
+    /**
+     * AssessmentResultOut
+     * @description A scored attempt as its candidate sees it: no answers, no per-question correctness.
+     */
+    AssessmentResultOut: {
+      /**
+       * Attempt Id
+       * Format: uuid
+       */
+      attempt_id: string;
+      /** Competencies */
+      competencies: components["schemas"]["CompetencyScoreOut"][];
+      /** Label */
+      label: string;
+      /**
+       * Next Allowed At
+       * @description When a new attempt may start.
+       */
+      next_allowed_at: string | null;
+      /**
+       * Outcome
+       * @enum {string}
+       */
+      outcome: "PASSED" | "NOT_PASSED" | "ENDED_EARLY" | "VOIDED";
+      /** Pass Overall */
+      pass_overall: number;
+      /** Passed */
+      passed: boolean;
+      /**
+       * Score
+       * @description Overall score 0–100, rounded down.
+       */
+      score: number;
+      /** Strongest */
+      strongest: string | null;
+      /**
+       * Submitted At
+       * Format: date-time
+       */
+      submitted_at: string;
+      /**
+       * Valid Until
+       * @description Until when a pass counts (passed only).
+       */
+      valid_until: string | null;
+      /** Weakest */
+      weakest: string | null;
+    };
+    /**
+     * AssessmentStatusOut
+     * @description Drives the bid sheet's assessment card (§8.1).
+     */
+    AssessmentStatusOut: {
+      /**
+       * Attempt Id
+       * @description Your open attempt (IN_PROGRESS).
+       */
+      attempt_id?: string | null;
+      /**
+       * Bidding Closes Soon
+       * @description Bidding closes before an attempt started now would end (+5 min).
+       * @default false
+       */
+      bidding_closes_soon: boolean;
+      /** Bidding Deadline */
+      bidding_deadline?: string | null;
+      blueprint?: components["schemas"]["BlueprintOut"] | null;
+      fallback?: components["schemas"]["FallbackOut"] | null;
+      /** Message */
+      message: string;
+      /** Next Allowed At */
+      next_allowed_at?: string | null;
+      /**
+       * Open Elsewhere
+       * @description Your other open attempt.
+       */
+      open_elsewhere?: string | null;
+      /** Reason */
+      reason?: ("ACCOUNT_NOT_VERIFIED" | "SKILL_NOT_ON_PROFILE") | null;
+      /** @description Your latest result here. */
+      result?: components["schemas"]["AssessmentResultOut"] | null;
+      /** Rules Version */
+      rules_version: number;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status:
+        | "NOT_REQUIRED"
+        | "REQUIRED"
+        | "IN_PROGRESS"
+        | "OPEN_ELSEWHERE"
+        | "PASSED"
+        | "RETAKE_LOCKED"
+        | "FALLBACK_PRACTICE"
+        | "CLOSED"
+        | "BLOCKED";
+    };
+    /** AttemptDetailOut */
+    AttemptDetailOut: {
+      /** Answers */
+      answers: components["schemas"]["AnswerTraceOut"][];
+      /**
+       * Attempt Id
+       * Format: uuid
+       */
+      attempt_id: string;
+      /** Breakdown */
+      breakdown: {
+        [key: string]: unknown;
+      }[];
+      /**
+       * Candidate Id
+       * Format: uuid
+       */
+      candidate_id: string;
+      /** Candidate Name */
+      candidate_name: string;
+      /** Connection Gaps */
+      connection_gaps: number;
+      /**
+       * Deadline At
+       * Format: date-time
+       */
+      deadline_at: string;
+      /** Extra Time Seconds */
+      extra_time_seconds: number;
+      /** Flagged */
+      flagged: boolean;
+      /** Focus Events */
+      focus_events: {
+        [key: string]: unknown;
+      }[];
+      /** Focus Leaves */
+      focus_leaves: number;
+      /** Label */
+      label: string;
+      /** Last Heartbeat At */
+      last_heartbeat_at: string | null;
+      /** Passed */
+      passed: boolean | null;
+      /** Reused Seen */
+      reused_seen: boolean;
+      /** Reviewed At */
+      reviewed_at: string | null;
+      /**
+       * Score
+       * @description 0–100 once scored.
+       */
+      score: number | null;
+      /**
+       * Started At
+       * Format: date-time
+       */
+      started_at: string;
+      /** Submitted At */
+      submitted_at: string | null;
+      /** Terminated Reason */
+      terminated_reason: string | null;
+      /** Void Reason */
+      void_reason: string | null;
+      /** Voided */
+      voided: boolean;
     };
     /**
      * AttemptOut
@@ -1560,6 +2199,49 @@ export interface components {
        * Format: date-time
        */
       submitted_at: string;
+      /** Total */
+      total: number;
+    };
+    /**
+     * AttemptStateOut
+     * @description An attempt's state; `question` only with a valid window token while open.
+     */
+    AttemptStateOut: {
+      /** Current Index */
+      current_index: number;
+      /**
+       * Deadline At
+       * Format: date-time
+       */
+      deadline_at: string;
+      /** Focus Leaves */
+      focus_leaves: number;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Label */
+      label: string;
+      /** Leave Limit */
+      leave_limit: number;
+      question?: components["schemas"]["QuestionOut"] | null;
+      result?: components["schemas"]["AssessmentResultOut"] | null;
+      /**
+       * Server Now
+       * Format: date-time
+       */
+      server_now: string;
+      /**
+       * Started At
+       * Format: date-time
+       */
+      started_at: string;
+      /**
+       * State
+       * @enum {string}
+       */
+      state: "OPEN" | "SCORED";
       /** Total */
       total: number;
     };
@@ -1788,6 +2470,62 @@ export interface components {
       extensions_used: number;
       /** Max Extensions */
       max_extensions: number;
+    };
+    /** BlueprintCompetencyOut */
+    BlueprintCompetencyOut: {
+      /** Code */
+      code: string;
+      /** Name */
+      name: string;
+      /** Question Count */
+      question_count: number;
+      /**
+       * Reasons
+       * @description Why this competency is part of the role.
+       */
+      reasons: string[];
+      /**
+       * Weight Bp
+       * @description Weight in basis points (10,000 = 100 %).
+       */
+      weight_bp: number;
+    };
+    /**
+     * BlueprintOut
+     * @description What the assessment for this role covers (the same for every newcomer).
+     */
+    BlueprintOut: {
+      /** Competencies */
+      competencies: components["schemas"]["BlueprintCompetencyOut"][];
+      /**
+       * Extra Time Seconds
+       * @default 0
+       */
+      extra_time_seconds: number;
+      /**
+       * Floor
+       * @description Minimum for every competency weighing at least `heavy_weight`.
+       */
+      floor: number;
+      /**
+       * Heavy Weight
+       * @description Weight (0–100) from which the floor applies.
+       */
+      heavy_weight: number;
+      /** Label */
+      label: string;
+      /**
+       * Pass Overall
+       * @description Overall pass mark, 0–100.
+       */
+      pass_overall: number;
+      /** Question Count */
+      question_count: number;
+      /**
+       * Time Limit Seconds
+       * @description Base time; extra time granted to you is separate.
+       */
+      time_limit_seconds: number;
     };
     /** Body_add_portfolio_image_api_v1_me_portfolio__item_id__images_post */
     Body_add_portfolio_image_api_v1_me_portfolio__item_id__images_post: {
@@ -2080,6 +2818,20 @@ export interface components {
       /** Code */
       code: string;
     };
+    /** CompetencyScoreOut */
+    CompetencyScoreOut: {
+      /** Code */
+      code: string;
+      /** Name */
+      name: string;
+      /**
+       * Score
+       * @description 0–100, rounded down.
+       */
+      score: number;
+      /** Weight Bp */
+      weight_bp: number;
+    };
     /**
      * ConstraintCheck
      * @description One Algorithm 1 check and whether the bid meets it (§9.2), with the values compared.
@@ -2280,9 +3032,17 @@ export interface components {
       portfolio: components["schemas"]["PublicPortfolioItem"][];
       /** @description C, P and the newcomer flag; null for anonymous visitors (reputation snapshots are readable only when signed in). */
       reputation?: components["schemas"]["ReputationSummary"] | null;
+      /**
+       * Role Assessments
+       * @description Valid passed role assessments: a competency result for a kind of role, not completed work (role assessment spec §11.6).
+       */
+      role_assessments?: components["schemas"]["PublicRoleAssessment"][];
       /** Skills */
       skills: components["schemas"]["PublicSkill"][];
-      /** Verified Scores */
+      /**
+       * Verified Scores
+       * @description Practice-test results (best per skill); not evidence for bidding.
+       */
       verified_scores: components["schemas"]["VerifiedScore"][];
       /**
        * Visibility
@@ -2349,6 +3109,8 @@ export interface components {
      * @description The dry-run eligibility verdict for the bid sheet's live preview.
      */
     EligibilityOut: {
+      /** @description The slot's role assessment status for you (role assessment §8.3). */
+      assessment?: components["schemas"]["AssessmentStatusOut"] | null;
       /** Checks */
       checks: components["schemas"]["ConstraintCheck"][];
       /** Eligible */
@@ -2400,7 +3162,23 @@ export interface components {
       | "STEP_UP_REQUIRED"
       | "TOKEN_INVALID"
       | "ALREADY_VERIFIED"
-      | "PASSWORD_REJECTED";
+      | "PASSWORD_REJECTED"
+      | "NOT_REQUIRED"
+      | "ALREADY_PASSED"
+      | "ATTEMPT_OPEN"
+      | "RETAKE_LOCKED"
+      | "CONSENT_REQUIRED"
+      | "BLUEPRINT_UNAVAILABLE"
+      | "SKILL_NOT_ON_PROFILE"
+      | "ACCOUNT_NOT_VERIFIED"
+      | "BIDDING_CLOSED"
+      | "NOT_CURRENT_QUESTION"
+      | "ATTEMPT_CLOSED"
+      | "ATTEMPT_MOVED"
+      | "ATTEMPT_TOKEN_REQUIRED"
+      | "ATTEMPT_TOKEN_INVALID"
+      | "DEADLINE_PASSED"
+      | "ROLE_ASSESSMENT_REQUIRED";
     /**
      * ErrorDetail
      * @description Body of the uniform error envelope.
@@ -2480,6 +3258,26 @@ export interface components {
       source?: string | null;
     };
     /**
+     * FallbackOut
+     * @description The slot's newcomer evidence while no role assessment is available (Decision 10).
+     */
+    FallbackOut: {
+      /** Pass Mark */
+      pass_mark: number;
+      /**
+       * Passes
+       * @description Whether that result meets the newcomer pass mark.
+       */
+      passes: boolean;
+      /**
+       * Practice Score
+       * @description Best practice-test result 0–100, if any.
+       */
+      practice_score: number | null;
+      /** Skill Name */
+      skill_name: string;
+    };
+    /**
      * FileOut
      * @description Metadata of a stored file (download through `GET /files/{id}/download`).
      */
@@ -2499,6 +3297,76 @@ export interface components {
       size_bytes: number;
       /** Width */
       width: number | null;
+    };
+    /** FlaggedItemOut */
+    FlaggedItemOut: {
+      /**
+       * Attempt Id
+       * Format: uuid
+       */
+      attempt_id: string;
+      /**
+       * Candidate Id
+       * Format: uuid
+       */
+      candidate_id: string;
+      /** Candidate Name */
+      candidate_name: string;
+      /** Connection Gaps */
+      connection_gaps: number;
+      /** Flagged */
+      flagged: boolean;
+      /** Focus Leaves */
+      focus_leaves: number;
+      /** Label */
+      label: string;
+      /** Passed */
+      passed: boolean | null;
+      /** Reviewed At */
+      reviewed_at: string | null;
+      /**
+       * Score
+       * @description 0–100 once scored.
+       */
+      score: number | null;
+      /**
+       * Started At
+       * Format: date-time
+       */
+      started_at: string;
+      /** Submitted At */
+      submitted_at: string | null;
+      /** Terminated Reason */
+      terminated_reason: string | null;
+      /** Voided */
+      voided: boolean;
+    };
+    /** FocusEventIn */
+    FocusEventIn: {
+      /** Client At */
+      client_at?: string | null;
+      /** Fullscreen Supported */
+      fullscreen_supported?: boolean | null;
+      /** Seq */
+      seq: number;
+      /**
+       * Type
+       * @enum {string}
+       */
+      type: "VISIBILITY_HIDDEN" | "FULLSCREEN_EXIT" | "WINDOW_BLUR" | "PAGE_UNLOAD";
+    };
+    /** FocusEventOut */
+    FocusEventOut: {
+      /** Focus Leaves */
+      focus_leaves: number;
+      /** Leave Limit */
+      leave_limit: number;
+      result?: components["schemas"]["AssessmentResultOut"] | null;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "WARNING" | "TERMINATED" | "CLOSED";
     };
     /**
      * ForgotPasswordRequest
@@ -2530,6 +3398,57 @@ export interface components {
        * @constant
        */
       status: "ok";
+    };
+    /** HeartbeatIn */
+    HeartbeatIn: {
+      /** Fullscreen */
+      fullscreen: boolean;
+      /** Visible */
+      visible: boolean;
+    };
+    /** HeartbeatOut */
+    HeartbeatOut: {
+      /**
+       * Deadline At
+       * Format: date-time
+       */
+      deadline_at: string;
+      /**
+       * Server Now
+       * Format: date-time
+       */
+      server_now: string;
+    };
+    /** HistoryItemOut */
+    HistoryItemOut: {
+      /**
+       * Attempt Id
+       * Format: uuid
+       */
+      attempt_id: string;
+      /** Label */
+      label: string;
+      /**
+       * Outcome
+       * @enum {string}
+       */
+      outcome: "PASSED" | "NOT_PASSED" | "ENDED_EARLY" | "VOIDED";
+      /** Passed */
+      passed: boolean;
+      /** Score */
+      score: number;
+      /**
+       * Started At
+       * Format: date-time
+       */
+      started_at: string;
+      /**
+       * Submitted At
+       * Format: date-time
+       */
+      submitted_at: string;
+      /** Valid Until */
+      valid_until: string | null;
     };
     /**
      * LoginRequest
@@ -2679,9 +3598,17 @@ export interface components {
     };
     /**
      * NewcomerEvidence
-     * @description The skill test that lets a newcomer through the newcomer rule (§9.2 step 2).
+     * @description What lets a newcomer through the newcomer rule (§9.2 step 2): a role assessment for the
+     *     slot, or a practice test where the slot has no assessment yet (Decision 10).
      */
     NewcomerEvidence: {
+      assessment?: components["schemas"]["AssessmentLineOut"] | null;
+      /**
+       * Kind
+       * @default PRACTICE
+       * @enum {string}
+       */
+      kind: "ROLE" | "PRACTICE";
       /** Score */
       score: number;
       /** Skill */
@@ -3160,6 +4087,26 @@ export interface components {
       url: string | null;
     };
     /**
+     * PublicRoleAssessment
+     * @description A passed role assessment as others see it (no project, no answers, no flags).
+     */
+    PublicRoleAssessment: {
+      /**
+       * At
+       * Format: date-time
+       */
+      at: string;
+      /** Label */
+      label: string;
+      /** Score */
+      score: string;
+      /**
+       * Valid Until
+       * Format: date-time
+       */
+      valid_until: string;
+    };
+    /**
      * PublicSkill
      * @description A claimed skill on a public profile.
      */
@@ -3203,6 +4150,112 @@ export interface components {
        * @default false
        */
       acknowledge_schedule_risk: boolean;
+    };
+    /** QuestionAdminOut */
+    QuestionAdminOut: {
+      /** Active */
+      active: boolean;
+      /** Code Snippet */
+      code_snippet: string | null;
+      /** Competency */
+      competency: string | null;
+      /** Competency Id */
+      competency_id: string | null;
+      /** Correct Index */
+      correct_index: number;
+      /** Difficulty */
+      difficulty: number;
+      /** Explanation */
+      explanation: string | null;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Options */
+      options: string[];
+      /**
+       * Review Level
+       * @enum {string}
+       */
+      review_level: "NONE" | "SELF_VERIFIED" | "HUMAN_APPROVED";
+      /** Reviewed At */
+      reviewed_at: string | null;
+      /** Reviewed By Name */
+      reviewed_by_name: string | null;
+      /** Skill */
+      skill: string;
+      /** Slug */
+      slug: string | null;
+      /**
+       * Source
+       * @enum {string}
+       */
+      source: "HUMAN" | "CLAUDE_GENERATED";
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "DRAFT" | "APPROVED" | "RETIRED";
+      /** Text */
+      text: string;
+      /** Times Served */
+      times_served: number;
+      /** Verification */
+      verification: {
+        [key: string]: unknown;
+      } | null;
+      /** Version */
+      version: number;
+    };
+    /**
+     * QuestionOut
+     * @description The current question only (one-way navigation, §6.4).
+     */
+    QuestionOut: {
+      /**
+       * Code Snippet
+       * @description Plain text, shown in a monospace block.
+       */
+      code_snippet: string | null;
+      /** Competency */
+      competency: string | null;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Index
+       * @description 0-based position of this question.
+       */
+      index: number;
+      /** Options */
+      options: string[];
+      /** Text */
+      text: string;
+      /** Total */
+      total: number;
+    };
+    /**
+     * QuestionPatch
+     * @description Edits to a DRAFT question (an approved one is retired and replaced instead).
+     */
+    QuestionPatch: {
+      /** Code Snippet */
+      code_snippet?: string | null;
+      /** Competency Id */
+      competency_id?: string | null;
+      /** Correct Index */
+      correct_index?: number | null;
+      /** Difficulty */
+      difficulty?: number | null;
+      /** Explanation */
+      explanation?: string | null;
+      /** Options */
+      options?: string[] | null;
+      /** Text */
+      text?: string | null;
     };
     /**
      * ReadinessResponse
@@ -3529,6 +4582,62 @@ export interface components {
       /** Slots */
       slots: components["schemas"]["SlotIn"][];
     };
+    /** StartIn */
+    StartIn: {
+      /**
+       * Consent
+       * @description The candidate accepted the rules shown on the consent screen.
+       */
+      consent: boolean;
+      /** Rules Version */
+      rules_version: number;
+    };
+    /**
+     * StartedOut
+     * @description A started or resumed attempt with its window token (returned once; send it as
+     *     `X-Attempt-Token` with every answer, focus event and heartbeat).
+     */
+    StartedOut: {
+      /** Attempt Token */
+      attempt_token: string;
+      /** Current Index */
+      current_index: number;
+      /**
+       * Deadline At
+       * Format: date-time
+       */
+      deadline_at: string;
+      /** Focus Leaves */
+      focus_leaves: number;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Label */
+      label: string;
+      /** Leave Limit */
+      leave_limit: number;
+      question?: components["schemas"]["QuestionOut"] | null;
+      result?: components["schemas"]["AssessmentResultOut"] | null;
+      /**
+       * Server Now
+       * Format: date-time
+       */
+      server_now: string;
+      /**
+       * Started At
+       * Format: date-time
+       */
+      started_at: string;
+      /**
+       * State
+       * @enum {string}
+       */
+      state: "OPEN" | "SCORED";
+      /** Total */
+      total: number;
+    };
     /**
      * TeamCostOut
      * @description Cheapest eligible way to fill every slot, against the budget after the platform fee.
@@ -3667,6 +4776,52 @@ export interface components {
        */
       skill_id: string;
     };
+    /** VoidIn */
+    VoidIn: {
+      /** Reason */
+      reason: string;
+    };
+    /** VoidOut */
+    VoidOut: {
+      /**
+       * Attempt Id
+       * Format: uuid
+       */
+      attempt_id: string;
+      /** Bids Affected */
+      bids_affected: number;
+      /**
+       * Voided At
+       * Format: date-time
+       */
+      voided_at: string;
+    };
+    /** AnswerIn */
+    app__schemas__role_assessments__AnswerIn: {
+      /**
+       * Choice
+       * @description 0–3, or null to skip.
+       */
+      choice: number | null;
+      /**
+       * Question Id
+       * Format: uuid
+       */
+      question_id: string;
+    };
+    /**
+     * AnswerIn
+     * @description Choose an option (0–3) for one question of the attempt.
+     */
+    app__schemas__skill_tests__AnswerIn: {
+      /** Choice */
+      choice: number;
+      /**
+       * Question Id
+       * Format: uuid
+       */
+      question_id: string;
+    };
   };
   responses: never;
   parameters: never;
@@ -3676,6 +4831,1487 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  list_attempts_api_v1_admin_assessments_get: {
+    parameters: {
+      query?: {
+        /** @description Only flagged (or unflagged) */
+        flagged?: boolean | null;
+        from?: string | null;
+        to?: string | null;
+        skill_id?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example [
+           *       {
+           *         "attempt_id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+           *         "candidate_id": "5a3d6c8e-1f7b-4c9d-8e0f-3a4b5c6d7e8f",
+           *         "candidate_name": "Rafsan Haque",
+           *         "connection_gaps": 0,
+           *         "flagged": true,
+           *         "focus_leaves": 2,
+           *         "label": "React · State and hooks, Components and props, Effects and data fetching",
+           *         "passed": false,
+           *         "score": 25,
+           *         "started_at": "2026-10-28T09:00:00Z",
+           *         "submitted_at": "2026-10-28T09:03:12Z",
+           *         "terminated_reason": "FOCUS_LIMIT",
+           *         "voided": false
+           *       }
+           *     ]
+           */
+          "application/json": components["schemas"]["FlaggedItemOut"][];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  attempt_detail_api_v1_admin_assessments__attempt_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        attempt_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "answers": [
+           *         {
+           *           "answered_at": "2026-10-28T09:00:41Z",
+           *           "choice": 1,
+           *           "competency": "State and hooks",
+           *           "correct": true,
+           *           "difficulty": 2,
+           *           "index": 0,
+           *           "question_id": "4f2c5b7d-0e6a-4b8c-9d9e-2f3a4b5c6d7e",
+           *           "seconds": 41,
+           *           "slug": "react-state-hooks-04"
+           *         }
+           *       ],
+           *       "attempt_id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+           *       "breakdown": [
+           *         {
+           *           "code": "state_hooks",
+           *           "earned_w": 3,
+           *           "name": "State and hooks",
+           *           "possible_w": 12,
+           *           "score_bp": 2500,
+           *           "weight_bp": 3500
+           *         }
+           *       ],
+           *       "candidate_id": "5a3d6c8e-1f7b-4c9d-8e0f-3a4b5c6d7e8f",
+           *       "candidate_name": "Rafsan Haque",
+           *       "connection_gaps": 0,
+           *       "deadline_at": "2026-10-28T09:15:00Z",
+           *       "extra_time_seconds": 0,
+           *       "flagged": true,
+           *       "focus_events": [
+           *         {
+           *           "seq": 1,
+           *           "server_at": "2026-10-28T09:01:40Z",
+           *           "type": "VISIBILITY_HIDDEN"
+           *         },
+           *         {
+           *           "seq": 2,
+           *           "server_at": "2026-10-28T09:03:12Z",
+           *           "type": "FULLSCREEN_EXIT"
+           *         }
+           *       ],
+           *       "focus_leaves": 2,
+           *       "label": "React · State and hooks, Components and props, Effects and data fetching",
+           *       "last_heartbeat_at": "2026-10-28T09:03:00Z",
+           *       "passed": false,
+           *       "reused_seen": false,
+           *       "score": 25,
+           *       "started_at": "2026-10-28T09:00:00Z",
+           *       "submitted_at": "2026-10-28T09:03:12Z",
+           *       "terminated_reason": "FOCUS_LIMIT",
+           *       "voided": false
+           *     }
+           */
+          "application/json": components["schemas"]["AttemptDetailOut"];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  mark_reviewed_api_v1_admin_assessments__attempt_id__review_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        attempt_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "attempt_id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+           *       "candidate_id": "5a3d6c8e-1f7b-4c9d-8e0f-3a4b5c6d7e8f",
+           *       "candidate_name": "Rafsan Haque",
+           *       "connection_gaps": 0,
+           *       "flagged": true,
+           *       "focus_leaves": 2,
+           *       "label": "React · State and hooks, Components and props, Effects and data fetching",
+           *       "passed": false,
+           *       "score": 25,
+           *       "started_at": "2026-10-28T09:00:00Z",
+           *       "submitted_at": "2026-10-28T09:03:12Z",
+           *       "terminated_reason": "FOCUS_LIMIT",
+           *       "voided": false
+           *     }
+           */
+          "application/json": components["schemas"]["FlaggedItemOut"];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  void_attempt_api_v1_admin_assessments__attempt_id__void_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        attempt_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["VoidIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "attempt_id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+           *       "bids_affected": 1,
+           *       "voided_at": "2026-10-28T10:00:00Z"
+           *     }
+           */
+          "application/json": components["schemas"]["VoidOut"];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description This can't be done in the current state. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "INVALID_STATE",
+           *         "message": "This can't be done in the current state.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  list_questions_api_v1_admin_question_bank_get: {
+    parameters: {
+      query?: {
+        skill_id?: string | null;
+        competency_id?: string | null;
+        difficulty?: number | null;
+        status?: ("DRAFT" | "APPROVED" | "RETIRED") | null;
+        source?: ("HUMAN" | "CLAUDE_GENERATED") | null;
+        offset?: number;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example [
+           *       {
+           *         "active": false,
+           *         "competency": "State and hooks",
+           *         "competency_id": "6b4e7d9f-2a8c-4d0e-9f1a-4b5c6d7e8f90",
+           *         "correct_index": 0,
+           *         "difficulty": 2,
+           *         "explanation": "Both calls read the same `count`; use the updater form.",
+           *         "id": "4f2c5b7d-0e6a-4b8c-9d9e-2f3a4b5c6d7e",
+           *         "options": [
+           *           "Stale state in both calls",
+           *           "React batches renders",
+           *           "StrictMode",
+           *           "A bug"
+           *         ],
+           *         "review_level": "SELF_VERIFIED",
+           *         "reviewed_at": "2026-10-28T06:00:00Z",
+           *         "skill": "React",
+           *         "slug": "react-state-hooks-04",
+           *         "source": "CLAUDE_GENERATED",
+           *         "status": "APPROVED",
+           *         "text": "A counter increments twice in one click handler but shows +1. Why?",
+           *         "times_served": 7,
+           *         "verification": {
+           *           "checks_passed": true,
+           *           "method": "execution",
+           *           "solver_agreement": true
+           *         },
+           *         "version": 1
+           *       }
+           *     ]
+           */
+          "application/json": components["schemas"]["QuestionAdminOut"][];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  edit_question_api_v1_admin_question_bank__question_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        question_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["QuestionPatch"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "active": false,
+           *       "competency": "State and hooks",
+           *       "competency_id": "6b4e7d9f-2a8c-4d0e-9f1a-4b5c6d7e8f90",
+           *       "correct_index": 0,
+           *       "difficulty": 2,
+           *       "explanation": "Both calls read the same `count`; use the updater form.",
+           *       "id": "4f2c5b7d-0e6a-4b8c-9d9e-2f3a4b5c6d7e",
+           *       "options": [
+           *         "Stale state in both calls",
+           *         "React batches renders",
+           *         "StrictMode",
+           *         "A bug"
+           *       ],
+           *       "review_level": "SELF_VERIFIED",
+           *       "reviewed_at": "2026-10-28T06:00:00Z",
+           *       "skill": "React",
+           *       "slug": "react-state-hooks-04",
+           *       "source": "CLAUDE_GENERATED",
+           *       "status": "APPROVED",
+           *       "text": "A counter increments twice in one click handler but shows +1. Why?",
+           *       "times_served": 7,
+           *       "verification": {
+           *         "checks_passed": true,
+           *         "method": "execution",
+           *         "solver_agreement": true
+           *       },
+           *       "version": 1
+           *     }
+           */
+          "application/json": components["schemas"]["QuestionAdminOut"];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description This can't be done in the current state. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "INVALID_STATE",
+           *         "message": "This can't be done in the current state.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  approve_question_api_v1_admin_question_bank__question_id__approve_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        question_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "active": false,
+           *       "competency": "State and hooks",
+           *       "competency_id": "6b4e7d9f-2a8c-4d0e-9f1a-4b5c6d7e8f90",
+           *       "correct_index": 0,
+           *       "difficulty": 2,
+           *       "explanation": "Both calls read the same `count`; use the updater form.",
+           *       "id": "4f2c5b7d-0e6a-4b8c-9d9e-2f3a4b5c6d7e",
+           *       "options": [
+           *         "Stale state in both calls",
+           *         "React batches renders",
+           *         "StrictMode",
+           *         "A bug"
+           *       ],
+           *       "review_level": "SELF_VERIFIED",
+           *       "reviewed_at": "2026-10-28T06:00:00Z",
+           *       "skill": "React",
+           *       "slug": "react-state-hooks-04",
+           *       "source": "CLAUDE_GENERATED",
+           *       "status": "APPROVED",
+           *       "text": "A counter increments twice in one click handler but shows +1. Why?",
+           *       "times_served": 7,
+           *       "verification": {
+           *         "checks_passed": true,
+           *         "method": "execution",
+           *         "solver_agreement": true
+           *       },
+           *       "version": 1
+           *     }
+           */
+          "application/json": components["schemas"]["QuestionAdminOut"];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description This can't be done in the current state. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "INVALID_STATE",
+           *         "message": "This can't be done in the current state.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  retire_question_api_v1_admin_question_bank__question_id__retire_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        question_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "active": false,
+           *       "competency": "State and hooks",
+           *       "competency_id": "6b4e7d9f-2a8c-4d0e-9f1a-4b5c6d7e8f90",
+           *       "correct_index": 0,
+           *       "difficulty": 2,
+           *       "explanation": "Both calls read the same `count`; use the updater form.",
+           *       "id": "4f2c5b7d-0e6a-4b8c-9d9e-2f3a4b5c6d7e",
+           *       "options": [
+           *         "Stale state in both calls",
+           *         "React batches renders",
+           *         "StrictMode",
+           *         "A bug"
+           *       ],
+           *       "review_level": "SELF_VERIFIED",
+           *       "reviewed_at": "2026-10-28T06:00:00Z",
+           *       "skill": "React",
+           *       "slug": "react-state-hooks-04",
+           *       "source": "CLAUDE_GENERATED",
+           *       "status": "APPROVED",
+           *       "text": "A counter increments twice in one click handler but shows +1. Why?",
+           *       "times_served": 7,
+           *       "verification": {
+           *         "checks_passed": true,
+           *         "method": "execution",
+           *         "solver_agreement": true
+           *       },
+           *       "version": 1
+           *     }
+           */
+          "application/json": components["schemas"]["QuestionAdminOut"];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description This can't be done in the current state. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "INVALID_STATE",
+           *         "message": "This can't be done in the current state.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
   admin_session_api_v1_admin_session_get: {
     parameters: {
       query?: never;
@@ -3771,6 +6407,1592 @@ export interface operations {
            *     }
            */
           "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  set_accommodation_api_v1_admin_users__user_id__accommodation_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AccommodationIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "extra_time_pct": 25,
+           *       "granted_at": "2026-10-28T10:00:00Z",
+           *       "note": "",
+           *       "user_id": "5a3d6c8e-1f7b-4c9d-8e0f-3a4b5c6d7e8f"
+           *     }
+           */
+          "application/json": components["schemas"]["AccommodationOut"];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description This can't be done in the current state. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "INVALID_STATE",
+           *         "message": "This can't be done in the current state.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_attempt_api_v1_assessment_attempts__attempt_id__get: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Window token from start/resume */
+        "X-Attempt-Token"?: string | null;
+      };
+      path: {
+        attempt_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "current_index": 3,
+           *       "deadline_at": "2026-10-28T09:15:00Z",
+           *       "focus_leaves": 0,
+           *       "id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+           *       "label": "FastAPI · Authentication and authorization, API design and HTTP, Databases and ORM",
+           *       "leave_limit": 2,
+           *       "question": {
+           *         "code_snippet": "1  @app.post('/login')\n2  def login(body: Login):\n",
+           *         "competency": "Authentication and authorization",
+           *         "id": "4f2c5b7d-0e6a-4b8c-9d9e-2f3a4b5c6d7e",
+           *         "index": 3,
+           *         "options": [
+           *           "Line 1",
+           *           "Line 2",
+           *           "Line 3",
+           *           "Line 4"
+           *         ],
+           *         "text": "A login endpoint returns 200 for a wrong password. Which line causes it?",
+           *         "total": 12
+           *       },
+           *       "server_now": "2026-10-28T09:04:31Z",
+           *       "started_at": "2026-10-28T09:00:00Z",
+           *       "state": "OPEN",
+           *       "total": 12
+           *     }
+           */
+          "application/json": components["schemas"]["AttemptStateOut"];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description This can't be done in the current state. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "INVALID_STATE",
+           *         "message": "This can't be done in the current state.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  answer_api_v1_assessment_attempts__attempt_id__answer_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Window token from start/resume */
+        "X-Attempt-Token"?: string | null;
+      };
+      path: {
+        attempt_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["app__schemas__role_assessments__AnswerIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "current_index": 4,
+           *       "question": {
+           *         "code_snippet": "1  @app.post('/login')\n2  def login(body: Login):\n",
+           *         "competency": "Authentication and authorization",
+           *         "id": "4f2c5b7d-0e6a-4b8c-9d9e-2f3a4b5c6d7e",
+           *         "index": 3,
+           *         "options": [
+           *           "Line 1",
+           *           "Line 2",
+           *           "Line 3",
+           *           "Line 4"
+           *         ],
+           *         "text": "A login endpoint returns 200 for a wrong password. Which line causes it?",
+           *         "total": 12
+           *       },
+           *       "status": "NEXT",
+           *       "total": 12
+           *     }
+           */
+          "application/json": components["schemas"]["AnswerOut"];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description This can't be done in the current state. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "INVALID_STATE",
+           *         "message": "This can't be done in the current state.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  finish_api_v1_assessment_attempts__attempt_id__finish_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Window token from start/resume */
+        "X-Attempt-Token"?: string | null;
+      };
+      path: {
+        attempt_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "attempt_id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+           *       "competencies": [
+           *         {
+           *           "code": "authn_authz",
+           *           "name": "Authentication and authorization",
+           *           "score": 85,
+           *           "weight_bp": 3500
+           *         },
+           *         {
+           *           "code": "api_design",
+           *           "name": "API design and HTTP",
+           *           "score": 72,
+           *           "weight_bp": 2000
+           *         }
+           *       ],
+           *       "label": "FastAPI · Authentication and authorization, API design and HTTP, Databases and ORM",
+           *       "outcome": "PASSED",
+           *       "pass_overall": 60,
+           *       "passed": true,
+           *       "score": 78,
+           *       "strongest": "Authentication and authorization",
+           *       "submitted_at": "2026-10-28T09:14:00Z",
+           *       "valid_until": "2027-04-26T09:14:00Z",
+           *       "weakest": "API design and HTTP"
+           *     }
+           */
+          "application/json": components["schemas"]["AssessmentResultOut"];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description This can't be done in the current state. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "INVALID_STATE",
+           *         "message": "This can't be done in the current state.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  focus_event_api_v1_assessment_attempts__attempt_id__focus_events_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Window token from start/resume */
+        "X-Attempt-Token"?: string | null;
+      };
+      path: {
+        attempt_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["FocusEventIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "focus_leaves": 1,
+           *       "leave_limit": 2,
+           *       "status": "WARNING"
+           *     }
+           */
+          "application/json": components["schemas"]["FocusEventOut"];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description This can't be done in the current state. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "INVALID_STATE",
+           *         "message": "This can't be done in the current state.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  heartbeat_api_v1_assessment_attempts__attempt_id__heartbeat_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Window token from start/resume */
+        "X-Attempt-Token"?: string | null;
+      };
+      path: {
+        attempt_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["HeartbeatIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "deadline_at": "2026-10-28T09:15:00Z",
+           *       "server_now": "2026-10-28T09:04:31Z"
+           *     }
+           */
+          "application/json": components["schemas"]["HeartbeatOut"];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description This can't be done in the current state. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "INVALID_STATE",
+           *         "message": "This can't be done in the current state.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_result_api_v1_assessment_attempts__attempt_id__result_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        attempt_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "attempt_id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+           *       "competencies": [
+           *         {
+           *           "code": "authn_authz",
+           *           "name": "Authentication and authorization",
+           *           "score": 85,
+           *           "weight_bp": 3500
+           *         },
+           *         {
+           *           "code": "api_design",
+           *           "name": "API design and HTTP",
+           *           "score": 72,
+           *           "weight_bp": 2000
+           *         }
+           *       ],
+           *       "label": "FastAPI · Authentication and authorization, API design and HTTP, Databases and ORM",
+           *       "outcome": "PASSED",
+           *       "pass_overall": 60,
+           *       "passed": true,
+           *       "score": 78,
+           *       "strongest": "Authentication and authorization",
+           *       "submitted_at": "2026-10-28T09:14:00Z",
+           *       "valid_until": "2027-04-26T09:14:00Z",
+           *       "weakest": "API design and HTTP"
+           *     }
+           */
+          "application/json": components["schemas"]["AssessmentResultOut"];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description This can't be done in the current state. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "INVALID_STATE",
+           *         "message": "This can't be done in the current state.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  resume_api_v1_assessment_attempts__attempt_id__resume_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        attempt_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "attempt_token": "q3Wd8n1Zr0-example-window-token-Xf2k",
+           *       "current_index": 3,
+           *       "deadline_at": "2026-10-28T09:15:00Z",
+           *       "focus_leaves": 0,
+           *       "id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+           *       "label": "FastAPI · Authentication and authorization, API design and HTTP, Databases and ORM",
+           *       "leave_limit": 2,
+           *       "question": {
+           *         "code_snippet": "1  @app.post('/login')\n2  def login(body: Login):\n",
+           *         "competency": "Authentication and authorization",
+           *         "id": "4f2c5b7d-0e6a-4b8c-9d9e-2f3a4b5c6d7e",
+           *         "index": 3,
+           *         "options": [
+           *           "Line 1",
+           *           "Line 2",
+           *           "Line 3",
+           *           "Line 4"
+           *         ],
+           *         "text": "A login endpoint returns 200 for a wrong password. Which line causes it?",
+           *         "total": 12
+           *       },
+           *       "server_now": "2026-10-28T09:04:31Z",
+           *       "started_at": "2026-10-28T09:00:00Z",
+           *       "state": "OPEN",
+           *       "total": 12
+           *     }
+           */
+          "application/json": components["schemas"]["StartedOut"];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description This can't be done in the current state. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "INVALID_STATE",
+           *         "message": "This can't be done in the current state.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
         };
       };
       /** @description Too many requests. Please wait and try again. */
@@ -3960,7 +8182,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["AnswerIn"];
+        "application/json": components["schemas"]["app__schemas__skill_tests__AnswerIn"];
       };
     };
     responses: {
@@ -12175,6 +16397,130 @@ export interface operations {
       };
     };
   };
+  my_history_api_v1_me_role_assessments_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example [
+           *       {
+           *         "attempt_id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+           *         "label": "FastAPI · Authentication and authorization, API design and HTTP, Databases and ORM",
+           *         "outcome": "PASSED",
+           *         "passed": true,
+           *         "score": 78,
+           *         "started_at": "2026-10-28T09:00:00Z",
+           *         "submitted_at": "2026-10-28T09:14:00Z",
+           *         "valid_until": "2027-04-26T09:14:00Z"
+           *       }
+           *     ]
+           */
+          "application/json": components["schemas"]["HistoryItemOut"][];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
   put_skills_api_v1_me_skills_put: {
     parameters: {
       query?: never;
@@ -16341,6 +20687,435 @@ export interface operations {
            *       "error": {
            *         "code": "VERSION_CONFLICT",
            *         "message": "This project changed since you loaded it. Reload and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Send the request body as JSON. */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNSUPPORTED_MEDIA_TYPE",
+           *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  slot_status_api_v1_projects__project_id__slots__slot_id__assessment_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        project_id: string;
+        slot_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "bidding_closes_soon": false,
+           *       "bidding_deadline": "2026-11-05T12:30:00Z",
+           *       "blueprint": {
+           *         "competencies": [
+           *           {
+           *             "code": "authn_authz",
+           *             "name": "Authentication and authorization",
+           *             "question_count": 4,
+           *             "reasons": [
+           *               "Core skill of this role (FastAPI)",
+           *               "The requirements mention: sign in, roles, permissions"
+           *             ],
+           *             "weight_bp": 3500
+           *           },
+           *           {
+           *             "code": "api_design",
+           *             "name": "API design and HTTP",
+           *             "question_count": 3,
+           *             "reasons": [
+           *               "Core skill of this role (FastAPI)"
+           *             ],
+           *             "weight_bp": 2000
+           *           }
+           *         ],
+           *         "extra_time_seconds": 0,
+           *         "floor": 40,
+           *         "heavy_weight": 20,
+           *         "label": "FastAPI · Authentication and authorization, API design and HTTP, Databases and ORM",
+           *         "pass_overall": 60,
+           *         "question_count": 12,
+           *         "time_limit_seconds": 900
+           *       },
+           *       "message": "As a new developer on DevSync, you show your competency for this role with a short assessment.",
+           *       "rules_version": 1,
+           *       "status": "REQUIRED"
+           *     }
+           */
+          "application/json": components["schemas"]["AssessmentStatusOut"];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  start_api_v1_projects__project_id__slots__slot_id__assessment_attempts_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description UUID; a repeat resumes the attempt */
+        "Idempotency-Key"?: string | null;
+      };
+      path: {
+        project_id: string;
+        slot_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["StartIn"];
+      };
+    };
+    responses: {
+      /** @description Your open attempt for this role, with a new window token */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "attempt_token": "q3Wd8n1Zr0-example-window-token-Xf2k",
+           *       "current_index": 3,
+           *       "deadline_at": "2026-10-28T09:15:00Z",
+           *       "focus_leaves": 0,
+           *       "id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+           *       "label": "FastAPI · Authentication and authorization, API design and HTTP, Databases and ORM",
+           *       "leave_limit": 2,
+           *       "question": {
+           *         "code_snippet": "1  @app.post('/login')\n2  def login(body: Login):\n",
+           *         "competency": "Authentication and authorization",
+           *         "id": "4f2c5b7d-0e6a-4b8c-9d9e-2f3a4b5c6d7e",
+           *         "index": 3,
+           *         "options": [
+           *           "Line 1",
+           *           "Line 2",
+           *           "Line 3",
+           *           "Line 4"
+           *         ],
+           *         "text": "A login endpoint returns 200 for a wrong password. Which line causes it?",
+           *         "total": 12
+           *       },
+           *       "server_now": "2026-10-28T09:04:31Z",
+           *       "started_at": "2026-10-28T09:00:00Z",
+           *       "state": "OPEN",
+           *       "total": 12
+           *     }
+           */
+          "application/json": unknown;
+        };
+      };
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "attempt_token": "q3Wd8n1Zr0-example-window-token-Xf2k",
+           *       "current_index": 3,
+           *       "deadline_at": "2026-10-28T09:15:00Z",
+           *       "focus_leaves": 0,
+           *       "id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+           *       "label": "FastAPI · Authentication and authorization, API design and HTTP, Databases and ORM",
+           *       "leave_limit": 2,
+           *       "question": {
+           *         "code_snippet": "1  @app.post('/login')\n2  def login(body: Login):\n",
+           *         "competency": "Authentication and authorization",
+           *         "id": "4f2c5b7d-0e6a-4b8c-9d9e-2f3a4b5c6d7e",
+           *         "index": 3,
+           *         "options": [
+           *           "Line 1",
+           *           "Line 2",
+           *           "Line 3",
+           *           "Line 4"
+           *         ],
+           *         "text": "A login endpoint returns 200 for a wrong password. Which line causes it?",
+           *         "total": 12
+           *       },
+           *       "server_now": "2026-10-28T09:04:31Z",
+           *       "started_at": "2026-10-28T09:00:00Z",
+           *       "state": "OPEN",
+           *       "total": 12
+           *     }
+           */
+          "application/json": components["schemas"]["StartedOut"];
+        };
+      };
+      /** @description The request could not be understood. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "BAD_REQUEST",
+           *         "message": "The request could not be understood.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description This can't be done in the current state. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "INVALID_STATE",
+           *         "message": "This can't be done in the current state.",
            *         "request_id": "req_123"
            *       }
            *     }

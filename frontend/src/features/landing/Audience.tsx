@@ -34,7 +34,7 @@ const CONTENT: Record<
     points: [
       [
         "A fair first chance",
-        "Clients can reserve team places for newcomers; a skill test counts.",
+        "Clients can reserve team places for newcomers; a role assessment counts.",
       ],
       ["See why you weren’t picked", "The main gap, a hint and the price that would have won."],
       [

@@ -12,6 +12,7 @@ import type {
 } from "@/api/types";
 import { solveChallenge } from "@/lib/captcha";
 import { pageLoad } from "@/lib/redirects";
+import { clearSessionDrafts } from "@/lib/storage";
 
 export const meKey = ["me"] as const;
 
@@ -116,6 +117,7 @@ export function useLogout(all = false) {
     meta: { inlineErrors: true },
     mutationFn: () => api<undefined>(all ? "/auth/logout-all" : "/auth/logout", { method: "POST" }),
     onSettled: () => {
+      clearSessionDrafts(); // bid drafts and pending leaves belong to this session only
       pageLoad.to("/");
     },
   });

@@ -193,8 +193,35 @@ function Profile({ p, isMe }: { p: PublicProfile; isMe: boolean }) {
         </div>
         <aside className="space-y-6">
           <ReputationCard p={p} />
+          {p.role_assessments?.length ? (
+            <Card>
+              <CardHeader
+                title="Verified role assessments"
+                description="Assessment results — not completed work."
+              />
+              <ul className="space-y-4 p-5">
+                {p.role_assessments.map((r) => (
+                  <li key={`${r.label}-${r.at}`} className="flex items-center gap-4">
+                    <RingProgress
+                      value={Number(r.score) * 100}
+                      size={52}
+                      label={`${r.label} assessment score`}
+                    >
+                      {formatScore(Number(r.score))}
+                    </RingProgress>
+                    <div className="min-w-0">
+                      <p className="text-body-sm font-medium text-text">{r.label}</p>
+                      <p className="text-caption text-text-muted">
+                        Passed {formatDate(r.at)}, valid until {formatDate(r.valid_until)}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
           <Card>
-            <CardHeader title="Verified scores" description="From timed DevSync skill tests." />
+            <CardHeader title="Practice results" description="From DevSync practice tests." />
             {p.verified_scores.length ? (
               <ul className="space-y-4 p-5">
                 {p.verified_scores.map((v) => (
@@ -208,13 +235,13 @@ function Profile({ p, isMe }: { p: PublicProfile; isMe: boolean }) {
                     </RingProgress>
                     <div>
                       <p className="text-body-sm font-medium text-text">{v.name}</p>
-                      <p className="text-caption text-text-muted">Tested {formatDate(v.at)}</p>
+                      <p className="text-caption text-text-muted">Practice, {formatDate(v.at)}</p>
                     </div>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="p-5 text-body-sm text-text-muted">No tests taken yet.</p>
+              <p className="p-5 text-body-sm text-text-muted">No practice tests taken yet.</p>
             )}
           </Card>
           <Card>

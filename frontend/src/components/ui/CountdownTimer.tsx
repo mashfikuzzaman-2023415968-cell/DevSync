@@ -24,17 +24,32 @@ export function secondsLeft(deadline: Date, offsetMs: number, now = Date.now()):
   return Math.max(0, (deadline.getTime() - (now + offsetMs)) / 1000);
 }
 
+function minutesWords(seconds: number): string {
+  const minutes = Math.round(seconds / 60);
+  return minutes === 1 ? "1 minute" : `${String(minutes)} minutes`;
+}
+
 export function CountdownTimer({
   deadline,
   offsetMs = 0,
   onExpire,
   className,
+  warnAt = WARN_SECONDS,
+  dangerAt = DANGER_SECONDS,
+  announceAt,
 }: {
   deadline: Date;
   /** server time − client time, in ms. */
   offsetMs?: number;
   onExpire?: () => void;
   className?: string;
+  /** Amber from this many seconds left (default 60). */
+  warnAt?: number;
+  /** Rose from this many seconds left (default 15). */
+  dangerAt?: number;
+  /** Seconds-left marks announced to screen readers once each (e.g. 300, 120, 60); by default
+   * only the two colour changes are announced. */
+  announceAt?: readonly number[];
 }) {
   const [left, setLeft] = useState(() => secondsLeft(deadline, offsetMs));
   const expired = useRef(false);
@@ -55,13 +70,19 @@ export function CountdownTimer({
     };
   }, [deadline, offsetMs, onExpire]);
 
-  const level = left <= DANGER_SECONDS ? "danger" : left <= WARN_SECONDS ? "warning" : "normal";
-  const announcement =
-    level === "danger"
-      ? "Less than 15 seconds left."
-      : level === "warning"
-        ? "Less than a minute left."
-        : "";
+  const level = left <= dangerAt ? "danger" : left <= warnAt ? "warning" : "normal";
+  let announcement: string;
+  if (announceAt) {
+    const mark = [...announceAt].sort((a, b) => a - b).find((m) => left <= m);
+    announcement = mark !== undefined ? `${minutesWords(mark)} left.` : "";
+  } else {
+    announcement =
+      level === "danger"
+        ? "Less than 15 seconds left."
+        : level === "warning"
+          ? "Less than a minute left."
+          : "";
+  }
   const Icon = level === "normal" ? Clock : AlarmClock;
   return (
     <div
@@ -80,7 +101,7 @@ export function CountdownTimer({
       </span>
       {level !== "normal" ? (
         <span className="text-body-sm font-medium">
-          {level === "danger" ? "Hurry" : "Under a minute"}
+          {level === "danger" ? "Hurry" : warnAt > WARN_SECONDS ? "Almost done" : "Under a minute"}
         </span>
       ) : null}
       <span className="sr-only" aria-live="polite">

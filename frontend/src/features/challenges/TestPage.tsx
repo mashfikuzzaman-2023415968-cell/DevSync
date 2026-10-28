@@ -36,7 +36,7 @@ function Result({ attempt, result }: { attempt: Attempt; result: AttemptResult |
       </h2>
       <p className="mt-2 flex items-center gap-1.5 text-body text-text-muted">
         <CircleCheck className="size-4 text-success" aria-hidden="true" />
-        Added to your profile as a verified score.
+        Added to your profile as a practice result.
       </p>
       <p className="mt-1 text-body-sm text-text-muted">You can take this test again in 30 days.</p>
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -44,7 +44,7 @@ function Result({ attempt, result }: { attempt: Attempt; result: AttemptResult |
           <Link to="/dev/profile">See your profile</Link>
         </Button>
         <Button asChild variant="outline">
-          <Link to="/dev/challenges">Back to challenges</Link>
+          <Link to="/dev/challenges">Back to practice tests</Link>
         </Button>
       </div>
     </Card>
@@ -209,7 +209,7 @@ export default function TestPage() {
     [refetch],
   );
 
-  const title = attempt.data?.title ?? "Skill test";
+  const title = attempt.data?.title ?? "Practice test";
   return (
     <>
       <PageHeader
@@ -220,7 +220,7 @@ export default function TestPage() {
             className="inline-flex min-h-11 items-center gap-1 text-body-sm text-text-muted hover:text-text"
           >
             <ArrowLeft className="size-4" aria-hidden="true" />
-            Skill challenges
+            Practice tests
           </Link>
         }
       />
@@ -234,7 +234,7 @@ export default function TestPage() {
           {attempt.error instanceof ApiError && attempt.error.status === 404 ? (
             <ErrorState
               title="We couldn’t find this test"
-              description="It may belong to another account. Start a test from Skill challenges."
+              description="It may belong to another account. Start a test from Practice tests."
             />
           ) : (
             <ErrorState

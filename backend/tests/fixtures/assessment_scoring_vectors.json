@@ -1,0 +1,3319 @@
+{
+ "_note": "Shared scoring cases: the Python reference (app/algorithms/assessment_scoring.py) and the SQL scoring (role_score_core, migration 0011) must both give these results (role assessment spec \u00a75.3, \u00a717.2).",
+ "vectors": [
+  {
+   "name": "all_correct",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 5000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 5000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 10000,
+    "passed": true,
+    "score": "1",
+    "score_bp": [
+     10000,
+     10000
+    ]
+   }
+  },
+  {
+   "name": "all_wrong",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 5000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 5000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": false
+    }
+   ],
+   "expect": {
+    "overall_bp": 0,
+    "passed": false,
+    "score": "0",
+    "score_bp": [
+     0,
+     0
+    ]
+   }
+  },
+  {
+   "name": "exactly_60_and_40",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 5000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 5000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": false
+    }
+   ],
+   "expect": {
+    "overall_bp": 7000,
+    "passed": true,
+    "score": "0.7",
+    "score_bp": [
+     10000,
+     4000
+    ]
+   }
+  },
+  {
+   "name": "heavy_below_floor",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 8000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 2000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": false
+    }
+   ],
+   "expect": {
+    "overall_bp": 8666,
+    "passed": false,
+    "score": "0.866",
+    "score_bp": [
+     10000,
+     3333
+    ]
+   }
+  },
+  {
+   "name": "light_at_zero_passes",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 8500
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 1500
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": false
+    }
+   ],
+   "expect": {
+    "overall_bp": 8500,
+    "passed": true,
+    "score": "0.85",
+    "score_bp": [
+     10000,
+     0
+    ]
+   }
+  },
+  {
+   "name": "ended_early_high",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": true,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 5000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 5000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 3,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 10000,
+    "passed": false,
+    "score": "1",
+    "score_bp": [
+     10000,
+     10000
+    ]
+   }
+  },
+  {
+   "name": "weights_2_3_4",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 10000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 6666,
+    "passed": true,
+    "score": "0.666",
+    "score_bp": [
+     6666
+    ]
+   }
+  },
+  {
+   "name": "just_below_pass",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 10000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": false
+    }
+   ],
+   "expect": {
+    "overall_bp": 6363,
+    "passed": true,
+    "score": "0.636",
+    "score_bp": [
+     6363
+    ]
+   }
+  },
+  {
+   "name": "six_competencies",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 2500
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 2000
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 1500
+    },
+    {
+     "id": "d",
+     "code": "d",
+     "weight_bp": 1500
+    },
+    {
+     "id": "e",
+     "code": "e",
+     "weight_bp": 1500
+    },
+    {
+     "id": "f",
+     "code": "f",
+     "weight_bp": 1000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "e",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "f",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "e",
+     "difficulty": 3,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 6499,
+    "passed": true,
+    "score": "0.649",
+    "score_bp": [
+     5555,
+     5555,
+     10000,
+     0,
+     10000,
+     10000
+    ]
+   }
+  },
+  {
+   "name": "random_9",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 4000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 2500
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 3500
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 3,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 7736,
+    "passed": true,
+    "score": "0.773",
+    "score_bp": [
+     5384,
+     8333,
+     10000
+    ]
+   }
+  },
+  {
+   "name": "random_10",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 1500
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 3000
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 3000
+    },
+    {
+     "id": "d",
+     "code": "d",
+     "weight_bp": 2500
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "d",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "d",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 2,
+     "correct": false
+    }
+   ],
+   "expect": {
+    "overall_bp": 3823,
+    "passed": false,
+    "score": "0.382",
+    "score_bp": [
+     7500,
+     2857,
+     4285,
+     2222
+    ]
+   }
+  },
+  {
+   "name": "random_11",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 1500
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 2000
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 2000
+    },
+    {
+     "id": "d",
+     "code": "d",
+     "weight_bp": 1000
+    },
+    {
+     "id": "e",
+     "code": "e",
+     "weight_bp": 2500
+    },
+    {
+     "id": "f",
+     "code": "f",
+     "weight_bp": 1000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "e",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "f",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "e",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "f",
+     "difficulty": 2,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 7500,
+    "passed": true,
+    "score": "0.75",
+    "score_bp": [
+     0,
+     5000,
+     10000,
+     10000,
+     10000,
+     10000
+    ]
+   }
+  },
+  {
+   "name": "random_12",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 2000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 2500
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 1500
+    },
+    {
+     "id": "d",
+     "code": "d",
+     "weight_bp": 1000
+    },
+    {
+     "id": "e",
+     "code": "e",
+     "weight_bp": 2000
+    },
+    {
+     "id": "f",
+     "code": "f",
+     "weight_bp": 1000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "e",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "f",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "d",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "e",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "f",
+     "difficulty": 2,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 6999,
+    "passed": false,
+    "score": "0.699",
+    "score_bp": [
+     10000,
+     10000,
+     3333,
+     10000,
+     0,
+     10000
+    ]
+   }
+  },
+  {
+   "name": "random_13",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 2500
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 2500
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 2000
+    },
+    {
+     "id": "d",
+     "code": "d",
+     "weight_bp": 3000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "d",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "d",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 1,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 4829,
+    "passed": false,
+    "score": "0.482",
+    "score_bp": [
+     7777,
+     5714,
+     3000,
+     2857
+    ]
+   }
+  },
+  {
+   "name": "random_14",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 4000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 4000
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 2000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 7933,
+    "passed": true,
+    "score": "0.793",
+    "score_bp": [
+     10000,
+     7142,
+     5384
+    ]
+   }
+  },
+  {
+   "name": "random_15",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 2000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 2500
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 3500
+    },
+    {
+     "id": "d",
+     "code": "d",
+     "weight_bp": 2000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "d",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "d",
+     "difficulty": 1,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 5797,
+    "passed": false,
+    "score": "0.579",
+    "score_bp": [
+     6666,
+     3636,
+     4444,
+     10000
+    ]
+   }
+  },
+  {
+   "name": "random_16",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 2000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 1500
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 2500
+    },
+    {
+     "id": "d",
+     "code": "d",
+     "weight_bp": 2000
+    },
+    {
+     "id": "e",
+     "code": "e",
+     "weight_bp": 2000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "d",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "e",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "e",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 4570,
+    "passed": false,
+    "score": "0.457",
+    "score_bp": [
+     10000,
+     6250,
+     3333,
+     0,
+     4000
+    ]
+   }
+  },
+  {
+   "name": "random_17",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 1000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 4000
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 2500
+    },
+    {
+     "id": "d",
+     "code": "d",
+     "weight_bp": 2500
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "d",
+     "difficulty": 3,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 5680,
+    "passed": false,
+    "score": "0.568",
+    "score_bp": [
+     6250,
+     6666,
+     5555,
+     4000
+    ]
+   }
+  },
+  {
+   "name": "random_18",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 2000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 3500
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 2000
+    },
+    {
+     "id": "d",
+     "code": "d",
+     "weight_bp": 2500
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "d",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "d",
+     "difficulty": 1,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 7500,
+    "passed": false,
+    "score": "0.75",
+    "score_bp": [
+     10000,
+     10000,
+     2500,
+     6000
+    ]
+   }
+  },
+  {
+   "name": "random_19",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 1000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 1500
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 2000
+    },
+    {
+     "id": "d",
+     "code": "d",
+     "weight_bp": 1500
+    },
+    {
+     "id": "e",
+     "code": "e",
+     "weight_bp": 2000
+    },
+    {
+     "id": "f",
+     "code": "f",
+     "weight_bp": 2000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "e",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "f",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "d",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "e",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "f",
+     "difficulty": 3,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 7657,
+    "passed": true,
+    "score": "0.765",
+    "score_bp": [
+     10000,
+     5714,
+     6000,
+     4000,
+     10000,
+     10000
+    ]
+   }
+  },
+  {
+   "name": "random_20",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 3500
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 3500
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 3000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": false
+    }
+   ],
+   "expect": {
+    "overall_bp": 6999,
+    "passed": true,
+    "score": "0.699",
+    "score_bp": [
+     7857,
+     8333,
+     4444
+    ]
+   }
+  },
+  {
+   "name": "random_21",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 2000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 1500
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 1000
+    },
+    {
+     "id": "d",
+     "code": "d",
+     "weight_bp": 1500
+    },
+    {
+     "id": "e",
+     "code": "e",
+     "weight_bp": 4000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "d",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "e",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "e",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 4863,
+    "passed": false,
+    "score": "0.486",
+    "score_bp": [
+     3750,
+     10000,
+     4000,
+     3333,
+     4285
+    ]
+   }
+  },
+  {
+   "name": "random_22",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 2000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 1500
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 1500
+    },
+    {
+     "id": "d",
+     "code": "d",
+     "weight_bp": 1500
+    },
+    {
+     "id": "e",
+     "code": "e",
+     "weight_bp": 2000
+    },
+    {
+     "id": "f",
+     "code": "f",
+     "weight_bp": 1500
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "d",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "e",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "f",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "e",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "f",
+     "difficulty": 3,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 8650,
+    "passed": true,
+    "score": "0.865",
+    "score_bp": [
+     10000,
+     10000,
+     6000,
+     10000,
+     10000,
+     5000
+    ]
+   }
+  },
+  {
+   "name": "random_23",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 2000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 1500
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 1000
+    },
+    {
+     "id": "d",
+     "code": "d",
+     "weight_bp": 2500
+    },
+    {
+     "id": "e",
+     "code": "e",
+     "weight_bp": 3000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "e",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "e",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": false
+    }
+   ],
+   "expect": {
+    "overall_bp": 9571,
+    "passed": true,
+    "score": "0.957",
+    "score_bp": [
+     10000,
+     7142,
+     10000,
+     10000,
+     10000
+    ]
+   }
+  },
+  {
+   "name": "random_24",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 2500
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 2000
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 2500
+    },
+    {
+     "id": "d",
+     "code": "d",
+     "weight_bp": 3000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "d",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 2,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 7737,
+    "passed": false,
+    "score": "0.773",
+    "score_bp": [
+     10000,
+     2857,
+     6666,
+     10000
+    ]
+   }
+  },
+  {
+   "name": "random_25",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 2000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 4000
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 4000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": false
+    }
+   ],
+   "expect": {
+    "overall_bp": 6363,
+    "passed": false,
+    "score": "0.636",
+    "score_bp": [
+     8181,
+     10000,
+     1818
+    ]
+   }
+  },
+  {
+   "name": "random_26",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 1500
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 2000
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 2500
+    },
+    {
+     "id": "d",
+     "code": "d",
+     "weight_bp": 2500
+    },
+    {
+     "id": "e",
+     "code": "e",
+     "weight_bp": 1500
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "d",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "e",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "e",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": false
+    }
+   ],
+   "expect": {
+    "overall_bp": 8250,
+    "passed": true,
+    "score": "0.825",
+    "score_bp": [
+     10000,
+     6250,
+     6000,
+     10000,
+     10000
+    ]
+   }
+  },
+  {
+   "name": "random_27",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 2000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 2500
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 3000
+    },
+    {
+     "id": "d",
+     "code": "d",
+     "weight_bp": 2500
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "d",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "d",
+     "difficulty": 3,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 6033,
+    "passed": false,
+    "score": "0.603",
+    "score_bp": [
+     6000,
+     6666,
+     2222,
+     10000
+    ]
+   }
+  },
+  {
+   "name": "random_28",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 1000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 2000
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 2000
+    },
+    {
+     "id": "d",
+     "code": "d",
+     "weight_bp": 2000
+    },
+    {
+     "id": "e",
+     "code": "e",
+     "weight_bp": 1500
+    },
+    {
+     "id": "f",
+     "code": "f",
+     "weight_bp": 1500
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "d",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "e",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "f",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "e",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "f",
+     "difficulty": 3,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 6606,
+    "passed": false,
+    "score": "0.66",
+    "score_bp": [
+     10000,
+     6666,
+     3333,
+     10000,
+     5000,
+     5714
+    ]
+   }
+  },
+  {
+   "name": "random_29",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 2000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 4000
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 4000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 6597,
+    "passed": true,
+    "score": "0.659",
+    "score_bp": [
+     4444,
+     7000,
+     7272
+    ]
+   }
+  },
+  {
+   "name": "random_30",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 2000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 2500
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 2000
+    },
+    {
+     "id": "d",
+     "code": "d",
+     "weight_bp": 3500
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 2,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 8288,
+    "passed": true,
+    "score": "0.828",
+    "score_bp": [
+     7000,
+     5555,
+     10000,
+     10000
+    ]
+   }
+  },
+  {
+   "name": "random_31",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 2500
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 1500
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 2000
+    },
+    {
+     "id": "d",
+     "code": "d",
+     "weight_bp": 2500
+    },
+    {
+     "id": "e",
+     "code": "e",
+     "weight_bp": 1500
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "e",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "e",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 7678,
+    "passed": true,
+    "score": "0.767",
+    "score_bp": [
+     10000,
+     2857,
+     10000,
+     5000,
+     10000
+    ]
+   }
+  },
+  {
+   "name": "random_32",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 2500
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 4000
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 3500
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": false
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 3,
+     "correct": true
+    }
+   ],
+   "expect": {
+    "overall_bp": 7115,
+    "passed": true,
+    "score": "0.711",
+    "score_bp": [
+     10000,
+     7500,
+     4615
+    ]
+   }
+  },
+  {
+   "name": "random_33",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": true,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 2000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 1000
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 2500
+    },
+    {
+     "id": "d",
+     "code": "d",
+     "weight_bp": 2500
+    },
+    {
+     "id": "e",
+     "code": "e",
+     "weight_bp": 2000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "d",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "e",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "d",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "e",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": false
+    }
+   ],
+   "expect": {
+    "overall_bp": 3894,
+    "passed": false,
+    "score": "0.389",
+    "score_bp": [
+     5555,
+     7500,
+     0,
+     3333,
+     6000
+    ]
+   }
+  },
+  {
+   "name": "random_34",
+   "rule": {
+    "pass_overall_bp": 6000,
+    "floor_bp": 4000,
+    "heavy_weight_bp": 2000
+   },
+   "ended_early": false,
+   "competencies": [
+    {
+     "id": "a",
+     "code": "a",
+     "weight_bp": 3000
+    },
+    {
+     "id": "b",
+     "code": "b",
+     "weight_bp": 2500
+    },
+    {
+     "id": "c",
+     "code": "c",
+     "weight_bp": 1500
+    },
+    {
+     "id": "d",
+     "code": "d",
+     "weight_bp": 3000
+    }
+   ],
+   "questions": [
+    {
+     "competency": "a",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 1,
+     "correct": false
+    },
+    {
+     "competency": "a",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "b",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 2,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "a",
+     "difficulty": 3,
+     "correct": false
+    },
+    {
+     "competency": "b",
+     "difficulty": 3,
+     "correct": true
+    },
+    {
+     "competency": "c",
+     "difficulty": 1,
+     "correct": true
+    },
+    {
+     "competency": "d",
+     "difficulty": 1,
+     "correct": false
+    }
+   ],
+   "expect": {
+    "overall_bp": 6666,
+    "passed": false,
+    "score": "0.666",
+    "score_bp": [
+     5555,
+     10000,
+     10000,
+     3333
+    ]
+   }
+  }
+ ]
+}

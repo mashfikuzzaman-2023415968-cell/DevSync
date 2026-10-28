@@ -1,5 +1,6 @@
-/** Skill challenges (spec §13.5 #14): timed multiple-choice tests that turn into verified
- * evidence on the profile. Coding challenges join in Phase 13. */
+/** Practice tests (spec §13.5 #14, role assessment spec §11.5): timed multiple-choice tests whose
+ * results show on the profile as practice results. Newcomers bid on a role assessment instead
+ * (taken from each project's bid sheet). Coding challenges join in Phase 13. */
 import { CalendarClock, ListChecks, Play, RotateCcw } from "lucide-react";
 import { useNavigate } from "react-router";
 import { ApiError } from "@/api/client";
@@ -104,8 +105,8 @@ export default function ChallengesPage() {
   return (
     <>
       <PageHeader
-        title="Skill challenges"
-        description="Pass a timed test to show clients a verified score, even before your first review."
+        title="Practice tests"
+        description="Practice tests help you prepare and appear on your profile as practice results. Bidding as a newcomer needs the role assessment shown on each project."
       />
       {tests.isPending ? (
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3" aria-hidden="true">
