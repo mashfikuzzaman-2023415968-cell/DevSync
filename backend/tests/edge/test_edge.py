@@ -69,6 +69,14 @@ def test_style_nonce_matches_the_page_and_changes_per_response(edge: httpx.Clien
     assert len(set(nonces)) == len(nonces)
 
 
+def test_permissions_policy_allows_full_screen(edge: httpx.Client) -> None:
+    """The role assessment opens in full screen (role assessment spec §7.2, §15): the site's own
+    origin must keep it, so the policy never lists `fullscreen`."""
+    for path in ("/", "/dev/projects/x", "/api/v1/health"):
+        policy = edge.get(path).headers.get("permissions-policy", "")
+        assert "fullscreen" not in policy, (path, policy)
+
+
 def test_server_version_is_hidden(edge: httpx.Client) -> None:
     server = edge.get("/").headers.get("server", "")
     assert not any(ch.isdigit() for ch in server)

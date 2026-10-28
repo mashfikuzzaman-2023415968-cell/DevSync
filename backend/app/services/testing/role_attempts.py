@@ -167,15 +167,16 @@ async def answer_key(attempt_id: uuid.UUID) -> list[dict[str, object]] | None:
         attempt = await db.get(TestAttempt, attempt_id)
         if attempt is None or attempt.blueprint_id is None:
             return None
+        question_ids = list(attempt.question_ids)  # read before the session closes
         rows = await db.execute(
             select(Question.id, Question.correct_index, Competency.name)
             .outerjoin(Competency, Competency.id == Question.competency_id)
-            .where(Question.id.in_(list(attempt.question_ids)))
+            .where(Question.id.in_(question_ids))
         )
         by_id = {qid: (int(idx), name) for qid, idx, name in rows.all()}
     return [
         {"index": i, "question_id": str(qid), "competency": by_id[qid][1], "answer": by_id[qid][0]}
-        for i, qid in enumerate(attempt.question_ids)
+        for i, qid in enumerate(question_ids)
     ]
 
 

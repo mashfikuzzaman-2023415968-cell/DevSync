@@ -11,9 +11,10 @@ from __future__ import annotations
 import uuid
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Header, Response, status
+from fastapi import APIRouter, Depends, Header, Request, Response, status
 
 from app.api.deps import acting, rate_limit
+from app.core.errors import DomainError, ErrorCode
 from app.schemas.common import error_responses
 from app.schemas.role_assessments import (
     AnswerIn,
@@ -32,7 +33,16 @@ from app.schemas.role_assessments import (
 from app.services import role_assessments as svc
 from app.services.context import Ctx
 
-router = APIRouter(tags=["role-assessments"])
+MAX_BODY_BYTES = 2048  # every request body here is a few fields (role assessment spec §15)
+
+
+async def small_body(request: Request) -> None:
+    """Refuse a request body over 2 KB (the app-wide limit is 256 KB)."""
+    if len(await request.body()) > MAX_BODY_BYTES:
+        raise DomainError(code=ErrorCode.PAYLOAD_TOO_LARGE)
+
+
+router = APIRouter(tags=["role-assessments"], dependencies=[Depends(small_body)])
 Taker = Annotated[Ctx, Depends(acting("assessment.take"))]
 AttemptToken = Annotated[
     str | None,

@@ -2875,7 +2875,7 @@
             "type": "array"
           },
           "verified_scores": {
-            "description": "Practice-test results (best per skill); not evidence for bidding.",
+            "description": "Practice-test and admin-verified results (best per skill); role assessments are listed separately.",
             "items": {
               "$ref": "#/components/schemas/VerifiedScore"
             },

@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import cast, column, func, literal, select
+from sqlalchemy import SmallInteger, cast, column, func, literal, select
 from sqlalchemy.dialects.postgresql import BYTEA, ENUM, JSONB
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,6 +36,11 @@ _REVIEW = ENUM(ReviewLevel, name="review_level", create_type=False,
 
 def _review(level: ReviewLevel) -> Any:
     return literal(level.value, type_=_REVIEW)
+
+
+def _small(value: int) -> Any:
+    """A smallint argument (the definer's signature; an int would match no function)."""
+    return literal(value, type_=SmallInteger)
 
 
 def _bytes(value: bytes | None) -> Any:
@@ -209,8 +214,8 @@ async def start(
     stmt: Any = select(column("attempt_id"), column("deadline_at")).select_from(
         func.start_role_attempt(
             blueprint_id, [uuid.UUID(q) for q in question_ids], now, seed, project_id, slot_id,
-            _bytes(token_hash), extra_time, rules_version, retake_days, leave_limit,
-            validity_days, reused_seen, _review(min_review),
+            _bytes(token_hash), extra_time, _small(rules_version), retake_days,
+            _small(leave_limit), _small(validity_days), reused_seen, _review(min_review),
         )
     )  # fmt: skip
     row = (await db.execute(stmt)).one()
