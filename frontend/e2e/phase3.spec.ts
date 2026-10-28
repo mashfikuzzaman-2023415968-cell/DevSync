@@ -103,9 +103,9 @@ test("developer completes a profile with an image, takes a test and sees the sco
   await page.getByRole("button", { name: "Submit test" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Submit test" }).click();
   await expect(page.getByText(/of 10 correct/)).toBeVisible();
-  await expect(page.getByText("Added to your profile as a verified score.")).toBeVisible();
+  await expect(page.getByText("Added to your profile as a practice result.")).toBeVisible();
 
-  // The public profile shows the verified score and the image.
+  // The public profile shows the practice result and the image.
   await page.goto(`/d/${dev.userId}`);
   await expect(page.getByRole("heading", { level: 1, name: "Nadia Rahman" })).toBeVisible();
   await expect(page.getByRole("progressbar", { name: "React test score" })).toBeVisible();

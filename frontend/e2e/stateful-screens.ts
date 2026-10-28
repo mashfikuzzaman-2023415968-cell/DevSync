@@ -104,7 +104,7 @@ export const STATEFUL_SCREENS: StatefulScreen[] = [
     },
   },
   {
-    // The timed skill test, with the countdown running and the first question shown.
+    // The timed practice test, with the countdown running and the first question shown.
     name: "timed-test",
     randomContent: true,
     prepare: async (page, baseURL) => {

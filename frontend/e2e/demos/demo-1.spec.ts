@@ -24,6 +24,7 @@ import { join } from "node:path";
 import type { Page, TestInfo } from "@playwright/test";
 import { closeDialog, expect, optionChosen, test } from "../test";
 import {
+  addRoleResult,
   addSkillEvidence,
   apiSignIn,
   csrfHeaders,
@@ -32,6 +33,7 @@ import {
   PASSWORD,
   seedUser,
   signIn,
+  takeRoleAssessment,
   totpNow,
   uniqueEmail,
   uniquePhone,
@@ -162,7 +164,7 @@ test("Demo 1 — accounts, planning, profiles, sealed bidding and filtering @dem
   page,
   baseURL,
 }, info) => {
-  test.setTimeout(420_000);
+  test.setTimeout(600_000);
   const base = baseURL ?? "";
   const shots = new Shots(page, info);
 
@@ -279,7 +281,7 @@ test("Demo 1 — accounts, planning, profiles, sealed bidding and filtering @dem
   await expect(page.getByLabel("Frontend: days 4–13, slack 4 days")).toBeVisible();
   await shots.take("plan", "The published plan (Gantt with the critical path)");
 
-  // 5. A newcomer completes a profile and passes the timed React test.
+  // 5. A newcomer completes a profile and takes the timed React practice test.
   await page.context().clearCookies();
   const newcomer = await apiSignIn(page, base, "DEVELOPER", "Tania Sultana");
   await page.goto("/dev/profile");
@@ -311,7 +313,7 @@ test("Demo 1 — accounts, planning, profiles, sealed bidding and filtering @dem
   expect(keyResponse.ok()).toBe(true);
   const { answers } = (await keyResponse.json()) as { answers: number[] };
   expect(answers).toHaveLength(10);
-  await shots.take("skill-test", "The timed React test (server-side timer)");
+  await shots.take("skill-test", "The timed React practice test (server-side timer)");
   for (const [i, choice] of answers.entries()) {
     await page.getByRole("radio").nth(choice).click();
     await expect(
@@ -322,8 +324,8 @@ test("Demo 1 — accounts, planning, profiles, sealed bidding and filtering @dem
   await page.getByRole("button", { name: "Submit test" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Submit test" }).click();
   await expect(page.getByText(/10 of 10 correct/)).toBeVisible();
-  await expect(page.getByText("Added to your profile as a verified score.")).toBeVisible();
-  await shots.take("skill-test-passed", "Passed: the score is added as verified evidence");
+  await expect(page.getByText("Added to your profile as a practice result.")).toBeVisible();
+  await shots.take("skill-test-passed", "The practice result is added to the profile");
 
   // 6. The newcomer searches and filters projects, then places a sealed bid.
   await page.goto("/dev/find");
@@ -336,6 +338,14 @@ test("Demo 1 — accounts, planning, profiles, sealed bidding and filtering @dem
   await page.goto(`/dev/projects/${projectId}`);
   await expect(page.getByRole("heading", { name: TITLE })).toBeVisible();
   await fillBid(page, "React", "18000", "20");
+  // A newcomer bids on a role assessment for this role, not on the practice test (§14.2).
+  await expect(page.getByText("Role assessment required")).toBeVisible({ timeout: 10_000 });
+  await shots.take("assessment-required", "Newcomers take a role assessment for this role");
+  // Tania's assessment is taken off screen here; Rafsan takes one live in step 10.
+  await addRoleResult(page.request, base, newcomer.userId, projectId, "React", "pass");
+  await page.reload();
+  await fillBid(page, "React", "18000", "20");
+  await expect(page.getByText(/Role assessment passed/)).toBeVisible({ timeout: 10_000 });
   await expect(page.getByText(/meet every requirement/i)).toBeVisible({ timeout: 10_000 });
   await shots.take("bid-eligible", "Live eligibility preview: the newcomer qualifies");
   await page.getByRole("button", { name: "Place sealed bid" }).click();
@@ -345,6 +355,7 @@ test("Demo 1 — accounts, planning, profiles, sealed bidding and filtering @dem
   await page.context().clearCookies();
   const second = await apiSignIn(page, base, "DEVELOPER", "Farid Ahmed");
   await addSkillEvidence(page.request, base, second.userId, "React", 0.9);
+  await addRoleResult(page.request, base, second.userId, projectId, "React", "pass");
   await page.goto("/dev/bids");
   await expect(page.getByText("No bids yet")).toBeVisible();
   await page.goto(`/dev/projects/${projectId}`);
@@ -374,7 +385,9 @@ test("Demo 1 — accounts, planning, profiles, sealed bidding and filtering @dem
     .filter({ visible: true })
     .click();
   await expect(
-    page.getByRole("dialog", { name: "Tania Sultana" }).getByText(/newcomer rule: React test/),
+    page
+      .getByRole("dialog", { name: "Tania Sultana" })
+      .getByText(/newcomer rule: passed the role assessment/),
   ).toBeVisible();
   await shots.take("why-newcomer", "Why eligible: the newcomer rule, check by check");
   await closeDialog(page, "Tania Sultana");
@@ -396,6 +409,56 @@ test("Demo 1 — accounts, planning, profiles, sealed bidding and filtering @dem
   await page.goto(`/client/projects/${seededId}/bids`);
   await expect(page.getByText(/12 bids, 10 eligible/)).toBeVisible();
   await expect(visible("Can’t meet the deadline")).toBeVisible();
-  await expect(visible("No passing skill test")).toBeVisible();
+  await expect(visible("No passing role assessment")).toBeVisible();
   await shots.take("seeded-bids", "Seeded project: 12 sealed bids, 10 eligible, 2 reasons");
+  await page
+    .getByRole("button", { name: "Why not eligible: Lamia Akter" })
+    .filter({ visible: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "Lamia Akter" }).getByText(/below the pass mark of 60/),
+  ).toBeVisible();
+  await shots.take("why-failed-assessment", "Lamia failed her FastAPI role assessment");
+  await closeDialog(page, "Lamia Akter");
+
+  // 10. A newcomer takes the React role assessment live and bids (role assessment spec §14.2).
+  // A fresh "Rafsan Haque" each run: the seeded Rafsan stays untouched for the presenter, and
+  // the bid is withdrawn at the end so the seeded project keeps its documented 12 bids.
+  await page.context().clearCookies();
+  const rafsan = await apiSignIn(page, base, "DEVELOPER", "Rafsan Haque");
+  await addSkillEvidence(page.request, base, rafsan.userId, "React", 0.7);
+  await page.goto(`/dev/projects/${seededId}`);
+  await expect(page.getByRole("heading", { name: ORDERING })).toBeVisible();
+  await fillBid(page, "React", "16000", "20");
+  await fillChecked(page, /Hours a week/, "20");
+  await page.getByLabel("Proposal").fill("React screens for the menu, cart and order tracking.");
+  await expect(page.getByText("Role assessment required")).toBeVisible({ timeout: 10_000 });
+  await page.getByRole("button", { name: "Why these?" }).click();
+  await shots.take("rafsan-required", "The role assessment: competencies, weights and why");
+  await takeRoleAssessment(page, { shot: (name, caption) => shots.take(name, caption) });
+  await page.getByRole("button", { name: "Back to your bid" }).click();
+  // The draft is intact after the assessment.
+  await expect(page.getByLabel(/Your price/)).toHaveValue("16000");
+  await expect(page.getByText(/Role assessment passed/)).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(/meet every requirement/i)).toBeVisible({ timeout: 10_000 });
+  await page.getByRole("button", { name: "Place sealed bid" }).click();
+  await expect(page.getByText("Bid placed").first()).toBeVisible();
+
+  // 11. The client sees the assessment line on Rafsan's bid.
+  await switchTo(page, base, "rahim@devsync.local", demoPassword);
+  await page.goto(`/client/projects/${seededId}/bids`);
+  await page
+    .getByRole("button", { name: "Why eligible: Rafsan Haque" })
+    .filter({ visible: true })
+    .click();
+  const why = page.getByRole("dialog", { name: "Rafsan Haque" });
+  await expect(why.getByTestId("assessment-line")).toContainText(/Role assessment: \d+, passed/);
+  await shots.take("client-assessment-line", "The client sees the result, never the answers");
+  await closeDialog(page, "Rafsan Haque");
+
+  // Leave the seeded project as it was (12 standing bids) for the next run.
+  await switchTo(page, base, rafsan.email, PASSWORD);
+  await page.goto(`/dev/projects/${seededId}`);
+  await page.getByRole("button", { name: "Withdraw bid" }).click();
+  await expect(page.getByText("Bid withdrawn").first()).toBeVisible();
 });

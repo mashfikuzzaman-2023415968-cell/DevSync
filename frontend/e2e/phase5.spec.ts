@@ -14,6 +14,7 @@ import type { Locator, Page } from "@playwright/test";
 import { closeDialog, expect, optionChosen, test } from "./test";
 import {
   addSkillEvidence,
+  qualifyFor,
   apiSignIn,
   closeBidding,
   createOrderingProject,
@@ -69,8 +70,9 @@ test("a developer searches, previews eligibility, bids and withdraws @e2e", asyn
   await apiSignIn(page, baseURL ?? "", "CLIENT", "Rahim");
   const projectId = await createOrderingProject(page, baseURL ?? "", { publish: true });
 
-  // A developer finds it and opens the bid sheet.
-  await apiSignIn(page, baseURL ?? "", "DEVELOPER", "Nadia Rahman");
+  // A newcomer who passed the React role assessment finds it and opens the bid sheet.
+  const nadia = await apiSignIn(page, baseURL ?? "", "DEVELOPER", "Nadia Rahman");
+  await qualifyFor(page.request, baseURL ?? "", nadia.userId, projectId, "React");
   const watch = await watchPage(page, origin);
   await page.goto("/dev/find");
   await page.getByLabel("Search projects", { exact: true }).fill("ordering");
@@ -126,7 +128,8 @@ test("a bid is sealed from other developers across browser contexts @e2e", async
   // Developer A places a bid.
   const ctxA = await browser.newContext({ ignoreHTTPSErrors: true, baseURL: baseURL ?? "" });
   const a = await ctxA.newPage();
-  await apiSignIn(a, baseURL ?? "", "DEVELOPER", "Developer A");
+  const devA = await apiSignIn(a, baseURL ?? "", "DEVELOPER", "Developer A");
+  await qualifyFor(a.request, baseURL ?? "", devA.userId, projectId, "FastAPI");
   await a.goto(`/dev/projects/${projectId}`);
   await a.getByRole("combobox").click();
   await a
@@ -171,7 +174,8 @@ test("the client sees all bids with eligibility and the too-few banner @e2e", as
     });
   if (!ctx) throw new Error("no browser");
   const dev = await ctx.newPage();
-  await apiSignIn(dev, baseURL ?? "", "DEVELOPER", "Arif Hossain");
+  const arif = await apiSignIn(dev, baseURL ?? "", "DEVELOPER", "Arif Hossain");
+  await qualifyFor(dev.request, baseURL ?? "", arif.userId, projectId, "React");
   await dev.goto(`/dev/projects/${projectId}`);
   await dev.getByRole("combobox").click();
   await dev.getByRole("option", { name: /React/ }).first().click();
@@ -195,7 +199,7 @@ async function bidAs(
   baseURL: string,
   projectId: string,
   name: string,
-  setup: (userId: string) => Promise<void>,
+  setup: (userId: string, projectId: string) => Promise<void>,
   [skill, price, days]: [string, string, string],
 ): Promise<void> {
   const browser = page.context().browser();
@@ -203,7 +207,7 @@ async function bidAs(
   const ctx = await browser.newContext({ ignoreHTTPSErrors: true, baseURL });
   const dev = await ctx.newPage();
   const user = await apiSignIn(dev, baseURL, "DEVELOPER", name);
-  await setup(user.userId);
+  await setup(user.userId, projectId);
   await dev.goto(`/dev/projects/${projectId}`);
   await dev.getByRole("combobox").click();
   await dev.getByRole("option", { name: skill }).first().click();
@@ -225,13 +229,13 @@ test("the client sees why each bid is eligible: newcomer rule and relaxation @e2
   const projectId = await createOrderingProject(page, base, { publish: true });
   const req = page.request;
 
-  // Nadia: a newcomer with an 85% React test → eligible through the newcomer rule.
+  // Nadia: a newcomer who passed the React role assessment → eligible through the newcomer rule.
   await bidAs(
     page,
     base,
     projectId,
     "Nadia Rahman",
-    (id) => addSkillEvidence(req, base, id, "React", 0.85),
+    (id, pid) => qualifyFor(req, base, id, pid, "React"),
     ["React", "18000", "20"],
   );
   // Shakib: experienced, P 42 (below 45) → eligible only after automatic relaxation.
@@ -246,14 +250,15 @@ test("the client sees why each bid is eligible: newcomer rule and relaxation @e2
     },
     ["FastAPI", "22000", "18"],
   );
-  // Lamia: a newcomer without a passing FastAPI test → filtered out.
+  // Lamia: a newcomer who passed the FastAPI role assessment but needs 45 days → filtered out
+  // (a newcomer without a pass can't bid at all, role assessment spec §8.3).
   await bidAs(
     page,
     base,
     projectId,
     "Lamia Akter",
-    (id) => addSkillEvidence(req, base, id, "FastAPI", 0.4),
-    ["FastAPI", "21000", "25"],
+    (id, pid) => qualifyFor(req, base, id, pid, "FastAPI"),
+    ["FastAPI", "21000", "45"],
   );
 
   const watch = await watchPage(page, origin);
@@ -272,10 +277,11 @@ test("the client sees why each bid is eligible: newcomer rule and relaxation @e2
     Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)),
   );
   await expect(
-    sheet.getByText("Eligible through the newcomer rule: React test 85%."),
+    sheet.getByText("Eligible through the newcomer rule: passed the role assessment with 100."),
   ).toBeVisible();
   await expect(sheet.getByText("How the filter decided")).toBeVisible();
-  await expect(sheet.getByText("React test 85% (newcomers need 60%)")).toBeVisible();
+  await expect(sheet.getByText("Role assessment 100 · passed")).toBeVisible();
+  await expect(sheet.getByTestId("assessment-line")).toContainText("Role assessment: 100, passed");
   const issues = await checkScreen(page, "client-bids-why");
   await closeDialog(page, "Nadia Rahman");
 
@@ -285,7 +291,7 @@ test("the client sees why each bid is eligible: newcomer rule and relaxation @e2
     .filter({ visible: true })
     .click();
   await expect(
-    page.getByRole("dialog", { name: "Lamia Akter" }).getByText(/Filtered out: FastAPI test 40%/),
+    page.getByRole("dialog", { name: "Lamia Akter" }).getByText(/Filtered out: 45 days/),
   ).toBeVisible();
   await closeDialog(page, "Lamia Akter");
 
@@ -358,7 +364,8 @@ test("after the bidding deadline the bid sheet is closed @e2e", async ({ page, b
   const base = baseURL ?? "";
   await apiSignIn(page, base, "CLIENT", "Rahim");
   const projectId = await createOrderingProject(page, base, { publish: true });
-  await apiSignIn(page, base, "DEVELOPER", "Tanvir Ahmed");
+  const tanvir = await apiSignIn(page, base, "DEVELOPER", "Tanvir Ahmed");
+  await qualifyFor(page.request, base, tanvir.userId, projectId, "Testing");
   await page.goto(`/dev/projects/${projectId}`);
   await page.getByRole("combobox").click();
   await page
@@ -419,7 +426,8 @@ test("a developer opens a bid's own page, withdraws there, and nobody else can o
   const ctxA = await browser.newContext({ ignoreHTTPSErrors: true, baseURL: baseURL ?? "" });
   const a = await ctxA.newPage();
   const watchA = await watchPage(a, new URL(baseURL ?? "").origin);
-  await apiSignIn(a, baseURL ?? "", "DEVELOPER", "Developer A");
+  const devA = await apiSignIn(a, baseURL ?? "", "DEVELOPER", "Developer A");
+  await qualifyFor(a.request, baseURL ?? "", devA.userId, projectId, "FastAPI");
   await a.goto(`/dev/projects/${projectId}`);
   await a.getByRole("combobox").click();
   await a

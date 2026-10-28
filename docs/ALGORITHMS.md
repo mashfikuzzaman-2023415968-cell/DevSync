@@ -110,10 +110,41 @@ Budget ৳120,000, deadline 30 days, four slots (React, FastAPI, PostgreSQL, Tes
 bids** with `P0 = 0.45`, `C0 = 0.40`. The filter returns **10 eligible and 2 ineligible**:
 
 - **Shakib Hasan → `TOO_SLOW`** — bids 31 days, over the 30-day deadline.
-- **Lamia Akter → `NO_SKILL_EVIDENCE`** — a newcomer bidding the PostgreSQL slot; she has a passing
-  FastAPI test but no PostgreSQL evidence, so the newcomer rule rejects her for that slot.
-- The other two newcomers pass the newcomer rule: **Nadia Rahman** (React test 85%) and
-  **Mehjabin Chowdhury** (Testing 90%). The seven experienced bidders clear `P0`/`C0`.
+- **Lamia Akter → `NO_SKILL_EVIDENCE`** — a newcomer bidding the FastAPI slot whose FastAPI role
+  assessment was not passed ("Role assessment 50 — below the pass mark of 60").
+- The other two newcomers pass the newcomer rule with a passed role assessment for their slot:
+  **Nadia Rahman** (React) and **Mehjabin Chowdhury** (Testing). The seven experienced bidders
+  clear `P0`/`C0`.
 
 The seed asserts exactly these numbers and reasons, and the Phase 5 gate (`phase5_checks`) fails if
 they drift.
+
+## Role assessment — blueprint, selection, scoring (DevSync extension, not PCS)
+
+The newcomer rule's evidence for a slot is a **role assessment** (`ROLE_ASSESSMENT_BUILD_SPEC.md`
+§5; full description and a worked example in `docs/ROLE_ASSESSMENT.md`). Three pure modules:
+
+- **Blueprint** (`algorithms/role_blueprint.py`):
+  - **Competencies.** The slot skill's competencies (80 points) plus the core competencies of
+    the two skills that share most milestones with it (20 points).
+  - **Keyword boost.** Whole-word keyword hits in the project text add `min(hits, 5) × 4`.
+  - **Choice and weights.** At most 6 competencies, at least 3 of them from the slot's skill.
+    Weights are clamped to 10–40 % in 5 % steps and add up to exactly 100 %.
+  - **Questions.** Allocated by largest remainder, with the 4/5/3 difficulty mix assigned to
+    what the approved pool can supply.
+  - **Fingerprint.** A SHA-256 of the canonical blueprint. Equal fingerprints mean a pass is
+    reused.
+- **Selection** (`algorithms/assessment_selection.py`): the exact allocation per competency
+  and difficulty, preferring questions unseen for 180 days. It picks at random among the 5
+  served least often (exposure control). The attempt opens on a medium question and alternates
+  competencies.
+- **Scoring** (`algorithms/assessment_scoring.py`, identical in SQL `role_score_core`):
+  - **Weights.** Questions weigh easy 2, medium 3, hard 4.
+  - **Per competency.** `floor(10000 × earned / possible)`.
+  - **Overall.** `floor(Σ weight × score / 10000)`.
+  - **Pass.** Overall ≥ 6000 bp and every competency of weight ≥ 2000 bp scores ≥ 4000 bp.
+  - **Integer arithmetic only.** 35 shared vectors check Python against SQL.
+
+Algorithm 1 takes the result as `BidInput.assessment_passed`: a newcomer passes the evidence
+check only with `score ≥ newcomer.pass_mark` **and** a role assessment that wasn't failed.
+Relaxation never relaxes it; `pcs_replication` has no newcomer rule.

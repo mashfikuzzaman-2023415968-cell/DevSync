@@ -9,7 +9,14 @@
  */
 import type { Page } from "@playwright/test";
 import { expect, optionChosen, resetLimits, test } from "./test";
-import { addSkillEvidence, apiSignIn, createOrderingProject, setReputation } from "./fixtures";
+import {
+  addRoleResult,
+  addSkillEvidence,
+  apiSignIn,
+  createOrderingProject,
+  qualifyFor,
+  setReputation,
+} from "./fixtures";
 import { openScreen, STATEFUL_SCREENS } from "./stateful-screens";
 
 const WIDTHS = [390, 768, 1440] as const;
@@ -146,6 +153,7 @@ for (const scheme of ["light", "dark"] as const) {
         const user = await apiSignIn(dev, base, "DEVELOPER", name);
         await addSkillEvidence(dev.request, base, user.userId, skill, 0.85);
         if (experienced) await setReputation(dev.request, base, user.userId, 0.56, 0.59);
+        else await addRoleResult(dev.request, base, user.userId, id, skill, "pass");
         await dev.goto(`/dev/projects/${id}`);
         await dev.getByRole("combobox").click();
         await dev.getByRole("option", { name: skill }).first().click();
@@ -162,7 +170,7 @@ for (const scheme of ["light", "dark"] as const) {
       const sheet = await ctx.newPage();
       await prepare(sheet, scheme, width);
       const third = await apiSignIn(sheet, base, "DEVELOPER", "Tanvir Ahmed");
-      await addSkillEvidence(sheet.request, base, third.userId, "FastAPI", 0.8);
+      await qualifyFor(sheet.request, base, third.userId, id, "FastAPI");
       await sheet.goto(`/dev/projects/${id}`);
       await sheet.getByRole("combobox").click();
       await sheet.getByRole("option", { name: "FastAPI" }).first().click();

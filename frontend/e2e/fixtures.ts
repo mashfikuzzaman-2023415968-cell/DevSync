@@ -1,5 +1,5 @@
 /** Helpers for Phase 1 E2E tests: talk to the test-only API routes (DEVSYNC_ENV=test). */
-import type { APIRequestContext, Page } from "@playwright/test";
+import { expect, type APIRequestContext, type Page } from "@playwright/test";
 
 export const PASSWORD = "correct horse battery staple 42!";
 
@@ -279,4 +279,109 @@ export async function setReputation(
     data: { p: p.toFixed(3), c: c.toFixed(3) },
   });
   if (r.status() !== 204) throw new Error(`reputation → ${String(r.status())}`);
+}
+
+/** The id of a published project's first slot for a skill (from the public project page). */
+export async function slotFor(
+  request: APIRequestContext,
+  projectId: string,
+  skill: string,
+): Promise<string> {
+  const r = await request.get(`/api/v1/public/projects/${projectId}`);
+  if (!r.ok()) throw new Error(`public project → ${String(r.status())}`);
+  const detail = (await r.json()) as { slots: { id: string; skill: string }[] };
+  const slot = detail.slots.find((s) => s.skill === skill);
+  if (!slot) throw new Error(`no ${skill} slot on ${projectId}`);
+  return slot.id;
+}
+
+/** A real role assessment attempt for the developer on a slot (role assessment spec §14):
+ * passed, failed, or ended by the two-leave rule. Test environment only. */
+export async function addRoleResult(
+  request: APIRequestContext,
+  baseURL: string,
+  userId: string,
+  projectId: string,
+  skill: string,
+  outcome: "pass" | "fail" | "ended" = "pass",
+): Promise<{ attempt_id: string; passed: boolean | null }> {
+  const slotId = await slotFor(request, projectId, skill);
+  const r = await request.post(`/api/v1/__test__/developers/${userId}/role-evidence`, {
+    headers: await csrfHeaders(request, baseURL),
+    data: { project_id: projectId, slot_id: slotId, outcome },
+  });
+  if (!r.ok()) throw new Error(`role-evidence → ${String(r.status())} ${await r.text()}`);
+  return (await r.json()) as { attempt_id: string; passed: boolean | null };
+}
+
+/** A newcomer allowed to bid for a project's slot (role assessment spec §8.3): the skill listed
+ * with a passing practice score, then a passed role assessment for that slot. */
+export async function qualifyFor(
+  request: APIRequestContext,
+  baseURL: string,
+  userId: string,
+  projectId: string,
+  skill: string,
+): Promise<void> {
+  await addSkillEvidence(request, baseURL, userId, skill, 0.9);
+  await addRoleResult(request, baseURL, userId, projectId, skill, "pass");
+}
+
+/** The correct option of each question of a role attempt, in order (test-only route). */
+export async function roleAnswerKey(
+  request: APIRequestContext,
+  attemptId: string,
+): Promise<{ index: number; competency: string | null; answer: number }[]> {
+  const r = await request.get(`/api/v1/__test__/assessment-attempts/${attemptId}/answer-key`);
+  if (!r.ok()) throw new Error(`answer-key → ${String(r.status())}`);
+  return (
+    (await r.json()) as { answers: { index: number; competency: string | null; answer: number }[] }
+  ).answers;
+}
+
+/** Take the role assessment shown on the bid sheet through the real UI (role assessment spec
+ * §14.2): Start, accept the rules, answer every question with the test-only answer key (or as
+ * `choose` decides), and wait for the result. Returns the attempt id. `shot` takes screenshots
+ * at the consent screen, the first question and the result. */
+export async function takeRoleAssessment(
+  page: Page,
+  options: {
+    choose?: (index: number, correct: number) => number;
+    shot?: (name: string, caption: string) => Promise<void>;
+  } = {},
+): Promise<string> {
+  await page.getByRole("button", { name: "Start assessment" }).click();
+  const consent = page.getByRole("dialog", { name: "Before you start" });
+  await expect(consent).toBeVisible();
+  await options.shot?.(
+    "assessment-consent",
+    "The rules, accepted before the role assessment starts",
+  );
+  await consent.getByRole("checkbox", { name: "I understand and agree" }).click();
+  const started = page.waitForResponse(
+    (r) => r.url().includes("/assessment/attempts") && r.request().method() === "POST",
+  );
+  await consent.getByRole("button", { name: "Start assessment" }).click();
+  const attempt = (await (await started).json()) as { id: string; total: number };
+  const key = await roleAnswerKey(page.request, attempt.id);
+  const runner = page.getByTestId("assessment-runner");
+  for (const { index, answer } of key) {
+    await expect(
+      runner.getByText(`Question ${String(index + 1)} of ${String(key.length)}`),
+    ).toBeVisible();
+    if (index === 0) {
+      await options.shot?.(
+        "assessment-question",
+        "One question at a time, against the server's clock",
+      );
+    }
+    const choice = options.choose ? options.choose(index, answer) : answer;
+    await runner.getByRole("radio").nth(choice).click();
+    await runner.getByRole("button", { name: "Confirm answer" }).click();
+  }
+  await expect(
+    runner.getByRole("heading", { name: /Passed|Not passed|Ended early/ }),
+  ).toBeVisible();
+  await options.shot?.("assessment-result", "The result: score per competency, never the answers");
+  return attempt.id;
 }

@@ -896,10 +896,31 @@ def phase5_checks(g: Gate) -> str:
     )  # fmt: skip
     if not (ROOT / "docs" / "plans" / "phase-05.md").exists():
         raise StepFailed("docs/plans/phase-05.md is missing")
+    ra = role_assessment_checks()
     return (
         f"{p4}; §18.4 stage-1 seed reproduces 10 eligible + TOO_SLOW/NO_SKILL_EVIDENCE; "
-        "Algorithm 1 boundaries + newcomer rule; bids sealed; bidding-deadline job verified"
+        f"Algorithm 1 boundaries + newcomer rule; bids sealed; bidding-deadline job verified; {ra}"
     )
+
+
+def role_assessment_checks() -> str:
+    """Role assessment (ROLE_ASSESSMENT_BUILD_SPEC.md §20): the question bank seed matches its
+    YAML sources and validates, every code question's execution check passes, SQL and Python
+    scoring agree on the shared vectors, and answers never leave the API."""
+    in_tests(["python", "scripts/build_question_bank.py", "--check"])
+    run(["make", "question-checks"], cwd=ROOT, timeout=1200)
+    in_tests(
+        [
+            "pytest", "-q", "-p", "no:cacheprovider",
+            "tests/algorithms/test_assessment_scoring.py",
+            "tests/integration/test_role_assessment_db.py",
+        ]
+    )  # fmt: skip
+    for doc in ("docs/plans/role-assessment.md", "docs/ROLE_ASSESSMENT.md",
+                "docs/question-review/verification-report.md"):  # fmt: skip
+        if not (ROOT / doc).exists():
+            raise StepFailed(f"{doc} is missing")
+    return "question bank valid; code questions execution-checked; SQL/Python scoring parity"
 
 
 def refresh_testing_doc() -> str:
