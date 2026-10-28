@@ -1,15 +1,22 @@
+from __future__ import annotations
+
 import contextlib
 import threading
 import time
 import uuid
+from typing import TYPE_CHECKING, Any
 
 import psycopg
 
+if TYPE_CHECKING:
+    from run_checks import Ctx
 
-def check(ctx, q):
+
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     marked = q["options"][q["correct_index"]]
     assert marked == "It detects the deadlock and aborts one transaction with an error"
     schema = f"qcheck_{uuid.uuid4().hex[:12]}"
+    assert ctx.dsn is not None
     boss = psycopg.connect(ctx.dsn, autocommit=True)
     a = psycopg.connect(ctx.dsn, autocommit=True)
     b = psycopg.connect(ctx.dsn, autocommit=True)
@@ -23,9 +30,9 @@ def check(ctx, q):
         a.execute("UPDATE accounts SET balance = balance + 1 WHERE id = 1")
         b.execute("BEGIN")
         b.execute("UPDATE accounts SET balance = balance + 1 WHERE id = 2")
-        outcome = {}
+        outcome: dict[str, Any] = {}
 
-        def second(name, conn, row):
+        def second(name: str, conn: psycopg.Connection[Any], row: int) -> None:
             try:
                 conn.execute(f"UPDATE accounts SET balance = balance + 1 WHERE id = {row}")
                 outcome[name] = "ok"

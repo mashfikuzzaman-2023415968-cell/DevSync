@@ -1,5 +1,13 @@
 """Check for fastapi-async-performance-05: gather() re-raises but does not cancel siblings."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
+
+
 CODE = r"""
 import asyncio
 
@@ -20,7 +28,7 @@ asyncio.run(main())
 """
 
 
-def check(ctx, q):
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     lines = ctx.python(CODE).strip().splitlines()
     assert lines == ["caught a", "b done"], lines
     ctx.expect_only(q, ", then ".join(lines))

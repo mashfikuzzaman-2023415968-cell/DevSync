@@ -1,5 +1,13 @@
 """Check for fastapi_validation_schemas_04: run the snippet for real; the marked option must equal the result."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
+
+
 CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
@@ -28,5 +36,5 @@ print(show(c.get("/item")))
 """
 
 
-def check(ctx, q):
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     ctx.expect_only(q, ctx.python(CODE))

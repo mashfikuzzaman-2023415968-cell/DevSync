@@ -1,5 +1,13 @@
 """Check for fastapi-api-security-08: wildcard origins + credentials reflects the caller's Origin."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
+
+
 CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
@@ -31,7 +39,7 @@ print(json.dumps({
 """
 
 
-def check(ctx, q):
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     import json
 
     got = json.loads(ctx.python(CODE))

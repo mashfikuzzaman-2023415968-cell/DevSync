@@ -1,5 +1,13 @@
 """Check for fastapi-databases-orm-03: POST without commit, then GET, against a real SQLite file."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
+
+
 CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
@@ -50,6 +58,6 @@ FIXED = CODE.replace(
 )
 
 
-def check(ctx, q):
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     ctx.expect_only(q, ctx.python(CODE))
     assert ctx.python(FIXED).strip() == '["pen"]'  # with a commit the row is there

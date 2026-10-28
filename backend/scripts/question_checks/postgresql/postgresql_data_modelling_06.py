@@ -1,3 +1,10 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
+
 BASE = """
 CREATE TABLE tickets (
   id int GENERATED ALWAYS AS IDENTITY,
@@ -6,7 +13,7 @@ CREATE TABLE tickets (
 """
 
 
-def check(ctx, q):
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     marked = q["options"][q["correct_index"]]
     assert marked.startswith("It fails because"), marked
     # The statement on line 5 fails with 428C9 (generated_always).

@@ -1,3 +1,10 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
+
 SETUP = """
 CREATE TABLE customers (id int PRIMARY KEY);
 CREATE TABLE orders (id int PRIMARY KEY, customer_id int);
@@ -13,14 +20,14 @@ QUERIES = {
 }
 
 
-def _query_for(option):
+def _query_for(option: str) -> str:
     for key in ("INNER JOIN", "= NULL", "HAVING", "IS NULL"):  # most specific first
         if key in option:
             return QUERIES[key]
     raise AssertionError(option)
 
 
-def check(ctx, q):
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     for i, option in enumerate(q["options"]):
         got = sorted(r[0] for r in ctx.sql(SETUP + _query_for(option) + ";\n"))
         is_right = got == [3]

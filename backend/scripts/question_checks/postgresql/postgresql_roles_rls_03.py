@@ -1,17 +1,24 @@
+from __future__ import annotations
+
 import uuid
+from typing import TYPE_CHECKING, Any
 
 import psycopg
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
 
 
 class Env:
     """One schema plus helper roles; cleans up after itself."""
 
-    def __init__(self, ctx, roles):
+    def __init__(self, ctx: Ctx, roles: list[str]) -> None:
         self.roles = roles
         self.schema = f"qcheck_{uuid.uuid4().hex[:12]}"
+        assert ctx.dsn is not None
         self.conn = psycopg.connect(ctx.dsn, autocommit=True)
 
-    def __enter__(self):
+    def __enter__(self) -> psycopg.Connection[Any]:
         c = self.conn
         for r in self.roles:
             c.execute(f"DROP ROLE IF EXISTS {r}")
@@ -22,7 +29,7 @@ class Env:
             c.execute(f'GRANT USAGE ON SCHEMA "{self.schema}" TO {r}')
         return c
 
-    def __exit__(self, *exc):
+    def __exit__(self, *exc: object) -> None:
         c = self.conn
         c.execute("RESET ROLE")
         c.execute(f'DROP SCHEMA "{self.schema}" CASCADE')
@@ -31,7 +38,13 @@ class Env:
         c.close()
 
 
-def check(ctx, q):
+def _scalar(conn: psycopg.Connection[Any], sql: str) -> Any:
+    row = conn.execute(sql).fetchone()
+    assert row is not None
+    return row[0]
+
+
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     with Env(ctx, ["alice"]) as c:
         for stmt in (
             "CREATE TABLE notes (id int, owner text, body text)",
@@ -42,5 +55,5 @@ def check(ctx, q):
             "SET ROLE alice",
         ):
             c.execute(stmt)
-        count = c.execute("SELECT count(*) FROM notes").fetchone()[0]
+        count = _scalar(c, "SELECT count(*) FROM notes")
     ctx.expect_only(q, str(count))

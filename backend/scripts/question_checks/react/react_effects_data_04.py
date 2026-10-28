@@ -1,11 +1,17 @@
+from __future__ import annotations
+
 import os
 import sys
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
 
 sys.path.insert(0, os.path.dirname(__file__))
 from _jsh import PRELUDE, js, verify  # noqa: F401
 
 
-def check(ctx, q):
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     # same code with a 20 ms interval instead of 1000 ms; about ten ticks happen in 250 ms
     out = ctx.node(
         PRELUDE

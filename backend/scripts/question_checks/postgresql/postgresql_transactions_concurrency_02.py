@@ -1,10 +1,17 @@
+from __future__ import annotations
+
 import uuid
+from typing import TYPE_CHECKING, Any
 
 import psycopg
 
+if TYPE_CHECKING:
+    from run_checks import Ctx
 
-def _run(ctx, isolation):
+
+def _run(ctx: Ctx, isolation: str) -> tuple[psycopg.Error | None, int]:
     schema = f"qcheck_{uuid.uuid4().hex[:12]}"
+    assert ctx.dsn is not None
     boss = psycopg.connect(ctx.dsn, autocommit=True)
     a = psycopg.connect(ctx.dsn, autocommit=True)
     b = psycopg.connect(ctx.dsn, autocommit=True)
@@ -17,7 +24,7 @@ def _run(ctx, isolation):
         a.execute(f"BEGIN ISOLATION LEVEL {isolation}")
         a.execute("SELECT balance FROM accounts WHERE id = 1").fetchall()
         b.execute("UPDATE accounts SET balance = 50 WHERE id = 1")  # autocommits
-        error = None
+        error: psycopg.Error | None = None
         try:
             a.execute("UPDATE accounts SET balance = balance - 10 WHERE id = 1")
         except psycopg.Error as exc:
@@ -26,7 +33,9 @@ def _run(ctx, isolation):
             a.execute("COMMIT")
         else:
             a.execute("ROLLBACK")
-        balance = boss.execute("SELECT balance FROM accounts WHERE id = 1").fetchone()[0]
+        row = boss.execute("SELECT balance FROM accounts WHERE id = 1").fetchone()
+        assert row is not None
+        balance: int = row[0]
         return error, balance
     finally:
         for c in (a, b):
@@ -35,7 +44,7 @@ def _run(ctx, isolation):
         boss.close()
 
 
-def check(ctx, q):
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     marked = q["options"][q["correct_index"]]
     assert marked.startswith("It fails with a serialization failure"), marked
     error, balance = _run(ctx, "REPEATABLE READ")

@@ -1,5 +1,13 @@
 """Check for fastapi-api-security-03: the injection payload against a real SQLite table."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
+
+
 CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
@@ -42,7 +50,7 @@ print(json.dumps(c.get("/users", params={"name": "ann"}).json()))
 """
 
 
-def check(ctx, q):
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     injected, safe, normal = ctx.python(CODE).strip().splitlines()
     ctx.expect_only(q, injected)
     assert safe == "[]" and normal == '["ann"]'

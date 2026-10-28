@@ -62,7 +62,7 @@ underscores>.py`:
 ```python
 def check(ctx, q):
     out = ctx.python("print(sorted({3, 1, 2}))")
-    ctx.expect_only(q, out)       # marked option == output; no distractor equals it
+    ctx.expect_only(q, out)  # marked option == output; no distractor equals it
 ```
 
 `ctx.python(code)`, `ctx.python_status(code)`, `ctx.node(code)` (React/react-dom/jsdom available

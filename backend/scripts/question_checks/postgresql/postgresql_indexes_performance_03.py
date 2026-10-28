@@ -1,3 +1,10 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
+
 SETUP = """
 CREATE TABLE orders (id serial PRIMARY KEY, status text NOT NULL,
                      created_at timestamptz NOT NULL DEFAULT now(), total int NOT NULL);
@@ -13,7 +20,7 @@ INDEXES = {
 }
 
 
-def _kind(option):
+def _kind(option: str) -> str:
     if "partial" in option:
         return "partial"
     if "hash" in option:
@@ -25,8 +32,8 @@ def _kind(option):
     raise AssertionError(option)
 
 
-def check(ctx, q):
-    sizes = {}
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
+    sizes: dict[str, int] = {}
     for name, ddl in INDEXES.items():
         rows = ctx.sql(SETUP + ddl + ";\nANALYZE orders;\nSELECT pg_relation_size('test_idx');\n")
         sizes[name] = rows[0][0]
@@ -39,7 +46,7 @@ def check(ctx, q):
             )
         )
         assert "test_idx" in plan, (name, plan)  # every candidate can serve the lookup
-    smallest = min(sizes, key=sizes.get)
+    smallest = min(sizes, key=lambda k: sizes[k])
     assert smallest == "partial" and sorted(sizes.values())[0] < sorted(sizes.values())[1], sizes
     marked = _kind(q["options"][q["correct_index"]])
     assert marked == "partial"

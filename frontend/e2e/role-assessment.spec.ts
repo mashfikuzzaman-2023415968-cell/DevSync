@@ -11,6 +11,15 @@
  */
 import type { Page } from "@playwright/test";
 import { expect, optionChosen, test } from "./test";
+
+/** Eight letters from the clock (display names allow letters, not digits). */
+function uniqueLetters(): string {
+  return Date.now()
+    .toString(26)
+    .slice(-8)
+    .replace(/[0-9]/g, (d) => "qrstuvwxyz"[Number(d)] ?? "q")
+    .replace(/^./, (c) => c.toUpperCase());
+}
 import {
   addSkillEvidence,
   apiSignIn,
@@ -88,7 +97,9 @@ test("leaving twice ends the attempt, and the admin sees it flagged @e2e", async
   const base = baseURL ?? "";
   await apiSignIn(page, base, "CLIENT", "Rahim");
   const projectId = await createOrderingProject(page, base, { publish: true });
-  const dev = await apiSignIn(page, base, "DEVELOPER", "Imtiaz Leaves Twice");
+  // The admin queue keeps attempts from earlier runs, so this run's developer gets its own name.
+  const name = `Imtiaz ${uniqueLetters()}`;
+  const dev = await apiSignIn(page, base, "DEVELOPER", name);
   await addSkillEvidence(page.request, base, dev.userId, "React", 0.7);
   await openSlot(page, projectId);
   await startAssessment(page);
@@ -110,7 +121,7 @@ test("leaving twice ends the attempt, and the admin sees it flagged @e2e", async
   const admin = await ctx.newPage();
   await apiSignIn(admin, base, "ADMIN", "Administrator");
   await admin.goto("/admin/assessments");
-  const row = admin.getByRole("listitem").filter({ hasText: "Imtiaz Leaves Twice" });
+  const row = admin.getByRole("listitem").filter({ hasText: name });
   await expect(row).toBeVisible();
   await expect(row.getByText("Ended (left twice)")).toBeVisible();
   await row.getByRole("link", { name: "Open" }).click();
@@ -185,6 +196,9 @@ test("a pass counts for another project with the same role, and experienced deve
   await apiSignIn(page, base, "CLIENT", "Rahim");
   const first = await createOrderingProject(page, base, { publish: true });
   const second = await createOrderingProject(page, base, { publish: true });
+  // Two projects take ~10 CSRF fetches under /api/v1/auth/; let Nginx's auth zone (5 r/s,
+  // burst 10, which the test reset can't clear) refill before signing in again.
+  await page.waitForTimeout(2500);
   const dev = await apiSignIn(page, base, "DEVELOPER", "Rina Reuses");
   await addSkillEvidence(page.request, base, dev.userId, "React", 0.7);
   await openSlot(page, first);

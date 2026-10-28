@@ -1,6 +1,12 @@
 """Shared helpers for the React question checks (not a check itself; no question id)."""
 
+from __future__ import annotations
+
 import json
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
 
 PRELUDE = r"""
 process.on('uncaughtException', () => {});
@@ -35,13 +41,13 @@ function typeInto(input, val) {
 """
 
 
-def js(ctx, body):
+def js(ctx: Ctx, body: str) -> Any:
     """Run `body` after the prelude; the script must console.log one JSON value."""
     out = ctx.node(PRELUDE + body)
     return json.loads(out.strip().splitlines()[-1])
 
 
-def verify(q, truth):
+def verify(q: dict[str, Any], truth: dict[str, bool]) -> None:
     """truth maps an option's leading text to whether that option is actually true.
 
     Asserts every option is covered, the marked one is true and every distractor is false."""

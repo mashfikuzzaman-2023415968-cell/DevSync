@@ -922,6 +922,31 @@ def test_finishing_early_counts_the_rest_as_wrong(api: Api) -> None:
     assert code(r) == "ATTEMPT_CLOSED"
 
 
+def test_bodies_over_two_kilobytes_are_refused(api: Api) -> None:
+    """Every assessment body is a few fields (role assessment spec §15): over 2 KB → 413 before
+    any work, at the boundary still validated normally; a GET is never read for a body."""
+    pid, slot = shared_project(api)
+    newcomer(api)
+    attempt, token = begin(api, pid, slot)
+    aid, qid = attempt["id"], attempt["question"]["id"]
+    headers = {"Content-Type": "application/json"}
+    over = b'{"question_id": "%s", "choice": 0, "pad": "%s"}' % (qid.encode(), b"x" * 2100)
+    r = call(api, "POST", attempt_path(aid, "/answer"), token=token, content=over, headers=headers)
+    assert (r.status_code, code(r)) == (413, "PAYLOAD_TOO_LARGE")
+    r = call(api, "POST", slot_path(pid, slot, "/attempts"), content=over, headers=headers)
+    assert (r.status_code, code(r)) == (413, "PAYLOAD_TOO_LARGE")
+    # Exactly 2048 bytes: not refused for size (the extra field is refused by validation).
+    pad = 2048 - len(b'{"question_id": "%s", "choice": 0, "pad": ""}' % qid.encode())
+    edge = b'{"question_id": "%s", "choice": 0, "pad": "%s"}' % (qid.encode(), b"x" * pad)
+    assert len(edge) == 2048
+    r = call(api, "POST", attempt_path(aid, "/answer"), token=token, content=edge, headers=headers)
+    assert r.status_code == 422, r.text
+    # Nothing was recorded, and a GET with no body is unaffected.
+    state = call(api, "GET", attempt_path(aid), token=token)
+    assert state.status_code == 200
+    assert state.json()["current_index"] == 0
+
+
 def test_window_token_is_required_checked_and_rotated_on_resume(api: Api) -> None:
     pid, slot = shared_project(api)
     newcomer(api)

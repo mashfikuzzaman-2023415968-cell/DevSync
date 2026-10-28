@@ -37,7 +37,10 @@ MAX_BODY_BYTES = 2048  # every request body here is a few fields (role assessmen
 
 
 async def small_body(request: Request) -> None:
-    """Refuse a request body over 2 KB (the app-wide limit is 256 KB)."""
+    """Refuse a request body over 2 KB (the app-wide limit is 256 KB). A GET has no body to read
+    (reading it anyway turns a client that went away into a logged error)."""
+    if request.method in ("GET", "HEAD"):
+        return
     if len(await request.body()) > MAX_BODY_BYTES:
         raise DomainError(code=ErrorCode.PAYLOAD_TOO_LARGE)
 

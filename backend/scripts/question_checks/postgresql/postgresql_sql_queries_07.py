@@ -1,10 +1,17 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
+
 SETUP = """
 CREATE TABLE payments (user_id int, amount int);
 INSERT INTO payments VALUES (1, 100), (2, 50);
 """
 
 
-def check(ctx, q):
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     rows = ctx.sql(SETUP + "SELECT sum(amount) FROM payments WHERE user_id = 999;\n")
     options = q["options"]
     truth = {

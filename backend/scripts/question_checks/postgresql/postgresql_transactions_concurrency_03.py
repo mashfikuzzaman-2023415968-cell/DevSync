@@ -1,12 +1,19 @@
+from __future__ import annotations
+
 import threading
 import time
 import uuid
+from typing import TYPE_CHECKING, Any
 
 import psycopg
 
+if TYPE_CHECKING:
+    from run_checks import Ctx
 
-def check(ctx, q):
+
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     schema = f"qcheck_{uuid.uuid4().hex[:12]}"
+    assert ctx.dsn is not None
     boss = psycopg.connect(ctx.dsn, autocommit=True)
     a = psycopg.connect(ctx.dsn, autocommit=True)
     b = psycopg.connect(ctx.dsn, autocommit=True)
@@ -19,9 +26,9 @@ def check(ctx, q):
         a.execute("BEGIN")
         a.execute("UPDATE accounts SET balance = balance - 30 WHERE id = 1")
         b.execute("BEGIN")
-        outcome = {}
+        outcome: dict[str, Any] = {}
 
-        def b_update():
+        def b_update() -> None:
             try:
                 b.execute("UPDATE accounts SET balance = balance - 20 WHERE id = 1")
                 outcome["ok"] = True
@@ -36,7 +43,9 @@ def check(ctx, q):
         t.join(10)
         assert not t.is_alive() and outcome.get("ok"), outcome
         b.execute("COMMIT")
-        balance = boss.execute("SELECT balance FROM accounts WHERE id = 1").fetchone()[0]
+        row = boss.execute("SELECT balance FROM accounts WHERE id = 1").fetchone()
+        assert row is not None
+        balance = row[0]
         ctx.expect_only(q, str(balance))
     finally:
         for c in (a, b):

@@ -1,5 +1,13 @@
 """Check for fastapi-async-performance-02: two concurrent requests, time.sleep vs asyncio.sleep."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
+
+
 CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
@@ -30,7 +38,7 @@ print(round(asyncio.run(both("/slow")), 2), round(asyncio.run(both("/ok")), 2))
 """
 
 
-def check(ctx, q):
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     blocking, cooperative = (float(x) for x in ctx.python(CODE).split())
     assert 1.9 <= blocking <= 2.5, blocking
     assert 0.9 <= cooperative <= 1.4, cooperative

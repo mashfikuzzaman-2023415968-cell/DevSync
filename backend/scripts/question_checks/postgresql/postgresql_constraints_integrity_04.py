@@ -1,3 +1,10 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
+
 BASE = """
 CREATE TABLE parent (id int PRIMARY KEY);
 CREATE TABLE child (
@@ -13,7 +20,7 @@ COMMIT;
 """
 
 
-def check(ctx, q):
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     assert q["options"][q["correct_index"]].startswith("None;")
     # No statement fails (lines 7, 8 and 9 all succeed).
     assert ctx.sql_error(BASE + TX) is None

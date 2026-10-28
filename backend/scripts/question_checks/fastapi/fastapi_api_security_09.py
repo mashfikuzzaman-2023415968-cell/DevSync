@@ -1,5 +1,13 @@
 """Check for fastapi-api-security-09: attack the route, then each proposed fix."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
+
+
 CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
@@ -53,7 +61,7 @@ print(json.dumps({v: build(v) for v in ["original", "scoped", "uuid", "status404
 """
 
 
-def check(ctx, q):
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     import json
 
     got = json.loads(ctx.python(CODE))

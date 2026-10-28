@@ -1,5 +1,13 @@
 """Check for fastapi_authn_authz_11: run the snippet for real; the marked option must equal the result."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
+
+
 CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
@@ -30,5 +38,5 @@ print(show(c.post("/orders", json={"qty": "many"})))
 """
 
 
-def check(ctx, q):
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     ctx.expect_only(q, ctx.python(CODE))

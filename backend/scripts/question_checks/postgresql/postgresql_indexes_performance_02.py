@@ -1,3 +1,10 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
+
 SETUP = """
 CREATE TABLE users (id serial PRIMARY KEY, email text NOT NULL);
 INSERT INTO users (email)
@@ -7,18 +14,18 @@ CREATE INDEX users_email_idx ON users (email);
 QUERY = "SELECT * FROM users WHERE lower(email) = 'user77@example.com'"
 
 
-def _plan(ctx, change):
+def _plan(ctx: Ctx, change: str) -> str:
     rows = ctx.sql(
         SETUP + change + ";\nANALYZE users;\nSET enable_seqscan = off;\nEXPLAIN " + QUERY + ";\n"
     )
     return "\n".join(r[0] for r in rows)
 
 
-def _uses_index(plan):
+def _uses_index(plan: str) -> bool:
     return "Index Scan" in plan or "Bitmap Index Scan" in plan or "Index Only Scan" in plan
 
 
-def check(ctx, q):
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     # Baseline: even with seq scans discouraged, no index can serve the lower(email) condition.
     assert not _uses_index(_plan(ctx, "SELECT 1")), "baseline already uses an index"
     changes = {

@@ -495,7 +495,11 @@ async def _seed_role_results(
     evidence: dict[str, uuid.UUID] = {}
     for n, (slug, (skill, outcome)) in enumerate(ROLE_RESULTS.items(), start=1):
         taken = await role_attempts.take(
-            ids[slug], pid, slot_ids[skill], seed=1000 + n, **plans[outcome]  # type: ignore[arg-type]
+            ids[slug],
+            pid,
+            slot_ids[skill],
+            seed=1000 + n,
+            **plans[outcome],  # type: ignore[arg-type]
         )
         if (outcome == "pass") != bool(taken.passed):
             raise SystemExit(f"seed assertion failed: {slug}'s role assessment should {outcome}")

@@ -1,5 +1,13 @@
 """Check for fastapi-databases-orm-04: count the SELECTs the loop sends (SQLite, 3 authors)."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
+
+
 CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
@@ -47,7 +55,7 @@ print(len(selects))
 """
 
 
-def check(ctx, q):
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     lazy, eager = ctx.python(CODE).split()
     ctx.expect_only(q, lazy)
     assert eager == "2"  # eager loading is the fix, not 3 or 1

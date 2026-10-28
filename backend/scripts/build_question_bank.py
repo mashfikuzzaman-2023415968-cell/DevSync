@@ -284,7 +284,7 @@ def validate(sources: list[tuple[str, dict[str, Any]]]) -> Report:
     ids: set[str] = set()
     names = set()
     for slug, doc in sources:
-        name = doc.get("skill")
+        name: Any = doc.get("skill")
         names.add(name)
         comps = _competencies(doc, slug, report)
         questions = doc.get("questions") or []

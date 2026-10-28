@@ -83,8 +83,8 @@ export function ResultView({
         {result.passed && result.valid_until ? (
           <p>
             This result counts for roles like this one until{" "}
-            <span data-volatile>{formatDate(result.valid_until)}</span>. It
-            shows your competency; it doesn’t count as completed work.
+            <span data-volatile>{formatDate(result.valid_until)}</span>. It shows your competency;
+            it doesn’t count as completed work.
           </p>
         ) : result.next_allowed_at ? (
           <p>

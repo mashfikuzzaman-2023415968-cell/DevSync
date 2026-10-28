@@ -1,12 +1,18 @@
+from __future__ import annotations
+
 import subprocess
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
 
 
-def sh(script, shell="sh"):
+def sh(script: str, shell: str = "sh") -> tuple[int, str]:
     r = subprocess.run([shell, "-c", script], capture_output=True, text=True, timeout=10)
     return r.returncode, r.stdout.strip()
 
 
-def check(ctx, q):
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     script = q["code_snippet"]
     code, out = sh(script)
     ctx.expect_only(q, out)

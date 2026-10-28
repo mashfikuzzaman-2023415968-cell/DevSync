@@ -1,4 +1,12 @@
-def check(ctx, q):
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
+
+
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     code, out, err = ctx.node_status(q["code_snippet"])
     assert code != 0, "process should crash"
     assert "caught" not in out, "catch must not run"

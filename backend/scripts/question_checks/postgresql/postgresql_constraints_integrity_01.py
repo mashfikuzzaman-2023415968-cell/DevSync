@@ -1,3 +1,10 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
+
 SETUP = """
 CREATE TABLE users (email text UNIQUE);
 INSERT INTO users VALUES (NULL), (NULL), ('a@x.com');
@@ -5,7 +12,7 @@ SELECT count(*) FROM users;
 """
 
 
-def check(ctx, q):
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     # Line 2 does not fail, and the table holds three rows.
     assert ctx.sql_error(SETUP) is None
     assert ctx.sql(SETUP) == [(3,)]

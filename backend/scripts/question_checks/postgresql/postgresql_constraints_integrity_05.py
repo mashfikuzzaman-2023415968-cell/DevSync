@@ -1,3 +1,10 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
+
 BASE = """
 CREATE TABLE subscriptions (id serial PRIMARY KEY, user_id int NOT NULL, status text NOT NULL);
 """
@@ -10,7 +17,7 @@ INSERT INTO subscriptions (user_id, status) VALUES (1, 'active');
 SECOND_ACTIVE = "INSERT INTO subscriptions (user_id, status) VALUES (1, 'active');\n"
 
 
-def _enforces(ctx, ddl):
+def _enforces(ctx: Ctx, ddl: str) -> bool:
     """True when the setup accepts the good rows and rejects a second active row."""
     return (
         ctx.sql_error(BASE + ddl + ROWS_OK) is None
@@ -18,7 +25,7 @@ def _enforces(ctx, ddl):
     )
 
 
-def check(ctx, q):
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     variants = {
         "partial unique index": "CREATE UNIQUE INDEX ON subscriptions (user_id) WHERE status = 'active';\n",
         "UNIQUE (user_id, status)": "ALTER TABLE subscriptions ADD UNIQUE (user_id, status);\n",

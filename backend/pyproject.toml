@@ -49,6 +49,9 @@ warn_redundant_casts = true
 no_implicit_optional = true
 check_untyped_defs = true
 files = ["app", "scripts"]
+# question checks import `run_checks` (types only) and, for React, `_jsh` (runtime: sys.path)
+mypy_path = "scripts/question_checks:scripts/question_checks/react"
+explicit_package_bases = true
 
 [[tool.mypy.overrides]]
 module = ["app.core.*", "app.algorithms.*", "app.services.money", "app.services.ledger", "app.services.auth", "app.services.auth.*"]

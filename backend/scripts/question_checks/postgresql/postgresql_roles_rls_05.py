@@ -1,17 +1,24 @@
+from __future__ import annotations
+
 import uuid
+from typing import TYPE_CHECKING, Any
 
 import psycopg
+
+if TYPE_CHECKING:
+    from run_checks import Ctx
 
 
 class Env:
     """One schema plus helper roles; cleans up after itself."""
 
-    def __init__(self, ctx, roles):
+    def __init__(self, ctx: Ctx, roles: list[str]) -> None:
         self.roles = roles
         self.schema = f"qcheck_{uuid.uuid4().hex[:12]}"
+        assert ctx.dsn is not None
         self.conn = psycopg.connect(ctx.dsn, autocommit=True)
 
-    def __enter__(self):
+    def __enter__(self) -> psycopg.Connection[Any]:
         c = self.conn
         for r in self.roles:
             c.execute(f"DROP ROLE IF EXISTS {r}")
@@ -22,7 +29,7 @@ class Env:
             c.execute(f'GRANT USAGE ON SCHEMA "{self.schema}" TO {r}')
         return c
 
-    def __exit__(self, *exc):
+    def __exit__(self, *exc: object) -> None:
         c = self.conn
         c.execute("RESET ROLE")
         c.execute(f'DROP SCHEMA "{self.schema}" CASCADE')
@@ -31,7 +38,7 @@ class Env:
         c.close()
 
 
-def check(ctx, q):
+def check(ctx: Ctx, q: dict[str, Any]) -> None:
     marked = q["options"][q["correct_index"]]
     assert marked == "It fails: new row violates row-level security policy for table notes"
     with Env(ctx, ["alice"]) as c:
@@ -43,13 +50,15 @@ def check(ctx, q):
             "SET ROLE alice",
         ):
             c.execute(stmt)
-        error = None
+        error: psycopg.Error | None = None
         try:
             c.execute("INSERT INTO notes VALUES (1, 'bob')")
         except psycopg.Error as exc:
             error = exc
         c.execute("RESET ROLE")
-        stored = c.execute("SELECT count(*) FROM notes").fetchone()[0]
+        stored_row = c.execute("SELECT count(*) FROM notes").fetchone()
+        assert stored_row is not None
+        stored = stored_row[0]
     assert error is not None, "the insert must fail"
     message = str(error)
     assert "new row violates row-level security policy" in message, message
