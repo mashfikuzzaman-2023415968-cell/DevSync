@@ -234,6 +234,7 @@ class BidLifecycle(RuleBasedStateMachine):
             browser.ready()
         skill = self._send(self.client, SKILLS, "GET").json()[0]
         self.skill_id = skill.get("skill_id") or skill["id"]
+        self.skill_name = str(skill["name"])
         # Model: bid id → (developer index, project id, status) and each developer's active bid
         # per project (one ACTIVE bid per developer and project, DECISIONS D49).
         self.bid_state: dict[str, tuple[int, str, str]] = {}
@@ -329,7 +330,15 @@ class BidLifecycle(RuleBasedStateMachine):
         )
         assert published.status_code == 200, published.text
         assert published.json()["status"] == "BIDDING"
-        return (pid, slots.json()[0]["id"], deadline)
+        slot_id = slots.json()[0]["id"]
+        # Both developers are newcomers, who bid on a passed role assessment for the role (role
+        # assessment spec §8.3); a pass counts for every project with the same blueprint.
+        for dev in self.developers:
+            dev.ready()
+            assert dev.user is not None
+            _clear_rate_limits()
+            dev.api.qualify_for_slot(dev.user, pid, slot_id, self.skill_name)
+        return (pid, slot_id, deadline)
 
     @rule(target=bids, project=projects, dev=st.integers(0, 1), data=st.data())
     def place_bid(self, project: tuple[str, str, int], dev: int, data: st.DataObject) -> Any:

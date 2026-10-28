@@ -350,7 +350,6 @@ export function AssessmentRunner({
                 </p>
                 <Button
                   variant="ghost"
-                  size="sm"
                   disabled={busy}
                   onClick={() => {
                     void finishEarly();

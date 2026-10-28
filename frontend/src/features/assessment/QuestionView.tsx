@@ -16,7 +16,9 @@ const LETTERS = ["A", "B", "C", "D"] as const;
 
 export function CodeBlock({ code }: { code: string }) {
   return (
-    <pre className="overflow-x-auto rounded-lg border border-border bg-surface-2 p-4 font-mono text-body-sm leading-relaxed text-text">
+    // Long lines wrap rather than scroll: on a phone the whole snippet stays in view during a
+    // timed question, and there's no scroll region a keyboard can't reach.
+    <pre className="whitespace-pre-wrap break-words rounded-lg border border-border bg-surface-2 p-4 font-mono text-body-sm leading-relaxed text-text">
       <code>{code.replace(/\n$/, "")}</code>
     </pre>
   );

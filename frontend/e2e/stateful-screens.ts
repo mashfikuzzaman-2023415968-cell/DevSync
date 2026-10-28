@@ -66,6 +66,15 @@ async function openConsent(page: Page, path: string): Promise<void> {
   await page.goto(path);
   await page.getByRole("button", { name: "Start assessment" }).click();
   await page.getByRole("dialog", { name: "Before you start" }).waitFor();
+  await settled(page);
+}
+
+/** Wait for running animations: measured mid-zoom or mid-fade, an overlay's buttons are a few
+ * pixels short and its text (or the page behind it) reads as low contrast. */
+async function settled(page: Page): Promise<void> {
+  await page.waitForFunction(() =>
+    document.getAnimations().every((a) => a.playState !== "running"),
+  );
 }
 
 export const STATEFUL_SCREENS: StatefulScreen[] = [
@@ -159,10 +168,17 @@ export const STATEFUL_SCREENS: StatefulScreen[] = [
     },
   },
   {
-    // The full-screen runner on its first question (§11.3); questions are drawn per attempt.
+    // The runner on its first question (§11.3); questions are drawn per attempt. The matrix
+    // reopens this screen at every viewport, so the page acts like a browser without full screen
+    // (the focus layout iPhones get): a full-screen window can't be resized, and leaving full
+    // screen is a leave. Reopening reuses the open runner instead of reloading — a reload is a
+    // leave too, and two would end the attempt (both rules are tested in role-assessment.spec).
     name: "assessment-runner",
     randomContent: true,
     prepare: async (page, baseURL) => {
+      await page.addInitScript(() => {
+        (Element.prototype as { requestFullscreen?: unknown }).requestFullscreen = undefined;
+      });
       const path = await newcomerOnBidSheet(page, baseURL, "Nadia Rahman");
       await openConsent(page, path);
       const consent = page.getByRole("dialog", { name: "Before you start" });
@@ -171,12 +187,13 @@ export const STATEFUL_SCREENS: StatefulScreen[] = [
       await page.getByTestId("assessment-runner").getByText("Question 1 of 12").waitFor();
       return {
         open: async (p) => {
-          await p.goto(path);
-          await p.getByRole("button", { name: "Resume assessment" }).click();
-          await p
-            .getByTestId("assessment-runner")
-            .getByText(/Question \d+ of 12/)
-            .waitFor();
+          const runner = p.getByTestId("assessment-runner");
+          if (!(await runner.isVisible())) {
+            await p.goto(path);
+            await p.getByRole("button", { name: "Resume assessment" }).click();
+          }
+          await runner.getByText(/Question \d+ of 12/).waitFor();
+          await settled(p);
         },
       };
     },

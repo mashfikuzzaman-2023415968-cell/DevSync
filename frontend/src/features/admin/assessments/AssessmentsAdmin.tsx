@@ -94,9 +94,9 @@ export function AssessmentQueue() {
                   <div className="flex items-center gap-3">
                     <Badge tone={o.tone}>{o.label}</Badge>
                     {a.score !== null ? (
-                      <span className="tabular font-semibold">{a.score}</span>
+                      <span className="tabular font-semibold text-text">{a.score}</span>
                     ) : null}
-                    <Button asChild variant="outline" size="sm">
+                    <Button asChild variant="outline">
                       <Link to={`/admin/assessments/${a.attempt_id}`}>Open</Link>
                     </Button>
                   </div>
