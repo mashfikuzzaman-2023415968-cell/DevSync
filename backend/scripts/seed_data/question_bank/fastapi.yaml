@@ -1,0 +1,2140 @@
+# Question bank source for FastAPI (role assessment spec §13). Edit here; the build
+# writes alembic/seed/question_bank_v2.json. Legacy questions keep their text and options
+# exactly as stored by migration 0004 (they are matched by text). See README.md.
+skill: FastAPI
+domain: BACKEND
+competencies:
+- code: api_design
+  name: API design and HTTP
+  description: Routes, HTTP methods and status codes, path and query parameters, REST design.
+  is_core: true
+  keywords:
+  - api
+  - rest
+  - endpoint
+  - endpoints
+  - backend
+  - http
+  - routes
+  - status codes
+  - orders
+  - crud
+  position: 1
+- code: validation_schemas
+  name: Validation and schemas
+  description: Pydantic models, request and response validation, serialisation.
+  is_core: true
+  keywords:
+  - validation
+  - pydantic
+  - schema
+  - schemas
+  - request body
+  - response model
+  - input
+  - json
+  position: 2
+- code: authn_authz
+  name: Authentication and authorization
+  description: Login, password hashing, sessions or tokens, roles and permissions.
+  is_core: true
+  keywords:
+  - login
+  - sign in
+  - sign-up
+  - password
+  - jwt
+  - session
+  - oauth
+  - roles
+  - permissions
+  - otp
+  - 2fa
+  - authentication
+  - admin
+  position: 3
+- code: databases_orm
+  name: Databases and ORM
+  description: SQLAlchemy models and sessions, dependencies, transactions from the API side.
+  is_core: false
+  keywords:
+  - database
+  - sqlalchemy
+  - orm
+  - postgresql
+  - models
+  - migrations
+  - alembic
+  - persistence
+  position: 4
+- code: async_performance
+  name: Async and performance
+  description: async def, awaiting I/O, blocking calls, background tasks and throughput.
+  is_core: false
+  keywords:
+  - async
+  - performance
+  - concurrent
+  - background tasks
+  - throughput
+  - real-time
+  - websocket
+  - scalable
+  - queue
+  position: 5
+- code: error_handling
+  name: Error handling and debugging
+  description: HTTPException, exception handlers, logging and debugging failures.
+  is_core: false
+  keywords:
+  - errors
+  - error handling
+  - exceptions
+  - logging
+  - debugging
+  - reliability
+  - monitoring
+  position: 6
+- code: api_security
+  name: API security
+  description: Injection, CORS, rate limiting, secrets and OWASP API risks.
+  is_core: false
+  keywords:
+  - security
+  - secure
+  - cors
+  - rate limit
+  - injection
+  - owasp
+  - secrets
+  - payments
+  - payment
+  - privacy
+  position: 7
+questions:
+- id: fastapi-legacy-01
+  competency: api_design
+  difficulty: 1
+  text: What is TestClient (from fastapi.testclient) for?
+  options:
+  - Deploying
+  - Calling the app in tests without running a server
+  - Load testing
+  - Generating clients
+  correct_index: 1
+  explanation: TestClient runs the ASGI app in-process, so tests can call routes like a client with no
+    server or network.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: fastapi-legacy-02
+  competency: validation_schemas
+  difficulty: 2
+  text: What does `response_model` on a route do?
+  options:
+  - Sets the HTTP method
+  - Caches the response
+  - Adds authentication
+  - Validates and filters the response to the declared schema
+  correct_index: 3
+  explanation: response_model validates the returned data against the declared Pydantic schema, drops
+    fields not in it, and documents it in OpenAPI.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: fastapi-legacy-03
+  competency: api_design
+  difficulty: 1
+  text: How do you declare a path parameter?
+  options:
+  - '@app.get(''/items/{item_id}'') with an item_id argument'
+  - Using a global variable
+  - Using Body()
+  - Using Query()
+  correct_index: 0
+  explanation: A path parameter is a {name} placeholder in the route path plus a function argument of
+    the same name; FastAPI converts and validates it.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: fastapi-legacy-04
+  competency: api_design
+  difficulty: 1
+  text: What is a common use of FastAPI middleware?
+  options:
+  - Defining models
+  - Writing migrations
+  - Rendering React
+  - Adding headers, timing or request ids to every request
+  correct_index: 3
+  explanation: Middleware wraps every request and response, which makes it the place for cross-cutting
+    work such as headers, timing and request ids.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: fastapi-legacy-05
+  competency: databases_orm
+  difficulty: 2
+  text: What does a dependency with `yield` let you do?
+  options:
+  - Retry requests
+  - Return multiple values
+  - Run cleanup code after the response (e.g. close a DB session)
+  - Stream files
+  correct_index: 2
+  explanation: A dependency that yields runs its code after the yield once the response is done, so it
+    is the standard pattern to open and close a database session per request.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+    reviewer_note: Exact timing of exit code relative to sending the response has changed across FastAPI
+      versions (0.106 vs 0.118+); the cleanup idea is unambiguous, but 'after the response' is a version-dependent
+      detail.
+- id: fastapi-legacy-06
+  competency: api_design
+  difficulty: 1
+  text: Which is the right way to read an optional query parameter `q`?
+  options:
+  - 'def f(q: str | None = None)'
+  - It's not possible
+  - request.json()['q'] only
+  - def f(*, body)
+  correct_index: 0
+  explanation: A parameter that is not in the path and has a default of None is an optional query parameter;
+    str | None = None marks it optional.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: fastapi-legacy-07
+  competency: async_performance
+  difficulty: 3
+  text: Where does FastAPI run a plain `def` (non-async) endpoint?
+  options:
+  - It refuses to run it
+  - On the event loop
+  - In a thread pool
+  - In a new process
+  correct_index: 2
+  explanation: A plain def endpoint is run in an external thread pool so blocking code does not stall
+    the event loop; async def endpoints run on the loop itself.
+  status: DRAFT
+  source: HUMAN
+  active: true
+  review_level: NONE
+  reviewed_by_name: null
+  reviewed_at: null
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: fastapi-legacy-08
+  competency: error_handling
+  difficulty: 1
+  text: How do you raise a 404 from inside an endpoint?
+  options:
+  - raise HTTPException(status_code=404)
+  - return 404
+  - print(404)
+  - sys.exit(404)
+  correct_index: 0
+  explanation: raise HTTPException(status_code=404) stops the endpoint and FastAPI turns it into a 404
+    response with a JSON detail.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: fastapi-legacy-09
+  competency: api_security
+  difficulty: 1
+  text: Why should passwords never be returned in a response model?
+  options:
+  - FastAPI hashes them
+  - They are too long
+  - JSON can't encode them
+  - Response models define exactly what leaves the API; secrets must never be exposed
+  correct_index: 3
+  explanation: A response model is the allow-list of what leaves the API; leaving password fields out
+    of it prevents leaking secrets or hashes.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: fastapi-legacy-10
+  competency: async_performance
+  difficulty: 1
+  text: Which ASGI server is commonly used to run FastAPI?
+  options:
+  - Tomcat
+  - Uvicorn
+  - Gunicorn sync workers only
+  - Apache mod_php
+  correct_index: 1
+  explanation: FastAPI is an ASGI framework; Uvicorn is the ASGI server normally used to run it. Tomcat
+    and mod_php are not ASGI servers.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: fastapi-legacy-11
+  competency: validation_schemas
+  difficulty: 1
+  text: What does FastAPI use Pydantic models for?
+  options:
+  - Validating and serializing request and response data
+  - Scheduling jobs
+  - Templating HTML
+  - Database migrations
+  correct_index: 0
+  explanation: FastAPI uses Pydantic models to parse and validate request bodies and to serialise and
+    document responses.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: fastapi-legacy-12
+  competency: validation_schemas
+  difficulty: 2
+  text: What does `model_config = ConfigDict(extra='forbid')` do on a Pydantic v2 model?
+  options:
+  - Makes all fields optional
+  - Ignores type errors
+  - Rejects input that contains fields not declared on the model
+  - Allows any extra fields
+  correct_index: 2
+  explanation: extra='forbid' makes validation fail (422) when the input has fields that are not declared;
+    the default is to ignore them.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: fastapi-legacy-13
+  competency: validation_schemas
+  difficulty: 2
+  text: What status code does FastAPI return by default for a request body that fails validation?
+  options:
+  - '404'
+  - '400'
+  - '500'
+  - '422'
+  correct_index: 3
+  explanation: Request validation failures return 422 Unprocessable Content with a detail list describing
+    each error.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: fastapi-legacy-14
+  competency: api_design
+  difficulty: 1
+  text: What is FastAPI's Depends() used for?
+  options:
+  - Defining database columns
+  - Running background tasks
+  - Declaring dependencies (e.g. DB sessions, auth) that are resolved per request
+  - Importing modules
+  correct_index: 2
+  explanation: Depends declares a dependency (a callable) that FastAPI calls for each request and injects
+    the result, for example a DB session or the current user.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: fastapi-legacy-15
+  competency: api_design
+  difficulty: 1
+  text: How does FastAPI generate interactive API documentation?
+  options:
+  - From docstrings only
+  - From the OpenAPI schema it builds from routes and type hints
+  - It cannot
+  - From a YAML file you write
+  correct_index: 1
+  explanation: FastAPI builds an OpenAPI schema from routes, type hints and models and serves Swagger
+    UI and ReDoc from it automatically.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: fastapi-legacy-16
+  competency: async_performance
+  difficulty: 2
+  text: What is the effect of declaring a route with `async def`?
+  options:
+  - It is cached
+  - It runs on the event loop, so it should not call blocking code directly
+  - It becomes a background task
+  - It runs in a new process
+  correct_index: 1
+  explanation: An async def route runs on the event loop; calling blocking code in it (sleep, requests,
+    sync DB) stalls all other requests.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: fastapi-api-design-01
+  competency: api_design
+  difficulty: 2
+  text: Both routes are registered in the order shown. What does GET /users/me return?
+  code_snippet: |
+    1  @app.get("/users/{user_id}")
+    2  def get_user(user_id: str):
+    3      return {"route": "by-id"}
+    4
+    5  @app.get("/users/me")
+    6  def get_me():
+    7      return {"route": "current-user"}
+  options:
+  - '{"route": "current-user"}'
+  - Status 404
+  - '{"route": "by-id"}'
+  - Status 422
+  correct_index: 2
+  explanation: Starlette matches routes in registration order and the first match wins. /users/{user_id}
+    also matches /users/me (user_id='me'), so get_me is never reached. Declare the fixed path /users/me
+    before the parameterised one.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 2
+    reviewer_note: 'Verified: first-registered parameterised route wins.'
+- id: fastapi-api-design-02
+  competency: api_design
+  difficulty: 2
+  text: What does GET /items?tag=a&tag=b return?
+  code_snippet: |
+    1  @app.get("/items")
+    2  def list_items(tag: list[str] = Query(default=[])):
+    3      return tag
+  options:
+  - '["a", "b"]'
+  - '["b"]'
+  - '["a"]'
+  - Status 422
+  correct_index: 0
+  explanation: A list[str] query parameter declared with Query() collects every repeated occurrence of
+    the parameter, so both values arrive as a list. Without Query(), a list annotation would be treated
+    as a request body.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: fastapi-api-design-03
+  competency: api_design
+  difficulty: 2
+  text: What does GET /files/docs/readme.txt return?
+  code_snippet: |
+    1  @app.get("/files/{name}")
+    2  def read_file(name: str):
+    3      return {"name": name}
+  options:
+  - '{"name": "docs"}'
+  - Status 404
+  - '{"name": "docs/readme.txt"}'
+  - Status 422
+  correct_index: 1
+  explanation: A plain {name} path parameter matches one path segment only and never a slash, so /files/docs/readme.txt
+    matches no route and gives 404. Declaring {name:path} would capture the rest of the path.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 2
+    reviewer_note: Verified 404 ({name} does not match '/').
+- id: fastapi-api-design-04
+  competency: api_design
+  difficulty: 2
+  text: A client times out and automatically repeats the same request. Which HTTP method is not idempotent
+    by definition, so a blind retry could create a duplicate record?
+  options:
+  - PUT
+  - DELETE
+  - GET
+  - POST
+  correct_index: 3
+  explanation: 'GET, PUT and DELETE are defined as idempotent: repeating them leaves the server in the
+    same state. POST (create, trigger an action) has no such guarantee, so retries need protection such
+    as an idempotency key.'
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: fastapi-api-design-05
+  competency: api_design
+  difficulty: 3
+  text: A client calls GET /items (no trailing slash) and does not follow redirects. What does it receive?
+  code_snippet: |
+    1  router = APIRouter(prefix="/items")
+    2
+    3  @router.get("/")
+    4  def list_items():
+    5      return []
+    6
+    7  app.include_router(router)
+  options:
+  - Status 200 with an empty list
+  - Status 404 (route not found)
+  - Status 307 redirect to /items/
+  - Status 405 (method not allowed)
+  correct_index: 2
+  explanation: The router prefix plus path "/" makes the route /items/. With default settings Starlette's
+    redirect_slashes answers a request for /items with a 307 redirect to /items/ rather than 404 or serving
+    it directly.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 2
+    reviewer_note: Verified 307 with redirect_slashes default.
+- id: fastapi-api-design-06
+  competency: api_design
+  difficulty: 1
+  text: Which request header supplies the value of x_token?
+  code_snippet: |
+    1  @app.get("/ping")
+    2  def ping(x_token: str = Header()):
+    3      return {"token": x_token}
+  options:
+  - x_token, with the underscore kept exactly as written in the code
+  - Authorization, as the default header for FastAPI parameters
+  - 'None: Header() reads the value from the query string instead'
+  - X-Token, since underscores become hyphens and names are case-insensitive
+  correct_index: 3
+  explanation: Header() converts underscores in the parameter name to hyphens (convert_underscores=True
+    by default) and header names are case-insensitive, so X-Token is read. Sending x_token or Authorization
+    leaves the parameter missing (422).
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: fastapi-api-design-07
+  competency: api_design
+  difficulty: 3
+  text: What does GET /items/abc return?
+  code_snippet: |
+    1  @app.get("/items/{item_id}")
+    2  def by_id(item_id: int):
+    3      return "by-id"
+    4
+    5  @app.get("/items/{slug}")
+    6  def by_slug(slug: str):
+    7      return "by-slug"
+  options:
+  - '"by-slug"'
+  - '"by-id"'
+  - Status 422
+  - Status 404
+  correct_index: 2
+  explanation: Routing matches only on the path pattern; both routes match /items/abc and the first, by_id,
+    wins. Its int validation then fails with 422. FastAPI does not fall through to the next route when
+    validation fails.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 3
+    reviewer_note: 'Verified 422: first matching route is chosen by path, then int validation fails; no
+      fall-through.'
+- id: fastapi-api-design-08
+  competency: api_design
+  difficulty: 1
+  text: A mobile app may repeat POST /payments after a network timeout, and a customer must never be charged
+    twice. Which server-side design best achieves this?
+  options:
+  - Switch the endpoint to GET so that repeated requests are always safe
+  - Return 200 instead of 201 so that clients no longer retry the request
+  - Require an Idempotency-Key header and replay the stored result for a repeated key
+  - Raise the server timeout so that clients never time out and retry
+  correct_index: 2
+  explanation: The server cannot tell a retry from a new payment unless the client labels it. Storing
+    the result under an idempotency key makes a repeated request return the original outcome without charging
+    again. Changing method, status or timeouts does not remove the duplicate risk.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: fastapi-validation-schemas-01
+  competency: validation_schemas
+  difficulty: 1
+  text: Which Pydantic v2 method builds a model instance directly from a JSON string?
+  options:
+  - Item.model_validate_json(raw)
+  - Item.from_json(raw)
+  - Item.load_json(raw)
+  - Item.model_parse(raw)
+  correct_index: 0
+  explanation: model_validate_json parses and validates a JSON string in one step (Pydantic v2). from_json,
+    load_json and model_parse do not exist on BaseModel.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: fastapi-validation-schemas-02
+  competency: validation_schemas
+  difficulty: 1
+  text: What does this code print?
+  code_snippet: |
+    1  class Item(BaseModel):
+    2      name: str
+    3      price: float | None = None
+    4
+    5  print(Item(name="pen").price)
+  options:
+  - '0'
+  - '0.0'
+  - A ValidationError
+  - None
+  correct_index: 3
+  explanation: price has a default of None, so omitting it is valid and the attribute is None. Nothing
+    is coerced to 0 and no error is raised.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: fastapi-validation-schemas-03
+  competency: validation_schemas
+  difficulty: 3
+  text: With Pydantic v2 default settings, which call raises a ValidationError?
+  code_snippet: |
+    1  class M(BaseModel):
+    2      n: int
+  options:
+  - M(n="5")
+  - M(n=5.0)
+  - M(n=5.5)
+  - M(n=True)
+  correct_index: 2
+  explanation: Default (lax) mode converts the string "5", the whole float 5.0 and the bool True to int.
+    A float with a fractional part such as 5.5 cannot be converted without losing data, so it is rejected.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 2
+    reviewer_note: 'Verified: ''5'', 5.0, True accepted in lax mode; 5.5 rejected.'
+- id: fastapi-validation-schemas-04
+  competency: validation_schemas
+  difficulty: 3
+  text: What JSON body does GET /item return?
+  code_snippet: |
+    1  class Item(BaseModel):
+    2      name: str
+    3      tag: str = "none"
+    4
+    5  @app.get("/item", response_model=Item, response_model_exclude_unset=True)
+    6  def get_item():
+    7      return Item(name="pen")
+  options:
+  - '{"name": "pen", "tag": "none"}'
+  - '{"name": "pen"}'
+  - '{"name": "pen", "tag": null}'
+  - '{"tag": "none"}'
+  correct_index: 1
+  explanation: response_model_exclude_unset=True leaves out fields that were never explicitly set on the
+    returned model. tag only has its default value, so it is dropped and only name is sent.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 2
+- id: fastapi-validation-schemas-05
+  competency: validation_schemas
+  difficulty: 3
+  text: 'A client posts {"name": "pen"}. What happens?'
+  code_snippet: |
+    1  class Item(BaseModel):
+    2      name: str
+    3      note: str | None
+    4
+    5  @app.post("/items")
+    6  def create(item: Item):
+    7      return item
+  options:
+  - Status 422
+  - '{"name": "pen", "note": null}'
+  - '{"name": "pen", "note": ""}'
+  - Status 400
+  correct_index: 0
+  explanation: 'In Pydantic v2 a field annotated str | None without a default is required but nullable.
+    Omitting note is a validation error (422). Write note: str | None = None to make it optional.'
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 2
+    reviewer_note: 'Verified 422: Optional without default is required in Pydantic v2.'
+- id: fastapi-validation-schemas-06
+  competency: validation_schemas
+  difficulty: 2
+  text: 'A client posts {"name": "pen", "price": 5, "discount": 50}. What does it receive?'
+  code_snippet: |
+    1  class Item(BaseModel):
+    2      name: str
+    3      price: int
+    4
+    5  @app.post("/items")
+    6  def create(item: Item):
+    7      return item
+  options:
+  - Status 422
+  - '{"name": "pen", "price": 5}'
+  - '{"name": "pen", "price": 5, "discount": 50}'
+  - Status 400
+  correct_index: 1
+  explanation: By default Pydantic ignores fields that are not declared, so the request succeeds and discount
+    is dropped. Only extra='forbid' on the model would make it fail with 422.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 2
+- id: fastapi-authn-authz-01
+  competency: authn_authz
+  difficulty: 1
+  text: How should an API store users' passwords?
+  options:
+  - Encrypted with AES so they can be decrypted at login
+  - As a SHA-256 hash without a salt
+  - As a hash from a slow, salted algorithm such as Argon2 or bcrypt
+  - Base64-encoded
+  correct_index: 2
+  explanation: 'Passwords must be stored so that nobody, including the operator, can recover them: a slow
+    salted password hash. Encryption is reversible, unsalted fast hashes fall to rainbow tables and GPUs,
+    and Base64 is only an encoding.'
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: fastapi-authn-authz-02
+  competency: authn_authz
+  difficulty: 1
+  text: A logged-in user without the admin role calls an admin-only endpoint. Which status code fits best?
+  options:
+  - 401 Unauthorized
+  - 400 Bad Request
+  - 403 Forbidden
+  - 422 Unprocessable Content
+  correct_index: 2
+  explanation: The caller is authenticated but not permitted, which is 403. 401 means credentials are
+    missing or invalid; 400 and 422 describe malformed input.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: fastapi-authn-authz-03
+  competency: authn_authz
+  difficulty: 1
+  text: What does the signature of a signed (not encrypted) JWT guarantee?
+  options:
+  - The payload is hidden from anyone who holds the token
+  - The token stops working after the user logs out
+  - The password supplied at login was correct
+  - The token content was not altered since it was issued by the holder of the key
+  correct_index: 3
+  explanation: 'A signature proves integrity and origin: any change to header or payload breaks it. A
+    signed JWT is only Base64-encoded, so its payload is readable, and logout or password checks are separate
+    mechanisms.'
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: fastapi-authn-authz-04
+  competency: authn_authz
+  difficulty: 1
+  text: Which registered JWT claim holds the time after which the token must be rejected?
+  options:
+  - iat
+  - nbf
+  - sub
+  - exp
+  correct_index: 3
+  explanation: exp is the expiration time. iat is when the token was issued, nbf is the time before which
+    it must not be accepted, and sub identifies the subject.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: fastapi-authn-authz-05
+  competency: authn_authz
+  difficulty: 2
+  text: A client calls GET /me without an Authorization header. What does it receive?
+  code_snippet: |
+    1  oauth2 = OAuth2PasswordBearer(tokenUrl="login")
+    2
+    3  @app.get("/me")
+    4  def me(token: str = Depends(oauth2)):
+    5      return {"token": token}
+  options:
+  - Status 403
+  - Status 422
+  - '{"token": null}'
+  - Status 401
+  correct_index: 3
+  explanation: 'OAuth2PasswordBearer raises 401 ''Not authenticated'' (with a WWW-Authenticate: Bearer
+    header) when the header is missing, before the endpoint body runs.'
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 2
+    reviewer_note: Verified 401 (OAuth2PasswordBearer).
+- id: fastapi-authn-authz-06
+  competency: authn_authz
+  difficulty: 2
+  text: The admin screen of a web app is hidden from normal users in the user interface. What else is
+    needed to protect the admin API?
+  options:
+  - Nothing, because the route is not linked anywhere
+  - A role check on every admin endpoint on the server
+  - A longer, harder-to-guess URL for the admin route
+  - A CORS rule that only allows the admin screen
+  correct_index: 1
+  explanation: 'Anything done in the client can be bypassed: users can call the API directly. Authorization
+    must be enforced server-side on each endpoint, for example with a dependency that checks the user''s
+    role. Hidden or obscure URLs and CORS do not stop direct requests.'
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: fastapi-authn-authz-07
+  competency: authn_authz
+  difficulty: 2
+  text: A user logs out, but their JWT access token (valid for 7 days) still works. Why?
+  options:
+  - The token is stateless and stays valid until it expires unless a revocation list exists
+  - JWTs cannot be signed with a secret key, so logout cannot be enforced
+  - The browser caches the token on the server side until the cache is flushed
+  - FastAPI keeps every issued token in memory and forgets it only on restart
+  correct_index: 0
+  explanation: A server that only verifies signature and exp has no record of issued tokens, so logging
+    out on the client does not invalidate them. Use short lifetimes, refresh tokens, and a revocation
+    or session check when immediate invalidation is needed.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: fastapi-authn-authz-08
+  competency: authn_authz
+  difficulty: 2
+  text: GET /orders/{order_id} needs a valid login and returns the order. User B can read user A's order
+    by using its id. Which control is missing?
+  options:
+  - A check that the order belongs to the current user or that the user may see it
+  - Hashing the order id inside the URL so that it looks less guessable
+  - Requiring HTTPS for every request to this endpoint
+  - Rate limiting the endpoint to a few requests per minute
+  correct_index: 0
+  explanation: 'This is broken object-level authorization: being logged in is not enough, the code must
+    verify access to the specific object. The other controls do not decide who may read which order.'
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: fastapi-authn-authz-09
+  competency: authn_authz
+  difficulty: 3
+  text: An anonymous client sends GET /admin?role=x with no token. What does it receive?
+  code_snippet: "1   def current_user():\n2       raise HTTPException(status_code=401)\n3 \n4   def require_role(role:\
+    \ str):\n5       def checker(user=Depends(current_user)):\n6           if user.role != role:\n7  \
+    \             raise HTTPException(status_code=403)\n8           return user\n9       return checker\n\
+    10\n11  @app.get(\"/admin\")\n12  def admin_panel(user=Depends(require_role)):\n13      return {\"\
+    ok\": True}\n"
+  options:
+  - '{"ok": true}'
+  - Status 401
+  - Status 403
+  - Status 422
+  correct_index: 0
+  explanation: 'Depends(require_role) forgets the call parentheses, so FastAPI treats require_role itself
+    as the dependency: role becomes a query parameter and the returned checker function is injected as
+    user. The checker and current_user never run, so the admin route is open.'
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 3
+    reviewer_note: 'Verified 200 {ok:true}: Depends(require_role) treats role as a query param and returns
+      the checker function itself; current_user never runs. Subtle but fair.'
+- id: fastapi-authn-authz-10
+  competency: authn_authz
+  difficulty: 3
+  text: A server decodes incoming JWTs using the algorithm named in each token's own header. What does
+    this allow?
+  options:
+  - Expired tokens to be replayed by exploiting small differences in clock skew
+  - Cross-site request forgery through cookies sent automatically by the browser
+  - An attacker can pick the algorithm none and forge a token that the server accepts
+  - SQL injection through the sub claim when the user is looked up
+  correct_index: 2
+  explanation: The token is attacker-controlled, so its header must not decide how it is verified. Servers
+    should pin an allow-list of algorithms (and key types). This is the classic alg=none / algorithm-confusion
+    forgery.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 2
+- id: fastapi-authn-authz-11
+  competency: authn_authz
+  difficulty: 3
+  text: 'A client with no Authorization header posts {"qty": "many"}. What status does it get?'
+  code_snippet: |
+    1  oauth2 = OAuth2PasswordBearer(tokenUrl="login")
+    2
+    3  class Order(BaseModel):
+    4      qty: int
+    5
+    6  @app.post("/orders")
+    7  def create(order: Order, token: str = Depends(oauth2)):
+    8      return {"qty": order.qty}
+  options:
+  - Status 403
+  - Status 401
+  - Status 422
+  - Status 400
+  correct_index: 1
+  explanation: 'FastAPI resolves dependencies before it validates body parameters, and the security dependency
+    raises HTTPException 401 immediately. The body error is never reported, which is also what you want:
+    do not tell anonymous callers about your schema.'
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 3
+    reviewer_note: 'Verified 401 on FastAPI 0.142: dependency error raised before body validation errors
+      are reported. Relies on internal ordering, but behaviour has been stable.'
+- id: fastapi-authn-authz-12
+  competency: authn_authz
+  difficulty: 2
+  text: Which design is safest for a password-reset link?
+  options:
+  - A random single-use token stored hashed that expires within minutes
+  - The Base64 of the user id plus the time of the reset request
+  - An MD5 hash of the email address of the account being reset
+  - A 4-digit code that stays valid for 24 hours after it is sent
+  correct_index: 0
+  explanation: Reset tokens must be unguessable, single-use and short-lived, and stored hashed so a database
+    leak does not leak working links. Values derived from known data or short numeric codes can be guessed.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: fastapi-databases-orm-01
+  competency: databases_orm
+  difficulty: 1
+  text: In SQLAlchemy, which call makes the changes of the current transaction permanent?
+  options:
+  - session.flush()
+  - session.refresh(obj)
+  - session.expunge_all()
+  - session.commit()
+  correct_index: 3
+  explanation: commit() ends the transaction and persists its changes. flush() only sends pending SQL
+    inside the still-open transaction, refresh() reloads an object, expunge_all() detaches objects.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: fastapi-databases-orm-02
+  competency: databases_orm
+  difficulty: 1
+  text: Which SQLAlchemy 2.0 call loads a User by its primary key?
+  options:
+  - session.find(User, user_id)
+  - User.objects.get(id=user_id)
+  - session.fetch_one(User, user_id)
+  - session.get(User, user_id)
+  correct_index: 3
+  explanation: Session.get(Entity, pk) is the primary-key lookup in 2.0. find and fetch_one do not exist,
+    and Model.objects.get is the Django ORM.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: fastapi-databases-orm-03
+  competency: databases_orm
+  difficulty: 2
+  text: POST /items?name=pen returns 200. What does a later GET /items return?
+  code_snippet: "1   def get_db():\n2       db = SessionLocal()\n3       try:\n4           yield db\n\
+    5       finally:\n6           db.close()\n7 \n8   @app.post(\"/items\")\n9   def create_item(name:\
+    \ str, db: Session = Depends(get_db)):\n10      db.add(Item(name=name))\n11      return {\"ok\": True}\n\
+    12\n13  @app.get(\"/items\")\n14  def list_items(db: Session = Depends(get_db)):\n15      return [i.name\
+    \ for i in db.scalars(select(Item))]\n"
+  options:
+  - '[]'
+  - '["pen"]'
+  - Status 500
+  - Status 422
+  correct_index: 0
+  explanation: Nothing calls commit(). The session only holds the new Item in a transaction; db.close()
+    in the dependency rolls it back, so the row is never stored and the list stays empty. Add db.commit()
+    after db.add().
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 2
+    reviewer_note: Assumes default SessionLocal (no autocommit); close() without commit rolls back.
+- id: fastapi-databases-orm-04
+  competency: databases_orm
+  difficulty: 3
+  text: The author table has 3 rows and Author.books is a relationship() with default settings. How many
+    SELECT statements does this code send?
+  code_snippet: |
+    1  authors = db.scalars(select(Author)).all()
+    2  titles = []
+    3  for author in authors:
+    4      titles += [b.title for b in author.books]
+  options:
+  - '1'
+  - '3'
+  - '4'
+  - '6'
+  correct_index: 2
+  explanation: 'Lazy loading is the default: one SELECT loads the authors, then each author.books access
+    triggers its own SELECT, 1 + 3 = 4 (the N+1 problem). selectinload(Author.books) would reduce this
+    to 2.'
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 2
+- id: fastapi-databases-orm-05
+  competency: databases_orm
+  difficulty: 3
+  text: An async endpoint using AsyncSession reads order.items (a relationship) after the query and fails
+    with MissingGreenlet. What is the right fix?
+  options:
+  - Close the session before the attribute is accessed in the endpoint
+  - Call session.expire_all() right before the attribute is accessed
+  - Read the attribute inside loop.run_in_executor on a worker thread
+  - Load it in the query, for example with selectinload(Order.items)
+  correct_index: 3
+  explanation: With asyncio, a lazy load would need implicit blocking I/O, which is not allowed. Eager-load
+    what you need in the query (selectinload or joinedload), or await it explicitly. Closing or expiring
+    the session makes it worse, and threads do not help.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 2
+- id: fastapi-databases-orm-06
+  competency: databases_orm
+  difficulty: 2
+  text: A module-level db = SessionLocal() is shared by all requests. What is the main risk?
+  options:
+  - The database refuses to open a second connection for the same process
+  - Concurrent requests share one transaction, so they can roll back each other's changes
+  - Every query runs about twice as slowly because the session is global
+  - Pydantic validation silently stops working for the shared session
+  correct_index: 1
+  explanation: 'A Session is not safe to share between concurrent requests: they would use the same transaction,
+    identity map and failure state. Create one session per request, typically in a yield dependency.'
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 2
+- id: fastapi-async-performance-01
+  competency: async_performance
+  difficulty: 1
+  text: Which FastAPI feature runs a small function after the response has been sent, such as a confirmation
+    email?
+  options:
+  - Query
+  - APIRouter
+  - BackgroundTasks
+  - TestClient
+  correct_index: 2
+  explanation: A BackgroundTasks parameter lets the endpoint schedule functions that run after the response
+    is sent, so the client does not wait for them.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: fastapi-async-performance-02
+  competency: async_performance
+  difficulty: 2
+  text: Two clients call GET /slow at the same moment on a single worker. Roughly how long until both
+    have their response?
+  code_snippet: |
+    1  @app.get("/slow")
+    2  async def slow():
+    3      time.sleep(1)
+    4      return {"ok": True}
+  options:
+  - About 1 second
+  - About 2 seconds
+  - About 0.5 seconds
+  - Under 0.1 seconds
+  correct_index: 1
+  explanation: 'time.sleep blocks the event loop inside an async def, so the second request cannot start
+    until the first finishes: about 2 s. With await asyncio.sleep(1) both would finish in about 1 s.'
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 2
+- id: fastapi-async-performance-03
+  competency: async_performance
+  difficulty: 1
+  text: A nightly report takes 20 minutes and must not be lost if the API process restarts midway. Where
+    should it run?
+  options:
+  - In FastAPI BackgroundTasks, because they run after the response
+  - In a separate worker fed by a durable task queue such as Celery or ARQ
+  - In an async def endpoint that awaits it before responding
+  - In a thread started from inside the endpoint
+  correct_index: 1
+  explanation: BackgroundTasks run inside the API process, so they die with it and have no retries or
+    visibility. Long or critical jobs belong in a task queue with its own workers and durable storage.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: fastapi-async-performance-04
+  competency: async_performance
+  difficulty: 2
+  text: An endpoint does CPU-heavy image processing in pure Python. Which change most directly adds true
+    parallelism across requests?
+  options:
+  - Declare the endpoint as async def so it uses every core
+  - Increase the size of the thread pool
+  - Add await asyncio.sleep(0) inside the loop
+  - Run several worker processes, for example uvicorn --workers or gunicorn
+  correct_index: 3
+  explanation: 'Pure-Python CPU work is limited by the GIL: async def and threads do not run it in parallel.
+    Separate processes can use several cores. (Offloading to a process pool or task queue also works.)'
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 2
+- id: fastapi-error-handling-01
+  competency: error_handling
+  difficulty: 1
+  text: Which feature registers one function that turns a custom exception into a JSON response for the
+    whole app?
+  options:
+  - '@app.middleware("http") on every route'
+  - '@app.exception_handler(MyError)'
+  - '@app.on_event("shutdown")'
+  - '@app.get("/error")'
+  correct_index: 1
+  explanation: exception_handler maps an exception class to a handler returning a Response, so routes
+    can simply raise the exception. The others do not provide that mapping.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: fastapi-error-handling-02
+  competency: error_handling
+  difficulty: 2
+  text: What JSON body does the client receive?
+  code_snippet: |
+    1  @app.post("/users")
+    2  def create_user():
+    3      raise HTTPException(status_code=409, detail={"code": "duplicate"})
+  options:
+  - '{"code": "duplicate"}'
+  - '{"error": {"code": "duplicate"}}'
+  - '{"detail": {"code": "duplicate"}}'
+  - '{"detail": "duplicate"}'
+  correct_index: 2
+  explanation: HTTPException's detail can be any JSON-serialisable value; FastAPI wraps it under the key
+    detail, so the dict is nested unchanged.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: fastapi-error-handling-03
+  competency: error_handling
+  difficulty: 2
+  text: A production endpoint crashes with an unexpected exception. Which handling is best?
+  options:
+  - Return the traceback in the response body for easier reports
+  - Log the traceback with a request id on the server and return a generic 500 message
+  - Catch it and return 200 with an empty body so clients keep working
+  - 'Catch it with except: pass so the logs stay clean'
+  correct_index: 1
+  explanation: Operators need the detail (logged server-side, correlated by request id); clients should
+    get only a generic message, since tracebacks leak internals and masking errors as success hides failures.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: fastapi-error-handling-04
+  competency: error_handling
+  difficulty: 3
+  text: What status does GET /items/2 return?
+  code_snippet: "1   DB = {1: \"pen\"}\n2 \n3   @app.get(\"/items/{item_id}\")\n4   def get_item(item_id:\
+    \ int):\n5       try:\n6           if item_id not in DB:\n7               raise HTTPException(status_code=404,\
+    \ detail=\"missing\")\n8           return {\"item\": DB[item_id]}\n9       except Exception:\n10 \
+    \         raise HTTPException(status_code=500, detail=\"failed\")\n"
+  options:
+  - Status 404
+  - Status 200
+  - Status 500
+  - Status 422
+  correct_index: 2
+  explanation: HTTPException is a subclass of Exception, so the broad except Exception catches the 404
+    that was just raised and replaces it with a 500. Catch specific exceptions, or re-raise HTTPException.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 2
+    reviewer_note: 'Verified 500: the 404 HTTPException is caught by except Exception.'
+- id: fastapi-error-handling-05
+  competency: error_handling
+  difficulty: 3
+  text: A client calls GET /no-such-route, which no route matches. What JSON body does it get?
+  code_snippet: |
+    1  from fastapi import FastAPI, HTTPException
+    2  from fastapi.responses import JSONResponse
+    3
+    4  app = FastAPI()
+    5
+    6  @app.exception_handler(HTTPException)
+    7  async def custom(request, exc):
+    8      return JSONResponse({"custom": exc.detail}, status_code=exc.status_code)
+  options:
+  - '{"detail": "Not Found"}'
+  - '{"custom": "Not Found"}'
+  - An empty body with status 404
+  - 'Plain text: Internal Server Error'
+  correct_index: 0
+  explanation: The 404 for an unknown route is raised by Starlette's own HTTPException, the parent class
+    of FastAPI's. A handler registered for fastapi.HTTPException does not catch it, so the default body
+    is used. Register the handler for starlette.exceptions.HTTPException to cover both.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 3
+    reviewer_note: 'Verified: handler for fastapi.HTTPException does not catch Starlette''s routing 404.'
+- id: fastapi-error-handling-06
+  competency: error_handling
+  difficulty: 2
+  text: A client calls GET /search with no query string. What is the loc of the first item of the response's
+    detail list?
+  code_snippet: |
+    1  @app.get("/search")
+    2  def search(q: str):
+    3      return {"q": q}
+  options:
+  - '["body", "q"]'
+  - '["path", "q"]'
+  - '["q"]'
+  - '["query", "q"]'
+  correct_index: 3
+  explanation: 'Validation errors report where the problem is: first the source (query, path, header,
+    cookie or body), then the field name. A missing query parameter gives ["query", "q"].'
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: fastapi-api-security-01
+  competency: api_security
+  difficulty: 1
+  text: Where should a deployed API keep its JWT signing key and database password?
+  options:
+  - In environment variables or a secrets manager, never committed to git
+  - In a .env file committed to the repository for convenience
+  - Hard-coded in settings.py with a note to rotate it later
+  - In the frontend bundle so the browser can sign tokens
+  correct_index: 0
+  explanation: 'Secrets must stay out of source control and client code: inject them at deploy time from
+    the environment or a secrets manager so they can be rotated and access-controlled.'
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: fastapi-api-security-02
+  competency: api_security
+  difficulty: 1
+  text: Which control most directly limits password guessing against POST /login?
+  options:
+  - Serving the whole API over HTTPS only, with HSTS enabled
+  - Rate limiting by account and IP address, with backoff or lockout
+  - A strict CORS allow-list that names only the official frontend
+  - Hiding the login route from the generated OpenAPI documentation
+  correct_index: 1
+  explanation: Brute force is about the number of attempts, so attempts must be throttled. HTTPS protects
+    traffic in transit, CORS only affects browsers, and an undocumented route is still reachable.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: fastapi-api-security-03
+  competency: api_security
+  difficulty: 2
+  text: The users table holds ann and bob. What does GET /users with the query parameter name set to x'
+    OR '1'='1 return?
+  code_snippet: |
+    1  @app.get("/users")
+    2  def find_user(name: str, db: Session = Depends(get_db)):
+    3      query = text(f"SELECT name FROM users WHERE name = '{name}'")
+    4      return [row[0] for row in db.execute(query)]
+  options:
+  - '["ann", "bob"]'
+  - '[]'
+  - Status 422
+  - Status 500
+  correct_index: 0
+  explanation: 'The f-string pastes input into the SQL, which becomes WHERE name = ''x'' OR ''1''=''1'',
+    true for every row: SQL injection. Use bound parameters, text("... WHERE name = :name") with params,
+    or the ORM expression language.'
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 2
+- id: fastapi-api-security-04
+  competency: api_security
+  difficulty: 2
+  text: An API allows only https://app.example.com in its CORS settings. Which statement is true?
+  options:
+  - It is enforced by browsers, so a script on another server can still call the API
+  - It authenticates callers, so other origins can never get data
+  - It encrypts traffic between browser and API
+  - The server rejects every request from other origins before routing
+  correct_index: 0
+  explanation: CORS is a browser rule about which web origins may read responses. curl or another server
+    is not bound by it, so it is no replacement for authentication and authorization.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 2
+- id: fastapi-api-security-05
+  competency: api_security
+  difficulty: 3
+  text: 'Any logged-in user can send {"name": "ann", "is_admin": true} to PATCH /me and become an admin.
+    Which change fixes it?'
+  code_snippet: |
+    1  class ProfileUpdate(BaseModel):
+    2      name: str
+    3      is_admin: bool = False
+    4
+    5  @app.patch("/me")
+    6  def update_me(body: ProfileUpdate):
+    7      user.update(body.model_dump())
+    8      return user
+  options:
+  - Add model_config = ConfigDict(extra='forbid') to ProfileUpdate
+  - Remove is_admin from ProfileUpdate and change it only through admin-only code
+  - Add response_model=ProfileUpdate to the route
+  - Change @app.patch to @app.put
+  correct_index: 1
+  explanation: 'This is mass assignment: a client-writable schema contains a privileged field. The field
+    must not be in the input model. extra=''forbid'' does nothing because is_admin is declared, response_model
+    only filters output, and the HTTP method changes nothing.'
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 2
+- id: fastapi-api-security-06
+  competency: api_security
+  difficulty: 1
+  text: GET /preview?url=... fetches the given URL on the server and returns its text. Which risk is most
+    serious?
+  options:
+  - SQL injection through the URL string
+  - Clickjacking of the preview page
+  - Any website being able to read the response because of CORS
+  - Attackers can make the server request internal addresses such as cloud metadata (SSRF)
+  correct_index: 3
+  explanation: 'A user-controlled URL fetched from inside your network is server-side request forgery:
+    it can reach services and metadata endpoints that outsiders cannot. Mitigate with allow-lists, blocking
+    private ranges and no redirects.'
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: fastapi-api-security-07
+  competency: api_security
+  difficulty: 2
+  text: A list endpoint accepts ?limit= with no upper bound. Which problem does this create and how do
+    you fix it?
+  options:
+  - Callers can request huge pages and exhaust resources; cap it with Query(le=100)
+  - Callers can inject SQL; escape the value by hand
+  - Responses may be cached forever; add a Cache-Control header
+  - Tokens may leak; rotate the signing key
+  correct_index: 0
+  explanation: 'Unbounded page sizes allow unrestricted resource consumption, a classic API risk. Validate
+    and cap pagination parameters, for example limit: int = Query(20, ge=1, le=100).'
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: fastapi-async-performance-05
+  competency: async_performance
+  difficulty: 3
+  text: What does this program print when it runs?
+  code_snippet: |
+    1  async def job(name, delay, fail=False):
+    2      await asyncio.sleep(delay)
+    3      if fail:
+    4          raise ValueError(name)
+    5      print(name, "done")
+    6
+    7  async def main():
+    8      try:
+    9          await asyncio.gather(job("a", 0.1, True), job("b", 0.3))
+    10     except ValueError as e:
+    11         print("caught", e)
+    12     await asyncio.sleep(0.5)
+    13
+    14 asyncio.run(main())
+  options:
+  - caught a
+  - caught a, then b done
+  - b done, then caught a
+  - The ValueError escapes main() and the program crashes
+  correct_index: 1
+  explanation: gather() re-raises the first exception immediately, but without return_exceptions it does
+    not cancel the other awaitables. Job b keeps running and prints "b done" during the final sleep. Use
+    a TaskGroup or cancel explicitly if siblings must stop.
+  check: execution
+  status: DRAFT
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: NONE
+  reviewed_by_name: null
+  reviewed_at: null
+  verification: null
+- id: fastapi-async-performance-06
+  competency: async_performance
+  difficulty: 3
+  text: One worker with default settings serves these routes. A load test fires 50 simultaneous requests
+    at /a, and later 50 simultaneous requests at /b. About how long does each batch take?
+  code_snippet: |
+    1  @app.get("/a")
+    2  def a():
+    3      time.sleep(0.1)
+    4      return {"ok": True}
+    5
+    6  @app.get("/b")
+    7  async def b():
+    8      time.sleep(0.1)
+    9      return {"ok": True}
+  options:
+  - About 0.1 s for /a and about 0.1 s for /b
+  - About 0.1 s for /a and about 5 s for /b
+  - About 0.2 s for /a and about 5 s for /b
+  - About 5 s for /a and about 5 s for /b
+  correct_index: 2
+  explanation: Sync def routes run in the threadpool, whose default limit is 40 threads, so 50 requests
+    need two waves (about 0.2 s). The async def route blocks the event loop itself, so its 50 sleeps run
+    strictly one after another (about 5 s).
+  check: execution
+  status: DRAFT
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: NONE
+  reviewed_by_name: null
+  reviewed_at: null
+  verification: null
+- id: fastapi-async-performance-07
+  competency: async_performance
+  difficulty: 3
+  text: After every POST /export the client gets its response at once, but all other requests then hang
+    for about 3 seconds. What is the cause?
+  code_snippet: |
+    1  async def build_report():
+    2      time.sleep(3)
+    3
+    4  @app.post("/export")
+    5  async def export(bg: BackgroundTasks):
+    6      bg.add_task(build_report)
+    7      return {"queued": True}
+  options:
+  - build_report is async def but blocks, so it runs on the event loop; a plain def task would run in the threadpool
+  - BackgroundTasks run before the response is sent, so the worker is busy until they finish
+  - Making export a plain def would move build_report to a worker thread and fix the stall
+  - BackgroundTasks keep the request's resources locked until the task ends
+  correct_index: 0
+  explanation: Starlette awaits async background tasks directly on the event loop, and runs plain def tasks
+    in the threadpool. A blocking call inside an async def task therefore freezes the loop after the response.
+    The route's own sync/async form does not change where the task runs.
+  check: execution
+  status: DRAFT
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: NONE
+  reviewed_by_name: null
+  reviewed_at: null
+  verification: null
+- id: fastapi-api-security-08
+  competency: api_security
+  difficulty: 3
+  text: A single-page app on app.example.com authenticates with a session cookie. A page on evil.example
+    sends a credentialed request with that cookie to this API. What happens?
+  code_snippet: |
+    1  app.add_middleware(
+    2      CORSMiddleware,
+    3      allow_origins=["*"],
+    4      allow_credentials=True,
+    5  )
+  options:
+  - Browsers reject the wildcard together with credentials, so the request is blocked
+  - The API answers with Access-Control-Allow-Origin "*", which browsers refuse for credentialed requests
+  - Only app.example.com is allowed because credentials restrict a wildcard to the page's own site
+  - The API echoes evil.example as the allowed origin with credentials, so that page can read the response
+  correct_index: 3
+  explanation: When a cookie is sent, Starlette's CORSMiddleware does not answer with "*"; it reflects the
+    caller's Origin and sets Allow-Credentials true. The wildcard plus credentials combination therefore
+    lets any site read authenticated responses. List explicit origins instead.
+  check: execution
+  status: DRAFT
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: NONE
+  reviewed_by_name: null
+  reviewed_at: null
+  verification: null
+- id: fastapi-api-security-09
+  competency: api_security
+  difficulty: 3
+  text: A user of organisation 1 requests /orgs/1/invoices/<id> with the id of an invoice that belongs
+    to organisation 2, and gets it. Which change closes the hole?
+  code_snippet: |
+    1  @app.get("/orgs/{org_id}/invoices/{invoice_id}")
+    2  def get_invoice(org_id: int, invoice_id: str,
+    3                  user=Depends(current_user)):
+    4      if user.org_id != org_id:
+    5          raise HTTPException(403)
+    6      return INVOICES[invoice_id]
+  options:
+  - Make invoice ids random UUIDs, so they cannot be guessed
+  - Look the invoice up by invoice_id and org_id together and return 404 when it is not found
+  - Return 404 instead of 403 on line 5, so org existence is not revealed
+  - Declare invoice_id with Path(min_length=8) so malformed ids are rejected
+  correct_index: 1
+  explanation: 'The org check passes because the path org_id is the caller''s own; the invoice id is never
+    tied to it (an IDOR). Scope the lookup to the verified org. Random ids only hide the problem: a leaked
+    or shared id still works. Status codes and format validation do not enforce ownership.'
+  check: execution
+  status: DRAFT
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: NONE
+  reviewed_by_name: null
+  reviewed_at: null
+  verification: null
+- id: fastapi-api-security-10
+  competency: api_security
+  difficulty: 3
+  text: This login-complete route tries to allow only same-site redirects. Which value of the next query
+    parameter still sends the browser to another host?
+  code_snippet: |
+    1  @app.get("/login/done")
+    2  def done(next: str = "/"):
+    3      if not next.startswith("/"):
+    4          next = "/"
+    5      return RedirectResponse(next)
+  options:
+  - https://evil.example/x
+  - evil.example/x
+  - //evil.example/x
+  - javascript:alert(1)
+  correct_index: 2
+  explanation: 'A leading "//" is a protocol-relative URL: it starts with "/" so the check passes, and
+    the browser treats evil.example as the host. Absolute URLs and javascript: values fail the check. Safer:
+    parse the value and require an empty scheme and netloc, or map names to known paths.'
+  check: execution
+  status: DRAFT
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: NONE
+  reviewed_by_name: null
+  reviewed_at: null
+  verification: null

@@ -1,0 +1,1051 @@
+# Question bank source for Node.js (role assessment spec §13). Edit here; the build
+# writes alembic/seed/question_bank_v2.json. Legacy questions keep their text and options
+# exactly as stored by migration 0004 (they are matched by text). See README.md.
+skill: Node.js
+domain: BACKEND
+competencies:
+- code: async_event_loop
+  name: Async and the event loop
+  description: Callbacks, promises, async/await and the event loop.
+  is_core: true
+  keywords:
+  - async
+  - promises
+  - event loop
+  - callbacks
+  - concurrency
+  - real-time
+  - streams
+  position: 1
+- code: api_express
+  name: API building (Express)
+  description: Express routes, middleware, request and response handling.
+  is_core: true
+  keywords:
+  - express
+  - api
+  - rest
+  - middleware
+  - routes
+  - backend
+  - server
+  - endpoints
+  position: 2
+- code: node_errors
+  name: Error handling
+  description: Errors in async code, error middleware and process-level failures.
+  is_core: true
+  keywords:
+  - errors
+  - error handling
+  - exceptions
+  - crash
+  - logging
+  - reliability
+  position: 3
+- code: security_basics
+  name: Security basics
+  description: Input validation, secrets, dependencies, injection and headers.
+  is_core: true
+  keywords:
+  - security
+  - secure
+  - validation
+  - secrets
+  - jwt
+  - injection
+  - helmet
+  - authentication
+  position: 4
+questions:
+- id: nodejs-legacy-01
+  competency: api_express
+  difficulty: 1
+  text: What does middleware mean in Express?
+  options:
+  - A database layer
+  - A template engine
+  - A load balancer
+  - Functions that run in order on a request and can modify it or end the response
+  correct_index: 3
+  explanation: Middleware functions sit between the request and the final handler. Each receives (req,
+    res, next), may change req or res, and either ends the response or calls next().
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: nodejs-legacy-02
+  competency: node_errors
+  difficulty: 3
+  text: What is an unhandled promise rejection in recent Node versions by default?
+  options:
+  - It crashes the process
+  - Retried automatically
+  - Logged only in debug mode
+  - Ignored silently
+  correct_index: 0
+  explanation: 'Since Node 15 the default for --unhandled-rejections is throw: an unhandled promise rejection
+    is raised as an uncaught exception and terminates the process unless a handler is registered.'
+  status: DRAFT
+  source: HUMAN
+  active: true
+  review_level: NONE
+  reviewed_by_name: null
+  reviewed_at: null
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+    reviewer_note: True since Node 15 (--unhandled-rejections=throw default); 'recent' is slightly vague
+      but fine.
+- id: nodejs-legacy-03
+  competency: async_event_loop
+  difficulty: 2
+  text: Why use streams for large files?
+  options:
+  - They are required for HTTP
+  - They encrypt data
+  - They compress automatically
+  - They process data in chunks instead of loading it all into memory
+  correct_index: 3
+  explanation: Streams process data in chunks, so memory use stays flat for large files and processing
+    can start before the whole file is read. They do not compress or encrypt by themselves.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: nodejs-legacy-04
+  competency: security_basics
+  difficulty: 2
+  text: What does `npm ci` do differently from `npm install`?
+  options:
+  - Only installs dev dependencies
+  - Installs exactly from the lock file and fails if it doesn't match package.json
+  - Publishes the package
+  - Updates every dependency
+  correct_index: 1
+  explanation: npm ci installs exactly what package-lock.json lists, deletes node_modules first and fails
+    if the lock file and package.json disagree. This gives reproducible, tamper-evident installs, which
+    matters for supply-chain safety.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: nodejs-legacy-05
+  competency: async_event_loop
+  difficulty: 1
+  text: Which format do ES modules use for imports?
+  options:
+  - using
+  - require()
+  - import / export
+  - include
+  correct_index: 2
+  explanation: ES modules use import/export; require() is the CommonJS system.
+  status: DRAFT
+  source: HUMAN
+  active: true
+  review_level: NONE
+  reviewed_by_name: null
+  reviewed_at: null
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+  weak: tests syntax trivia that maps to no assessed competency (module format)
+- id: nodejs-legacy-06
+  competency: async_event_loop
+  difficulty: 3
+  text: Which runs first after the current operation completes?
+  options:
+  - An I/O callback
+  - setImmediate
+  - A resolved promise's .then callback (microtask)
+  - setTimeout(fn, 0)
+  correct_index: 2
+  explanation: After the current operation finishes, the microtask queue (promise callbacks) is drained
+    before the event loop moves to timers, I/O callbacks or setImmediate.
+  status: DRAFT
+  source: HUMAN
+  active: true
+  review_level: NONE
+  reviewed_by_name: null
+  reviewed_at: null
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: nodejs-legacy-07
+  competency: api_express
+  difficulty: 1
+  text: Which module is built in for working with file paths in a cross-platform way?
+  options:
+  - url
+  - os
+  - path
+  - fs
+  correct_index: 2
+  explanation: The path module builds and parses file paths using the correct separator for the operating
+    system.
+  status: DRAFT
+  source: HUMAN
+  active: true
+  review_level: NONE
+  reviewed_by_name: null
+  reviewed_at: null
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+  weak: tests a standard-library name that maps to no assessed competency
+- id: nodejs-legacy-08
+  competency: security_basics
+  difficulty: 1
+  text: What does `process.env` contain?
+  options:
+  - Command history
+  - The process's environment variables
+  - Open files
+  - The installed packages
+  correct_index: 1
+  explanation: process.env holds the process's environment variables, the usual place for configuration
+    and secrets that must not be committed to the repository.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: nodejs-legacy-09
+  competency: security_basics
+  difficulty: 1
+  text: What is the purpose of package-lock.json?
+  options:
+  - To list scripts
+  - To record exact dependency versions so installs are reproducible
+  - To store environment variables
+  - To lock the source code
+  correct_index: 1
+  explanation: package-lock.json records the exact resolved version (and integrity hash) of every dependency,
+    so every install produces the same tree and unexpected upgrades are visible in review.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: nodejs-legacy-10
+  competency: async_event_loop
+  difficulty: 2
+  text: What is the `worker_threads` module for?
+  options:
+  - Running CPU-heavy JavaScript in parallel threads
+  - Scheduling cron jobs
+  - Managing HTTP workers
+  - Connecting to databases
+  correct_index: 0
+  explanation: worker_threads runs JavaScript in separate threads with their own event loop, which keeps
+    CPU-heavy work off the main thread.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: nodejs-legacy-11
+  competency: async_event_loop
+  difficulty: 1
+  text: What makes Node.js well suited to I/O-heavy servers?
+  options:
+  - Its non-blocking, event-driven I/O model
+  - It runs only on Linux
+  - It compiles to native code
+  - It is multi-threaded for JavaScript code
+  correct_index: 0
+  explanation: Node uses non-blocking, event-driven I/O, so one thread can serve many concurrent connections
+    while operations wait. JavaScript code itself runs on a single thread.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: nodejs-legacy-12
+  competency: node_errors
+  difficulty: 1
+  text: How should errors from an awaited promise be handled?
+  options:
+  - With try/catch around the await
+  - Only with .finally
+  - With process.exit
+  - They can't be caught
+  correct_index: 0
+  explanation: await turns a rejected promise into a thrown exception, so try/catch around the await handles
+    it.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: nodejs-legacy-13
+  competency: async_event_loop
+  difficulty: 1
+  text: What does `await` do inside an async function?
+  options:
+  - Blocks the whole process
+  - Converts a callback to sync code
+  - Creates a new thread
+  - Pauses that function until the promise settles, without blocking the event loop
+  correct_index: 3
+  explanation: await suspends only the async function, letting the event loop run other work, and resumes
+    it when the promise settles.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: nodejs-legacy-14
+  competency: async_event_loop
+  difficulty: 2
+  text: What happens if you run a long CPU-bound loop on Node's main thread?
+  options:
+  - Node moves it to a GPU
+  - The event loop is blocked and other requests wait
+  - It runs in parallel automatically
+  - Other requests keep being served normally
+  correct_index: 1
+  explanation: JavaScript runs on one thread, so a long synchronous loop blocks the event loop and every
+    other request waits until it finishes.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: nodejs-legacy-15
+  competency: security_basics
+  difficulty: 1
+  text: Which is the safest way to build a SQL query with user input?
+  options:
+  - String concatenation
+  - Escaping quotes manually
+  - Parameterized queries / placeholders
+  - Template literals
+  correct_index: 2
+  explanation: Parameterized queries send the SQL text and the values separately, so input can never be
+    interpreted as SQL. Manual escaping and concatenation are error-prone.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: nodejs-legacy-16
+  competency: security_basics
+  difficulty: 1
+  text: What is the main risk of storing secrets directly in source code?
+  options:
+  - Slower startup
+  - Syntax errors
+  - They expire
+  - They leak to anyone who can read the repository or its history
+  correct_index: 3
+  explanation: Secrets committed to source control are readable by everyone with repository access, remain
+    in history after deletion, and spread to forks and CI logs.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: nodejs-async-event-loop-01
+  competency: async_event_loop
+  difficulty: 3
+  text: This script runs as a CommonJS file with `node app.js`. In what order does it print?
+  code_snippet: |
+    console.log('A');
+    setTimeout(() => console.log('B'), 0);
+    Promise.resolve().then(() => console.log('C'));
+    process.nextTick(() => console.log('D'));
+    console.log('E');
+  options:
+  - A, E, D, C, B
+  - A, E, C, D, B
+  - A, E, B, C, D
+  - A, B, C, D, E
+  correct_index: 0
+  explanation: Synchronous code runs first (A, E). Then the process.nextTick queue is drained, then promise
+    microtasks (C), and only afterwards the timers phase runs the setTimeout callback (B). So the order
+    is A, E, D, C, B.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 2
+    reviewer_note: 'Verified on Node 20.18: A E D C B.'
+- id: nodejs-async-event-loop-02
+  competency: async_event_loop
+  difficulty: 3
+  text: Inside the callback of an `fs.readFile` call, three things are scheduled as shown. In what order
+    do they print?
+  code_snippet: |
+    const fs = require('fs');
+    fs.readFile(__filename, () => {
+      setTimeout(() => console.log('timeout'), 0);
+      setImmediate(() => console.log('immediate'));
+      Promise.resolve().then(() => console.log('promise'));
+    });
+  options:
+  - promise, timeout, immediate
+  - promise, immediate, timeout
+  - immediate, promise, timeout
+  - timeout, immediate, promise
+  correct_index: 1
+  explanation: When the callback ends, the microtask queue is drained first (promise). The callback runs
+    in the poll phase, so the check phase (setImmediate) comes next, and the timer only fires on the next
+    loop iteration. Inside an I/O callback, immediate always precedes timeout.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 3
+    reviewer_note: 'Verified on Node 20.18 (5 runs): promise, immediate, timeout. Deterministic because
+      scheduled from an I/O callback.'
+- id: nodejs-async-event-loop-03
+  competency: async_event_loop
+  difficulty: 2
+  text: What does this program print?
+  code_snippet: |
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    async function main() {
+      [1, 2, 3].forEach(async (n) => {
+        await wait(10);
+        console.log(n);
+      });
+      console.log('done');
+    }
+    main();
+  options:
+  - 1, 2, 3, done
+  - 1, done, 2, 3
+  - done, 1, 2, 3
+  - done
+  correct_index: 2
+  explanation: forEach ignores the promises returned by its async callbacks, so main() does not wait for
+    them. 'done' prints immediately, then the three timers fire in order. Use for...of with await, or
+    Promise.all with map, to wait.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 2
+    reviewer_note: 'Verified: done, 1, 2, 3.'
+- id: nodejs-api-express-01
+  competency: api_express
+  difficulty: 1
+  text: Which Express call registers a handler that runs only for HTTP POST requests to /users?
+  options:
+  - app.listen('/users', handler)
+  - app.create('/users', handler)
+  - app.post('/users', handler)
+  - app.send('/users', handler)
+  correct_index: 2
+  explanation: 'Express exposes one method per HTTP verb: app.get, app.post, app.put, app.delete. app.listen
+    starts the server, and create and send are not routing methods.'
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: nodejs-api-express-02
+  competency: api_express
+  difficulty: 1
+  text: What does the built-in `express.json()` middleware do?
+  options:
+  - Parses JSON request bodies and puts the result on req.body
+  - Sends every response as JSON automatically
+  - Validates request bodies against a JSON schema
+  - Converts the query string into a JSON object
+  correct_index: 0
+  explanation: express.json() reads requests whose Content-Type is application/json and populates req.body.
+    It does not validate the data or change responses; validation needs a separate library.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: nodejs-api-express-03
+  competency: api_express
+  difficulty: 2
+  text: Both routes are registered as shown. A request to GET /users/me gets the response 'by id'. Why?
+  code_snippet: |
+    app.get('/users/:id', (req, res) => res.send('by id'));
+    app.get('/users/me', (req, res) => res.send('profile'));
+  options:
+  - Express always prefers the route with the dynamic segment
+  - The word 'me' is reserved and cannot be a literal path
+  - Express runs routes in registration order and the first matching one responds
+  - A path can only be handled by a single route per app
+  correct_index: 2
+  explanation: Express tries routes and middleware in the order they were registered, and the first handler
+    that sends a response ends the cycle. '/users/:id' matches 'me', so the more specific route must be
+    registered first.
+  check: manual
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 2
+- id: nodejs-api-express-04
+  competency: api_express
+  difficulty: 2
+  text: Every request to this server hangs until the client times out. What is wrong?
+  code_snippet: |
+    app.use((req, res, next) => {
+      console.log(req.method, req.url);
+    });
+    app.get('/', (req, res) => res.send('ok'));
+  options:
+  - app.use must be registered after the routes
+  - console.log blocks the event loop until the request ends
+  - The middleware neither calls next() nor sends a response
+  - res.send needs a return statement in front of it
+  correct_index: 2
+  explanation: A middleware must either end the response or call next() to pass control on. This one does
+    neither, so the request never reaches the route and no response is sent.
+  check: manual
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: nodejs-api-express-05
+  competency: api_express
+  difficulty: 2
+  text: 'POST /orders with a JSON body fails with `TypeError: Cannot read properties of undefined (reading
+    ''total'')`. What is the cause?'
+  code_snippet: |
+    app.post('/orders', (req, res) => {
+      res.json({ total: req.body.total });
+    });
+    app.use(express.json());
+  options:
+  - The route should use app.put for bodies
+  - req.body only exists on GET requests
+  - express.json() must be called inside the handler
+  - The body parser is registered after the route, so req.body is never populated
+  correct_index: 3
+  explanation: Middleware only affects handlers registered after it. Because express.json() comes after
+    the POST route, req.body is still undefined when the handler runs. Register body parsers before the
+    routes.
+  check: manual
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 2
+- id: nodejs-api-express-06
+  competency: api_express
+  difficulty: 3
+  text: For an unknown id the client correctly receives the 404, but the server also logs `ERR_HTTP_HEADERS_SENT`.
+    What fixes this?
+  code_snippet: |
+    app.get('/items/:id', async (req, res) => {
+      const item = await db.find(req.params.id);
+      if (!item) {
+        res.status(404).json({ error: 'not found' });
+      }
+      res.json(item);
+    });
+  options:
+  - Return from the handler after sending the 404 response
+  - Wrap the db.find call in a try/catch block
+  - Call res.end() after the final res.json
+  - Move the db.find call out of the handler
+  correct_index: 0
+  explanation: Without a return, execution continues after the 404 and res.json tries to send a second
+    response, which throws ERR_HTTP_HEADERS_SENT. Writing `return res.status(404).json(...)` stops the
+    handler.
+  check: manual
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 2
+- id: nodejs-api-express-07
+  competency: api_express
+  difficulty: 3
+  text: A router is mounted with `app.use('/api', router)` and contains `router.get('/users', ...)`. Inside
+    that handler, what is `req.path` for GET /api/users?x=1?
+  options:
+  - /api/users
+  - /users
+  - /users?x=1
+  - /api/users?x=1
+  correct_index: 1
+  explanation: When a router is mounted at a prefix, Express strips the mount path from req.url before
+    the router sees it, and req.path is the path part without the query string, so it is '/users'. req.originalUrl
+    keeps the full '/api/users?x=1'.
+  check: manual
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 2
+- id: nodejs-error-handling-01
+  competency: node_errors
+  difficulty: 1
+  text: In Express, how does a route handler pass an error on to the error-handling middleware?
+  options:
+  - Call res.fail(err)
+  - Return the error object from the handler
+  - Call next(err)
+  - Call app.emit('stop', err)
+  correct_index: 2
+  explanation: Calling next with an argument tells Express to skip the remaining normal handlers and go
+    straight to the error-handling middleware. Returning a value or inventing methods such as res.fail
+    does nothing.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: nodejs-error-handling-02
+  competency: node_errors
+  difficulty: 2
+  text: What happens when this script runs?
+  code_snippet: |
+    try {
+      setTimeout(() => {
+        throw new Error('boom');
+      }, 0);
+    } catch (e) {
+      console.log('caught');
+    }
+  options:
+  - It prints 'caught' and exits normally
+  - It prints 'caught' and then crashes
+  - It prints nothing and exits normally
+  - The process crashes with an uncaught exception and 'caught' is never printed
+  correct_index: 3
+  explanation: The callback runs later from the event loop, after the try block has already finished,
+    so the catch clause is no longer on the stack. The error becomes an uncaught exception and terminates
+    the process.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 2
+    reviewer_note: 'Verified on Node 20: crashes with uncaught ''boom'', no ''caught''.'
+- id: nodejs-error-handling-03
+  competency: node_errors
+  difficulty: 2
+  text: What happens when this script runs on Node 20 with default settings?
+  code_snippet: |
+    async function load() {
+      throw new Error('fail');
+    }
+    async function main() {
+      try {
+        load();
+      } catch (err) {
+        console.log('handled');
+      }
+    }
+    main();
+  options:
+  - The process crashes on an unhandled rejection and 'handled' is never printed
+  - It prints 'handled' and exits normally
+  - It prints 'handled' and then crashes
+  - It prints nothing and exits normally
+  correct_index: 0
+  explanation: load() is not awaited, so its rejected promise is not part of the try block and catch never
+    sees it. Nobody handles the rejection, and since Node 15 an unhandled rejection terminates the process.
+    Writing `await load()` would be caught.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 3
+    reviewer_note: 'Verified on Node 20: crashes with unhandled rejection, ''handled'' not printed.'
+- id: nodejs-error-handling-04
+  competency: node_errors
+  difficulty: 3
+  text: What does this code print?
+  code_snippet: |
+    Promise.resolve()
+      .then(() => { throw new Error('one'); })
+      .catch((e) => { console.log('caught', e.message); throw new Error('two'); })
+      .then(() => console.log('then'))
+      .catch((e) => console.log('final', e.message));
+  options:
+  - caught one, then
+  - caught one, final two
+  - caught one, then, final two
+  - caught one, final one
+  correct_index: 1
+  explanation: The first catch logs 'caught one' and throws a new error, so the promise returned by catch
+    rejects. The following then is skipped, and the last catch receives the new error and prints 'final
+    two'.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 2
+    reviewer_note: 'Verified: caught one / final two.'
+- id: nodejs-error-handling-05
+  competency: node_errors
+  difficulty: 2
+  text: Express does not use this function as an error handler and returns its default error page instead.
+    Why?
+  code_snippet: |
+    app.use((err, req, res) => {
+      res.status(500).json({ error: 'something failed' });
+    });
+  options:
+  - Error handlers must be registered before all routes
+  - Error handlers can only call res.send, not res.json
+  - Express recognises error handlers by their four parameters, and next is missing
+  - The status code 500 is reserved for the default handler
+  correct_index: 2
+  explanation: 'Express tells error-handling middleware apart by its arity: it must declare four parameters
+    (err, req, res, next), even if next is unused. With three parameters it is treated as ordinary middleware.
+    Error handlers belong after the routes.'
+  check: manual
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 2
+- id: nodejs-security-basics-01
+  competency: security_basics
+  difficulty: 2
+  text: How should an API store user passwords?
+  options:
+  - Hash them once with SHA-256 without a salt
+  - Encrypt them with AES using a key kept in an environment variable
+  - Encode them with Base64 in the database
+  - Hash them with a slow salted algorithm such as bcrypt or Argon2
+  correct_index: 3
+  explanation: Passwords need a deliberately slow, salted password-hashing function so stolen hashes are
+    expensive to crack. A fast unsalted hash is easy to brute-force, and encrypted or encoded passwords
+    can be recovered.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: nodejs-security-basics-02
+  competency: security_basics
+  difficulty: 3
+  text: A route serves uploaded files by name. Which change is the most robust protection against path
+    traversal such as `../../etc/passwd`?
+  code_snippet: |
+    app.get('/files/:name', (req, res) => {
+      const file = path.join(UPLOAD_DIR, req.params.name);
+      res.sendFile(file);
+    });
+  options:
+  - Resolve the full path and reject it unless it starts inside UPLOAD_DIR
+  - Remove the first occurrence of '../' from the name
+  - Reject names that contain the word 'etc'
+  - Wrap the name in encodeURIComponent before joining
+  correct_index: 0
+  explanation: path.join normalises the '..' segments, so the result can leave UPLOAD_DIR. Resolving to
+    an absolute path and checking that it stays under the base directory is reliable. Stripping '../'
+    once can be bypassed with input like '....//', and keyword blocklists miss other targets.
+  check: manual
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 2
+- id: nodejs-security-basics-03
+  competency: security_basics
+  difficulty: 3
+  text: A server merges parsed JSON from a request into an object using this function. After the attack
+    payload below is processed, what does `console.log({}.admin)` print?
+  code_snippet: |
+    const merge = (target, source) => {
+      for (const key in source) {
+        if (typeof source[key] === 'object' && source[key] !== null) {
+          target[key] = merge(target[key] || {}, source[key]);
+        } else {
+          target[key] = source[key];
+        }
+      }
+      return target;
+    };
+    merge({}, JSON.parse('{"__proto__": {"admin": true}}'));
+    console.log({}.admin);
+  options:
+  - undefined
+  - 'true'
+  - 'false'
+  - It throws a TypeError
+  correct_index: 1
+  explanation: 'JSON.parse creates an own property named __proto__. The recursive merge then reads target[''__proto__''],
+    which is Object.prototype, and writes admin onto it. Every object now inherits admin: true. This is
+    prototype pollution; block __proto__, constructor and prototype keys.'
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 3
+    reviewer_note: 'Verified on Node 20: prints true (prototype pollution via for-in over own __proto__
+      key from JSON.parse).'

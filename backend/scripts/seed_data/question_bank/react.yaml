@@ -1,0 +1,1917 @@
+# Question bank source for React (role assessment spec §13). Edit here; the build
+# writes alembic/seed/question_bank_v2.json. Legacy questions keep their text and options
+# exactly as stored by migration 0004 (they are matched by text). See README.md.
+skill: React
+domain: FRONTEND
+competencies:
+- code: components_props
+  name: Components and props
+  description: Building components, passing props and children, composition and lists with keys.
+  is_core: true
+  keywords:
+  - component
+  - components
+  - props
+  - jsx
+  - children
+  - reusable
+  - ui
+  - frontend
+  - list
+  - key
+  position: 1
+- code: state_hooks
+  name: State and hooks
+  description: useState, useReducer, lifting state, context and custom hooks.
+  is_core: true
+  keywords:
+  - state
+  - hooks
+  - usestate
+  - usereducer
+  - context
+  - shared state
+  - cart
+  - global state
+  - custom hook
+  position: 2
+- code: effects_data
+  name: Effects and data fetching
+  description: useEffect, cleanup, dependencies and loading data from APIs.
+  is_core: true
+  keywords:
+  - fetch
+  - api
+  - data fetching
+  - useeffect
+  - loading
+  - real-time
+  - live updates
+  - polling
+  - integration
+  - rest
+  position: 3
+- code: forms_validation
+  name: Forms and validation
+  description: Controlled inputs, validation, errors and submission.
+  is_core: false
+  keywords:
+  - form
+  - forms
+  - validation
+  - input
+  - checkout
+  - sign up
+  - registration
+  - submit
+  - fields
+  position: 4
+- code: performance
+  name: Performance
+  description: Memoisation, avoiding re-renders, code splitting and large lists.
+  is_core: false
+  keywords:
+  - performance
+  - fast
+  - slow
+  - optimise
+  - optimize
+  - memo
+  - large lists
+  - lazy loading
+  - speed
+  position: 5
+- code: accessibility
+  name: Accessibility
+  description: Semantic HTML, labels, keyboard use, focus and ARIA in React apps.
+  is_core: false
+  keywords:
+  - accessibility
+  - accessible
+  - a11y
+  - screen reader
+  - keyboard
+  - aria
+  - wcag
+  - contrast
+  position: 6
+- code: testing_ui
+  name: Testing UI
+  description: Testing components with Testing Library, user events and mocks.
+  is_core: false
+  keywords:
+  - testing
+  - tests
+  - unit tests
+  - testing library
+  - jest
+  - vitest
+  - component tests
+  - quality
+  position: 7
+questions:
+- id: react-legacy-01
+  competency: state_hooks
+  difficulty: 3
+  text: In React 18, what does automatic batching do?
+  options:
+  - Merges components
+  - Combines several state updates into one re-render, even inside timeouts and promises
+  - Delays effects by one second
+  - Sends network requests together
+  correct_index: 1
+  explanation: Since React 18, updates are batched everywhere, including inside timeouts, promises and
+    native event handlers, so several setState calls in one tick cause a single re-render. Earlier versions
+    batched only inside React event handlers.
+  status: DRAFT
+  source: HUMAN
+  active: true
+  review_level: NONE
+  reviewed_by_name: null
+  reviewed_at: null
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: react-legacy-02
+  competency: state_hooks
+  difficulty: 2
+  text: Why is mutating state directly (e.g. pushing into an array held in state) a problem?
+  options:
+  - React may not detect the change because the reference is the same
+  - It is a syntax error
+  - It is slower
+  - It deletes the state
+  correct_index: 0
+  explanation: React decides whether to re-render by comparing the new state with the old using Object.is.
+    Pushing into the existing array keeps the same reference, so the change may not be detected. Create
+    a new array (e.g. [...items, item]).
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: react-legacy-03
+  competency: performance
+  difficulty: 2
+  text: What does React.lazy combined with Suspense provide?
+  options:
+  - Server-side rendering
+  - 'Code-splitting: loading a component''s code only when it is first rendered'
+  - Global state
+  - Automatic memoization
+  correct_index: 1
+  explanation: React.lazy loads a component through a dynamic import() the first time it renders, and
+    Suspense shows a fallback while the chunk loads. This splits the bundle so users download less code
+    up front. It is not SSR, state or memoisation.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: react-legacy-04
+  competency: effects_data
+  difficulty: 1
+  text: When does an effect with an empty dependency array (`useEffect(fn, [])`) run?
+  options:
+  - Only when props change
+  - On every render
+  - Only after the first render (and cleanup on unmount)
+  - Never
+  correct_index: 2
+  explanation: With an empty dependency array the effect runs after the first render and its cleanup runs
+    on unmount, since it has no values to react to. (In development StrictMode adds one extra mount/unmount
+    cycle.)
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+    reviewer_note: 'Minor: in dev StrictMode the effect runs mount-cleanup-mount; the answer is still
+      correct for normal semantics.'
+- id: react-legacy-05
+  competency: state_hooks
+  difficulty: 1
+  text: What does calling a state setter from useState do?
+  options:
+  - Schedules a re-render with the new state
+  - Mutates the state variable immediately
+  - Reloads the page
+  - Resets every other piece of state
+  correct_index: 0
+  explanation: A state setter queues an update and schedules a re-render with the new value. The variable
+    in the current render keeps its old value, and other state is untouched.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: react-legacy-06
+  competency: state_hooks
+  difficulty: 1
+  text: What is the purpose of React Context?
+  options:
+  - To pass values through the tree without passing props at every level
+  - To replace all component state
+  - To call APIs
+  - To speed up rendering
+  correct_index: 0
+  explanation: Context lets a provider make a value available to any descendant through useContext, avoiding
+    prop drilling through intermediate components. It is a delivery mechanism, not a replacement for state,
+    a data-fetching tool or a speed-up.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: react-legacy-07
+  competency: components_props
+  difficulty: 1
+  text: What does a component's return value of `null` mean?
+  options:
+  - Throw an error
+  - Unmount the parent
+  - Render the previous output
+  - Render nothing
+  correct_index: 3
+  explanation: A component that returns null renders nothing in its place, which is the standard way to
+    hide a component conditionally. It does not throw, unmount the parent or keep earlier output.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: react-legacy-08
+  competency: state_hooks
+  difficulty: 1
+  text: Changing the `.current` value of a ref created with useRef will…
+  options:
+  - Throw an error
+  - Reset the component
+  - Not trigger a re-render
+  - Trigger a re-render
+  correct_index: 2
+  explanation: A ref is a mutable box that persists across renders. Writing to ref.current does not notify
+    React, so no re-render happens. Use state when the UI must update.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: react-legacy-09
+  competency: performance
+  difficulty: 2
+  text: What is the main purpose of useCallback?
+  options:
+  - To run code after paint
+  - To keep the same function identity between renders unless its dependencies change
+  - To create a ref
+  - To fetch data
+  correct_index: 1
+  explanation: useCallback returns the same function instance between renders until its dependencies change.
+    This matters for referential equality, e.g. when passing callbacks to React.memo children or listing
+    them in effect dependencies.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: react-legacy-10
+  competency: components_props
+  difficulty: 1
+  text: Why does React need a `key` prop on list items?
+  options:
+  - To sort the list alphabetically
+  - To identify items between renders so it can match and reorder them
+  - To style each item
+  - To make items focusable
+  correct_index: 1
+  explanation: Keys give list items a stable identity so React can match items between renders, reorder
+    DOM nodes and preserve each item's state. They are not passed as props and do not affect sorting,
+    styling or focus.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: react-legacy-11
+  competency: state_hooks
+  difficulty: 1
+  text: What is 'lifting state up'?
+  options:
+  - Putting state in a ref
+  - Storing state in localStorage
+  - Using a global variable
+  - Moving state to the closest common parent of components that need it
+  correct_index: 3
+  explanation: Lifting state up means moving shared state to the closest common ancestor and passing it
+    down as props (with callbacks to change it), so sibling components stay in sync.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: react-legacy-12
+  competency: performance
+  difficulty: 1
+  text: Which hook memoizes a computed value between renders?
+  options:
+  - useMemo
+  - useRef
+  - useId
+  - useState
+  correct_index: 0
+  explanation: useMemo caches the result of a computation between renders and recomputes it only when
+    its dependencies change. useRef holds a mutable box, useId generates ids and useState holds state.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: react-legacy-13
+  competency: forms_validation
+  difficulty: 1
+  text: What is a 'controlled' input in React?
+  options:
+  - An input inside a form tag
+  - An input with validation
+  - An input rendered by a server
+  - An input whose value is driven by React state
+  correct_index: 3
+  explanation: A controlled input gets its value from React state through the value prop and reports changes
+    through onChange, so React is the single source of truth. An uncontrolled input keeps its value in
+    the DOM.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: react-legacy-14
+  competency: state_hooks
+  difficulty: 2
+  text: Which statement about the Rules of Hooks is correct?
+  options:
+  - Hooks can be called from class components
+  - Hooks must be called inside conditions
+  - Hooks must be called in the same order on every render, at the top level of components or custom hooks
+  - Hooks may be called inside loops
+  correct_index: 2
+  explanation: React identifies hooks by call order, so hooks must be called unconditionally at the top
+    level of function components or custom hooks, in the same order every render. Not inside conditions,
+    loops, nested functions or classes.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: react-legacy-15
+  competency: components_props
+  difficulty: 1
+  text: Which is the safest way to render user-supplied text in React?
+  options:
+  - dangerouslySetInnerHTML
+  - Building an HTML string
+  - Rendering it as a child expression like {text}
+  - Using eval
+  correct_index: 2
+  explanation: React escapes strings rendered as children ({text}), so user input is shown as text and
+    cannot inject markup. dangerouslySetInnerHTML, HTML strings and eval can all execute attacker-controlled
+    content.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: react-legacy-16
+  competency: effects_data
+  difficulty: 2
+  text: What should a useEffect cleanup function typically do?
+  options:
+  - Set state for the next render
+  - Call the effect again
+  - Return JSX
+  - Undo subscriptions, timers or listeners the effect created
+  correct_index: 3
+  explanation: The cleanup function runs before the effect re-runs and when the component unmounts. It
+    should release what the effect set up (subscriptions, timers, listeners, requests) to avoid leaks
+    and stale callbacks.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: react-components-props-01
+  competency: components_props
+  difficulty: 1
+  text: Which prop holds the elements written between a component's opening and closing tags, as in `<Card>...</Card>`?
+  options:
+  - props.children
+  - props.content
+  - props.slot
+  - props.inner
+  correct_index: 0
+  explanation: React passes whatever is nested between the tags as the special `children` prop. There
+    is no built-in `content`, `slot` or `inner` prop; those names only work if the parent passes them
+    explicitly.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: react-components-props-02
+  competency: components_props
+  difficulty: 2
+  text: A child component must change a number that its parent owns and passes down as a prop. What is
+    the idiomatic way?
+  options:
+  - The child assigns a new value to props.count, which makes React re-render the parent component
+  - The parent also passes a callback prop; the child calls it and the parent updates its state
+  - The child keeps the number in a module-level variable that the parent component reads on render
+  - The child calls ReactDOM.render again with a different count prop for the same parent
+  correct_index: 1
+  explanation: 'Props are read-only (frozen in development). Data flows down and changes flow up: the
+    owner of the state exposes a setter or handler via props, the child calls it, and the owner re-renders
+    with the new value.'
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: react-components-props-03
+  competency: components_props
+  difficulty: 2
+  text: What HTML does `Inbox` produce when `messages` is an empty array?
+  code_snippet: |
+    1  function Inbox({ messages }) {
+    2    return <div>{messages.length && <p>You have mail</p>}</div>;
+    3  }
+    4  // rendered with messages = []
+  options:
+  - <div></div>
+  - <div><p>You have mail</p></div>
+  - <div>false</div>
+  - <div>0</div>
+  correct_index: 3
+  explanation: '`messages.length && ...` evaluates to 0 when the array is empty, and React renders the
+    number 0 as text (unlike false, null or undefined, which render nothing). Use `messages.length > 0
+    &&` or a ternary.'
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 2
+- id: react-components-props-04
+  competency: components_props
+  difficulty: 2
+  text: What does `<Badge color={null} />` render?
+  code_snippet: |
+    1  function Badge({ color = 'gray' }) {
+    2    return <span className={'badge-' + color} />;
+    3  }
+  options:
+  - <span class="badge-null"></span>
+  - <span class="badge-gray"></span>
+  - <span class="badge-"></span>
+  - <span class="badge-undefined"></span>
+  correct_index: 0
+  explanation: Destructuring defaults apply only when the value is undefined, not when it is null. With
+    color={null} the default 'gray' is not used and string concatenation turns null into 'null'.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 3
+- id: react-components-props-05
+  competency: components_props
+  difficulty: 3
+  text: After the button is clicked once, what text do the list items show, in order?
+  code_snippet: |
+    1  function Row({ name }) {
+    2    const [label] = useState(name);
+    3    return <li>{label}</li>;
+    4  }
+    5  function List() {
+    6    const [names, setNames] = useState(['A', 'B', 'C']);
+    7    return (
+    8      <>
+    9        <button onClick={() => setNames(names.slice(1))}>Remove first</button>
+    10       <ul>{names.map((n, i) => <Row key={i} name={n} />)}</ul>
+    11     </>
+    12   );
+    13 }
+  options:
+  - B, C
+  - A, B
+  - A, B, C
+  - C, B
+  correct_index: 1
+  explanation: With key={i} the rows are matched by position, not by item. After removing the first name,
+    row 0 and row 1 keep their existing instances, whose `label` state was initialised once from the old
+    props, so they still show A and B and the last row is unmounted. Use a stable id as the key.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 3
+- id: react-components-props-06
+  competency: components_props
+  difficulty: 3
+  text: Typing in this input loses focus after every keystroke. What is the cause?
+  code_snippet: |
+    1  function SignupForm() {
+    2    const [email, setEmail] = useState('');
+    3    function EmailField() {
+    4      return <input value={email} onChange={(e) => setEmail(e.target.value)} />;
+    5    }
+    6    return <EmailField />;
+    7  }
+  options:
+  - The onChange handler is an inline arrow function, which is recreated on every render and so resets
+    the focus
+  - The input is controlled, and React drops the focus from controlled inputs after each state update
+    it applies
+  - EmailField is declared inside SignupForm, so each render creates a new component type and remounts
+    the input
+  - useState is called before EmailField is defined, so the state update is lost and the input is re-created
+  correct_index: 2
+  explanation: A component defined inside another component is a new function on every render, so React
+    sees a different type, unmounts the old input and mounts a new one (losing focus). Declare EmailField
+    outside SignupForm, or call it as a plain function. Inline handlers and controlled inputs do not cause
+    this.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 2
+- id: react-components-props-07
+  competency: components_props
+  difficulty: 3
+  text: The button is clicked twice while `first` is true, then `first` becomes false. What does the button
+    show?
+  code_snippet: |
+    1  function Counter({ label }) {
+    2    const [n, setN] = useState(0);
+    3    return <button onClick={() => setN(n + 1)}>{label}: {n}</button>;
+    4  }
+    5  function App({ first }) {
+    6    return first ? <Counter label="A" /> : <Counter label="B" />;
+    7  }
+  options:
+  - 'B: 0'
+  - 'A: 2'
+  - 'A: 0'
+  - 'B: 2'
+  correct_index: 3
+  explanation: Both branches render a Counter at the same position with the same type, so React keeps
+    the existing instance and its state (n = 2) and only updates the label prop. Give the two a different
+    key (or render them in different positions) to reset the state.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 3
+- id: react-state-hooks-01
+  competency: state_hooks
+  difficulty: 2
+  text: '`count` is 0. After one click on a button that runs `handleClick`, what is `count` on the next
+    render?'
+  code_snippet: |
+    1  const [count, setCount] = useState(0);
+    2  function handleClick() {
+    3    setCount(count + 1);
+    4    setCount(count + 1);
+    5    setCount(c => c + 1);
+    6  }
+  options:
+  - '0'
+  - '1'
+  - '2'
+  - '3'
+  correct_index: 2
+  explanation: Both `setCount(count + 1)` calls use the same snapshot (count = 0), so each queues 'set
+    to 1'. The updater `c => c + 1` then runs on the queued value 1 and gives 2. Use updater functions
+    when the next state depends on the previous one.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 2
+- id: react-state-hooks-02
+  competency: state_hooks
+  difficulty: 3
+  text: After clicking Add, the list on screen stays empty. Why?
+  code_snippet: |
+    1  function reducer(state, action) {
+    2    if (action.type === 'add') {
+    3      state.items.push(action.item);
+    4      return state;
+    5    }
+    6    return state;
+    7  }
+    8  // const [state, dispatch] = useReducer(reducer, { items: [] });
+    9  // clicking Add calls dispatch({ type: 'add', item: 'x' });
+    10 // the screen renders state.items
+  options:
+  - The reducer returns the same state object it mutated, so React sees no change and skips the render
+  - dispatch only schedules the update, so the list becomes visible after a second click on the button
+  - useReducer cannot hold an array inside its state object, so the pushed item is silently discarded
+  - The reducer must be wrapped in useCallback before dispatch will call it with the action object
+  correct_index: 0
+  explanation: 'React compares the new state with the old using Object.is. A reducer that mutates `state`
+    and returns it yields the same reference, so React bails out. Return a new object, e.g. { ...state,
+    items: [...state.items, action.item] }.'
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 2
+- id: react-state-hooks-03
+  competency: state_hooks
+  difficulty: 3
+  text: On the first click, which value does the timeout callback push onto `log`?
+  code_snippet: |
+    1  const log = [];
+    2  function Counter() {
+    3    const [count, setCount] = useState(0);
+    4    function handleClick() {
+    5      setCount(count + 5);
+    6      setTimeout(() => log.push(count), 0);
+    7    }
+    8    return <button onClick={handleClick}>{count}</button>;
+    9  }
+  options:
+  - '0'
+  - '1'
+  - '5'
+  - '10'
+  correct_index: 0
+  explanation: Each render has its own snapshot of state. The handler created during the render where
+    count is 0 closes over that 0, so the callback pushes 0 even though count becomes 5 on the next render.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 2
+- id: react-state-hooks-04
+  competency: state_hooks
+  difficulty: 2
+  text: Two components each call the same custom hook `useCounter()`, which uses `useState` inside. How
+    are their counters related?
+  options:
+  - They share one value, because the hook function is defined only once in the codebase
+  - Each call gets its own independent state; the hook shares logic, not state
+  - They share one value only if the two components are rendered as siblings in the tree
+  - React throws an error when two different components call the same custom hook
+  correct_index: 1
+  explanation: State created by useState inside a custom hook belongs to the component that calls it.
+    Calling the hook twice gives two separate states. To share state, lift it up or put it in context.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: react-effects-data-01
+  competency: effects_data
+  difficulty: 1
+  text: In a function component, where should a request that loads data when the component first appears
+    normally be started?
+  options:
+  - Directly in the component body, before the return
+  - Inside the JSX that the component returns
+  - Inside a useEffect callback
+  - In the initial value, as useState(fetch(url))
+  correct_index: 2
+  explanation: Rendering must be pure, so network requests belong in effects (or event handlers). Starting
+    a request in the body would repeat it on every render, and useState(fetch(url)) would store a Promise.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: react-effects-data-02
+  competency: effects_data
+  difficulty: 1
+  text: What does the dependency array in `useEffect(fn, [userId])` control?
+  options:
+  - The effect runs once for every item in the array, in the order that the items appear
+  - userId is passed to fn as its first argument every time that the effect is run
+  - React re-renders the component whenever userId changes, even when nothing else did
+  - The effect runs again after a render only if userId changed since the previous render
+  correct_index: 3
+  explanation: The array lists the reactive values the effect reads. After each render React compares
+    them with the previous ones (Object.is) and re-runs the effect only if one differs. It does not pass
+    arguments or trigger renders.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: react-effects-data-03
+  competency: effects_data
+  difficulty: 2
+  text: The network tab shows this request being sent over and over. Which change stops the repeated requests
+    while still loading the right user?
+  code_snippet: |
+    1  function Profile({ id }) {
+    2    const [user, setUser] = useState(null);
+    3    useEffect(() => {
+    4      fetch('/api/users/' + id).then((r) => r.json()).then(setUser);
+    5    });
+    6    return <h1>{user ? user.name : 'Loading'}</h1>;
+    7  }
+  options:
+  - Pass [id] as the second argument to useEffect
+  - Wrap the fetch call in a useCallback hook
+  - Call setUser inside a setTimeout callback
+  - Move the fetch call into the component body
+  correct_index: 0
+  explanation: Without a dependency array the effect runs after every render; setUser with a new object
+    triggers a render, which re-runs the effect, forever. [id] makes it run only when id changes. The
+    other changes still fetch on every render.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 2
+- id: react-effects-data-04
+  competency: effects_data
+  difficulty: 2
+  text: After the component has been on screen for about five seconds, what does it show?
+  code_snippet: |
+    1  function Ticker() {
+    2    const [count, setCount] = useState(0);
+    3    useEffect(() => {
+    4      const t = setInterval(() => setCount(count + 1), 1000);
+    5      return () => clearInterval(t);
+    6    }, []);
+    7    return <p>{count}</p>;
+    8  }
+  options:
+  - '0'
+  - '1'
+  - '4'
+  - '5'
+  correct_index: 1
+  explanation: The effect runs once with an empty dependency array, so its callback closes over count
+    = 0 forever. Every tick calls setCount(0 + 1), so the value becomes 1 and then stays 1. Use setCount(c
+    => c + 1) or list count in the dependencies.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 3
+- id: react-effects-data-05
+  competency: effects_data
+  difficulty: 2
+  text: A component mounts with id = 1 and is later re-rendered with id = 2 (no StrictMode). What does
+    `log` contain afterwards?
+  code_snippet: |
+    1  useEffect(() => {
+    2    log.push('start ' + id);
+    3    return () => { log.push('stop ' + id); };
+    4  }, [id]);
+  options:
+  - start 1, start 2, stop 1
+  - start 1, stop 1, start 2
+  - start 1, stop 2, start 2
+  - start 1, start 2
+  correct_index: 1
+  explanation: When the dependencies change, React first runs the cleanup of the previous effect (which
+    closed over id 1), then runs the new effect with id 2. The cleanup therefore logs 'stop 1' before
+    'start 2'.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 2
+- id: react-effects-data-06
+  competency: effects_data
+  difficulty: 3
+  text: '`id` changes from 1 to 2 while the first request is pending, and the response for 1 arrives after
+    the response for 2, so the screen shows user 1 under id 2. Which change fixes it?'
+  code_snippet: |
+    1  function User({ id }) {
+    2    const [user, setUser] = useState(null);
+    3    useEffect(() => {
+    4      fetch('/api/users/' + id)
+    5        .then((r) => r.json())
+    6        .then(setUser);
+    7    }, [id]);
+    8    return <p>{user ? user.name : '...'}</p>;
+    9  }
+  options:
+  - Remove id from the dependency array so that only a single request is ever made
+  - Wrap setUser in useCallback so that late responses are dropped before they apply
+  - Set a local ignore flag in the effect's cleanup and skip setUser when it is set
+  - Make the effect callback async and await the fetch call inside of that callback
+  correct_index: 2
+  explanation: Responses can arrive out of order. A cleanup that sets `ignore = true` marks the earlier
+    effect as stale, so its late response is discarded (AbortController works too). The other options
+    either stop refetching, do nothing about ordering, or break the effect's return value.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 2
+- id: react-effects-data-07
+  competency: effects_data
+  difficulty: 3
+  text: The component mounts (no StrictMode) and the button is then clicked twice. How many times is 'load'
+    pushed onto `log`?
+  code_snippet: |
+    1  function Results() {
+    2    const [n, setN] = useState(0);
+    3    const options = { limit: 10 };
+    4    useEffect(() => { log.push('load'); }, [options]);
+    5    return <button onClick={() => setN(n + 1)}>{n}</button>;
+    6  }
+  options:
+  - '0'
+  - '1'
+  - '2'
+  - '3'
+  correct_index: 3
+  explanation: '`options` is a new object on every render, and dependencies are compared with Object.is,
+    so the effect sees a changed dependency after each of the three renders (mount plus two clicks). Move
+    the object outside the component or memoise it.'
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 3
+    reviewer_note: Assumes no StrictMode; in dev StrictMode the mount effect runs twice (log would get
+      4). Consider stating 'production build / no StrictMode' as effects-data-05 does.
+- id: react-effects-data-08
+  competency: effects_data
+  difficulty: 3
+  text: In development with StrictMode on, an effect that sends an analytics request on mount fires twice.
+    What is the correct reading?
+  options:
+  - A mistake in the dependency array causes a second run of the effect in production builds too, not
+    only in development
+  - StrictMode doubles every state update, so production builds also render each component twice on mount
+  - The browser fires the effect again whenever the tab regains focus after the user switches windows
+  - React deliberately mounts, unmounts and remounts the component once in development to expose missing
+    cleanup
+  correct_index: 3
+  explanation: In React 18 development, StrictMode simulates unmount and remount once to check that effects
+    are resilient (cleanup/idempotent). It does not happen in production builds. Fix by adding cleanup
+    or making the effect safe to run twice, not by removing StrictMode.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 2
+- id: react-forms-validation-01
+  competency: forms_validation
+  difficulty: 1
+  text: An input has `value={name}` but no `onChange` handler. What happens when the user types in it?
+  options:
+  - The text does not change, and React warns that the field is read-only
+  - The text changes and name updates automatically as the user types in the field
+  - The input is treated as uncontrolled and works normally without any warning
+  - React throws an error and unmounts the whole form from the page
+  correct_index: 0
+  explanation: Passing `value` makes the input controlled, so only state can change what it shows. Without
+    onChange (or readOnly) the field is frozen and React logs a warning. Use defaultValue for an uncontrolled
+    input.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 2
+- id: react-forms-validation-02
+  competency: forms_validation
+  difficulty: 1
+  text: A `<form onSubmit={handleSubmit}>` handler does not call `event.preventDefault()`. What happens
+    on submit?
+  options:
+  - React blocks the submit by itself and logs a warning to the console
+  - The browser also submits the form normally, which reloads the page
+  - Nothing extra happens, because React always cancels the default submission
+  - The handler runs only after the browser has cleared the form fields
+  correct_index: 1
+  explanation: React does not cancel the browser default for you. Unless the handler calls event.preventDefault(),
+    the browser performs a normal form submission and reloads the page, losing client-side state.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: react-forms-validation-03
+  competency: forms_validation
+  difficulty: 2
+  text: A sign-up form must show 'Email is invalid' only after the user has left the field, not while
+    they are still typing. What is a good approach?
+  options:
+  - Disable the input until the user clicks Submit, then validate it and re-enable it for the next try
+  - Store the error in a ref and read it during render so that the message appears a little later
+  - Keep a touched flag per field, set it in onBlur, and show the error only if the field is touched and
+    invalid
+  - Throw an error from onChange and catch it in the parent component to display the message
+  correct_index: 2
+  explanation: Validation logic can run on every change, but when to show the message is separate UI state.
+    A per-field touched flag set on blur is the standard pattern. The other options block input, rely
+    on refs that do not re-render, or misuse exceptions.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 2
+- id: react-forms-validation-04
+  competency: forms_validation
+  difficulty: 2
+  text: The user changes the field to 2. What does the `<p>` show?
+  code_snippet: |
+    1  function Total() {
+    2    const [qty, setQty] = useState('1');
+    3    return (
+    4      <div>
+    5        <input type="number" value={qty} onChange={(e) => setQty(e.target.value)} />
+    6        <p>{qty + 1}</p>
+    7      </div>
+    8    );
+    9  }
+  options:
+  - '2'
+  - '3'
+  - '21'
+  - NaN
+  correct_index: 2
+  explanation: e.target.value is always a string, even for type="number". The state is the string '2',
+    so qty + 1 concatenates to '21'. Convert with Number(e.target.value) before doing arithmetic.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 2
+- id: react-forms-validation-05
+  competency: forms_validation
+  difficulty: 3
+  text: Users cannot type a space between their first and last name. What is the cause?
+  code_snippet: |
+    1  function NameField() {
+    2    const [name, setName] = useState('');
+    3    return (
+    4      <input
+    5        value={name}
+    6        onChange={(e) => setName(e.target.value.trim())}
+    7      />
+    8    );
+    9  }
+  options:
+  - A controlled input with value={name} ignores whitespace characters that the user types into it
+  - useState('') should start as null before the controlled input is able to accept spaces at all
+  - onChange only fires on blur in React, so the typed space is dropped before the handler runs
+  - trim() in onChange strips the space before it is stored, so the controlled value never contains it
+  correct_index: 3
+  explanation: After typing 'John' and a space, the handler stores 'John ' trimmed to 'John', and React
+    sets the input back to 'John', so the space disappears. Trim when submitting, not on each change.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 2
+- id: react-forms-validation-06
+  competency: forms_validation
+  difficulty: 3
+  text: The form is submitted once with email 'bad'. What happens?
+  code_snippet: |
+    1  function SignupForm({ save }) {
+    2    const [email] = useState('bad');
+    3    const [error, setError] = useState('');
+    4    function handleSubmit(e) {
+    5      e.preventDefault();
+    6      setError(email.includes('@') ? '' : 'Invalid email');
+    7      if (!error) save(email);
+    8    }
+    9    return (
+    10     <form onSubmit={handleSubmit}>
+    11       <p>{error}</p>
+    12       <button>Send</button>
+    13     </form>
+    14   );
+    15 }
+  options:
+  - save('bad') is called, and the message 'Invalid email' appears
+  - save is not called, and the message 'Invalid email' appears on the next render
+  - save is not called, and no message appears because the update is still pending
+  - save('bad') is called twice, and the message 'Invalid email' appears as well
+  correct_index: 0
+  explanation: State updates are applied on the next render, so on line 7 `error` is still the empty string
+    from this render's snapshot. `!error` is true, save runs with the bad email, and then the re-render
+    shows the message. Validate into a local variable and branch on it.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 3
+- id: react-forms-validation-07
+  competency: forms_validation
+  difficulty: 2
+  text: The console warns 'A component is changing an uncontrolled input to be controlled'. The input
+    uses `value={user.name}`, which is undefined until the user loads. What is the best fix?
+  options:
+  - Add a defaultValue prop in addition to the value prop on the same input
+  - Give the field a defined initial value, such as value={user.name ?? ''}
+  - Remove the onChange handler so that the input is no longer controlled by state
+  - Wrap the input component in React.memo so that its type can never switch
+  correct_index: 1
+  explanation: An input whose value is undefined is uncontrolled; once the value becomes a string it switches
+    to controlled, which React warns about. Always pass a string (an empty one while loading). Supplying
+    both value and defaultValue also warns.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 2
+- id: react-performance-01
+  competency: performance
+  difficulty: 1
+  text: Which tool shows how long each component takes to render and why it re-rendered?
+  options:
+  - The Elements panel in the browser's DevTools
+  - The StrictMode wrapper component
+  - The Profiler in React DevTools
+  - The console.table function
+  correct_index: 2
+  explanation: The React DevTools Profiler records commits, per-component render time and the reason for
+    each render. The Elements panel shows DOM, StrictMode only adds development checks, and console.table
+    prints data.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: react-performance-02
+  competency: performance
+  difficulty: 3
+  text: ListView is wrapped in React.memo, yet it renders again on every keystroke. Why?
+  code_snippet: |
+    1  const ListView = React.memo(function ListView({ options }) {
+    2    renders.push('render');
+    3    return <ul />;
+    4  });
+    5  function Page() {
+    6    const [text, setText] = useState('');
+    7    return (
+    8      <>
+    9        <input value={text} onChange={(e) => setText(e.target.value)} />
+    10       <ListView options={{ sort: 'asc' }} />
+    11     </>
+    12   );
+    13 }
+  options:
+  - React.memo compares props only on the first mount and ignores them afterwards
+  - React.memo does not work for components that render lists or other collections
+  - A parent state update always forces every child to render, regardless of React.memo
+  - The inline object literal is a new object on each render, so memo sees a changed prop
+  correct_index: 3
+  explanation: 'React.memo skips rendering only if all props are Object.is-equal. `{ sort: ''asc'' }`
+    is a fresh object each render, so the comparison fails. Hoist it to a constant or memoise it with
+    useMemo.'
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 2
+- id: react-performance-03
+  competency: performance
+  difficulty: 3
+  text: Typing in a search box feels laggy because each keystroke re-renders a very large filtered list.
+    Which React 18 feature keeps the input responsive by treating the list update as lower priority?
+  options:
+  - useDeferredValue (or startTransition) for the value that drives the list
+  - flushSync around the state update that drives the list, so that it is applied right away
+  - useLayoutEffect to filter the list before paint, so that the list is up to date at once
+  - useId to give the list a stable identity, so that React can skip re-rendering its rows
+  correct_index: 0
+  explanation: useDeferredValue and startTransition mark an update as non-urgent so React can interrupt
+    it to handle urgent input first. flushSync does the opposite, useLayoutEffect blocks paint, and useId
+    only generates ids.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 2
+- id: react-performance-04
+  competency: performance
+  difficulty: 2
+  text: A table must show 20,000 rows and scrolling is slow. Which technique helps most?
+  options:
+  - Use each row's array index as its key, so that React can reuse the row elements
+  - 'Windowing (virtualisation): render only the rows currently visible'
+  - Call forceUpdate on every row after it mounts, so the rows are painted quickly
+  - Move the row data into Context so that each row updates on its own from the provider
+  correct_index: 1
+  explanation: The cost is the number of DOM nodes and components. Windowing libraries mount only the
+    visible slice plus a small buffer. Index keys, forced updates or context do not reduce the work, and
+    some make it worse.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: react-accessibility-01
+  competency: accessibility
+  difficulty: 1
+  text: A control saves a form and does not navigate anywhere. Which element should you use so that it
+    works with the keyboard and screen readers by default?
+  options:
+  - <a href="#">
+  - <div role="presentation">
+  - <button>
+  - <span tabIndex={-1}>
+  correct_index: 2
+  explanation: A native button is focusable, activates with Enter and Space, and is announced as a button.
+    Links are for navigation, role="presentation" removes semantics, and tabIndex -1 removes the element
+    from the tab order.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: react-accessibility-02
+  competency: accessibility
+  difficulty: 1
+  text: In JSX, which attribute connects a `<label>` to the input whose id it names?
+  options:
+  - labelFor
+  - forId
+  - aria-for
+  - htmlFor
+  correct_index: 3
+  explanation: '`for` is a reserved word in JavaScript, so JSX uses htmlFor, which renders as the HTML
+    `for` attribute. The label then names the input and clicking it focuses the input. The other names
+    do not exist.'
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: react-accessibility-03
+  competency: accessibility
+  difficulty: 2
+  text: Keyboard and screen-reader users cannot use this control. Which single change fixes both problems?
+  code_snippet: |
+    1  <div className="save" onClick={handleSave}>
+    2    Save
+    3  </div>
+  options:
+  - Use <button type="button" onClick={handleSave}> instead of the div
+  - Add tabIndex={0} to the div
+  - Add aria-label="Save" to the div
+  - Add an onKeyDown handler to the div that calls handleSave on Enter
+  correct_index: 0
+  explanation: A native button is focusable, responds to Enter and Space, and exposes the button role.
+    tabIndex alone makes it focusable but not operable or announced as a button; aria-label adds a name
+    without role or keyboard support; onKeyDown adds one key but no role.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 2
+- id: react-accessibility-04
+  competency: accessibility
+  difficulty: 2
+  text: After a failed submit, a React form renders an error message below the field. Screen-reader users
+    hear nothing. Which change makes the message be announced?
+  options:
+  - Make the message red with a 4.5:1 contrast ratio
+  - Render the message in an element with role="alert"
+  - Set aria-hidden="true" on the message so it is not read twice
+  - Give the message tabIndex={-1} and change nothing else
+  correct_index: 1
+  explanation: Content inserted dynamically is not announced unless it is in a live region. role="alert"
+    (or aria-live) makes assistive technology read it when it appears. Colour and contrast help sighted
+    users, aria-hidden hides it, and tabIndex does not announce anything.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 2
+- id: react-accessibility-05
+  competency: accessibility
+  difficulty: 3
+  text: A modal dialog opens when a button is clicked. Which behaviour gives keyboard users the correct
+    experience?
+  options:
+  - Leave focus on the opening button and let Tab move through the page behind the dialog box
+  - Move focus into the dialog and take every control out of the tab order so that Tab does nothing
+  - Move focus into the dialog, trap Tab inside it, close on Escape, and restore focus to the trigger
+  - Move focus to the first link of the page so that users can reach the site navigation from the dialog
+  correct_index: 2
+  explanation: A modal must take focus, keep it inside while open, be dismissible with Escape and return
+    focus to the control that opened it, otherwise keyboard users get lost behind the overlay. The other
+    behaviours leave focus outside the dialog or make it unusable.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 2
+- id: react-accessibility-06
+  competency: accessibility
+  difficulty: 2
+  text: Screen readers announce this input with no name. Which change gives it an accessible name?
+  code_snippet: |
+    1  <label>Email</label>
+    2  <input id="email" type="email" name="email" />
+  options:
+  - Change name="email" to name="Email" on the input
+  - Add type="text" as well to the input element
+  - Add role="label" as well to the label element
+  - Change the label to <label htmlFor="email">
+  correct_index: 3
+  explanation: 'A label only names an input when it is associated with it: htmlFor matching the input''s
+    id (or wrapping the input). The name attribute is for form data, type does not name anything, and
+    there is no label role.'
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 2
+- id: react-accessibility-07
+  competency: accessibility
+  difficulty: 3
+  text: In a single-page app, a route change swaps the content without a page load and screen-reader users
+    get no cue. What is the recommended handling?
+  options:
+  - Move focus to the new page's main heading and update document.title
+  - Call window.location.reload() on every route change to simulate a real page load
+  - Put aria-live="assertive" on the app root so that all of its content is read out
+  - Show a visual toast message for the change and leave the keyboard focus where it was
+  correct_index: 0
+  explanation: A real navigation resets focus and announces the new title; a client-side route change
+    does neither. Managing focus on the new heading and updating the title restores that. A root live
+    region would read the whole page, and visual-only cues are invisible to screen readers.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 2
+- id: react-testing-ui-01
+  competency: testing_ui
+  difficulty: 1
+  text: In React Testing Library, which query is generally preferred to find a button with the visible
+    text 'Save'?
+  options:
+  - container.querySelector('.save-btn')
+  - 'screen.getByRole(''button'', { name: ''Save'' })'
+  - screen.getByTestId('save-button-test-id')
+  - wrapper.find('Button').first()
+  correct_index: 1
+  explanation: Role queries find elements the way users and assistive technology do and also confirm the
+    element is a real button. Class selectors and test ids are implementation details; `wrapper.find`
+    belongs to Enzyme.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: react-testing-ui-02
+  competency: testing_ui
+  difficulty: 1
+  text: What is the guiding principle of Testing Library?
+  options:
+  - Each component should be tested in isolation with all of its child components mocked out
+  - Tests should assert the values of the internal state of every component that they render
+  - Tests should resemble how users use the software, not test implementation details
+  - Snapshots should replace explicit assertions so that tests never need to be updated by hand
+  correct_index: 2
+  explanation: Testing Library encourages querying by role/label/text and asserting on what the user sees,
+    so that refactors that keep behaviour do not break tests. Mocking all children, asserting state or
+    relying on snapshots tie tests to implementation.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: react-testing-ui-03
+  competency: testing_ui
+  difficulty: 2
+  text: After a click, a success message appears only once a mocked request resolves. Which query waits
+    for the message to appear?
+  options:
+  - screen.getByText('Saved') right away
+  - screen.queryByText('Saved') right away
+  - screen.getAllByText('Saved') right away
+  - await screen.findByText('Saved')
+  correct_index: 3
+  explanation: findBy* queries return a promise that retries until the element appears or a timeout passes.
+    getBy* and getAllBy* throw immediately if nothing matches; queryBy* returns null immediately.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 2
+- id: react-testing-ui-04
+  competency: testing_ui
+  difficulty: 2
+  text: A component test passes locally but fails now and then in CI because it calls the real API. What
+    is the best fix?
+  options:
+  - Mock the network layer (for example with MSW or a mocked fetch) so responses are fixed
+  - Raise the timeout of every waitFor call in the test suite until the failures stop appearing
+  - Retry the failed tests automatically in CI until one of the attempts finally passes
+  - Run the affected test only on developer machines and skip it in the CI pipeline
+  correct_index: 0
+  explanation: Tests that depend on a real network are non-deterministic. Mocking the network boundary
+    gives fixed responses and still exercises the component. Longer timeouts and retries hide the flakiness
+    instead of removing it.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 2
+- id: react-testing-ui-05
+  competency: testing_ui
+  difficulty: 2
+  text: This test throws before reaching the assertion even though the banner is correctly hidden. What
+    is the fix?
+  code_snippet: |
+    1  test('hides the banner', () => {
+    2    render(<Banner show={false} />);
+    3    expect(screen.getByText('Welcome')).not.toBeInTheDocument();
+    4  });
+  options:
+  - Use findByText on line 3, which waits for the banner to disappear from the document
+  - Use queryByText on line 3, which returns null instead of throwing when nothing matches
+  - Wrap line 2 in act, because render is asynchronous and the banner is hidden too late
+  - Replace not.toBeInTheDocument with toBeFalsy and keep getByText as the query
+  correct_index: 1
+  explanation: getByText throws if no element matches, so it cannot be used to assert absence. queryByText
+    returns null, which not.toBeInTheDocument accepts. findByText also rejects when nothing appears, and
+    wrapping render in act or changing the matcher does not stop getByText throwing.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 2
+- id: react-testing-ui-06
+  competency: testing_ui
+  difficulty: 3
+  text: 'With user-event v14 this test fails with ''Unable to find an element with the text: Count: 1''.
+    Which change fixes it?'
+  code_snippet: |
+    1  test('increments', async () => {
+    2    render(<Counter />);
+    3    userEvent.click(screen.getByRole('button'));
+    4    expect(screen.getByText('Count: 1')).toBeInTheDocument();
+    5  });
+  options:
+  - Replace getByRole on line 3 with getByText, so that the button is found more reliably
+  - Wrap the expectation on line 4 in act(() => { ... }), so that updates get flushed
+  - Await the call on line 3, because user-event v14 methods return promises
+  - Replace the matcher on line 4 with toBeTruthy, which is less strict about the element
+  correct_index: 2
+  explanation: In v14 the user-event APIs are asynchronous, so the click has not been applied when line
+    4 runs. Awaiting it fixes the test. A different query, an act around the check, or a different matcher
+    cannot make the click happen earlier.
+  check: execution
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: execution
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 2
+- id: react-testing-ui-07
+  competency: testing_ui
+  difficulty: 3
+  text: A test clicks `screen.getByTestId('submit')`. After a refactor the button became `<div data-testid="submit"
+    onClick={...}>`; the test still passes but keyboard users can no longer submit. What does this show?
+  options:
+  - Tests should never click elements, and should call the component's handlers directly instead
+  - The test needs a longer timeout so that the browser has time to focus the div element
+  - data-testid attributes should be removed from the markup so that such tests fail sooner
+  - Test-id queries can pass when the element is no longer accessible; role-based queries would catch
+    it
+  correct_index: 3
+  explanation: getByTestId finds the element regardless of its semantics, so it hides accessibility regressions.
+    getByRole('button') would fail once the div lost its role. Calling handlers directly tests even less
+    of what users do.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 2
+- id: react-testing-ui-08
+  competency: testing_ui
+  difficulty: 2
+  text: A component debounces its search input by 300 ms. How can a unit test check the debounced call
+    without really waiting 300 ms?
+  options:
+  - Use fake timers and advance them by 300 ms
+  - Lower the delay to 0 in production code
+  - Call the change handler 300 times
+  - Poll the assertion in a loop for ten seconds
+  correct_index: 0
+  explanation: Fake timers (jest.useFakeTimers or vi.useFakeTimers) let the test control the clock and
+    advance it instantly, so the test is fast and deterministic. Changing production delay, spamming the
+    handler or long polling do not test the behaviour reliably.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1

@@ -13,7 +13,8 @@ PHASE ?= $(shell p=$$(cat .phase 2>/dev/null); [ "$$p" = "none" -o -z "$$p" ] &&
 .PHONY: help env certs up down logs migrate build lock openapi seed-demo create-admin \
 	test test-unit test-backend test-frontend e2e a11y visual visual-update stills security fuzz zap \
 	load chaos gate demo-check demo-up demo-down demo-reset demo-preflight erd experiments backup \
-	restore-drill docs test-stack-up test-stack-down deps-update ledger-report
+	restore-drill docs test-stack-up test-stack-down deps-update ledger-report \
+	question-bank question-checks
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -135,6 +136,25 @@ demo-check: ## Full Demo-N readiness: gates, seed, walkthrough x3 on 4 browsers,
 # plus the hypothesis property tests of the algorithms. Seeded, so two runs generate the same
 # requests. FUZZ_EXAMPLES / FUZZ_AUTH_EXAMPLES / FUZZ_STATEFUL_EXAMPLES change the budget
 # (the gate's step 11 uses the defaults: 200 per operation anonymous, 20 per role, 8 sequences).
+# Question bank (role assessment spec §13): YAML sources → frozen seed, and the execution checks
+# of every code question against a throwaway PostgreSQL 16 (the stack's own image) on the host.
+QCHECK_PG := postgres:16@sha256:ca0bd484cb98bf4b24eb1010e73fb3fcbd6714d240fbc1a10eea5b7dbecb641d
+QCHECK_PORT ?= 55432
+QCHECK_NAME := devsync-qcheck-pg-$(QCHECK_PORT)
+QCHECK_PY := $(if $(wildcard backend/.venv/bin/python),backend/.venv/bin/python,python3)
+question-bank: ## Validate the question bank YAML and rebuild alembic/seed/question_bank_v2.json
+	$(QCHECK_PY) backend/scripts/build_question_bank.py
+
+question-checks: ## Run every code question's execution check (Python, Node, PostgreSQL)
+	@docker rm -f $(QCHECK_NAME) >/dev/null 2>&1 || true
+	@docker run -d --rm --name $(QCHECK_NAME) -e POSTGRES_PASSWORD=qcheck \
+	  -p 127.0.0.1:$(QCHECK_PORT):5432 $(QCHECK_PG) >/dev/null
+	@for i in $$(seq 1 60); do docker exec $(QCHECK_NAME) pg_isready -q -U postgres && break; sleep 1; done
+	@status=0; QCHECK_DSN=postgresql://postgres:qcheck@127.0.0.1:$(QCHECK_PORT)/postgres \
+	  $(QCHECK_PY) backend/scripts/question_checks/run_checks.py $(if $(ONLY),--only $(ONLY)) \
+	  $(if $(JSON),--json $(JSON)) || status=$$?; \
+	  docker rm -f $(QCHECK_NAME) >/dev/null; exit $$status
+
 fuzz: test-stack-up ## Contract fuzzing (schemathesis) + property tests on the test stack
 	$(COMPOSE_TEST) run --rm -T \
 	  -e FUZZ_EXAMPLES -e FUZZ_AUTH_EXAMPLES -e FUZZ_STATEFUL_EXAMPLES -e FUZZ_STATEFUL_STEPS \

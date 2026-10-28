@@ -89,6 +89,11 @@ class Bid(UUIDPrimaryKey, Timestamps, Base):
     evaluated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Optimistic concurrency (§10.1): an edit sends If-Match; a stale one is 409.
     version: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+    # The role assessment result a newcomer's bid relies on (role assessment spec §4.7); set by
+    # the server when the bid is placed or its slot changes, never accepted from the client.
+    assessment_evidence_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("skill_evidence.id", ondelete="SET NULL")
+    )
 
     __table_args__ = (
         # One standing (ACTIVE or INELIGIBLE) bid per developer per project; a WITHDRAWN row is

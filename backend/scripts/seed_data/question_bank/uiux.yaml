@@ -1,0 +1,874 @@
+# Question bank source for UI/UX (role assessment spec §13). Edit here; the build
+# writes alembic/seed/question_bank_v2.json. Legacy questions keep their text and options
+# exactly as stored by migration 0004 (they are matched by text). See README.md.
+skill: UI/UX
+domain: DESIGN
+competencies:
+- code: usability
+  name: Usability principles
+  description: Heuristics, consistency, feedback, error prevention and user flows.
+  is_core: true
+  keywords:
+  - usability
+  - user experience
+  - ux
+  - user flow
+  - intuitive
+  - easy to use
+  - onboarding
+  - checkout
+  position: 1
+- code: layout_hierarchy
+  name: Layout and visual hierarchy
+  description: Grids, spacing, typography, hierarchy and responsive layouts.
+  is_core: true
+  keywords:
+  - layout
+  - visual
+  - design
+  - typography
+  - responsive
+  - mobile
+  - dashboard
+  - branding
+  - mockups
+  position: 2
+- code: accessible_design
+  name: Accessibility
+  description: Contrast, focus, labels, alt text and inclusive design (WCAG).
+  is_core: true
+  keywords:
+  - accessibility
+  - accessible
+  - a11y
+  - wcag
+  - contrast
+  - screen reader
+  - inclusive
+  position: 3
+- code: user_research
+  name: User research basics
+  description: Interviews, usability tests, personas and turning findings into decisions.
+  is_core: true
+  keywords:
+  - research
+  - user research
+  - interviews
+  - personas
+  - usability testing
+  - feedback
+  - survey
+  - prototype
+  position: 4
+questions:
+- id: uiux-legacy-01
+  competency: usability
+  difficulty: 2
+  text: What is information architecture?
+  options:
+  - Server layout
+  - How content is organised, labelled and navigated
+  - Database design
+  - Typography
+  correct_index: 1
+  explanation: Information architecture is the structure, grouping and labelling of content so people
+    can find things and understand where they are.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: uiux-legacy-02
+  competency: usability
+  difficulty: 3
+  text: Which is an example of Hick's law in practice?
+  options:
+  - Users read in an F pattern
+  - More choices increase the time to decide
+  - Dark mode saves battery
+  - Bigger buttons are easier to hit
+  correct_index: 1
+  explanation: 'Hick''s law: decision time grows with the number and complexity of choices, so fewer,
+    grouped options help users decide faster.'
+  status: DRAFT
+  source: HUMAN
+  active: true
+  review_level: NONE
+  reviewed_by_name: null
+  reviewed_at: null
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: uiux-legacy-03
+  competency: usability
+  difficulty: 2
+  text: What does progressive disclosure mean?
+  options:
+  - Showing all options at once
+  - Showing advanced options only when they are needed
+  - Loading images progressively
+  - Revealing passwords
+  correct_index: 1
+  explanation: Progressive disclosure keeps the interface simple by revealing advanced or rarely used
+    options only when the user asks for them.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: uiux-legacy-04
+  competency: user_research
+  difficulty: 1
+  text: What is the purpose of usability testing?
+  options:
+  - To check spelling
+  - To measure colour contrast
+  - To test server load
+  - To watch real users attempt tasks and find problems in the design
+  correct_index: 3
+  explanation: Usability testing observes representative users performing realistic tasks to find where
+    the design confuses them.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: uiux-legacy-05
+  competency: usability
+  difficulty: 1
+  text: What is a primary benefit of a design system?
+  options:
+  - Consistent, reusable components and patterns across the product
+  - Faster servers
+  - Fewer users
+  - Better SEO only
+  correct_index: 0
+  explanation: A design system provides shared components, patterns and guidelines, which keeps products
+    consistent and speeds up design and development.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: uiux-legacy-06
+  competency: accessible_design
+  difficulty: 2
+  text: What is the recommended minimum touch target size on mobile (WCAG and platform guidance)?
+  options:
+  - About 24×24 px
+  - About 44×44 px
+  - There is no guidance
+  - About 12×12 px
+  correct_index: 1
+  explanation: Platform guidance recommends targets of about 44 px (Apple) or 48 dp (Material).
+  status: DRAFT
+  source: HUMAN
+  active: true
+  review_level: NONE
+  reviewed_by_name: null
+  reviewed_at: null
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: false
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 2
+    reviewer_note: 'Ambiguous: WCAG 2.2 SC 2.5.8 (AA) sets the minimum at 24x24 CSS px; 44x44 is AAA (2.5.5)
+      / Apple HIG (Material is 48dp). Since the stem says ''WCAG and platform guidance'' and the topic
+      is WCAG 2.2, A is defensible. Reword to ''recommended (AAA / platform) size'' or drop 24 as a distractor.'
+  weak: 'ambiguous: WCAG 2.2 AA sets a minimum target size of 24 px, so the 24 px option is also defensible,
+    and other options are silly'
+- id: uiux-legacy-07
+  competency: accessible_design
+  difficulty: 1
+  text: What is the purpose of a visible focus indicator?
+  options:
+  - Decoration
+  - Indicating errors
+  - Showing keyboard users where they are on the page
+  - Loading feedback
+  correct_index: 2
+  explanation: A visible focus indicator shows keyboard and assistive-technology users which control is
+    active; removing it breaks keyboard navigation (WCAG 2.4.7).
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: uiux-legacy-08
+  competency: usability
+  difficulty: 1
+  text: What is a skeleton screen?
+  options:
+  - A placeholder layout shown while content loads
+  - A print stylesheet
+  - A wireframe
+  - An error page
+  correct_index: 0
+  explanation: A skeleton screen shows a placeholder of the layout while content loads, signalling progress
+    and reducing perceived waiting time.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: uiux-legacy-09
+  competency: accessible_design
+  difficulty: 1
+  text: Why respect the 'prefers-reduced-motion' setting?
+  options:
+  - It improves SEO
+  - It is required by browsers
+  - It saves bandwidth
+  - Some users get dizzy or distracted by motion
+  correct_index: 3
+  explanation: prefers-reduced-motion reflects a user's OS setting. Large animations can cause dizziness
+    or nausea for people with vestibular disorders, so reduce or remove them.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: uiux-legacy-10
+  competency: layout_hierarchy
+  difficulty: 1
+  text: What is the main goal of a primary button style?
+  options:
+  - To show the single most important action on the screen
+  - To link to help
+  - To show errors
+  - To decorate
+  correct_index: 0
+  explanation: The primary button marks the one main action, so the screen's hierarchy tells users what
+    to do next. Secondary actions are styled with less emphasis.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: uiux-legacy-11
+  competency: usability
+  difficulty: 1
+  text: Why use sentence case and clear verbs on buttons (e.g. 'Save changes')?
+  options:
+  - They load faster
+  - Shorter code
+  - They say exactly what will happen when pressed
+  - Browsers require it
+  correct_index: 2
+  explanation: Clear verb labels like 'Save changes' tell users the outcome of pressing the button, unlike
+    vague labels such as 'OK' or 'Submit'.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: uiux-legacy-12
+  competency: accessible_design
+  difficulty: 1
+  text: Why should status never be shown by colour alone?
+  options:
+  - It is a performance issue
+  - Colours are slow to render
+  - Colours are not allowed in forms
+  - People with colour-vision deficiencies may not perceive it; add text or icons
+  correct_index: 3
+  explanation: About 1 in 12 men has a colour-vision deficiency. Colour must be paired with text, icons
+    or patterns (WCAG 1.4.1 Use of Colour).
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: uiux-legacy-13
+  competency: accessible_design
+  difficulty: 2
+  text: What minimum contrast ratio does WCAG 2.1 AA require for normal body text?
+  options:
+  - 4.5:1
+  - '2:1'
+  - '7:1'
+  - '3:1'
+  correct_index: 0
+  explanation: WCAG 2.1 AA requires a contrast ratio of at least 4.5:1 for normal text and 3:1 for large
+    text.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+    reviewer_note: Stem says WCAG 2.1; also unchanged in 2.2, fine.
+- id: uiux-legacy-14
+  competency: usability
+  difficulty: 1
+  text: A good error message should…
+  options:
+  - Only show an error code
+  - Blame the user
+  - Say what went wrong and how to fix it
+  - Disappear after one second
+  correct_index: 2
+  explanation: 'Good error messages are specific, polite and constructive: they explain what happened
+    and what to do next.'
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: uiux-legacy-15
+  competency: usability
+  difficulty: 1
+  text: What should an empty state include?
+  options:
+  - An error code
+  - Nothing
+  - A random image only
+  - A short explanation and the next action to take
+  correct_index: 3
+  explanation: An empty state should explain what belongs there and give the next action, such as a button
+    to create the first item.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: uiux-legacy-16
+  competency: layout_hierarchy
+  difficulty: 2
+  text: What does Fitts's law describe?
+  options:
+  - Colour perception
+  - Memory limits
+  - Time to reach a target depends on its distance and size
+  - Reading speed
+  correct_index: 2
+  explanation: 'Fitts''s law: the time to reach a target grows with its distance and shrinks with its
+    size, so important targets should be large and close.'
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: uiux-usability-01
+  competency: usability
+  difficulty: 1
+  text: A project settings page has a 'Delete project' button right next to 'Edit'. Users sometimes delete
+    projects by accident. Which change best follows usability principles?
+  options:
+  - Separate the button visually and offer undo or a confirmation that names the project
+  - Make Delete the primary-coloured button so it is easier to find
+  - Add a tooltip that explains what Delete does
+  - Remove all confirmations so users can work faster
+  correct_index: 0
+  explanation: Error prevention and error recovery are core usability heuristics. Putting a destructive
+    action apart from safe ones and offering undo or a specific confirmation reduces slips. A prominent
+    Delete button makes accidents more likely, and a tooltip is too easy to miss.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: uiux-layout-hierarchy-01
+  competency: layout_hierarchy
+  difficulty: 1
+  text: Which technique most directly draws the eye to the most important element on a screen?
+  options:
+  - Giving every element the same size and weight
+  - Making it noticeably larger or higher in contrast than its surroundings
+  - Surrounding it with several decorative borders
+  - Setting it in a smaller font than the rest
+  correct_index: 1
+  explanation: Visual hierarchy comes from differences in size, weight, colour and contrast. When everything
+    looks the same nothing stands out, and decoration or smaller type does not lead the eye.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: uiux-layout-hierarchy-02
+  competency: layout_hierarchy
+  difficulty: 2
+  text: In a form, labels sit midway between two fields, so it is hard to tell which field each label
+    belongs to. Which fix applies the principle of proximity?
+  options:
+  - Make all labels bold
+  - Put every label and field inside a border
+  - Place each label closer to its own field than to the neighbouring field
+  - Use a different colour for each label
+  correct_index: 2
+  explanation: The Gestalt principle of proximity says elements that sit close together are perceived
+    as a group. Moving each label nearer to its field than to the next one removes the ambiguity. Bold,
+    borders and colour do not fix the spacing.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: uiux-layout-hierarchy-03
+  competency: layout_hierarchy
+  difficulty: 2
+  text: Why do design teams define a spacing scale (for example 4, 8, 16, 24 and 32 px) instead of choosing
+    margins freely?
+  options:
+  - Browsers only render spacing values that are multiples of 4
+  - It makes pages load faster
+  - It removes the need for responsive layouts
+  - It gives the layout a consistent rhythm and makes screens predictable
+  correct_index: 3
+  explanation: A limited, consistent scale of spacing values makes related elements align, creates a visible
+    rhythm and speeds up design decisions. It has no effect on rendering limits, speed or responsiveness.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: uiux-layout-hierarchy-04
+  competency: layout_hierarchy
+  difficulty: 3
+  text: A card shows a title, three lines of metadata and two buttons, all in the same size, weight and
+    colour. Users cannot tell what matters. Which redesign is best?
+  options:
+  - Use two or three distinct levels of size, weight and colour, with one clearly primary action
+  - Make every piece of text bold so that nothing is missed
+  - Add more content to the card to explain the hierarchy
+  - Give both buttons the same bright colour so both stand out
+  correct_index: 0
+  explanation: 'A clear hierarchy ranks content: a prominent title, de-emphasised metadata and a single
+    visually dominant primary action. Emphasising everything or competing buttons removes contrast and
+    recreates the problem.'
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 2
+- id: uiux-layout-hierarchy-05
+  competency: layout_hierarchy
+  difficulty: 3
+  text: An app uses the same red for its main 'Pay now' button, for error messages and for the 'Delete'
+    action. What is the design problem?
+  options:
+  - Red buttons are never allowed to be primary
+  - 'Red is overloaded: it signals danger and errors, so it blurs the meaning of the primary action'
+  - Users cannot see red text on white backgrounds
+  - A page may use only one button colour
+  correct_index: 1
+  explanation: Colour carries meaning. Red is widely read as error or destructive, so using it for the
+    main positive action, and also for deletion, makes users hesitate and weakens the hierarchy. Use distinct
+    semantic colours for primary actions and danger.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 2
+- id: uiux-accessibility-01
+  competency: accessible_design
+  difficulty: 2
+  text: A screen reader announces only 'button' for this control. What is the right fix?
+  code_snippet: |
+    <button class="icon-btn">
+      <svg viewBox="0 0 24 24" aria-hidden="true">...</svg>
+    </button>
+  options:
+  - Add a title attribute to the svg element
+  - Increase the size of the icon
+  - Give the button an accessible name, such as aria-label="Delete message"
+  - Remove the button and use a div with an onclick handler
+  correct_index: 2
+  explanation: A button with only an icon has no text for assistive technology. An accessible name from
+    visible or visually hidden text, or an aria-label, tells users what it does. A div without role and
+    keyboard support would be worse, and size does not help.
+  check: manual
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 2
+- id: uiux-accessibility-02
+  competency: accessible_design
+  difficulty: 3
+  text: A modal dialog opens, but keyboard focus stays on the page behind it, and Tab moves through hidden
+    page controls. What is the correct behaviour?
+  options:
+  - Leave focus where it is so users keep their place
+  - Move focus to the browser address bar
+  - Disable the Tab key on the whole page
+  - Move focus into the dialog, keep Tab inside it while open, and return focus to the trigger on close
+  correct_index: 3
+  explanation: Keyboard and screen-reader users must be taken into a modal, kept inside it (focus trap)
+    and returned to the triggering element afterwards. Leaving focus behind makes the dialog unreachable
+    and exposes content that is visually covered.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 2
+- id: uiux-accessibility-03
+  competency: accessible_design
+  difficulty: 3
+  text: A form fails validation. Which approach makes the errors accessible to screen-reader users?
+  options:
+  - Describe each error in text next to its field, link it with aria-describedby and move focus to the
+    first error
+  - Turn the invalid fields' borders red and shake them
+  - Show a toast that disappears after three seconds
+  - Show one 'Form invalid' alert at the top that does not name the fields
+  correct_index: 0
+  explanation: Errors must be perceivable without colour or timing and tied to the field they concern.
+    Text next to the field, programmatically associated with it, plus moving focus or announcing the error,
+    lets assistive technology users find and fix each problem.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 2
+- id: uiux-user-research-01
+  competency: user_research
+  difficulty: 1
+  text: What is a user persona?
+  options:
+  - A real customer who is legally bound to the product
+  - A fictional but research-based profile that represents a group of users
+  - A test script for usability sessions
+  - A marketing slogan for a target audience
+  correct_index: 1
+  explanation: Personas summarise goals, needs and behaviours of a user segment, based on research data,
+    so teams can design for real people instead of themselves. They are not real individuals, scripts
+    or slogans.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: uiux-user-research-02
+  competency: user_research
+  difficulty: 2
+  text: Analytics show that many users abandon checkout at the payment step. Which method best reveals
+    why?
+  options:
+  - Count page views of the payment page for another month
+  - Run an A/B test of the button colour
+  - Observe users attempting checkout in usability tests and interview them
+  - Send a satisfaction survey with a 1 to 5 rating
+  correct_index: 2
+  explanation: Analytics tell you where users drop off but not why. Watching people attempt the task and
+    asking them about it exposes confusion, missing options or trust problems. Page counts, colour tests
+    and generic ratings do not explain the cause.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 2
+- id: uiux-user-research-03
+  competency: user_research
+  difficulty: 2
+  text: Which question is best for an interview that aims to understand how freelancers currently find
+    work?
+  options:
+  - Would you use a feature that finds clients for you?
+  - Don't you think finding clients is too difficult?
+  - Do you find clients online, yes or no?
+  - Tell me about the last time you looked for a new client.
+  correct_index: 3
+  explanation: Open questions about specific past behaviour give reliable, detailed answers. Hypothetical
+    questions are unreliable, leading questions bias the answer, and closed yes/no questions give little
+    insight.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 2
+- id: uiux-user-research-04
+  competency: user_research
+  difficulty: 2
+  text: A team wants to learn how users naturally group the sections of a new help centre. Which method
+    fits?
+  options:
+  - Card sorting
+  - A/B testing
+  - Heatmap analysis
+  - Accessibility audit
+  correct_index: 0
+  explanation: In card sorting, participants group labelled cards into categories they find logical, which
+    informs the information architecture and navigation labels. A/B tests compare variants, heatmaps show
+    interaction on a finished page, and audits check compliance.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: uiux-user-research-05
+  competency: user_research
+  difficulty: 3
+  text: After one day an A/B test with 40 visitors shows variant B with a 12% higher sign-up rate, and
+    a stakeholder wants to ship B immediately. What is the main problem?
+  options:
+  - A/B tests must always run for exactly one year
+  - The sample is too small to tell a real difference from random variation
+  - Variant B cannot win if it was shown second
+  - Sign-up rate is never a valid metric
+  correct_index: 1
+  explanation: With so few visitors the difference is well within chance. Decide the sample size or duration
+    beforehand and test for statistical significance before concluding. Stopping early on a lucky streak
+    is a classic mistake.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 2
+- id: uiux-user-research-06
+  competency: user_research
+  difficulty: 3
+  text: In a survey, 80% of users say they would use a new 'export to PDF' feature, but analytics show
+    almost nobody uses the existing 'export to CSV' button. What is the best next step?
+  options:
+  - Build the feature immediately, because the survey is definitive
+  - Discard the survey results and rely only on analytics
+  - Observe real behaviour with interviews or tests before building, since stated wishes often differ
+    from actual use
+  - Run the survey again with more questions
+  correct_index: 2
+  explanation: People often report preferences that do not match their behaviour. Combining what users
+    say with what they do, and investigating the gap with observation or interviews, gives a more reliable
+    basis than either source alone.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 2

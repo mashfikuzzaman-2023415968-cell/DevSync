@@ -1,0 +1,935 @@
+# Question bank source for Flutter (role assessment spec §13). Edit here; the build
+# writes alembic/seed/question_bank_v2.json. Legacy questions keep their text and options
+# exactly as stored by migration 0004 (they are matched by text). See README.md.
+skill: Flutter
+domain: MOBILE
+competencies:
+- code: widgets_layout
+  name: Widgets and layout
+  description: Stateless and stateful widgets, the widget tree and layout widgets.
+  is_core: true
+  keywords:
+  - flutter
+  - widgets
+  - layout
+  - ui
+  - mobile
+  - screens
+  - responsive
+  position: 1
+- code: state_management
+  name: State management
+  description: setState, InheritedWidget, Provider, Riverpod or Bloc.
+  is_core: true
+  keywords:
+  - state
+  - state management
+  - provider
+  - riverpod
+  - bloc
+  - cart
+  - shared state
+  position: 2
+- code: navigation
+  name: Navigation
+  description: Navigator, routes, passing data between screens and deep links.
+  is_core: true
+  keywords:
+  - navigation
+  - routes
+  - screens
+  - deep link
+  - router
+  - tabs
+  position: 3
+- code: data_apis
+  name: Data and APIs
+  description: HTTP calls, JSON, futures and streams, offline data and persistence.
+  is_core: true
+  keywords:
+  - api
+  - http
+  - json
+  - data
+  - offline
+  - sync
+  - firebase
+  - rest
+  - storage
+  position: 4
+questions:
+- id: flutter-legacy-01
+  competency: widgets_layout
+  difficulty: 1
+  text: Which widget is best for a long, scrollable list built lazily?
+  options:
+  - Stack
+  - Column
+  - Row
+  - ListView.builder
+  correct_index: 3
+  explanation: ListView.builder creates children lazily, only for items that scroll into view, so long
+    lists stay fast and memory-efficient.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: flutter-legacy-02
+  competency: data_apis
+  difficulty: 2
+  text: What is a Stream in Dart?
+  options:
+  - A single future value
+  - A file
+  - A sequence of asynchronous events
+  - A layout widget
+  correct_index: 2
+  explanation: A Stream delivers a sequence of asynchronous events, such as websocket messages, whereas
+    a Future delivers a single value.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: flutter-legacy-03
+  competency: data_apis
+  difficulty: 1
+  text: Which widget rebuilds when a Future completes?
+  options:
+  - Padding
+  - Container
+  - ListView
+  - FutureBuilder
+  correct_index: 3
+  explanation: FutureBuilder rebuilds its subtree when its Future completes, giving the snapshot's data
+    or error.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: flutter-legacy-04
+  competency: widgets_layout
+  difficulty: 2
+  text: What is BuildContext?
+  options:
+  - A test runner
+  - A handle to the widget's location in the tree
+  - A database connection
+  - A theme file
+  correct_index: 1
+  explanation: BuildContext is a handle to the widget's position in the widget tree. It is used to look
+    up ancestors such as Theme, MediaQuery or Navigator.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: flutter-legacy-05
+  competency: data_apis
+  difficulty: 1
+  text: How do you wait for a Future inside an async function?
+  options:
+  - join
+  - await
+  - yield
+  - sleep
+  correct_index: 1
+  explanation: await suspends an async function until the Future completes and yields its value or throws
+    its error.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: flutter-legacy-06
+  competency: state_management
+  difficulty: 1
+  text: What does calling setState() do?
+  options:
+  - Saves to disk
+  - Navigates to a new page
+  - Marks the widget as dirty so it rebuilds with the new state
+  - Restarts the app
+  correct_index: 2
+  explanation: setState tells the framework that the State has changed, which schedules a rebuild so the
+    UI shows the new values.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: flutter-legacy-07
+  competency: widgets_layout
+  difficulty: 1
+  text: Which widget arranges children vertically?
+  options:
+  - Column
+  - Row
+  - Wrap only
+  - Stack
+  correct_index: 0
+  explanation: Column lays its children out along the vertical axis; Row lays them out horizontally.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: flutter-legacy-08
+  competency: state_management
+  difficulty: 1
+  text: What is the difference between a StatelessWidget and a StatefulWidget?
+  options:
+  - StatelessWidgets are faster to type
+  - A StatefulWidget has mutable state that can change over time
+  - None
+  - StatefulWidgets can't have children
+  correct_index: 1
+  explanation: A StatelessWidget is immutable and depends only on its configuration. A StatefulWidget
+    has an associated State object that persists and can call setState to rebuild.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: flutter-legacy-09
+  competency: widgets_layout
+  difficulty: 2
+  text: What does `const` before a widget constructor help with?
+  options:
+  - Lets Flutter reuse the instance and skip unnecessary rebuilds
+  - Adds animation
+  - Makes it mutable
+  - Makes it async
+  correct_index: 0
+  explanation: A const widget is created once at compile time and can be reused, so Flutter can skip rebuilding
+    that subtree when the parent rebuilds.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: flutter-legacy-10
+  competency: data_apis
+  difficulty: 1
+  text: What is a Future in Dart?
+  options:
+  - A value or error that will be available later
+  - A database
+  - A route
+  - A UI widget
+  correct_index: 0
+  explanation: A Future represents a computation whose result, a value or an error, will be available
+    later.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+- id: flutter-legacy-11
+  competency: state_management
+  difficulty: 2
+  text: What is the purpose of a Key in Flutter?
+  options:
+  - Database ids
+  - Encryption
+  - Preserving widget identity and state when widgets move in the tree
+  - Keyboard shortcuts
+  correct_index: 2
+  explanation: Keys let Flutter match widgets to State objects across rebuilds, so state follows an item
+    when a list is reordered, inserted or removed.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: flutter-legacy-12
+  competency: state_management
+  difficulty: 1
+  text: What does 'hot reload' do?
+  options:
+  - Builds a release APK
+  - Clears the cache
+  - Restarts the device
+  - Injects updated code into the running app, keeping state where possible
+  correct_index: 3
+  explanation: Hot reload injects changed source code into the running Dart VM and rebuilds the tree,
+    usually preserving app state.
+  status: DRAFT
+  source: HUMAN
+  active: true
+  review_level: NONE
+  reviewed_by_name: null
+  reviewed_at: null
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+  weak: tests a tooling feature that maps to no assessed competency
+- id: flutter-legacy-13
+  competency: widgets_layout
+  difficulty: 1
+  text: Which widget lets children overlap one another?
+  options:
+  - Row
+  - Stack
+  - Column
+  - ListView
+  correct_index: 1
+  explanation: Stack paints its children on top of each other; Positioned places children inside it.
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 1
+- id: flutter-legacy-14
+  competency: data_apis
+  difficulty: 1
+  text: What does the pubspec.yaml file declare?
+  options:
+  - Database schema
+  - Server routes
+  - Only the app icon
+  - Package metadata, dependencies and assets
+  correct_index: 3
+  explanation: pubspec.yaml holds the package name and version, the dependencies and dev dependencies,
+    and the assets and fonts bundled with the app.
+  status: DRAFT
+  source: HUMAN
+  active: true
+  review_level: NONE
+  reviewed_by_name: null
+  reviewed_at: null
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+  weak: tests a project-file fact that maps to no assessed competency
+- id: flutter-legacy-15
+  competency: navigation
+  difficulty: 1
+  text: How do you navigate to a new screen with the basic Navigator?
+  options:
+  - setState(newPage)
+  - runApp(newPage)
+  - Navigator.push(...)
+  - window.location
+  correct_index: 2
+  explanation: 'Navigator.push adds a new route on top of the navigator''s stack, for example `Navigator.push(context,
+    MaterialPageRoute(builder: (_) => Page()))`.'
+  status: APPROVED
+  source: HUMAN
+  active: true
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: flutter-legacy-16
+  competency: widgets_layout
+  difficulty: 1
+  text: Which language is used to write Flutter apps?
+  options:
+  - Dart
+  - Kotlin
+  - Swift
+  - JavaScript
+  correct_index: 0
+  explanation: Flutter apps are written in Dart.
+  status: DRAFT
+  source: HUMAN
+  active: true
+  review_level: NONE
+  reviewed_by_name: null
+  reviewed_at: null
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+  weak: trivial recall that maps to no assessed competency
+- id: flutter-widgets-layout-01
+  competency: widgets_layout
+  difficulty: 3
+  text: On a narrow phone this screen shows the error 'A RenderFlex overflowed by 84 pixels on the right'.
+    Which change fixes it?
+  code_snippet: |
+    Row(
+      children: [
+        Text('A very long title that does not fit on one line on small screens'),
+        Icon(Icons.star),
+      ],
+    )
+  options:
+  - Wrap the Text in an Expanded widget
+  - 'Add overflow: TextOverflow.ellipsis to the Text only'
+  - Wrap the Row in a Container
+  - Put the Row inside a Column
+  correct_index: 0
+  explanation: A Row gives its non-flex children unbounded width, so a long Text just keeps growing. Expanded
+    (or Flexible) gives the Text the remaining width, which lets it wrap or ellipsize. The overflow property
+    alone does not constrain the width, and Container or Column do not change the Row's behaviour.
+  check: manual
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 2
+- id: flutter-widgets-layout-02
+  competency: widgets_layout
+  difficulty: 3
+  text: This screen throws 'Vertical viewport was given unbounded height'. What is the right fix?
+  code_snippet: |
+    Column(
+      children: [
+        Text('Messages'),
+        ListView(children: messageTiles),
+      ],
+    )
+  options:
+  - Replace the Column with a Row
+  - 'Set mainAxisSize: MainAxisSize.max on the Column'
+  - 'Set scrollDirection: Axis.horizontal on the ListView'
+  - Wrap the ListView in an Expanded widget
+  correct_index: 3
+  explanation: A Column passes unbounded height to its children, but a scrollable ListView needs a bounded
+    height. Expanded gives it the remaining space. A horizontal list hits the same problem in the other
+    axis, and mainAxisSize.max is already the default.
+  check: manual
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 2
+- id: flutter-state-management-01
+  competency: state_management
+  difficulty: 2
+  text: The button is tapped many times, but the label always shows 0. Why?
+  code_snippet: |
+    class _CounterState extends State<Counter> {
+      int count = 0;
+
+      @override
+      Widget build(BuildContext context) {
+        return ElevatedButton(
+          onPressed: () {
+            count++;
+          },
+          child: Text('$count'),
+        );
+      }
+    }
+  options:
+  - The count variable must be declared final
+  - A Text widget cannot display an int
+  - The onPressed callback must be async
+  - The change is not wrapped in setState, so Flutter is never told to rebuild
+  correct_index: 3
+  explanation: The variable does change, but Flutter only rebuilds a StatefulWidget when setState is called.
+    Writing `setState(() { count++; });` marks the widget dirty and shows the new value.
+  check: manual
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: flutter-state-management-02
+  competency: state_management
+  difficulty: 2
+  text: A State object creates a TextEditingController in initState. Where should the controller be disposed?
+  options:
+  - At the end of the build() method
+  - In a second call to initState
+  - Nowhere; the garbage collector always handles it
+  - In the State's dispose() method
+  correct_index: 3
+  explanation: Controllers hold listeners and other resources, so the State that creates one must release
+    it in dispose(), which runs once when the State is removed from the tree. Disposing in build would
+    break the next rebuild.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 1
+- id: flutter-state-management-03
+  competency: state_management
+  difficulty: 3
+  text: After `add()` runs, the ValueListenableBuilder listening to `items` does not rebuild. Why?
+  code_snippet: |
+    final items = ValueNotifier<List<int>>([1, 2, 3]);
+
+    void add() {
+      items.value.add(4);
+    }
+  options:
+  - A ValueNotifier only notifies when a different value is assigned; mutating the same list does not
+  - ValueNotifier supports only int and String values
+  - add() must be called inside setState to notify listeners
+  - ValueListenableBuilder needs a Key to rebuild
+  correct_index: 0
+  explanation: ValueNotifier compares the new value with the old one in its value setter and notifies
+    only if they differ. add() mutates the existing list object, so nothing is notified. Assign a new
+    list, for example `items.value = [...items.value, 4];`.
+  check: manual
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 3
+- id: flutter-state-management-04
+  competency: state_management
+  difficulty: 3
+  text: TodoTile is a StatefulWidget that keeps its own checkbox state. After the first todo is removed
+    from the list, the checked state appears on the wrong rows. What is the fix?
+  code_snippet: |
+    ListView(
+      children: todos.map((t) => TodoTile(todo: t)).toList(),
+    )
+  options:
+  - Call setState when a todo is removed
+  - 'Give each tile a stable key, such as key: ValueKey(t.id)'
+  - Declare the TodoTile constructor as const
+  - Switch to ListView.builder without adding keys
+  correct_index: 1
+  explanation: Without keys Flutter matches widgets to existing State objects by position, so after a
+    removal the remaining tiles inherit the State of the tile that was in that position. A ValueKey based
+    on the item's id ties each State to its own todo.
+  check: manual
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 3
+- id: flutter-navigation-01
+  competency: navigation
+  difficulty: 1
+  text: Which call closes the current screen and returns to the previous one?
+  options:
+  - Navigator.back(context)
+  - Navigator.close(context)
+  - Navigator.pop(context)
+  - Navigator.exit(context)
+  correct_index: 2
+  explanation: Navigator.pop removes the top route from the stack. Navigator has no back, close or exit
+    methods.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 1
+- id: flutter-navigation-02
+  competency: navigation
+  difficulty: 2
+  text: 'A screen is opened with `Navigator.pushNamed(context, ''/details'', arguments: 42)`. How does
+    the ''/details'' screen read the 42?'
+  options:
+  - Navigator.of(context).arguments
+  - context.widget.arguments
+  - Route.current.arguments
+  - ModalRoute.of(context)!.settings.arguments
+  correct_index: 3
+  explanation: The arguments are stored in the route's RouteSettings. The destination widget reads them
+    with ModalRoute.of(context)!.settings.arguments (or via onGenerateRoute). The other expressions do
+    not exist.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 2
+- id: flutter-navigation-03
+  competency: navigation
+  difficulty: 2
+  text: After a successful login the app should show HomePage, and pressing Back on HomePage must not
+    return to the login screen. Which call does this?
+  options:
+  - 'Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomePage()))'
+  - 'Navigator.push(context, MaterialPageRoute(builder: (_) => HomePage()))'
+  - Navigator.pop(context)
+  - Navigator.pushNamed(context, '/home')
+  correct_index: 0
+  explanation: pushReplacement swaps the current route for the new one, so the login screen leaves the
+    stack. A plain push or pushNamed keeps the login screen underneath, and pop would just close the login
+    screen.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 2
+- id: flutter-navigation-04
+  competency: navigation
+  difficulty: 2
+  text: Why do many Flutter apps use a declarative router such as go_router instead of only calling Navigator.push?
+  options:
+  - Navigator.push is not available on Android
+  - Routes map to URLs, so deep links and browser URLs work and navigation can follow app state
+  - Declarative routers make screens load faster
+  - Navigator.push cannot pass data to the next screen
+  correct_index: 1
+  explanation: Declarative routers describe the navigation stack from route paths and state, giving deep
+    linking, web URLs and redirects (for example to a login page). Navigator.push works on every platform
+    and can pass data, so the other reasons are wrong.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 2
+- id: flutter-navigation-05
+  competency: navigation
+  difficulty: 3
+  text: A user opens a picker screen and then presses the system Back button without choosing anything.
+    What does this code print?
+  code_snippet: |
+    final choice = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const PickerPage()),
+    );
+    print(choice);
+  options:
+  - An empty string
+  - Nothing, because the await never completes
+  - 'null'
+  - It throws an exception
+  correct_index: 2
+  explanation: The Future returned by push completes with the value passed to Navigator.pop(context, value).
+    When a route is removed without a value, for example by the Back button, it completes with null, so
+    the type is effectively String?.
+  check: manual
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 2
+- id: flutter-navigation-06
+  competency: navigation
+  difficulty: 3
+  text: In current Flutter (3.7 or later), the analyzer warns about using the BuildContext after an await
+    in this handler. What is the risk and the fix?
+  code_snippet: |
+    onPressed: () async {
+      await saveProfile();
+      Navigator.of(context).pop();
+    }
+  options:
+  - The await blocks the UI thread; remove it
+  - pop cannot be called after an async call; use push instead
+  - The context becomes null; assign it to a variable first
+  - The widget may be unmounted during the await; check context.mounted before using the context
+  correct_index: 3
+  explanation: While saveProfile runs the user may leave the screen, so the widget can be disposed and
+    its context is no longer valid. After an await, check `if (!context.mounted) return;` (or State.mounted)
+    before using the context.
+  check: manual
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: D
+    reviewer_difficulty: 2
+    reviewer_note: context.mounted requires Flutter 3.7+; older code used `mounted` on State. Fine for
+      current Flutter.
+- id: flutter-data-apis-01
+  competency: data_apis
+  difficulty: 2
+  text: '`response.body` is the String ''{"id": 1}'' returned by an http call. Which code turns it into
+    a Map?'
+  options:
+  - jsonDecode(response.body)
+  - response.body.toMap()
+  - Map.from(response.body)
+  - json.parse(response.body)
+  correct_index: 0
+  explanation: jsonDecode from dart:convert parses a JSON string into Dart objects (Map, List, num, String,
+    bool, null). String has no toMap, Map.from needs a Map, and json.parse is JavaScript.
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: A
+    reviewer_difficulty: 1
+    reviewer_note: Assumes dart:convert is imported.
+- id: flutter-data-apis-02
+  competency: data_apis
+  difficulty: 3
+  text: This screen sends a new network request every time the widget rebuilds, for example on every keystroke
+    elsewhere. What is the fix?
+  code_snippet: |
+    @override
+    Widget build(BuildContext context) {
+      return FutureBuilder<List<User>>(
+        future: fetchUsers(),
+        builder: (context, snapshot) {
+          ...
+        },
+      );
+    }
+  options:
+  - Replace FutureBuilder with a StreamBuilder
+  - Create the Future once, such as in initState, and pass the stored Future to FutureBuilder
+  - Add a Key to the FutureBuilder
+  - Call fetchUsers() twice so the result is cached
+  correct_index: 1
+  explanation: build can run many times, and each run calls fetchUsers() again, creating a new Future.
+    Store the Future in a State field (initState or didUpdateWidget) and pass that same Future to FutureBuilder
+    so the request happens once.
+  check: manual
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: B
+    reviewer_difficulty: 2
+- id: flutter-data-apis-03
+  competency: data_apis
+  difficulty: 3
+  text: The API omits `nickname` for some users. For those users, constructing the model fails at runtime.
+    What is the cause and fix?
+  code_snippet: |
+    class User {
+      final String nickname;
+      User.fromJson(Map<String, dynamic> json)
+          : nickname = json['nickname'];
+    }
+  options:
+  - Map keys that are missing throw a KeyError; check containsKey in a try block
+  - fromJson constructors must be async to read optional fields
+  - json['nickname'] is null, which cannot be a non-nullable String; declare the field as String?
+  - Dart converts missing values to an empty string automatically
+  correct_index: 2
+  explanation: Reading a missing key from a Map returns null. Assigning that dynamic null to a non-nullable
+    String throws a TypeError at runtime ('Null is not a subtype of String'). Declare the field nullable
+    (String?) or supply a default such as `json['nickname'] as String? ?? ''`.
+  check: manual
+  status: APPROVED
+  source: CLAUDE_GENERATED
+  active: false
+  review_level: SELF_VERIFIED
+  reviewed_by_name: null
+  reviewed_at: '2026-10-28T11:17:51+00:00'
+  verification:
+    method: independent_solve
+    checks_passed: true
+    solver_agreement: true
+    verified_at: '2026-10-28T11:17:51+00:00'
+    reviewer_answer: C
+    reviewer_difficulty: 2
+    reviewer_note: Strictly the failure is a TypeError from assigning null (dynamic) to String; C's fix
+      is right.

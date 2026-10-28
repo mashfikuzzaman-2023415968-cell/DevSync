@@ -53,6 +53,23 @@ class ErrorCode(StrEnum):
     TOKEN_INVALID = "TOKEN_INVALID"
     ALREADY_VERIFIED = "ALREADY_VERIFIED"
     PASSWORD_REJECTED = "PASSWORD_REJECTED"
+    # Role assessment (role assessment spec §9).
+    NOT_REQUIRED = "NOT_REQUIRED"
+    ALREADY_PASSED = "ALREADY_PASSED"
+    ATTEMPT_OPEN = "ATTEMPT_OPEN"
+    RETAKE_LOCKED = "RETAKE_LOCKED"
+    CONSENT_REQUIRED = "CONSENT_REQUIRED"
+    BLUEPRINT_UNAVAILABLE = "BLUEPRINT_UNAVAILABLE"
+    SKILL_NOT_ON_PROFILE = "SKILL_NOT_ON_PROFILE"
+    ACCOUNT_NOT_VERIFIED = "ACCOUNT_NOT_VERIFIED"
+    BIDDING_CLOSED = "BIDDING_CLOSED"
+    NOT_CURRENT_QUESTION = "NOT_CURRENT_QUESTION"
+    ATTEMPT_CLOSED = "ATTEMPT_CLOSED"
+    ATTEMPT_MOVED = "ATTEMPT_MOVED"
+    ATTEMPT_TOKEN_REQUIRED = "ATTEMPT_TOKEN_REQUIRED"
+    ATTEMPT_TOKEN_INVALID = "ATTEMPT_TOKEN_INVALID"
+    DEADLINE_PASSED = "DEADLINE_PASSED"
+    ROLE_ASSESSMENT_REQUIRED = "ROLE_ASSESSMENT_REQUIRED"
 
 
 STATUS_BY_CODE: dict[ErrorCode, int] = {
@@ -81,6 +98,22 @@ STATUS_BY_CODE: dict[ErrorCode, int] = {
     ErrorCode.ALREADY_VERIFIED: 409,
     ErrorCode.PASSWORD_REJECTED: 422,
     ErrorCode.ACCOUNT_LOCKED: 423,
+    ErrorCode.NOT_REQUIRED: 409,
+    ErrorCode.ALREADY_PASSED: 409,
+    ErrorCode.ATTEMPT_OPEN: 409,
+    ErrorCode.RETAKE_LOCKED: 409,
+    ErrorCode.CONSENT_REQUIRED: 422,
+    ErrorCode.BLUEPRINT_UNAVAILABLE: 409,
+    ErrorCode.SKILL_NOT_ON_PROFILE: 409,
+    ErrorCode.ACCOUNT_NOT_VERIFIED: 403,
+    ErrorCode.BIDDING_CLOSED: 409,
+    ErrorCode.NOT_CURRENT_QUESTION: 409,
+    ErrorCode.ATTEMPT_CLOSED: 409,
+    ErrorCode.ATTEMPT_MOVED: 409,
+    ErrorCode.ATTEMPT_TOKEN_REQUIRED: 400,
+    ErrorCode.ATTEMPT_TOKEN_INVALID: 403,
+    ErrorCode.DEADLINE_PASSED: 409,
+    ErrorCode.ROLE_ASSESSMENT_REQUIRED: 409,
     ErrorCode.RATE_LIMITED: 429,
     ErrorCode.INTERNAL_ERROR: 500,
     ErrorCode.DEPENDENCY_UNAVAILABLE: 503,
@@ -111,6 +144,22 @@ SAFE_MESSAGES: dict[ErrorCode, str] = {
     ErrorCode.STEP_UP_REQUIRED: "Confirm with your authenticator code to continue.",
     ErrorCode.TOKEN_INVALID: "This link or code is invalid or has expired.",
     ErrorCode.ALREADY_VERIFIED: "This is already verified.",
+    ErrorCode.NOT_REQUIRED: "You don't need a role assessment for this role.",
+    ErrorCode.ALREADY_PASSED: "You've already passed the assessment for this role.",
+    ErrorCode.ATTEMPT_OPEN: "Finish or let your other assessment expire first.",
+    ErrorCode.RETAKE_LOCKED: "You can retake this assessment later.",
+    ErrorCode.CONSENT_REQUIRED: "Read and accept the assessment rules to start.",
+    ErrorCode.BLUEPRINT_UNAVAILABLE: "A role assessment isn't available for this role yet.",
+    ErrorCode.SKILL_NOT_ON_PROFILE: "Add this role's skill to your profile first.",
+    ErrorCode.ACCOUNT_NOT_VERIFIED: "Verify your phone and email first.",
+    ErrorCode.BIDDING_CLOSED: "Bidding has closed for this project.",
+    ErrorCode.NOT_CURRENT_QUESTION: "That isn't the current question.",
+    ErrorCode.ATTEMPT_CLOSED: "This assessment has ended.",
+    ErrorCode.ATTEMPT_MOVED: "This assessment continued in another window.",
+    ErrorCode.ATTEMPT_TOKEN_REQUIRED: "Open the assessment again to continue.",
+    ErrorCode.ATTEMPT_TOKEN_INVALID: "Open the assessment again to continue.",
+    ErrorCode.DEADLINE_PASSED: "Time is up for this assessment.",
+    ErrorCode.ROLE_ASSESSMENT_REQUIRED: "Newcomers need a passing role assessment for this role.",
 }
 
 

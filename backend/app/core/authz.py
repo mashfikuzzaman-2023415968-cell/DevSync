@@ -180,6 +180,21 @@ def _test_take(p: Principal, resource: Any) -> None:
         raise NotFoundError
 
 
+@policy("assessment.take")
+def _assessment_take(p: Principal, resource: Any) -> None:
+    """Role assessments (role assessment spec §6.2, §9): developers only — clients and admins get
+    ROLE_NOT_ALLOWED. A developer who hasn't finished verifying is let through so the status
+    can say what to do next (the service answers ACCOUNT_NOT_VERIFIED); an attempt belongs to
+    its developer (others: not found)."""
+    if p.status not in ("PENDING", "ACTIVE"):
+        raise AuthError
+    if p.role != "DEVELOPER":
+        raise ForbiddenError(code=ErrorCode.ROLE_NOT_ALLOWED)
+    owner = getattr(resource, "user_id", None)
+    if resource is not None and owner != p.user_id:
+        raise NotFoundError
+
+
 # --------------------------------------------------------------------------- Phase 4 policies
 
 

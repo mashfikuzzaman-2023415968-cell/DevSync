@@ -8,7 +8,7 @@ exactly. Validation rules come from the paper's constraints (§9.1.2):
 Keys added beyond the §6.2 table (DECISIONS.md D8): `rep.newcomer_review`,
 `algorithm.mode`, `filter.newcomer_competency_check`, `filter.shortlist_min`,
 `fitness.include_performance`, `fitness.use_skill_competency`; `captcha.max_number` (§14.16
-"difficulty from settings").
+"difficulty from settings"); the `assessment` group (role assessment spec §4.9).
 """
 
 from __future__ import annotations
@@ -239,6 +239,16 @@ class RateLimitSettings(_Group):
     github_sync: tuple[RateRule, ...] = _rules((1, 10 * MINUTE))
     data_export: tuple[RateRule, ...] = _rules((2, DAY))
     admin: tuple[RateRule, ...] = _rules((300, MINUTE))
+    # Role assessment (role assessment spec §9).
+    assessment_read: tuple[RateRule, ...] = _rules((120, MINUTE))
+    assessment_start: tuple[RateRule, ...] = _rules((10, HOUR))
+    assessment_resume: tuple[RateRule, ...] = _rules((20, HOUR))
+    assessment_answer: tuple[RateRule, ...] = _rules((120, MINUTE))
+    assessment_finish: tuple[RateRule, ...] = _rules((10, HOUR))
+    assessment_focus: tuple[RateRule, ...] = _rules((60, MINUTE))
+    assessment_heartbeat: tuple[RateRule, ...] = _rules((10, MINUTE))
+    assessment_history: tuple[RateRule, ...] = _rules((60, MINUTE))
+    admin_assessment_action: tuple[RateRule, ...] = _rules((30, HOUR))
     sse_concurrent: int = Field(3, ge=1, le=20)
     login_captcha_after_failures: int = Field(3, ge=1, le=20)
     login_progressive_after_failures: int = Field(5, ge=1, le=50)
@@ -251,6 +261,33 @@ class CaptchaSettings(_Group):
     Bounded so a mistake can neither switch the check off nor freeze slow phones."""
 
     max_number: int = Field(50_000, ge=1_000, le=1_000_000)
+
+
+class AssessmentSettings(_Group):
+    """Role assessment for newcomers (role assessment spec §4.9). Blueprints and attempts store
+    the values they were created with, so a change never affects existing ones."""
+
+    question_count: int = Field(12, ge=8, le=20)
+    time_limit_seconds: int = Field(900, ge=300, le=2400)
+    difficulty_mix: tuple[int, int, int] = Field((4, 5, 3), description="easy, medium, hard")
+    pass_overall_bp: int = Field(6000, ge=4000, le=9000)
+    floor_bp: int = Field(4000, ge=0, le=7000)
+    heavy_weight_bp: int = Field(2000, ge=1000, le=4000)
+    validity_days: int = Field(180, ge=30, le=365)
+    retake_days: int = Field(30, ge=1, le=90)
+    leave_limit: int = Field(2, ge=1, le=3)
+    leave_debounce_ms: int = Field(3000, ge=500, le=10_000)
+    allow_back_navigation: bool = False
+    min_approved_per_competency: int = Field(4, ge=2, le=20)
+    require_human_review: bool = False
+
+    @model_validator(mode="after")
+    def _mix(self) -> Self:
+        if any(n < 0 for n in self.difficulty_mix):
+            raise ValueError("assessment.difficulty_mix counts must not be negative")
+        if sum(self.difficulty_mix) != self.question_count:
+            raise ValueError("assessment.difficulty_mix must add up to assessment.question_count")
+        return self
 
 
 class AlgorithmSettings(_Group):
@@ -279,6 +316,7 @@ class PlatformSettingsValues(_Group):
     bidding: BiddingSettings = BiddingSettings()
     algorithm: AlgorithmSettings = AlgorithmSettings()
     captcha: CaptchaSettings = CaptchaSettings()
+    assessment: AssessmentSettings = AssessmentSettings()
     ratelimit: RateLimitSettings = RateLimitSettings()
 
 

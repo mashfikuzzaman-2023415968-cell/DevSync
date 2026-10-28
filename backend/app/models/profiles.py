@@ -22,15 +22,24 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     Numeric,
     SmallInteger,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, Timestamps, UUIDPrimaryKey
+from app.models.assessment import (
+    AttemptKind,
+    QuestionSource,
+    QuestionStatus,
+    ReviewLevel,
+    TerminatedReason,
+)
 from app.models.identity import _pg_enum
 
 
@@ -81,9 +90,10 @@ class VerificationStatus(enum.StrEnum):
 class EvidenceSource(enum.StrEnum):
     """Where verified skill evidence came from."""
 
-    TEST = "TEST"
+    TEST = "TEST"  # a practice test (role assessment spec Decision 1)
     CODING = "CODING"
     ADMIN_PORTFOLIO = "ADMIN_PORTFOLIO"
+    ROLE_ASSESSMENT = "ROLE_ASSESSMENT"  # one row per scored role attempt, passed or not
 
 
 class Skill(UUIDPrimaryKey, Timestamps, Base):
@@ -315,7 +325,31 @@ class Question(UUIDPrimaryKey, Timestamps, Base):
     options: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
     correct_index: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     difficulty: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default="2")
+    # Practice-test flag; role assessments use `status = APPROVED` instead (Decision 15).
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    # Role assessment (spec §4.2). Content of an APPROVED question is immutable (trigger): a
+    # correction retires the row and inserts a new version.
+    slug: Mapped[str | None] = mapped_column(Text, unique=True)  # stable YAML id (bank build)
+    competency_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("competencies.id"))
+    status: Mapped[QuestionStatus] = mapped_column(
+        _pg_enum(QuestionStatus, "question_status"), nullable=False, server_default="DRAFT"
+    )
+    source: Mapped[QuestionSource] = mapped_column(
+        _pg_enum(QuestionSource, "question_source"), nullable=False, server_default="HUMAN"
+    )
+    code_snippet: Mapped[str | None] = mapped_column(Text)
+    explanation: Mapped[str | None] = mapped_column(Text)
+    review_level: Mapped[ReviewLevel] = mapped_column(
+        _pg_enum(ReviewLevel, "review_level"), nullable=False, server_default="NONE"
+    )
+    reviewed_by_name: Mapped[str | None] = mapped_column(Text)
+    reviewed_by_user: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    verification: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    times_served: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    version: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
 
     __table_args__ = (
         CheckConstraint(
@@ -325,6 +359,19 @@ class Question(UUIDPrimaryKey, Timestamps, Base):
         CheckConstraint("correct_index BETWEEN 0 AND 3", name="correct_range"),
         CheckConstraint("difficulty BETWEEN 1 AND 3", name="difficulty_range"),
         CheckConstraint("char_length(text) BETWEEN 5 AND 1000", name="text_len"),
+        CheckConstraint("char_length(code_snippet) <= 1500", name="snippet_len"),
+        CheckConstraint("char_length(explanation) <= 600", name="explanation_len"),
+        CheckConstraint(
+            "status <> 'APPROVED' OR (competency_id IS NOT NULL "
+            "AND review_level IN ('SELF_VERIFIED', 'HUMAN_APPROVED'))",
+            name="approved_is_reviewed",
+        ),
+        CheckConstraint(
+            "review_level <> 'HUMAN_APPROVED' OR reviewed_by_name IS NOT NULL",
+            name="human_approval_named",
+        ),
+        CheckConstraint("times_served >= 0 AND version >= 1", name="counters_valid"),
+        Index("ix_question_bank_competency_status", "competency_id", "status", "difficulty"),
     )
 
 
@@ -351,7 +398,12 @@ class TestAttempt(UUIDPrimaryKey, Timestamps, Base):
     __tablename__ = "test_attempts"
     __test__ = False  # not a pytest test class despite the name
 
-    test_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("skill_tests.id"), nullable=False)
+    # A practice test (kind PRACTICE) or a role assessment (kind ROLE, role assessment spec §4.5).
+    kind: Mapped[AttemptKind] = mapped_column(
+        _pg_enum(AttemptKind, "attempt_kind"), nullable=False, server_default="PRACTICE"
+    )
+    test_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("skill_tests.id"))
+    blueprint_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("assessment_blueprints.id"))
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
@@ -363,11 +415,67 @@ class TestAttempt(UUIDPrimaryKey, Timestamps, Base):
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     score: Mapped[Decimal | None] = mapped_column(Numeric(4, 3))
     scored: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    # Role attempts only (role assessment spec §4.5–§7). Written only by the definer functions.
+    context_project_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    context_slot_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    current_index: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default="0")
+    answers_locked: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, server_default="[]"
+    )
+    attempt_token_hash: Mapped[bytes | None] = mapped_column(LargeBinary)
+    retired_token_hashes: Mapped[list[bytes]] = mapped_column(
+        ARRAY(LargeBinary), nullable=False, server_default="{}"
+    )
+    consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    rules_version: Mapped[int | None] = mapped_column(SmallInteger)
+    leave_limit: Mapped[int | None] = mapped_column(SmallInteger)
+    validity_days: Mapped[int | None] = mapped_column(SmallInteger)
+    focus_leaves: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default="0")
+    focus_events: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, server_default="[]"
+    )
+    last_focus_seq: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    last_heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    connection_gaps: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default="0")
+    terminated_reason: Mapped[TerminatedReason | None] = mapped_column(
+        _pg_enum(TerminatedReason, "terminated_reason")
+    )
+    breakdown: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)
+    overall_bp: Mapped[int | None] = mapped_column(Integer)
+    passed: Mapped[bool | None] = mapped_column(Boolean)
+    flagged: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    extra_time_seconds: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    reused_seen: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    admin_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    admin_reviewed_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
 
     __table_args__ = (
         Index("ix_test_attempts_user_test_started", "user_id", "test_id", "started_at"),
+        Index(
+            "ix_test_attempts_open_by_user",
+            "user_id",
+            postgresql_where=text("submitted_at IS NULL"),  # forbidden-ok: constant DDL predicate
+        ),
+        Index("ix_test_attempts_blueprint_user", "blueprint_id", "user_id", "submitted_at"),
+        Index(
+            "ix_test_attempts_flagged",
+            "submitted_at",
+            postgresql_where=text("flagged"),  # forbidden-ok: constant DDL predicate
+        ),
         CheckConstraint("deadline_at > started_at", name="deadline_after_start"),
         CheckConstraint("score IS NULL OR score BETWEEN 0 AND 1", name="score_range"),
+        CheckConstraint(
+            "(kind = 'PRACTICE' AND test_id IS NOT NULL AND blueprint_id IS NULL) OR "
+            "(kind = 'ROLE' AND blueprint_id IS NOT NULL AND test_id IS NULL "
+            "AND consent_at IS NOT NULL)",
+            name="kind_target",
+        ),
+        CheckConstraint("overall_bp IS NULL OR overall_bp BETWEEN 0 AND 10000", name="overall_range"),
+        CheckConstraint("focus_leaves >= 0 AND connection_gaps >= 0", name="counters_valid"),
+        CheckConstraint("jsonb_array_length(focus_events) <= 30", name="focus_events_bounded"),
+        CheckConstraint("extra_time_seconds BETWEEN 0 AND 3600", name="extra_time_range"),
     )
 
 
@@ -388,8 +496,21 @@ class SkillEvidence(UUIDPrimaryKey, Timestamps, Base):
         ForeignKey("test_attempts.id"), unique=True
     )
     at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # Role assessment results (role assessment spec §4.6): a row for every scored role attempt;
+    # only passed, unvoided, unexpired ones satisfy the newcomer rule.
+    blueprint_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("assessment_blueprints.id"))
+    passed: Mapped[bool | None] = mapped_column(Boolean)
+    valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    voided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    void_reason: Mapped[str | None] = mapped_column(Text)
 
     __table_args__ = (
         Index("ix_skill_evidence_user_skill", "user_id", "skill_id"),
+        Index("ix_skill_evidence_user_blueprint", "user_id", "blueprint_id"),
         CheckConstraint("score BETWEEN 0 AND 1", name="score_range"),
+        CheckConstraint(
+            "source::text <> 'ROLE_ASSESSMENT' OR (blueprint_id IS NOT NULL AND passed IS NOT NULL)",
+            name="role_evidence_complete",
+        ),
+        CheckConstraint("char_length(void_reason) <= 500", name="void_reason_len"),
     )
