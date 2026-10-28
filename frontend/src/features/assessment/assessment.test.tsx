@@ -459,7 +459,9 @@ describe("ResultView", () => {
       />,
     );
     expect(screen.getByRole("heading", { name: /Not passed/ })).toBeInTheDocument();
-    expect(screen.getByText(/retake this assessment on 27 Nov 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/retake this assessment on/)).toHaveTextContent(
+      "retake this assessment on 27 Nov 2026",
+    );
     expect(
       screen.getByText(/Practice tests can help with components and props/),
     ).toBeInTheDocument();

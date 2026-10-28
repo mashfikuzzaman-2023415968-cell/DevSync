@@ -9,13 +9,16 @@
  * step for those that do not (the admin's two-step verification page, which exists only between
  * the password and the code).
  */
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import {
+  addRoleResult,
+  addSkillEvidence,
   apiSignIn,
   createOrderingProject,
   csrfHeaders,
   lastLink,
   PASSWORD,
+  roleAnswerKey,
   seedUser,
 } from "./fixtures";
 import { resetLimits } from "./test";
@@ -43,6 +46,26 @@ export async function openScreen(page: Page, reach: Reach): Promise<void> {
   if (reach.open) await reach.open(page);
   else await page.goto(reach.path);
   await page.waitForLoadState("networkidle");
+}
+
+/** A newcomer with React on their profile, on a published project's bid sheet with the React
+ * role chosen (the bid draft keeps the choice in sessionStorage across reloads). */
+async function newcomerOnBidSheet(page: Page, baseURL: string, name: string): Promise<string> {
+  await apiSignIn(page, baseURL, "CLIENT", "Rahim Uddin");
+  const projectId = await createOrderingProject(page, baseURL, { publish: true });
+  const dev = await apiSignIn(page, baseURL, "DEVELOPER", name);
+  await addSkillEvidence(page.request, baseURL, dev.userId, "React", 0.7);
+  await page.goto(`/dev/projects/${projectId}`);
+  await page.getByRole("combobox").click();
+  await page.getByRole("option", { name: "React" }).first().click();
+  await page.getByText("Role assessment required").waitFor();
+  return `/dev/projects/${projectId}`;
+}
+
+async function openConsent(page: Page, path: string): Promise<void> {
+  await page.goto(path);
+  await page.getByRole("button", { name: "Start assessment" }).click();
+  await page.getByRole("dialog", { name: "Before you start" }).waitFor();
 }
 
 export const STATEFUL_SCREENS: StatefulScreen[] = [
@@ -118,6 +141,67 @@ export const STATEFUL_SCREENS: StatefulScreen[] = [
       await page.waitForURL(/\/dev\/challenges\/test\//, { timeout: 15_000 });
       await page.getByText("Question 1 of 10").waitFor();
       return { path: new URL(page.url()).pathname };
+    },
+  },
+  {
+    // The role assessment a newcomer needs before bidding (role assessment spec §11.2).
+    name: "assessment-required",
+    prepare: async (page, baseURL) => ({
+      path: await newcomerOnBidSheet(page, baseURL, "Nadia Rahman"),
+    }),
+  },
+  {
+    // The rules, accepted before an attempt starts (§7.1).
+    name: "assessment-consent",
+    prepare: async (page, baseURL) => {
+      const path = await newcomerOnBidSheet(page, baseURL, "Nadia Rahman");
+      return { open: (p) => openConsent(p, path) };
+    },
+  },
+  {
+    // The full-screen runner on its first question (§11.3); questions are drawn per attempt.
+    name: "assessment-runner",
+    randomContent: true,
+    prepare: async (page, baseURL) => {
+      const path = await newcomerOnBidSheet(page, baseURL, "Nadia Rahman");
+      await openConsent(page, path);
+      const consent = page.getByRole("dialog", { name: "Before you start" });
+      await consent.getByRole("checkbox", { name: "I understand and agree" }).click();
+      await consent.getByRole("button", { name: "Start assessment" }).click();
+      await page.getByTestId("assessment-runner").getByText("Question 1 of 12").waitFor();
+      return {
+        open: async (p) => {
+          await p.goto(path);
+          await p.getByRole("button", { name: "Resume assessment" }).click();
+          await p
+            .getByTestId("assessment-runner")
+            .getByText(/Question \d+ of 12/)
+            .waitFor();
+        },
+      };
+    },
+  },
+  {
+    // A finished role assessment's result (§11.4): every answer right, so the page is stable.
+    name: "assessment-result",
+    prepare: async (page, baseURL) => {
+      await apiSignIn(page, baseURL, "CLIENT", "Rahim Uddin");
+      const projectId = await createOrderingProject(page, baseURL, { publish: true });
+      const dev = await apiSignIn(page, baseURL, "DEVELOPER", "Nadia Rahman");
+      await addSkillEvidence(page.request, baseURL, dev.userId, "React", 0.7);
+      const taken = await addRoleResult(page.request, baseURL, dev.userId, projectId, "React");
+      expect(taken.passed).toBe(true);
+      await roleAnswerKey(page.request, taken.attempt_id); // the attempt exists and is readable
+      return { path: `/dev/assessments/${taken.attempt_id}` };
+    },
+  },
+  {
+    // The admin's review queue (§12.1); it lists every role attempt of earlier runs too.
+    name: "admin-assessments",
+    randomContent: true,
+    prepare: async (page, baseURL) => {
+      await apiSignIn(page, baseURL, "ADMIN", "Admin User");
+      return { path: "/admin/assessments?view=all" };
     },
   },
   {

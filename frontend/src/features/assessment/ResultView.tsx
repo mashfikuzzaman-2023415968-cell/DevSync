@@ -82,12 +82,14 @@ export function ResultView({
       <div className="rounded-lg border border-border bg-surface-2 p-4 text-body-sm text-text">
         {result.passed && result.valid_until ? (
           <p>
-            This result counts for roles like this one until {formatDate(result.valid_until)}. It
+            This result counts for roles like this one until{" "}
+            <span data-volatile>{formatDate(result.valid_until)}</span>. It
             shows your competency; it doesn’t count as completed work.
           </p>
         ) : result.next_allowed_at ? (
           <p>
-            You can retake this assessment on {formatDate(result.next_allowed_at)}.
+            You can retake this assessment on{" "}
+            <span data-volatile>{formatDate(result.next_allowed_at)}</span>.
             {weakest
               ? ` Practice tests can help with ${weakest.name.toLowerCase()} until then.`
               : ""}
