@@ -5,7 +5,7 @@ SHELL := /bin/bash
 COMPOSE      := docker compose -f docker-compose.yml -f docker-compose.dev.yml
 COMPOSE_TEST := docker compose -p devsync-test -f docker-compose.yml -f docker-compose.test.yml
 # Demo-day stack (spec §17.0): production settings, two API replicas, offline (Mailpit).
-COMPOSE_DEMO := docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.demo.yml
+COMPOSE_DEMO := DEVSYNC_DB_NAME=devsync_demo docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.demo.yml
 PYTEST       := $(COMPOSE_TEST) run --rm tests pytest
 PHASE ?= $(shell p=$$(cat .phase 2>/dev/null); [ "$$p" = "none" -o -z "$$p" ] && echo 0 || echo $$p)
 
@@ -14,7 +14,7 @@ PHASE ?= $(shell p=$$(cat .phase 2>/dev/null); [ "$$p" = "none" -o -z "$$p" ] &&
 	test test-unit test-backend test-frontend e2e a11y visual visual-update stills security fuzz zap \
 	load chaos gate demo-check demo-up demo-down demo-reset demo-preflight erd experiments backup \
 	restore-drill docs test-stack-up test-stack-down deps-update ledger-report \
-	question-bank question-checks
+	question-bank question-checks demo-answer-key
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -124,6 +124,9 @@ demo-up: ## Start the production-style demo stack and load the seed: make demo-u
 
 demo-down: ## Stop the demo stack (data kept; `make up` returns to development)
 	$(COMPOSE_DEMO) down
+
+demo-answer-key: ## Operator answer key on a 2nd screen: DEVSYNC_DEMO_TOOLS=1 make demo-answer-key USER=rafsan
+	@python3 backend/scripts/demo_answer_key.py --user $(USER) --watch
 
 demo-preflight: ## Pre-presentation checks (Docker, replicas, ports, cert trust, disk, seed)
 	@python3 backend/scripts/demo_preflight.py --stage $(DEMO_STAGE)

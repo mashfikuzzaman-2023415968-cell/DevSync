@@ -2,10 +2,13 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
-from _jsh import PRELUDE, js, verify  # noqa: E402,F401
+from _jsh import PRELUDE, js, verify  # noqa: F401
+
 
 def check(ctx, q):
-    r = js(ctx, """
+    r = js(
+        ctx,
+        """
 (async () => {
   let count = 0;
   globalThis.fetch = () => { count++; const n = count; return Promise.resolve({ json: () => Promise.resolve({ name: 'u' + n }) }); };
@@ -29,13 +32,17 @@ def check(ctx, q):
   }
   console.log(JSON.stringify(res));
 })();
-""")
+""",
+    )
     stops = {k: v["fetches"] <= 2 for k, v in r.items()}
     assert not stops["buggy"], r
-    assert stops["deps"] and r["deps"]["text"].startswith("u"), r   # loads the user, once
-    verify(q, {
-        "Pass [id] as the second argument": stops["deps"],
-        "Wrap the fetch call in a useCallback": stops["callback"],
-        "Call setUser inside a setTimeout": stops["timeout"],
-        "Move the fetch call into the component body": stops["body"],
-    })
+    assert stops["deps"] and r["deps"]["text"].startswith("u"), r  # loads the user, once
+    verify(
+        q,
+        {
+            "Pass [id] as the second argument": stops["deps"],
+            "Wrap the fetch call in a useCallback": stops["callback"],
+            "Call setUser inside a setTimeout": stops["timeout"],
+            "Move the fetch call into the component body": stops["body"],
+        },
+    )

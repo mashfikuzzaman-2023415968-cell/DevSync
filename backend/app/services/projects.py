@@ -69,6 +69,7 @@ from app.schemas.projects import (
     SlotsReplace,
 )
 from app.services import bids as bids_svc
+from app.services import role_assessments
 from app.services.context import Ctx
 from app.services.notifications import notify_users
 
@@ -694,6 +695,10 @@ async def publish(
         project.bidding_deadline = ctx.now + timedelta(days=bidding.extend_days)
     project.status = ProjectStatus.BIDDING  # publish-guard trigger re-checks shares/slots
     project.version += 1
+    await ctx.db.flush()
+    # Each slot's role assessment blueprint is built now and frozen with the published project
+    # (role assessment spec §4.4, Decision 2).
+    await role_assessments.ensure_slot_assessments(ctx.db, project, await active_settings(ctx.db))
     await _audit(ctx, "project.published", project_id, {"duration": result.duration})
     await ctx.db.commit()
     await ctx.db.refresh(project)

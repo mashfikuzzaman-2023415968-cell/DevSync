@@ -1,6 +1,6 @@
 """Check for fastapi-api-security-10: which next values the startswith('/') check lets through."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 import json
@@ -21,7 +21,7 @@ out = {}
 for v in ["https://evil.example/x", "evil.example.net/x", "//evil.example/x", "javascript:alert(1)"]:
     out[v] = c.get("/login/done", params={"next": v}).headers["location"]
 print(json.dumps(out))
-'''
+"""
 
 
 def check(ctx, q):

@@ -86,7 +86,9 @@ def score_attempt(
         earned = sum(DIFFICULTY_WEIGHT[a.difficulty] for a in mine if a.correct)
         score_bp = (TOTAL_BP * earned) // possible if possible else 0
         breakdown.append(
-            CompetencyScore(c.competency_id, c.code, c.name, c.weight_bp, earned, possible, score_bp)
+            CompetencyScore(
+                c.competency_id, c.code, c.name, c.weight_bp, earned, possible, score_bp
+            )
         )
     overall_bp = sum(c.weight_bp * c.score_bp for c in breakdown) // TOTAL_BP
     heavy_ok = all(c.score_bp >= floor_bp for c in breakdown if c.weight_bp >= heavy_weight_bp)

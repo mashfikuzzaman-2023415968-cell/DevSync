@@ -1,6 +1,6 @@
 """Check for fastapi-api-security-09: attack the route, then each proposed fix."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 import json, uuid
@@ -50,7 +50,7 @@ def build(variant):
     return c.get(f"/orgs/1/invoices/{target}").status_code, c.get("/orgs/2/invoices/7").status_code
 
 print(json.dumps({v: build(v) for v in ["original", "scoped", "uuid", "status404", "minlen"]}))
-'''
+"""
 
 
 def check(ctx, q):

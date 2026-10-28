@@ -2,10 +2,13 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
-from _jsh import PRELUDE, js, verify  # noqa: E402,F401
+from _jsh import PRELUDE, js, verify  # noqa: F401
+
 
 def check(ctx, q):
-    r = js(ctx, """
+    r = js(
+        ctx,
+        """
 function view(useReducerFn) {
   function App() {
     const [state, dispatch] = useReducerFn();
@@ -29,12 +32,16 @@ const res = {
   wrapped: view(() => useReducer(useCallback(buggy, []), init())),
 };
 console.log(JSON.stringify(res));
-""")
-    assert r["buggy"] == [0, 0], r          # stays empty, even after a second click
+""",
+    )
+    assert r["buggy"] == [0, 0], r  # stays empty, even after a second click
     assert r["pure"] == [1, 2] and r["copy"] == [1, 2], r  # arrays work; a new reference fixes it
-    verify(q, {
-        "The reducer returns the same state": r["buggy"] == [0, 0] and r["copy"] == [1, 2],
-        "dispatch only schedules": r["buggy"][1] > 0,
-        "useReducer cannot hold an array": r["pure"][0] == 0,
-        "The reducer must be wrapped in useCallback": r["wrapped"][0] > 0,
-    })
+    verify(
+        q,
+        {
+            "The reducer returns the same state": r["buggy"] == [0, 0] and r["copy"] == [1, 2],
+            "dispatch only schedules": r["buggy"][1] > 0,
+            "useReducer cannot hold an array": r["pure"][0] == 0,
+            "The reducer must be wrapped in useCallback": r["wrapped"][0] > 0,
+        },
+    )

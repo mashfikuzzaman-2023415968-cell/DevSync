@@ -807,20 +807,21 @@ def _profile_0008() -> str:
     spec = importlib.util.spec_from_file_location(
         "m0008", Path(__file__).with_name("0008_public_best_score.py")
     )
-    assert spec is not None and spec.loader is not None
+    if spec is None or spec.loader is None:
+        raise RuntimeError("migration 0008 not found")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return str(module.BEST)
 
 
-# Public profiles (§11.6): `verified_scores` are practice-test results only (best per skill, as
-# in 0008); `role_assessments` lists valid passes with the role label — never project names,
+# Public profiles (§11.6): `verified_scores` keep every non-role result (practice tests, admin-
+# verified portfolio; best per skill, as in 0008); `role_assessments` lists valid passes with the role label — never project names,
 # failed or ended attempts, flags or answers.
 _OLD_SCORES = """FROM (SELECT DISTINCT ON (skill_id) skill_id, score, at FROM skill_evidence
             WHERE user_id = u.id ORDER BY skill_id, score DESC, at DESC) e
       JOIN skills s ON s.id = e.skill_id), '[]'),"""
 _NEW_SCORES = """FROM (SELECT DISTINCT ON (skill_id) skill_id, score, at FROM skill_evidence
-            WHERE user_id = u.id AND source = 'TEST'
+            WHERE user_id = u.id AND source <> 'ROLE_ASSESSMENT'
             ORDER BY skill_id, score DESC, at DESC) e
       JOIN skills s ON s.id = e.skill_id), '[]'),
     'role_assessments', coalesce((
@@ -833,8 +834,11 @@ _NEW_SCORES = """FROM (SELECT DISTINCT ON (skill_id) skill_id, score, at FROM sk
 
 def _profile_0011() -> str:
     old = _profile_0008()
-    assert _OLD_SCORES in old, "0008's public_developer_profile changed"
+    if _OLD_SCORES not in old:
+        raise RuntimeError("0008's public_developer_profile changed")
     return old.replace(_OLD_SCORES, _NEW_SCORES)
+
+
 NEW_TABLES = ("competencies", "assessment_blueprints", "slot_assessments", "user_accommodations")
 
 
@@ -1109,7 +1113,9 @@ def upgrade() -> None:
         postgresql_where=sa.text("submitted_at IS NULL"),  # forbidden-ok: DDL
     )  # fmt: skip
     op.create_index(
-        "ix_test_attempts_blueprint_user", "test_attempts", ["blueprint_id", "user_id", "submitted_at"]
+        "ix_test_attempts_blueprint_user",
+        "test_attempts",
+        ["blueprint_id", "user_id", "submitted_at"],
     )
     op.create_index(
         "ix_test_attempts_flagged", "test_attempts", ["submitted_at"],
@@ -1133,7 +1139,9 @@ def upgrade() -> None:
         "source::text <> 'ROLE_ASSESSMENT' OR (blueprint_id IS NOT NULL AND passed IS NOT NULL)",
     )  # fmt: skip
     op.create_check_constraint(
-        op.f("ck_skill_evidence_void_reason_len"), "skill_evidence", "char_length(void_reason) <= 500"
+        op.f("ck_skill_evidence_void_reason_len"),
+        "skill_evidence",
+        "char_length(void_reason) <= 500",
     )
     op.create_index(
         "ix_skill_evidence_user_blueprint", "skill_evidence", ["user_id", "blueprint_id"]
@@ -1201,25 +1209,47 @@ def downgrade() -> None:
     op.execute("UPDATE bids SET assessment_evidence_id = NULL")
     op.execute("DELETE FROM skill_evidence WHERE source = 'ROLE_ASSESSMENT'")
     op.execute("DELETE FROM test_attempts WHERE kind = 'ROLE'")
-    op.execute("DELETE FROM question_bank WHERE slug NOT LIKE '%-legacy-%' OR slug IS NULL AND false")
+    op.execute(
+        "DELETE FROM question_bank WHERE slug NOT LIKE '%-legacy-%' OR slug IS NULL AND false"
+    )
 
-    op.drop_constraint(op.f("fk_bids_assessment_evidence_id_skill_evidence"), "bids", type_="foreignkey")
+    op.drop_constraint(
+        op.f("fk_bids_assessment_evidence_id_skill_evidence"), "bids", type_="foreignkey"
+    )
     op.drop_column("bids", "assessment_evidence_id")
 
     op.drop_index("ix_skill_evidence_user_blueprint", table_name="skill_evidence")
     op.drop_constraint(op.f("ck_skill_evidence_void_reason_len"), "skill_evidence", type_="check")
-    op.drop_constraint(op.f("ck_skill_evidence_role_evidence_complete"), "skill_evidence", type_="check")
-    op.drop_constraint(op.f("fk_skill_evidence_blueprint_id_assessment_blueprints"), "skill_evidence", type_="foreignkey")
+    op.drop_constraint(
+        op.f("ck_skill_evidence_role_evidence_complete"), "skill_evidence", type_="check"
+    )
+    op.drop_constraint(
+        op.f("fk_skill_evidence_blueprint_id_assessment_blueprints"),
+        "skill_evidence",
+        type_="foreignkey",
+    )
     for column in ("void_reason", "voided_at", "valid_until", "passed", "blueprint_id"):
         op.drop_column("skill_evidence", column)
 
     op.drop_index("ix_test_attempts_flagged", table_name="test_attempts")
     op.drop_index("ix_test_attempts_blueprint_user", table_name="test_attempts")
     op.drop_index("ix_test_attempts_open_by_user", table_name="test_attempts")
-    for name in ("extra_time_range", "focus_events_bounded", "counters_valid", "overall_range", "kind_target"):
+    for name in (
+        "extra_time_range",
+        "focus_events_bounded",
+        "counters_valid",
+        "overall_range",
+        "kind_target",
+    ):
         op.drop_constraint(op.f(f"ck_test_attempts_{name}"), "test_attempts", type_="check")
-    op.drop_constraint(op.f("fk_test_attempts_admin_reviewed_by_users"), "test_attempts", type_="foreignkey")
-    op.drop_constraint(op.f("fk_test_attempts_blueprint_id_assessment_blueprints"), "test_attempts", type_="foreignkey")
+    op.drop_constraint(
+        op.f("fk_test_attempts_admin_reviewed_by_users"), "test_attempts", type_="foreignkey"
+    )
+    op.drop_constraint(
+        op.f("fk_test_attempts_blueprint_id_assessment_blueprints"),
+        "test_attempts",
+        type_="foreignkey",
+    )
     op.alter_column("test_attempts", "test_id", existing_type=sa.UUID(), nullable=False)
     for column in (
         "admin_reviewed_by", "admin_reviewed_at", "reused_seen", "extra_time_seconds", "flagged",
@@ -1236,12 +1266,22 @@ def downgrade() -> None:
     op.drop_table("slot_assessments")
     op.drop_table("assessment_blueprints")
 
-    for name in ("counters_valid", "human_approval_named", "approved_is_reviewed", "explanation_len", "snippet_len"):
+    for name in (
+        "counters_valid",
+        "human_approval_named",
+        "approved_is_reviewed",
+        "explanation_len",
+        "snippet_len",
+    ):
         op.drop_constraint(op.f(f"ck_question_bank_{name}"), "question_bank", type_="check")
     op.drop_index("ix_question_bank_competency_status", table_name="question_bank")
     op.drop_constraint(op.f("uq_question_bank_slug"), "question_bank", type_="unique")
-    op.drop_constraint(op.f("fk_question_bank_reviewed_by_user_users"), "question_bank", type_="foreignkey")
-    op.drop_constraint(op.f("fk_question_bank_competency_id_competencies"), "question_bank", type_="foreignkey")
+    op.drop_constraint(
+        op.f("fk_question_bank_reviewed_by_user_users"), "question_bank", type_="foreignkey"
+    )
+    op.drop_constraint(
+        op.f("fk_question_bank_competency_id_competencies"), "question_bank", type_="foreignkey"
+    )
     for column in (
         "version", "times_served", "verification", "reviewed_at", "reviewed_by_user",
         "reviewed_by_name", "review_level", "explanation", "code_snippet", "source", "status",

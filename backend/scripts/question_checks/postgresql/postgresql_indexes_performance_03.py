@@ -28,14 +28,14 @@ def _kind(option):
 def check(ctx, q):
     sizes = {}
     for name, ddl in INDEXES.items():
-        rows = ctx.sql(
-            SETUP + ddl + ";\nANALYZE orders;\nSELECT pg_relation_size('test_idx');\n"
-        )
+        rows = ctx.sql(SETUP + ddl + ";\nANALYZE orders;\nSELECT pg_relation_size('test_idx');\n")
         sizes[name] = rows[0][0]
         plan = "\n".join(
             r[0]
             for r in ctx.sql(
-                SETUP + ddl + ";\nANALYZE orders;\nEXPLAIN SELECT * FROM orders WHERE status = 'pending';\n"
+                SETUP
+                + ddl
+                + ";\nANALYZE orders;\nEXPLAIN SELECT * FROM orders WHERE status = 'pending';\n"
             )
         )
         assert "test_idx" in plan, (name, plan)  # every candidate can serve the lookup

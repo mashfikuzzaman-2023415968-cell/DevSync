@@ -1,6 +1,6 @@
 """Check for fastapi_api_design_05: run the snippet for real; the marked option must equal the result."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 import json
@@ -27,7 +27,7 @@ r = c.get("/items", follow_redirects=False)
 assert r.headers["location"].endswith("/items/")
 
 print("Status 307 redirect to /items/" if r.status_code == 307 else show(r))
-'''
+"""
 
 
 def check(ctx, q):

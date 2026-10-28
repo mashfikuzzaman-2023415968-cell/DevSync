@@ -2,7 +2,8 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
-from _jsh import PRELUDE, js, verify  # noqa: E402,F401
+from _jsh import PRELUDE, js, verify  # noqa: F401
+
 
 def check(ctx, q):
     out = ctx.node("""

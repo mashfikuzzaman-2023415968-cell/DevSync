@@ -14,6 +14,7 @@ from typing import Any
 from sqlalchemy import column, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.assessment import AttemptKind
 from app.models.profiles import Skill, SkillTest, TestAttempt
 
 
@@ -32,9 +33,10 @@ async def get_test(db: AsyncSession, test_id: uuid.UUID) -> SkillTest | None:
 
 
 async def attempts_of(db: AsyncSession, user_id: uuid.UUID) -> Sequence[TestAttempt]:
+    """The user's practice-test attempts (role assessments live in `role_assessments`)."""
     stmt = (
         select(TestAttempt)
-        .where(TestAttempt.user_id == user_id)
+        .where(TestAttempt.user_id == user_id, TestAttempt.kind == AttemptKind.PRACTICE)
         .order_by(TestAttempt.started_at.desc())
     )
     return (await db.scalars(stmt)).all()
@@ -45,7 +47,7 @@ async def get_attempt(db: AsyncSession, attempt_id: uuid.UUID) -> TestAttempt | 
     re-read: the definer functions change the row behind the ORM's back."""
     stmt = (
         select(TestAttempt)
-        .where(TestAttempt.id == attempt_id)
+        .where(TestAttempt.id == attempt_id, TestAttempt.kind == AttemptKind.PRACTICE)
         .execution_options(populate_existing=True)
     )
     return await db.scalar(stmt)
@@ -107,8 +109,28 @@ async def expired_open_attempts(db: AsyncSession, now: datetime, limit: int) -> 
     """Attempts past their deadline and never submitted (SYSTEM context, for auto-scoring)."""
     stmt = (
         select(TestAttempt.id)
-        .where(TestAttempt.submitted_at.is_(None), TestAttempt.deadline_at < now)
+        .where(
+            TestAttempt.kind == AttemptKind.PRACTICE,
+            TestAttempt.submitted_at.is_(None),
+            TestAttempt.deadline_at < now,
+        )
         .order_by(TestAttempt.deadline_at)
         .limit(limit)
     )
     return list((await db.scalars(stmt)).all())
+
+
+async def open_attempt_any_kind(
+    db: AsyncSession, user_id: uuid.UUID, now: datetime, role_grace: float
+) -> TestAttempt | None:
+    """The user's open attempt of either kind, if one is still running (Decision 4)."""
+    stmt = (
+        select(TestAttempt)
+        .where(TestAttempt.user_id == user_id, TestAttempt.submitted_at.is_(None))
+        .order_by(TestAttempt.started_at.desc())
+    )
+    for attempt in (await db.scalars(stmt)).all():
+        grace = role_grace if attempt.kind == AttemptKind.ROLE else 0.0
+        if (attempt.deadline_at - now).total_seconds() + grace > 0:
+            return attempt
+    return None

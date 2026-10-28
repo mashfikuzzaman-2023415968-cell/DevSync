@@ -1,3 +1,4 @@
+import contextlib
 import threading
 import time
 import uuid
@@ -47,9 +48,7 @@ def check(ctx, q):
         assert results == ["40P01", "ok"], outcome
     finally:
         for c in (a, b):
-            try:
+            with contextlib.suppress(Exception):
                 c.close()
-            except Exception:  # noqa: BLE001
-                pass
         boss.execute(f'DROP SCHEMA "{schema}" CASCADE')
         boss.close()

@@ -21,6 +21,7 @@ import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from typing import Literal
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -44,6 +45,7 @@ from app.algorithms.filtering import (
     required_bids,
 )
 from app.core.audit import write_audit
+from app.core.clock import get_clock
 from app.core.errors import DomainError, ErrorCode, NotFoundError
 from app.core.money import format_taka
 from app.core.settings_cache import active_settings
@@ -57,6 +59,7 @@ from app.models.projects import Project, ProjectSlot, ProjectStatus
 from app.repositories import bids as repo
 from app.repositories import projects as projrepo
 from app.schemas.bids import (
+    AssessmentLineOut,
     BidCreate,
     BidDetailOut,
     BiddingWindow,
@@ -78,8 +81,9 @@ from app.schemas.bids import (
 )
 from app.schemas.common import Page
 from app.schemas.platform_settings import PlatformSettingsValues
-from app.services import marketplace, reputation_read
+from app.services import marketplace, reputation_read, role_assessments
 from app.services.context import Ctx
+from app.services.role_assessments import AssessmentLine, SlotEvidence
 
 _ADVANCEMENT = Advancement.C  # Balanced default until the client picks a preset at formation.
 
@@ -88,7 +92,7 @@ _REASON_TEXT = {
     ReasonCode.LOW_COMPETENCY: "Competency below the project minimum",
     ReasonCode.TOO_SLOW: "Needs more days than the deadline allows",
     ReasonCode.OVER_BUDGET: "Price above the project budget",
-    ReasonCode.NO_SKILL_EVIDENCE: "No passing skill test for this slot's skill",
+    ReasonCode.NO_SKILL_EVIDENCE: "No passing role assessment for this role",
     ReasonCode.SKILL_MISMATCH: "You don't list this slot's skill",
     ReasonCode.UNAVAILABLE: "Not enough free hours over the project period",
     ReasonCode.SUSPENDED: "Account not active",
@@ -117,8 +121,8 @@ _DEV_REASON: dict[ReasonCode, tuple[str, str]] = {
         "Check the budget before you set your price.",
     ),
     ReasonCode.NO_SKILL_EVIDENCE: (
-        "As a newcomer you need a passing skill test for this role's skill.",
-        "Take the skill test under Skill challenges, then bid again.",
+        "Newcomers need a passing role assessment for this role.",
+        "Take the role assessment on the project's bid sheet, then bid again.",
     ),
     ReasonCode.SKILL_MISMATCH: (
         "This role's skill isn't on your profile.",
@@ -311,8 +315,13 @@ def _bid_input(
     commitment: int,
     period: avail.Period,
     active: bool,
+    role: SlotEvidence | None = None,
 ) -> BidInput:
     evidence = data.evidence.get(developer_id, {})
+    score = evidence.get(slot.skill_id) if slot is not None else None
+    passed = None
+    if role is not None:  # a newcomer's evidence for this slot (role assessment spec §8.2)
+        score, passed = role.score, (role.passed if role.kind == "ROLE" else None)
     return BidInput(
         bid_id=bid_id,
         slot_id=str(slot.id) if slot else "",
@@ -323,7 +332,7 @@ def _bid_input(
         c=rep.c,
         t_days=days,
         c_paisa=price,
-        skill_evidence_score=evidence.get(slot.skill_id) if slot is not None else None,
+        skill_evidence_score=score,
         has_slot_skill=slot is not None and slot.skill_id in data.skills.get(developer_id, set()),
         active=active,
         available=avail.is_feasible(
@@ -333,6 +342,7 @@ def _bid_input(
             data.hours.get(developer_id, 20),
         ),
         self_dealing=False,
+        assessment_passed=passed,
     )
 
 
@@ -406,7 +416,7 @@ def _bid_out(bid: Bid, context: dict[uuid.UUID, tuple[str, str]]) -> BidOut:
 
 
 async def create_bid(ctx: Ctx, project_id: uuid.UUID, body: BidCreate) -> BidOut:
-    await _bidding_project(ctx, project_id)
+    project = await _bidding_project(ctx, project_id)
     slots = {s.id: s for s in await projrepo.load_slots(ctx.db, project_id)}
     if body.slot_id not in slots:
         raise DomainError(
@@ -415,6 +425,8 @@ async def create_bid(ctx: Ctx, project_id: uuid.UUID, body: BidCreate) -> BidOut
             fields={"slot_id": "unknown slot"},
         )
     portfolio = await _check_portfolio(ctx, body.portfolio_item_ids)
+    # A newcomer bids on a valid role assessment pass for this slot (§8.3); the server links it.
+    evidence_id = await role_assessments.require_for_bid(ctx, project, slots[body.slot_id])
     # Count-then-insert under a per-developer lock: two bids at once can't both pass the cap.
     await advisory_xact_lock(ctx.db, ctx.uid)
     if await repo.standing_bid(ctx.db, project_id, ctx.uid) is not None:
@@ -439,6 +451,7 @@ async def create_bid(ctx: Ctx, project_id: uuid.UUID, body: BidCreate) -> BidOut
         portfolio_item_ids=portfolio,
         hours_per_week_committed=await _default_hours(ctx, body.hours_per_week_committed),
         status=BidStatus.ACTIVE,
+        assessment_evidence_id=evidence_id,
     )
     ctx.db.add(bid)
     try:
@@ -482,16 +495,20 @@ async def update_bid(
     bid = await _own_bid(ctx, bid_id, for_update=True)
     if bid.status != BidStatus.ACTIVE:
         raise DomainError("This bid can no longer be edited.", code=ErrorCode.INVALID_STATE)
-    await _bidding_project(ctx, bid.project_id)
+    project = await _bidding_project(ctx, bid.project_id)
     _check_version(bid, if_match)
     data = body.model_dump(exclude_unset=True)
     if "slot_id" in data:
-        slots = {s.id for s in await projrepo.load_slots(ctx.db, bid.project_id)}
-        if data["slot_id"] not in slots:
+        by_id = {s.id: s for s in await projrepo.load_slots(ctx.db, bid.project_id)}
+        if data["slot_id"] not in by_id:
             raise DomainError(
                 "That slot is not part of this project.",
                 code=ErrorCode.VALIDATION_ERROR,
                 fields={"slot_id": "unknown slot"},
+            )
+        if data["slot_id"] != bid.slot_id:  # another role: its own assessment (§8.3)
+            bid.assessment_evidence_id = await role_assessments.require_for_bid(
+                ctx, project, by_id[data["slot_id"]]
             )
     for field in ("slot_id", "price_paisa", "days_needed", "hours_per_week_committed"):
         if field in data and data[field] is not None:
@@ -596,6 +613,7 @@ async def bid_detail(ctx: Ctx, bid_id: uuid.UUID) -> BidDetailOut:
                 days=bid.days_needed,
                 price=bid.price_paisa,
                 hours=bid.hours_per_week_committed,
+                linked=bid.assessment_evidence_id,
             )
     item_ids = [uuid.UUID(str(x)) for x in bid.portfolio_item_ids]
     titles = await repo.portfolio_titles(ctx.db, item_ids)
@@ -630,7 +648,38 @@ def _pct(score: float) -> str:
     return f"{score * 100:.0f}"
 
 
-def _check_out(check: Check, skill: str) -> ConstraintCheck:
+def _role_text(line: AssessmentLine) -> str:
+    """A role assessment result in words (role assessment spec §8.2)."""
+    if line.voided:
+        return "Role assessment voided by an admin"
+    if line.ended_early:
+        return "The role assessment ended early, so it can't count as a pass."
+    if line.passed:
+        return f"Role assessment {line.score} · passed"
+    if line.floor_miss is not None and line.score >= line.pass_overall:
+        name, got, floor = line.floor_miss
+        return (
+            f"Role assessment {line.score}, but {name.lower()} scored {got} "
+            f"(needs at least {floor})."
+        )
+    return f"Role assessment {line.score} — below the pass mark of {line.pass_overall}."
+
+
+def _assessment_text(role: SlotEvidence, skill: str, required: float) -> str:
+    """The newcomer evidence check in words: the role result, or the practice fallback."""
+    need = _pct(required)
+    if role.kind == "PRACTICE":
+        if role.score is None:
+            return (
+                f"No {skill} practice test result (newcomers need {need}%; no role assessment yet)"
+            )
+        return f"{skill} practice test {_pct(role.score)}% (newcomers need {need}%)"
+    if role.line is None or role.score is None:
+        return "Newcomers need a passing role assessment for this role."
+    return _role_text(role.line)
+
+
+def _check_out(check: Check, skill: str, role: SlotEvidence | None = None) -> ConstraintCheck:
     """Human text for one Algorithm 1 check (scores shown ×100, money as ৳)."""
     req, act = check.required, check.actual
     match check.name:
@@ -646,6 +695,8 @@ def _check_out(check: Check, skill: str) -> ConstraintCheck:
                 if check.ok
                 else "Not enough free hours over the project period"
             )
+        case "skill_evidence" if role is not None:
+            detail = _assessment_text(role, skill, float(req or 0))
         case "skill_evidence":
             detail = (
                 f"No {skill} test result (newcomers need {_pct(float(req or 0))}%)"
@@ -715,12 +766,24 @@ async def _dry_run(
     days: int,
     price: int,
     hours: int,
+    linked: uuid.UUID | None = None,
 ) -> EligibilityOut:
     """The caller's own bid (draft or placed) against the project's own constraints."""
     settings = await active_settings(ctx.db)
     terms = project_terms(project, list(slots.values()), settings)
     rep = await reputation_read.read_one(ctx.db, ctx.uid, settings)
     data = await _bidder_data(ctx.db, [ctx.uid], project.id)
+    role = None
+    if rep.is_newcomer:
+        roles = await role_assessments.newcomer_evidence(
+            ctx.db,
+            project=project,
+            slots=list(slots.values()),
+            items=[(ctx.uid, slot.id, linked)],
+            settings=settings,
+            now=ctx.now,
+        )
+        role = roles[(ctx.uid, slot.id)]
     bid = _bid_input(
         bid_id="preview",
         developer_id=ctx.uid,
@@ -732,12 +795,15 @@ async def _dry_run(
         commitment=hours,
         period=_period(project, ctx.now.date()),
         active=ctx.principal.is_active,
+        role=role,
     )
     proj = _project_input(terms, project, list(slots.values()), settings.pay.platform_fee_bp)
     params = _params(settings, terms)
     reason = classify_bid(bid, proj, params, params.p0, params.c0)
     skill = (await _skill_names(ctx.db, [slot.skill_id])).get(slot.skill_id, "this skill")
-    checks = [_check_out(c, skill) for c in explain_bid(bid, proj, params, params.p0, params.c0)]
+    checks = [
+        _check_out(c, skill, role) for c in explain_bid(bid, proj, params, params.p0, params.c0)
+    ]
     if reason is None:
         message = "You meet every requirement."
     elif reason in _RELAXABLE:
@@ -754,6 +820,7 @@ async def _dry_run(
         reason=reason.value if reason else None,
         message=message,
         checks=checks,
+        assessment=await role_assessments.status_for(ctx, project, slot),
     )
 
 
@@ -774,6 +841,7 @@ class Evaluation:
     params: FilterParams
     proj: ProjectInput
     skill_names: dict[uuid.UUID, str]
+    roles: dict[tuple[uuid.UUID, uuid.UUID], SlotEvidence]
 
     def slot_name(self, slot: ProjectSlot | None) -> str:
         """A slot's own label, or its skill's name when the client gave none."""
@@ -798,6 +866,18 @@ async def evaluate(
     dev_ids = [b.developer_id for b in bids]
     reps = await reputation_read.read_many(db, dev_ids, settings)
     data = await _bidder_data(db, dev_ids, project.id)
+    roles = await role_assessments.newcomer_evidence(
+        db,
+        project=project,
+        slots=slots,
+        items=[
+            (b.developer_id, b.slot_id, b.assessment_evidence_id)
+            for b in bids
+            if reps[b.developer_id].is_newcomer
+        ],
+        settings=settings,
+        now=get_clock().now(),
+    )
     by_slot = {s.id: s for s in slots}
     period = _period(project, today)
     inputs = [
@@ -812,6 +892,7 @@ async def evaluate(
             commitment=b.hours_per_week_committed,
             period=period,
             active=True,
+            role=roles.get((b.developer_id, b.slot_id)),
         )
         for b in bids
     ]
@@ -828,6 +909,7 @@ async def evaluate(
         params=params,
         proj=proj,
         skill_names=await _skill_names(db, [s.skill_id for s in slots]),
+        roles=roles,
     )
 
 
@@ -1005,8 +1087,8 @@ def _client_rows(
         slot = slots.get(b.slot_id)
         skill = ev.skill_names.get(slot.skill_id, "this skill") if slot else "this skill"
         evidence = (
-            NewcomerEvidence(skill=skill, score=inp.skill_evidence_score)
-            if newcomer_rule and rep.is_newcomer and inp.skill_evidence_score is not None
+            _newcomer_evidence(skill, ev.roles.get((b.developer_id, b.slot_id)), inp)
+            if newcomer_rule and rep.is_newcomer
             else None
         )
         item_ids = [uuid.UUID(str(x)) for x in b.portfolio_item_ids]
@@ -1030,7 +1112,7 @@ def _client_rows(
                 shortlisted=bid_id in eligible and bid_id not in not_shortlisted,
                 reasons=reasons,
                 checks=[
-                    _check_out(c, skill)
+                    _check_out(c, skill, ev.roles.get((b.developer_id, b.slot_id)))
                     for c in explain_bid(inp, ev.proj, ev.params, used_p0, used_c0)
                 ],
                 newcomer_evidence=evidence,
@@ -1046,3 +1128,39 @@ def _client_rows(
             )
         )
     return rows
+
+
+def _newcomer_evidence(
+    skill: str, role: SlotEvidence | None, inp: BidInput
+) -> NewcomerEvidence | None:
+    """The client's line for a newcomer bid (role assessment spec §8.5): the result only."""
+    if role is None or role.kind == "PRACTICE":
+        if inp.skill_evidence_score is None:
+            return None
+        return NewcomerEvidence(skill=skill, score=inp.skill_evidence_score, kind="PRACTICE")
+    line = role.line
+    if line is None:
+        return None
+    outcome: Literal["PASSED", "NOT_PASSED", "ENDED_EARLY", "VOIDED", "EXPIRED"] = (
+        "VOIDED"
+        if line.voided
+        else "ENDED_EARLY"
+        if line.ended_early
+        else "PASSED"
+        if line.passed and not line.expired
+        else "EXPIRED"
+        if line.expired
+        else "NOT_PASSED"
+    )
+    return NewcomerEvidence(
+        skill=skill,
+        score=line.score / 100,
+        kind="ROLE",
+        assessment=AssessmentLineOut(
+            score=line.score,
+            outcome=outcome,
+            strongest=line.strongest,
+            weakest=line.weakest,
+            taken_at=line.taken_at,
+        ),
+    )

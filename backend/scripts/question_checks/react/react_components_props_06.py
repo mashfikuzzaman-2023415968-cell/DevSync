@@ -2,10 +2,13 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
-from _jsh import PRELUDE, js, verify  # noqa: E402,F401
+from _jsh import PRELUDE, js, verify  # noqa: F401
+
 
 def check(ctx, q):
-    r = js(ctx, """
+    r = js(
+        ctx,
+        """
 function replaced(Form) {
   const { c } = mount(h(Form));
   const before = c.querySelector('input'); typeInto(before, 'a');
@@ -29,14 +32,18 @@ function Reordered() {
 }
 console.log(JSON.stringify({ buggy: !replaced(Buggy) ? 'kept' : 'remounted',
   fixed: replaced(Fixed) ? 'remounted' : 'kept', reordered: replaced(Reordered) ? 'remounted' : 'kept' }));
-""")
+""",
+    )
     assert r == {"buggy": "remounted", "fixed": "kept", "reordered": "remounted"}, r
-    verify(q, {
-        "EmailField is declared inside": r["buggy"] == "remounted" and r["fixed"] == "kept",
-        # the fixed version keeps the inline arrow handler yet no longer remounts
-        "The onChange handler is an inline": r["fixed"] == "remounted",
-        # the fixed version is still a controlled input and keeps its node
-        "The input is controlled": r["fixed"] == "remounted",
-        # state is not lost (input shows 'a'); moving the hook does not matter
-        "useState is called before": r["reordered"] == "kept",
-    })
+    verify(
+        q,
+        {
+            "EmailField is declared inside": r["buggy"] == "remounted" and r["fixed"] == "kept",
+            # the fixed version keeps the inline arrow handler yet no longer remounts
+            "The onChange handler is an inline": r["fixed"] == "remounted",
+            # the fixed version is still a controlled input and keeps its node
+            "The input is controlled": r["fixed"] == "remounted",
+            # state is not lost (input shows 'a'); moving the hook does not matter
+            "useState is called before": r["reordered"] == "kept",
+        },
+    )

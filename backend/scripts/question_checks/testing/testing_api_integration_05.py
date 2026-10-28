@@ -14,15 +14,33 @@ def pytest_run(files, *args, env=None):
         e = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1", **(env or {})}
         e.pop("PYTEST_ADDOPTS", None)
         r = subprocess.run(
-            [sys.executable, "-m", "pytest", "-p", "no:cacheprovider", "-p", "no:randomly",
-             "-q", "--no-header", "-rA", *args],
-            cwd=d, capture_output=True, text=True, timeout=120, env=e,
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-p",
+                "no:cacheprovider",
+                "-p",
+                "no:randomly",
+                "-q",
+                "--no-header",
+                "-rA",
+                *args,
+            ],
+            cwd=d,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            env=e,
         )
         return r.returncode, r.stdout + r.stderr
 
 
 def outcomes(out):
-    return {m.group(2): m.group(1) for m in re.finditer(r"^(PASSED|FAILED|ERROR) \S+?::(\w+)", out, re.M)}
+    return {
+        m.group(2): m.group(1)
+        for m in re.finditer(r"^(PASSED|FAILED|ERROR) \S+?::(\w+)", out, re.M)
+    }
 
 
 def split_files(snippet):
@@ -35,6 +53,7 @@ def split_files(snippet):
         elif name:
             files[name] += line + "\n"
     return files
+
 
 def check(ctx, q):
     ctx.expect_only(q, ctx.python(q["code_snippet"]))

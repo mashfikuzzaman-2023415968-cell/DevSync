@@ -14,15 +14,33 @@ def pytest_run(files, *args, env=None):
         e = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1", **(env or {})}
         e.pop("PYTEST_ADDOPTS", None)
         r = subprocess.run(
-            [sys.executable, "-m", "pytest", "-p", "no:cacheprovider", "-p", "no:randomly",
-             "-q", "--no-header", "-rA", *args],
-            cwd=d, capture_output=True, text=True, timeout=120, env=e,
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-p",
+                "no:cacheprovider",
+                "-p",
+                "no:randomly",
+                "-q",
+                "--no-header",
+                "-rA",
+                *args,
+            ],
+            cwd=d,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            env=e,
         )
         return r.returncode, r.stdout + r.stderr
 
 
 def outcomes(out):
-    return {m.group(2): m.group(1) for m in re.finditer(r"^(PASSED|FAILED|ERROR) \S+?::(\w+)", out, re.M)}
+    return {
+        m.group(2): m.group(1)
+        for m in re.finditer(r"^(PASSED|FAILED|ERROR) \S+?::(\w+)", out, re.M)
+    }
 
 
 def split_files(snippet):
@@ -36,6 +54,7 @@ def split_files(snippet):
             files[name] += line + "\n"
     return files
 
+
 def check(ctx, q):
     src = q["code_snippet"]
     for name in ("test_a", "test_b"):
@@ -45,7 +64,9 @@ def check(ctx, q):
     assert outcomes(out) == {"test_a": "PASSED", "test_b": "FAILED"}, out
     assert out.index("test_a") < out.index("test_b")  # default order is file order, not random
     assert "['x', 'y'] == ['y']" in out.replace('"', "'"), out
-    fixed = src.replace("tags=[]", "tags=None").replace("    tags.append(tag)", "    tags = [] if tags is None else tags\n    tags.append(tag)")
+    fixed = src.replace("tags=[]", "tags=None").replace(
+        "    tags.append(tag)", "    tags = [] if tags is None else tags\n    tags.append(tag)"
+    )
     rc2, out2 = pytest_run({"test_t.py": fixed})
     assert rc2 == 0, out2
     assert q["options"][q["correct_index"]].startswith("One default list is shared")

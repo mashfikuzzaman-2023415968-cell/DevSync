@@ -279,7 +279,9 @@ def test_preview_never_ranks_against_other_bids(api: Api, migration_url: str) ->
     )
     assert r.status_code == 200, r.text
     body = r.json()
-    assert set(body) == {"eligible", "reason", "message", "checks"}
+    # The verdict, its trace and the slot's role assessment status for this developer (role
+    # assessment spec §8.3); never a ranking against the other sealed bids.
+    assert set(body) == {"eligible", "reason", "message", "checks", "assessment"}
     assert body["reason"] != "NOT_SHORTLISTED"
     assert {c["name"] for c in body["checks"]} <= {
         "account_active",

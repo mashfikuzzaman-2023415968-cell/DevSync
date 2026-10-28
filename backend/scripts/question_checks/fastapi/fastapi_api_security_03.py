@@ -1,6 +1,6 @@
 """Check for fastapi-api-security-03: the injection payload against a real SQLite table."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 import json
@@ -39,7 +39,7 @@ r = c.get("/users", params={"name": payload})
 print(json.dumps(r.json()) if r.status_code == 200 else f"Status {r.status_code}")
 print(json.dumps(c.get("/safe", params={"name": payload}).json()))
 print(json.dumps(c.get("/users", params={"name": "ann"}).json()))
-'''
+"""
 
 
 def check(ctx, q):

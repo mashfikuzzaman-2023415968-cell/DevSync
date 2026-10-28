@@ -7,7 +7,8 @@ marked option is right and every other option is wrong. `make question-checks` s
 database and runs this script; any failure exits non-zero, and the bank build refuses to approve
 a code question whose check hasn't passed.
 
-    QCHECK_DSN=postgresql://… python scripts/question_checks/run_checks.py [--only ID …] [--json OUT]
+    QCHECK_DSN=postgresql://… python scripts/question_checks/run_checks.py \
+        [--only ID …] [--json OUT]
 
 `ctx` offers:
 - `ctx.python(code) -> str`  stdout of `python -c code` (stderr included on failure)
@@ -59,8 +60,9 @@ class Ctx:
     dsn: str | None
 
     def python(self, code: str) -> str:
-        result = subprocess.run(  # noqa: S603 - our own interpreter on our own snippet
+        result = subprocess.run(
             [sys.executable, "-c", code], capture_output=True, text=True, timeout=TIMEOUT,
+            check=False,
             cwd=HERE.parent.parent,
         )  # fmt: skip
         if result.returncode != 0:
@@ -69,16 +71,17 @@ class Ctx:
 
     def python_status(self, code: str) -> tuple[int, str, str]:
         """Exit code, stdout and stderr, for snippets that are meant to fail."""
-        result = subprocess.run(  # noqa: S603
+        result = subprocess.run(
             [sys.executable, "-c", code], capture_output=True, text=True, timeout=TIMEOUT,
+            check=False,
             cwd=HERE.parent.parent,
         )  # fmt: skip
         return result.returncode, result.stdout, result.stderr
 
     def node(self, code: str, module: bool = False) -> str:
         cmd = ["node", "--input-type=module", "-e", code] if module else ["node", "-e", code]
-        result = subprocess.run(  # noqa: S603
-            cmd, capture_output=True, text=True, timeout=TIMEOUT, env=_node_env()
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=TIMEOUT, check=False, env=_node_env()
         )
         if result.returncode != 0:
             raise CheckError(f"node failed ({result.returncode}): {result.stderr.strip()[-800:]}")
@@ -86,8 +89,8 @@ class Ctx:
 
     def node_status(self, code: str, module: bool = False) -> tuple[int, str, str]:
         cmd = ["node", "--input-type=module", "-e", code] if module else ["node", "-e", code]
-        result = subprocess.run(  # noqa: S603
-            cmd, capture_output=True, text=True, timeout=TIMEOUT, env=_node_env()
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=TIMEOUT, check=False, env=_node_env()
         )
         return result.returncode, result.stdout, result.stderr
 
@@ -170,7 +173,7 @@ def run(only: set[str] | None, dsn: str | None) -> dict[str, str | None]:
             module = _load(path)
             module.check(ctx, q)
             results[qid] = None
-        except Exception as exc:  # noqa: BLE001 - every failure is reported, none stops the run
+        except Exception as exc:
             detail = str(exc) if isinstance(exc, CheckError) else traceback.format_exc(limit=3)
             results[qid] = detail.strip()
     return results

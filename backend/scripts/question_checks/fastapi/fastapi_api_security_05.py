@@ -1,6 +1,6 @@
 """Check for fastapi-api-security-05: attack the original route, then each proposed fix."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 import json
@@ -36,7 +36,7 @@ def build(variant):
     return r.status_code, user["is_admin"]
 
 print(json.dumps({v: build(v) for v in ["original", "remove_field", "forbid", "response_model", "put"]}))
-'''
+"""
 
 
 def check(ctx, q):
@@ -46,7 +46,14 @@ def check(ctx, q):
     assert got["original"] == [200, True], got  # the attack works on the snippet
     assert got["remove_field"] == [200, False], got  # marked fix: not an admin afterwards
     for variant in ("forbid", "response_model", "put"):
-        assert got[variant][1] is True, (variant, got)  # every distractor still lets the attacker in
+        assert got[variant][1] is True, (
+            variant,
+            got,
+        )  # every distractor still lets the attacker in
     opts = q["options"]
     assert opts[q["correct_index"]].startswith("Remove is_admin"), opts
-    assert sorted(o.split()[0] for i, o in enumerate(opts) if i != q["correct_index"]) == ["Add", "Add", "Change"], opts
+    assert sorted(o.split()[0] for i, o in enumerate(opts) if i != q["correct_index"]) == [
+        "Add",
+        "Add",
+        "Change",
+    ], opts

@@ -29,6 +29,7 @@ EVERYONE = {ANON, PENDING, CLIENT, DEV, ADMIN}
 SIGNED_IN = {PENDING, CLIENT, DEV, ADMIN}
 ACTIVE = {CLIENT, DEV, ADMIN}
 HIDDEN = "hidden"  # non-allowed roles get 404 (admin area)
+DEV_ANY = {DEV, PENDING}  # developers, verified or not (the service tells a PENDING one to verify)
 
 # (method, path) -> (allowed roles, how the others are refused, object-scoped?)
 MATRIX: dict[tuple[str, str], tuple[set[str], str, bool]] = {
@@ -120,6 +121,32 @@ MATRIX: dict[tuple[str, str], tuple[set[str], str, bool]] = {
     ("GET", "/api/v1/projects/{project_id}/bids"): ({CLIENT, ADMIN}, "auth", True),
     ("POST", "/api/v1/projects/{project_id}/bidding-terms/preview"): ({CLIENT}, "auth", True),
     ("PATCH", "/api/v1/projects/{project_id}/bidding-terms"): ({CLIENT}, "auth", True),
+    # Role assessments (role assessment spec §9): developers; a PENDING one is let through so the
+    # status can say "verify first" (ACCOUNT_NOT_VERIFIED), clients and admins get 403.
+    ("GET", "/api/v1/projects/{project_id}/slots/{slot_id}/assessment"): (DEV_ANY, "auth", True),
+    ("POST", "/api/v1/projects/{project_id}/slots/{slot_id}/assessment/attempts"): (
+        DEV_ANY,
+        "auth",
+        True,
+    ),
+    ("POST", "/api/v1/assessment-attempts/{attempt_id}/resume"): (DEV_ANY, "auth", True),
+    ("GET", "/api/v1/assessment-attempts/{attempt_id}"): (DEV_ANY, "auth", True),
+    ("POST", "/api/v1/assessment-attempts/{attempt_id}/answer"): (DEV_ANY, "auth", True),
+    ("POST", "/api/v1/assessment-attempts/{attempt_id}/finish"): (DEV_ANY, "auth", True),
+    ("POST", "/api/v1/assessment-attempts/{attempt_id}/focus-events"): (DEV_ANY, "auth", True),
+    ("POST", "/api/v1/assessment-attempts/{attempt_id}/heartbeat"): (DEV_ANY, "auth", True),
+    ("GET", "/api/v1/assessment-attempts/{attempt_id}/result"): (DEV_ANY, "auth", True),
+    ("GET", "/api/v1/me/role-assessments"): (DEV_ANY, "auth", False),
+    # Admin tools (§12): hidden from everyone else.
+    ("GET", "/api/v1/admin/assessments"): ({ADMIN}, HIDDEN, False),
+    ("GET", "/api/v1/admin/assessments/{attempt_id}"): ({ADMIN}, HIDDEN, True),
+    ("POST", "/api/v1/admin/assessments/{attempt_id}/void"): ({ADMIN}, HIDDEN, True),
+    ("POST", "/api/v1/admin/assessments/{attempt_id}/review"): ({ADMIN}, HIDDEN, True),
+    ("POST", "/api/v1/admin/users/{user_id}/accommodation"): ({ADMIN}, HIDDEN, True),
+    ("GET", "/api/v1/admin/question-bank"): ({ADMIN}, HIDDEN, False),
+    ("PATCH", "/api/v1/admin/question-bank/{question_id}"): ({ADMIN}, HIDDEN, True),
+    ("POST", "/api/v1/admin/question-bank/{question_id}/approve"): ({ADMIN}, HIDDEN, True),
+    ("POST", "/api/v1/admin/question-bank/{question_id}/retire"): ({ADMIN}, HIDDEN, True),
 }
 
 BODIES: dict[tuple[str, str], dict[str, Any]] = {
@@ -155,6 +182,25 @@ BODIES: dict[tuple[str, str], dict[str, Any]] = {
     ("PATCH", "/api/v1/bids/{bid_id}"): {"price_paisa": 1_900_000},
     ("POST", "/api/v1/projects/{project_id}/bidding-terms/preview"): {"budget_paisa": 13_000_000},
     ("PATCH", "/api/v1/projects/{project_id}/bidding-terms"): {"budget_paisa": 13_000_000},
+    ("POST", "/api/v1/projects/{project_id}/slots/{slot_id}/assessment/attempts"): {
+        "consent": True,
+        "rules_version": 1,
+    },
+    ("POST", "/api/v1/assessment-attempts/{attempt_id}/answer"): {
+        "question_id": str(uuid.uuid4()),
+        "choice": 0,
+    },
+    ("POST", "/api/v1/assessment-attempts/{attempt_id}/focus-events"): {
+        "seq": 1,
+        "type": "WINDOW_BLUR",
+    },
+    ("POST", "/api/v1/assessment-attempts/{attempt_id}/heartbeat"): {
+        "visible": True,
+        "fullscreen": True,
+    },
+    ("POST", "/api/v1/admin/assessments/{attempt_id}/void"): {"reason": "Matrix void reason text."},
+    ("POST", "/api/v1/admin/users/{user_id}/accommodation"): {"extra_time_pct": 25},
+    ("PATCH", "/api/v1/admin/question-bank/{question_id}"): {"text": "A matrix question?"},
 }
 PATH_PARAM = re.compile(r"\{[a-z_]+\}")
 

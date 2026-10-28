@@ -29,6 +29,15 @@ services:
   scheduler:
     environment: *demo-env
 
+  # The demo has its own database (`devsync_demo`, set by the Makefile's COMPOSE_DEMO) on its own
+  # volume, so rehearsals never touch development data and the operator-only answer-key tool
+  # (`make demo-answer-key`) can refuse any database that isn't a demo one (role assessment
+  # spec §14.1, DECISIONS).
+  postgres:
+    volumes: !override
+      - pgdata_demo:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+
   mailpit:
     image: axllent/mailpit:v1.27@sha256:e22dce5b36f93c77082e204a3942fb6b283b7896e057458400a4c88344c3df68
     ports:
@@ -38,3 +47,6 @@ services:
       MP_SMTP_AUTH_ALLOW_INSECURE: "1"
     networks: [app]
     restart: unless-stopped
+
+volumes:
+  pgdata_demo: {}

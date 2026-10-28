@@ -3,7 +3,11 @@
 STAGE=1 (Demo 1, after Phase 5) loads the "Online ordering system" project in BIDDING with the
 documented 12 sealed bids — 10 eligible, Shakib `TOO_SLOW`, Lamia `NO_SKILL_EVIDENCE` — plus the
 client (payment verified), 9 experienced developers with fixed reputation snapshots (§18.4) and
-3 newcomers with skill evidence. Every developer has a real profile (headline, bio, hours,
+the newcomers (role assessment spec §14.1): Nadia and Mehjabin passed the role assessment for
+their slot, Lamia failed hers, Rafsan has none (he takes it live in the demo), and Tahmid's attempt
+ended under the two-leave rule (flagged, for the admin queue). Role results are real attempts,
+taken through the same database functions as the app. Practice-test scores stay on profiles.
+Every developer has a real profile (headline, bio, hours,
 skills with levels, §18.1), the experienced ones portfolio items and verified test scores, and
 Rahim his client profile (Rahim's Kitchen). A DRAFT project whose milestones depend on each other
 in a loop shows cycle detection in the wizard, and a second BIDDING project has too few bids.
@@ -53,6 +57,8 @@ from app.models.profiles import (
 from app.models.projects import Milestone, MilestoneDependency, Project, ProjectSlot, ProjectStatus
 from app.models.reputation import ReputationSnapshot
 from app.services import bids as bids_svc
+from app.services import role_assessments
+from app.services.testing import role_attempts
 from app.services.testing.seed import create_user
 
 MIN_FIXED_PASSWORD = 12
@@ -71,11 +77,22 @@ EXPERIENCED = {
     "shakib": "Shakib Hasan",
     "zahid": "Zahid Mahmud",
 }
-# Newcomers → (display name, evidence skill, evidence score).
-NEWCOMERS = {
+# Newcomers → (display name, practice-test skill, practice score or None).
+NEWCOMERS: dict[str, tuple[str, str, Decimal | None]] = {
     "nadia": ("Nadia Rahman", "React", Decimal("0.85")),
     "mehjabin": ("Mehjabin Chowdhury", "Testing", Decimal("0.90")),
     "lamia": ("Lamia Akter", "FastAPI", Decimal("0.75")),
+    "rafsan": ("Rafsan Haque", "React", None),
+    "tahmid": ("Tahmid Rahman", "React", None),
+}
+# Role assessments taken for a slot of the ordering system (role assessment spec §14.1):
+# slug → (slot skill, outcome). Real attempts: "pass" answers all but two questions right,
+# "fail" every other one, "ended" leaves the page twice after three answers.
+ROLE_RESULTS: dict[str, tuple[str, str]] = {
+    "nadia": ("React", "pass"),
+    "mehjabin": ("Testing", "pass"),
+    "lamia": ("FastAPI", "fail"),
+    "tahmid": ("React", "ended"),
 }
 SLOTS = ["React", "FastAPI", "PostgreSQL", "Testing"]
 # (slug, slot skill, days, price_paisa, declared skills). The one ACTIVE bid per developer.
@@ -87,8 +104,8 @@ BIDS = [
     ("farhan", "FastAPI", 19, 2_500_000, ["FastAPI"]),
     ("sadia", "PostgreSQL", 21, 2_300_000, ["PostgreSQL"]),
     ("rafi", "PostgreSQL", 20, 2_200_000, ["PostgreSQL"]),
-    # Lamia lists PostgreSQL but only has FastAPI evidence → NO_SKILL_EVIDENCE (newcomer rule).
-    ("lamia", "PostgreSQL", 20, 1_900_000, ["PostgreSQL", "FastAPI"]),
+    # Lamia failed the FastAPI role assessment → NO_SKILL_EVIDENCE (newcomer rule).
+    ("lamia", "FastAPI", 20, 1_900_000, ["FastAPI", "PostgreSQL"]),
     ("mehjabin", "Testing", 20, 1_700_000, ["Testing"]),
     ("zahid", "Testing", 22, 1_900_000, ["Testing"]),
     ("imran", "Testing", 19, 2_000_000, ["Testing"]),
@@ -134,14 +151,22 @@ PROFILES: dict[str, tuple[str, str, int, dict[str, int]]] = {
               "Two projects of end-to-end testing with Playwright, keen to take on more.",
               20, {"Testing": 3}),
     "nadia": ("Front-end developer: React, new to DevSync",
-              "Recent graduate building React apps; passed the React skill test with 85%.",
+              "Recent graduate building React apps; React practice test 85%.",
               30, {"React": 4, "UI/UX": 3}),
     "mehjabin": ("QA tester: test plans and automation",
-                 "Careful tester new to DevSync; passed the Testing skill test with 90%.",
+                 "Careful tester new to DevSync; Testing practice test 90%.",
                  25, {"Testing": 4}),
     "lamia": ("Backend developer learning databases",
-              "FastAPI developer new to DevSync (FastAPI test 75%), growing into PostgreSQL.",
+              "FastAPI developer new to DevSync (FastAPI practice test 75%), growing into "
+              "PostgreSQL.",
               30, {"FastAPI": 3, "PostgreSQL": 2}),
+    "rafsan": ("Junior React developer",
+               "Final-year student who builds React side projects; looking for a first "
+               "paid team project.",
+               25, {"React": 3}),
+    "tahmid": ("React developer, new to DevSync",
+               "Self-taught React developer working on his first freelance projects.",
+               25, {"React": 3}),
 }  # fmt: skip
 # Verified test scores of the experienced developers (the newcomers' are in NEWCOMERS). Filtering
 # reads only the newcomers' evidence; experienced developers pass on their fixed snapshots.
@@ -335,7 +360,8 @@ async def _seed_dev_data(ids: dict[str, uuid.UUID], skills: dict[str, uuid.UUID]
     now = get_clock().now()
     scores = {slug: dict(EXPERIENCED_EVIDENCE.get(slug, {})) for slug in PROFILES}
     for slug, (_name, skill, score) in NEWCOMERS.items():
-        scores[slug][skill] = score
+        if score is not None:  # practice-test results (shown as practice, Decision 1)
+            scores[slug][skill] = score
     async with open_session(DbContext.system(), job=True) as db:
         for slug, per_skill in scores.items():
             for skill, score in per_skill.items():
@@ -457,8 +483,32 @@ async def _seed_cycle_draft(rahim: uuid.UUID, skills: dict[str, uuid.UUID]) -> u
     return pid
 
 
-async def _seed_bids(
+async def _seed_role_results(
     ids: dict[str, uuid.UUID], pid: uuid.UUID, slot_ids: dict[str, uuid.UUID]
+) -> dict[str, uuid.UUID]:
+    """Real role attempts (§14.1); returns each passer's evidence id for their bid."""
+    plans = {
+        "pass": {"plan": role_attempts.wrong_on(2, 9)},
+        "fail": {"plan": role_attempts.every_other},
+        "ended": {"stop_after": 3, "leaves": 2},
+    }
+    evidence: dict[str, uuid.UUID] = {}
+    for n, (slug, (skill, outcome)) in enumerate(ROLE_RESULTS.items(), start=1):
+        taken = await role_attempts.take(
+            ids[slug], pid, slot_ids[skill], seed=1000 + n, **plans[outcome]  # type: ignore[arg-type]
+        )
+        if (outcome == "pass") != bool(taken.passed):
+            raise SystemExit(f"seed assertion failed: {slug}'s role assessment should {outcome}")
+        if outcome == "pass" and taken.evidence_id is not None:
+            evidence[slug] = taken.evidence_id
+    return evidence
+
+
+async def _seed_bids(
+    ids: dict[str, uuid.UUID],
+    pid: uuid.UUID,
+    slot_ids: dict[str, uuid.UUID],
+    evidence: dict[str, uuid.UUID],
 ) -> None:
     for slug, slot_name, days, price, _skills in BIDS:
         async with _as(ids[slug], "DEVELOPER") as db:
@@ -471,6 +521,7 @@ async def _seed_bids(
                     days_needed=days,
                     hours_per_week_committed=20,
                     status=BidStatus.ACTIVE,
+                    assessment_evidence_id=evidence.get(slug),
                 )
             )
             await db.commit()
@@ -596,7 +647,9 @@ async def seed_stage1() -> None:
     await _seed_dev_data(ids, skills)
     await _seed_client_profile(ids["rahim"])
     pid, slot_ids = await _seed_project(ids, skills)
-    await _seed_bids(ids, pid, slot_ids)
+    await role_assessments.ensure_links_as_system(pid)  # blueprints, as at publish (§4.4)
+    evidence = await _seed_role_results(ids, pid, slot_ids)
+    await _seed_bids(ids, pid, slot_ids, evidence)
     await _seed_too_few(ids, skills)
     cycle_id = await _seed_cycle_draft(ids["rahim"], skills)
     await _assert_filter(pid)

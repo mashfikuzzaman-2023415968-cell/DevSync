@@ -2,10 +2,13 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
-from _jsh import PRELUDE, js, verify  # noqa: E402,F401
+from _jsh import PRELUDE, js, verify  # noqa: F401
+
 
 def check(ctx, q):
-    r = js(ctx, """
+    r = js(
+        ctx,
+        """
 (async () => {
   const { render, screen, act: ract } = require('@testing-library/react');
   const Banner = ({ show }) => (show ? h('p', null, 'Welcome') : null);
@@ -22,11 +25,15 @@ def check(ctx, q):
   console.log(JSON.stringify(res));
   process.exit(0);
 })();
-""")
+""",
+    )
     assert r["getByThrows"] and r["queryIsNull"], r
-    verify(q, {
-        "Use queryByText on line 3": r["queryIsNull"] and r["getByThrows"],
-        "Use findByText on line 3": not r["findThrows"],
-        "Wrap line 2 in act": not r["getByThrowsAfterAct"],
-        "Replace not.toBeInTheDocument with toBeFalsy": not r["getByThrows"],
-    })
+    verify(
+        q,
+        {
+            "Use queryByText on line 3": r["queryIsNull"] and r["getByThrows"],
+            "Use findByText on line 3": not r["findThrows"],
+            "Wrap line 2 in act": not r["getByThrowsAfterAct"],
+            "Replace not.toBeInTheDocument with toBeFalsy": not r["getByThrows"],
+        },
+    )

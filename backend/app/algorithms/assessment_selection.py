@@ -28,7 +28,7 @@ EXPOSURE_WINDOW = 5  # pick among the 5 least-served questions
 ORDER_PATTERN = (2, 1, 3)  # medium, easy, hard
 
 
-class SelectionUnavailable(Exception):
+class SelectionUnavailable(Exception):  # noqa: N818 - reads as the condition (§5.2)
     """The current pool can't supply the blueprint's allocation."""
 
 
@@ -77,7 +77,11 @@ def select_questions(
     for a in _queue_order(allocations):
         for difficulty in (1, 2, 3):
             eligible = sorted(
-                (q for q in pool if q.competency_id == a.competency_id and q.difficulty == difficulty),
+                (
+                    q
+                    for q in pool
+                    if q.competency_id == a.competency_id and q.difficulty == difficulty
+                ),
                 key=lambda q: (q.times_served, q.question_id),
             )
             for _ in range(a.of(difficulty)):

@@ -2,10 +2,13 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
-from _jsh import PRELUDE, js, verify  # noqa: E402,F401
+from _jsh import PRELUDE, js, verify  # noqa: F401
+
 
 def check(ctx, q):
-    r = js(ctx, """
+    r = js(
+        ctx,
+        """
 (async () => {
   const rtl = require('@testing-library/react');
   const { render, screen, act: ract, cleanup } = rtl;
@@ -31,11 +34,15 @@ def check(ctx, q):
   console.log(JSON.stringify(res));
   process.exit(0);
 })();
-""")
+""",
+    )
     assert r["original"] is False and r["awaited"] is True, r
-    verify(q, {
-        "Await the call on line 3": r["awaited"],
-        "Replace getByRole on line 3": r["otherQuery"],
-        "Wrap the expectation on line 4": r["actWrapped"],
-        "Replace the matcher on line 4": r["truthy"],
-    })
+    verify(
+        q,
+        {
+            "Await the call on line 3": r["awaited"],
+            "Replace getByRole on line 3": r["otherQuery"],
+            "Wrap the expectation on line 4": r["actWrapped"],
+            "Replace the matcher on line 4": r["truthy"],
+        },
+    )

@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import column, func, literal, select
+from sqlalchemy import cast, column, func, literal, select
 from sqlalchemy.dialects.postgresql import BYTEA, ENUM, JSONB
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -71,9 +71,9 @@ async def competencies(db: AsyncSession) -> Sequence[Competency]:
 async def bank_counts(
     db: AsyncSession, skill_ids: Sequence[uuid.UUID], min_review: ReviewLevel
 ) -> dict[tuple[str, int], int]:
-    stmt: Any = select(column("competency_id"), column("difficulty"), column("approved")).select_from(
-        func.role_bank_counts(list(skill_ids), _review(min_review))
-    )
+    stmt: Any = select(
+        column("competency_id"), column("difficulty"), column("approved")
+    ).select_from(func.role_bank_counts(list(skill_ids), _review(min_review)))
     return {(str(r[0]), int(r[1])): int(r[2]) for r in (await db.execute(stmt)).all()}
 
 
@@ -114,12 +114,11 @@ async def create_slot_assessment(
     value = await db.scalar(
         select(
             func.create_slot_assessment(
-                project_id, slot_id, func.cast(json.dumps(blueprint), JSONB), requirements_hash
+                project_id, slot_id, cast(literal(json.dumps(blueprint)), JSONB), requirements_hash
             )
         )
     )
     return uuid.UUID(str(value))
-
 
 
 async def slot_links(
@@ -132,11 +131,13 @@ async def slot_links(
         .join(AssessmentBlueprint, AssessmentBlueprint.id == SlotAssessment.blueprint_id)
         .where(SlotAssessment.slot_id.in_(list(slot_ids)))
     )
-    return {slot: bp for slot, bp in (await db.execute(stmt)).all()}
+    return dict((await db.execute(stmt)).tuples().all())
 
 
 async def get_blueprint(db: AsyncSession, blueprint_id: uuid.UUID) -> AssessmentBlueprint | None:
-    return await db.scalar(select(AssessmentBlueprint).where(AssessmentBlueprint.id == blueprint_id))
+    return await db.scalar(
+        select(AssessmentBlueprint).where(AssessmentBlueprint.id == blueprint_id)
+    )
 
 
 async def blueprints(
@@ -242,6 +243,7 @@ async def current_question(
 async def record_answer(
     db: AsyncSession,
     attempt_id: uuid.UUID,
+    *,
     question_id: uuid.UUID,
     choice: int | None,
     now: datetime,
@@ -255,7 +257,9 @@ async def record_answer(
 
 
 async def finish(db: AsyncSession, attempt_id: uuid.UUID, now: datetime, token_hash: bytes) -> str:
-    return str(await db.scalar(select(func.finish_role_attempt(attempt_id, now, _bytes(token_hash)))))
+    return str(
+        await db.scalar(select(func.finish_role_attempt(attempt_id, now, _bytes(token_hash))))
+    )
 
 
 async def focus_event(
@@ -287,7 +291,9 @@ async def heartbeat(
 async def rotate_token(
     db: AsyncSession, attempt_id: uuid.UUID, new_hash: bytes, now: datetime
 ) -> str:
-    return str(await db.scalar(select(func.rotate_attempt_token(attempt_id, _bytes(new_hash), now))))
+    return str(
+        await db.scalar(select(func.rotate_attempt_token(attempt_id, _bytes(new_hash), now)))
+    )
 
 
 async def score(db: AsyncSession, attempt_id: uuid.UUID, now: datetime) -> str:
@@ -297,9 +303,9 @@ async def score(db: AsyncSession, attempt_id: uuid.UUID, now: datetime) -> str:
 async def void(
     db: AsyncSession, attempt_id: uuid.UUID, reason: str, now: datetime
 ) -> list[tuple[uuid.UUID, uuid.UUID, uuid.UUID]]:
-    stmt: Any = select(column("user_id"), column("blueprint_id"), column("evidence_id")).select_from(
-        func.void_role_attempt(attempt_id, reason, now)
-    )
+    stmt: Any = select(
+        column("user_id"), column("blueprint_id"), column("evidence_id")
+    ).select_from(func.void_role_attempt(attempt_id, reason, now))
     return [(r[0], r[1], r[2]) for r in (await db.execute(stmt)).all()]
 
 
@@ -344,14 +350,18 @@ async def evidence_for(
     return (await db.scalars(stmt)).all()
 
 
-async def evidence_by_ids(db: AsyncSession, ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, SkillEvidence]:
+async def evidence_by_ids(
+    db: AsyncSession, ids: Sequence[uuid.UUID]
+) -> dict[uuid.UUID, SkillEvidence]:
     if not ids:
         return {}
     stmt = select(SkillEvidence).where(SkillEvidence.id.in_(list(ids)))
     return {e.id: e for e in (await db.scalars(stmt)).all()}
 
 
-async def attempts_by_ids(db: AsyncSession, ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, TestAttempt]:
+async def attempts_by_ids(
+    db: AsyncSession, ids: Sequence[uuid.UUID]
+) -> dict[uuid.UUID, TestAttempt]:
     if not ids:
         return {}
     stmt = select(TestAttempt).where(TestAttempt.id.in_(list(ids)))

@@ -472,7 +472,9 @@ class TestAttempt(UUIDPrimaryKey, Timestamps, Base):
             "AND consent_at IS NOT NULL)",
             name="kind_target",
         ),
-        CheckConstraint("overall_bp IS NULL OR overall_bp BETWEEN 0 AND 10000", name="overall_range"),
+        CheckConstraint(
+            "overall_bp IS NULL OR overall_bp BETWEEN 0 AND 10000", name="overall_range"
+        ),
         CheckConstraint("focus_leaves >= 0 AND connection_gaps >= 0", name="counters_valid"),
         CheckConstraint("jsonb_array_length(focus_events) <= 30", name="focus_events_bounded"),
         CheckConstraint("extra_time_seconds BETWEEN 0 AND 3600", name="extra_time_range"),
@@ -509,7 +511,8 @@ class SkillEvidence(UUIDPrimaryKey, Timestamps, Base):
         Index("ix_skill_evidence_user_blueprint", "user_id", "blueprint_id"),
         CheckConstraint("score BETWEEN 0 AND 1", name="score_range"),
         CheckConstraint(
-            "source::text <> 'ROLE_ASSESSMENT' OR (blueprint_id IS NOT NULL AND passed IS NOT NULL)",
+            "source::text <> 'ROLE_ASSESSMENT' "
+            "OR (blueprint_id IS NOT NULL AND passed IS NOT NULL)",
             name="role_evidence_complete",
         ),
         CheckConstraint("char_length(void_reason) <= 500", name="void_reason_len"),

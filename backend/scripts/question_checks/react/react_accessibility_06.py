@@ -2,10 +2,13 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
-from _jsh import PRELUDE, js, verify  # noqa: E402,F401
+from _jsh import PRELUDE, js, verify  # noqa: F401
+
 
 def check(ctx, q):
-    r = js(ctx, """
+    r = js(
+        ctx,
+        """
 const { getByLabelText } = require('@testing-library/dom');
 const variants = {
   htmlFor: () => [h('label', { htmlFor: 'email' }, 'Email'), h('input', { id: 'email', type: 'email', name: 'email' })],
@@ -20,11 +23,15 @@ for (const [name, make] of Object.entries(variants)) {
   try { getByLabelText(c, 'Email'); res[name] = true; } catch (e) { res[name] = false; }
 }
 console.log(JSON.stringify(res));
-""")
+""",
+    )
     assert r["original"] is False, r
-    verify(q, {
-        "Change the label to <label htmlFor": r["htmlFor"],
-        'Change name="email"': r["nameAttr"],
-        'Add type="text"': r["typeText"],
-        'Add role="label"': r["roleLabel"],
-    })
+    verify(
+        q,
+        {
+            "Change the label to <label htmlFor": r["htmlFor"],
+            'Change name="email"': r["nameAttr"],
+            'Add type="text"': r["typeText"],
+            'Add role="label"': r["roleLabel"],
+        },
+    )

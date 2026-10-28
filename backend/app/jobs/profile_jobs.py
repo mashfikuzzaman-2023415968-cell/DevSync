@@ -10,7 +10,7 @@ from app.core.logging import get_logger
 from app.db.context import DbContext
 from app.db.session import open_session
 from app.jobs.runs import run_recorded
-from app.services import files, skill_tests
+from app.services import files, role_assessments, skill_tests
 
 log = get_logger(__name__)
 
@@ -24,11 +24,14 @@ async def purge_uploads() -> dict[str, int]:
 
 
 async def score_expired() -> int:
-    """Score attempts whose time ran out without a submit."""
+    """Score attempts whose time ran out without a submit: practice tests at the deadline, role
+    assessments 5 s after it (role assessment spec §6.3)."""
     async with open_session(DbContext.system(), job=True) as db:
-        done = await skill_tests.score_expired_attempts(db, get_clock().now())
-    log.info("attempts_expired", scored=done)
-    return done
+        now = get_clock().now()
+        practice = await skill_tests.score_expired_attempts(db, now)
+        role = await role_assessments.score_expired(db, now)
+    log.info("attempts_expired", scored=practice, role_scored=role)
+    return practice + role
 
 
 def uploads_cleanup() -> dict[str, int]:

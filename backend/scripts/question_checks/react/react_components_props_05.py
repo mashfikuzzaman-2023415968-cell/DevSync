@@ -2,10 +2,13 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
-from _jsh import PRELUDE, js, verify  # noqa: E402,F401
+from _jsh import PRELUDE, js, verify  # noqa: F401
+
 
 def check(ctx, q):
-    out = ctx.node(PRELUDE + """
+    out = ctx.node(
+        PRELUDE
+        + """
 function Row({ name }) { const [label] = useState(name); return h('li', null, label); }
 function List() {
   const [names, setNames] = useState(['A', 'B', 'C']);
@@ -16,5 +19,6 @@ function List() {
 const { c } = mount(h(List));
 click(c.querySelector('button'));
 console.log(Array.from(c.querySelectorAll('li')).map((l) => l.textContent).join(', '));
-""")
+"""
+    )
     ctx.expect_only(q, out)

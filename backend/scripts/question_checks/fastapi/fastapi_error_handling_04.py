@@ -1,6 +1,6 @@
 """Check for fastapi_error_handling_04: run the snippet for real; the marked option must equal the result."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 import json
@@ -29,7 +29,7 @@ def get_item(item_id: int):
 assert c.get("/items/1").status_code == 200
 
 print(show(c.get("/items/2")))
-'''
+"""
 
 
 def check(ctx, q):

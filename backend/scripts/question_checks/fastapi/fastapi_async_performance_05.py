@@ -1,6 +1,6 @@
 """Check for fastapi-async-performance-05: gather() re-raises but does not cancel siblings."""
 
-CODE = r'''
+CODE = r"""
 import asyncio
 
 async def job(name, delay, fail=False):
@@ -17,7 +17,7 @@ async def main():
     await asyncio.sleep(0.5)
 
 asyncio.run(main())
-'''
+"""
 
 
 def check(ctx, q):

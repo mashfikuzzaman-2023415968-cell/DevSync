@@ -31,6 +31,10 @@ known-first-party = ["app", "scripts", "tests"]
 "alembic/**" = ["E501"]
 # Question-bank content: long question text, reproducible (non-crypto) shuffling, build-time checks.
 "scripts/build_question_bank.py" = ["E501", "S311", "S101", "PT018"]
+# Execution checks of code questions are tests (asserts on what a snippet really does): the tests'
+# policy, plus quoted question text and snippets (long lines, SQL built from constants) and
+# subprocesses whose exit codes the checks inspect themselves.
+"scripts/question_checks/**" = ["S101", "PT018", "PLR2004", "E501", "S608", "PLW1510", "PLC0415"]
 "app/core/errors.py" = ["S105"]  # error-code names, not credentials
 
 [tool.ruff.format]

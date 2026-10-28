@@ -20,7 +20,7 @@ from redis.asyncio import Redis
 from app.api.deps import app_settings, redis_client
 from app.core.config import Settings
 from app.schemas.common import StrictRequest
-from app.services.testing import seed
+from app.services.testing import role_attempts, seed
 
 router = APIRouter(prefix="/__test__", tags=["test-only"], include_in_schema=False)
 
@@ -135,6 +135,52 @@ async def attempt_answer_key(attempt_id: uuid.UUID) -> dict[str, list[int]]:
     """Correct option per question, in attempt order (E2E: the Demo 1 newcomer passes a test).
     Like every route here it exists only when DEVSYNC_ENV=test (spec §16.2)."""
     key = await seed.answer_key(attempt_id)
+    if key is None:
+        raise HTTPException(status_code=404)
+    return {"answers": key}
+
+
+class RoleEvidenceRequest(StrictRequest):
+    project_id: uuid.UUID
+    slot_id: uuid.UUID
+    outcome: Literal["pass", "fail", "ended"] = "pass"
+
+
+class RoleEvidenceResponse(BaseModel):
+    attempt_id: uuid.UUID
+    evidence_id: uuid.UUID | None
+    passed: bool | None
+
+
+@router.post("/developers/{user_id}/role-evidence")
+async def role_evidence(user_id: uuid.UUID, body: RoleEvidenceRequest) -> RoleEvidenceResponse:
+    """A real role assessment attempt for the slot, passed, failed or ended by the two-leave rule
+    (E2E: newcomers who bid without taking the assessment through the UI)."""
+    plans: dict[str, dict[str, object]] = {
+        "pass": {"plan": role_attempts.all_correct},
+        "fail": {"plan": role_attempts.every_other},
+        "ended": {"stop_after": 2, "leaves": 2},
+    }
+    try:
+        taken = await role_attempts.take(
+            user_id,
+            body.project_id,
+            body.slot_id,
+            **plans[body.outcome],  # type: ignore[arg-type]
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404) from exc
+    return RoleEvidenceResponse(
+        attempt_id=taken.attempt_id, evidence_id=taken.evidence_id, passed=taken.passed
+    )
+
+
+@router.get("/assessment-attempts/{attempt_id}/answer-key")
+async def role_answer_key(attempt_id: uuid.UUID) -> dict[str, list[dict[str, object]]]:
+    """Each question's competency and correct option of a role attempt, in order (E2E: the
+    walkthrough answers through the real UI). The demo stack has no such route; its presenter
+    uses the operator-only `make demo-answer-key` instead (role assessment spec §14.1)."""
+    key = await role_attempts.answer_key(attempt_id)
     if key is None:
         raise HTTPException(status_code=404)
     return {"answers": key}

@@ -1,6 +1,6 @@
 """Check for fastapi_api_design_03: run the snippet for real; the marked option must equal the result."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 import json
@@ -21,7 +21,7 @@ def read_file(name: str):
     return {"name": name}
 
 print(show(c.get("/files/docs/readme.txt")))
-'''
+"""
 
 
 def check(ctx, q):

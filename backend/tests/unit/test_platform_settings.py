@@ -19,7 +19,8 @@ SEED_DIR = Path(__file__).resolve().parents[2] / "alembic" / "seed"
 SEED_V1 = SEED_DIR / "platform_settings_v1.json"
 SEED_V2 = SEED_DIR / "platform_settings_v2.json"
 SEED_V3 = SEED_DIR / "platform_settings_v3.json"
-SEED = SEED_DIR / "platform_settings_v4.json"
+SEED_V4 = SEED_DIR / "platform_settings_v4.json"
+SEED = SEED_DIR / "platform_settings_v5.json"
 
 
 def doc_with(path: str, value: Any) -> dict[str, Any]:
@@ -69,6 +70,16 @@ def test_v3_snapshot_still_validates_with_the_captcha_default_filled_in() -> Non
     v3 = json.loads(SEED_V3.read_text(encoding="utf-8"))
     assert "captcha" not in v3
     assert validate_settings(v3).captcha.max_number == 50_000
+
+
+def test_v4_snapshot_still_validates_with_the_assessment_defaults_filled_in() -> None:
+    v4 = json.loads(SEED_V4.read_text(encoding="utf-8"))
+    assert "assessment" not in v4
+    assert "assessment_start" not in v4["ratelimit"]
+    filled = validate_settings(v4)
+    assert filled.assessment.question_count == 12
+    assert filled.assessment.difficulty_mix == (4, 5, 3)
+    assert filled.ratelimit.assessment_start[0].limit == 10
 
 
 def test_defaults_serialize_decimals_as_strings() -> None:

@@ -1,6 +1,6 @@
 """Check for fastapi_api_design_02: run the snippet for real; the marked option must equal the result."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 import json
@@ -21,7 +21,7 @@ def list_items(tag: list[str] = Query(default=[])):
     return tag
 
 print(show(c.get("/items?tag=a&tag=b")))
-'''
+"""
 
 
 def check(ctx, q):

@@ -1,6 +1,6 @@
 """Check for fastapi_authn_authz_05: run the snippet for real; the marked option must equal the result."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 import json
@@ -24,7 +24,7 @@ def me(token: str = Depends(oauth2)):
 assert c.get("/me", headers={"Authorization": "Bearer abc"}).json() == {"token": "abc"}
 
 print(show(c.get("/me")))
-'''
+"""
 
 
 def check(ctx, q):

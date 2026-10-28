@@ -120,7 +120,8 @@ class AssessmentBlueprint(UUIDPrimaryKey, Base):
         CheckConstraint("question_count BETWEEN 1 AND 50", name="count_range"),
         CheckConstraint("time_limit_seconds BETWEEN 60 AND 7200", name="time_range"),
         CheckConstraint(
-            "(status = 'UNAVAILABLE') = (unavailable_reason IS NOT NULL)", name="reason_iff_unavailable"
+            "(status = 'UNAVAILABLE') = (unavailable_reason IS NOT NULL)",
+            name="reason_iff_unavailable",
         ),
     )
 
@@ -155,7 +156,9 @@ class UserAccommodation(Base):
     )
     extra_time_pct: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     note: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
-    granted_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    granted_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
     granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     __table_args__ = (

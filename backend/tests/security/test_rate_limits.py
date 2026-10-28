@@ -24,6 +24,7 @@ from __future__ import annotations
 import io
 import os
 import re
+import uuid
 from collections.abc import Callable, Iterator
 from contextlib import ExitStack
 from datetime import timedelta
@@ -56,7 +57,6 @@ PENDING_SCOPES = {
     "dispute": "Phase 12 (disputes)",
     "github_sync": "Phase 13 (GitHub manual sync)",
     "data_export": "Phase 12 (data export)",
-    "admin": "Phase 12 (admin console; today only GET /admin/session exists)",
 }
 # Scopes with a behaviour test in this module (scope → test name).
 TESTED_SCOPES = {
@@ -72,6 +72,17 @@ TESTED_SCOPES = {
     "project_create": "test_project_create_limit_is_per_day_per_user",
     "test_start": "test_skill_test_start_limit_is_per_user",
     "upload": "test_upload_limit_is_per_user",
+    # Role assessment (role assessment spec §9).
+    "assessment_read": "test_assessment_read_limit_is_per_user",
+    "assessment_start": "test_assessment_start_limit_is_per_user",
+    "assessment_resume": "test_assessment_resume_limit_is_per_user",
+    "assessment_answer": "test_assessment_answer_limit_is_per_user",
+    "assessment_finish": "test_assessment_finish_limit_is_per_user",
+    "assessment_focus": "test_assessment_focus_limit_is_per_user",
+    "assessment_heartbeat": "test_assessment_heartbeat_limit_is_per_user",
+    "assessment_history": "test_assessment_history_limit_is_per_user",
+    "admin": "test_admin_limit_is_per_user",
+    "admin_assessment_action": "test_admin_assessment_action_limit_is_per_user",
     # Not §14.8 rows, but wired limits all the same (covered elsewhere).
     "totp": "tests/security/test_admin_totp.py",
     "captcha_challenge": "tests/security/test_login_sessions.py",
@@ -421,8 +432,9 @@ def test_bid_create_and_edit_limit_is_per_user(api: Api, api2: Api) -> None:
     """Bid create/edit: 20/hour, keyed by user (placing and editing share the budget)."""
     api.sign_in_as("CLIENT")
     pid, slot_id = _published_project(api)
-    api.sign_in_as("DEVELOPER")
-    api2.sign_in_as("DEVELOPER")
+    skill = api.get("/api/v1/skills").json()[0]["name"]
+    for client in (api, api2):  # newcomers allowed to bid (role assessment spec §8.3)
+        client.qualify_for_slot(client.sign_in_as("DEVELOPER"), pid, slot_id, skill)
     _clear()
     created = api.post(
         f"/api/v1/projects/{pid}/bids",
@@ -506,3 +518,145 @@ def test_upload_limit_is_per_user(api: Api, api2: Api) -> None:
     assert upload(0, api2, other_item).status_code == 201
     _age("upload", HOUR)
     assert upload(21).status_code != 429
+
+
+# --------------------------------------------------------------------------- role assessment
+
+
+def _per_user(
+    scope: str, send: Callable[[], Any], other: Callable[[], Any], limit: int, window: int
+) -> None:
+    """`limit` requests pass, the next is 429 with Retry-After, another user is unaffected, and
+    the window passing lets the first user in again. The global per-user limit (120/min, tested
+    above) is reset as it goes — every 50 sends, as a POST costs two requests (the CSRF token,
+    then the call) — so every 429 here comes from `scope` itself."""
+    _clear()
+    for done in range(0, limit, 50):
+        _fill(send, min(50, limit - done))
+        _clear("api_authenticated")
+    _assert_limited(send(), window)
+    assert other().status_code != 429
+    _age(scope, window)
+    _clear("api_authenticated")
+    assert send().status_code != 429
+
+
+def _ids() -> tuple[str, str]:
+    return str(uuid.uuid4()), str(uuid.uuid4())
+
+
+def test_assessment_read_limit_is_per_user(api: Api, api2: Api) -> None:
+    """Assessment status, attempt and result reads: 120/min per user (spec §9)."""
+    api.sign_in_as("DEVELOPER")
+    api2.sign_in_as("DEVELOPER")
+    pid, sid = _ids()
+    path = f"/api/v1/projects/{pid}/slots/{sid}/assessment"
+    _per_user("assessment_read", lambda: api.get(path), lambda: api2.get(path), 120, MINUTE)
+
+
+def test_assessment_start_limit_is_per_user(api: Api, api2: Api) -> None:
+    """Starting a role assessment: 10/hour per user."""
+    api.sign_in_as("DEVELOPER")
+    api2.sign_in_as("DEVELOPER")
+    pid, sid = _ids()
+    path = f"/api/v1/projects/{pid}/slots/{sid}/assessment/attempts"
+    body = {"consent": True, "rules_version": 1}
+    _per_user(
+        "assessment_start",
+        lambda: api.post(path, json=body),
+        lambda: api2.post(path, json=body),
+        10,
+        HOUR,
+    )
+
+
+def test_assessment_resume_limit_is_per_user(api: Api, api2: Api) -> None:
+    """Resuming (a new window token): 20/hour per user."""
+    api.sign_in_as("DEVELOPER")
+    api2.sign_in_as("DEVELOPER")
+    path = f"/api/v1/assessment-attempts/{uuid.uuid4()}/resume"
+    _per_user("assessment_resume", lambda: api.post(path), lambda: api2.post(path), 20, HOUR)
+
+
+def test_assessment_answer_limit_is_per_user(api: Api, api2: Api) -> None:
+    """Answers: 120/min per user."""
+    api.sign_in_as("DEVELOPER")
+    api2.sign_in_as("DEVELOPER")
+    path = f"/api/v1/assessment-attempts/{uuid.uuid4()}/answer"
+    body = {"question_id": str(uuid.uuid4()), "choice": 0}
+    _per_user(
+        "assessment_answer",
+        lambda: api.post(path, json=body),
+        lambda: api2.post(path, json=body),
+        120,
+        MINUTE,
+    )
+
+
+def test_assessment_finish_limit_is_per_user(api: Api, api2: Api) -> None:
+    """Finishing early: 10/hour per user."""
+    api.sign_in_as("DEVELOPER")
+    api2.sign_in_as("DEVELOPER")
+    path = f"/api/v1/assessment-attempts/{uuid.uuid4()}/finish"
+    _per_user("assessment_finish", lambda: api.post(path), lambda: api2.post(path), 10, HOUR)
+
+
+def test_assessment_focus_limit_is_per_user(api: Api, api2: Api) -> None:
+    """Focus events: 60/min per user."""
+    api.sign_in_as("DEVELOPER")
+    api2.sign_in_as("DEVELOPER")
+    path = f"/api/v1/assessment-attempts/{uuid.uuid4()}/focus-events"
+    body = {"seq": 1, "type": "WINDOW_BLUR"}
+    _per_user(
+        "assessment_focus",
+        lambda: api.post(path, json=body),
+        lambda: api2.post(path, json=body),
+        60,
+        MINUTE,
+    )
+
+
+def test_assessment_heartbeat_limit_is_per_user(api: Api, api2: Api) -> None:
+    """Heartbeats: 10/min per user (the client sends one every 15 s)."""
+    api.sign_in_as("DEVELOPER")
+    api2.sign_in_as("DEVELOPER")
+    path = f"/api/v1/assessment-attempts/{uuid.uuid4()}/heartbeat"
+    body = {"visible": True, "fullscreen": True}
+    _per_user(
+        "assessment_heartbeat",
+        lambda: api.post(path, json=body),
+        lambda: api2.post(path, json=body),
+        10,
+        MINUTE,
+    )
+
+
+def test_assessment_history_limit_is_per_user(api: Api, api2: Api) -> None:
+    """My role assessments: 60/min per user."""
+    api.sign_in_as("DEVELOPER")
+    api2.sign_in_as("DEVELOPER")
+    path = "/api/v1/me/role-assessments"
+    _per_user("assessment_history", lambda: api.get(path), lambda: api2.get(path), 60, MINUTE)
+
+
+def test_admin_limit_is_per_user(api: Api, api2: Api) -> None:
+    """Admin reads: 300/min per admin."""
+    api.sign_in_as("ADMIN")
+    api2.sign_in_as("ADMIN")
+    path = "/api/v1/admin/question-bank?limit=1"
+    _per_user("admin", lambda: api.get(path), lambda: api2.get(path), 300, MINUTE)
+
+
+def test_admin_assessment_action_limit_is_per_user(api: Api, api2: Api) -> None:
+    """Admin void and accommodations: 30/hour per admin (each also needs a step-up)."""
+    api.sign_in_as("ADMIN")
+    api2.sign_in_as("ADMIN")
+    path = f"/api/v1/admin/users/{uuid.uuid4()}/accommodation"
+    body = {"extra_time_pct": 25}
+    _per_user(
+        "admin_assessment_action",
+        lambda: api.post(path, json=body),
+        lambda: api2.post(path, json=body),
+        30,
+        HOUR,
+    )

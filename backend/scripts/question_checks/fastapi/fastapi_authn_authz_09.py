@@ -1,6 +1,6 @@
 """Check for fastapi_authn_authz_09: run the snippet for real; the marked option must equal the result."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 import json
@@ -31,7 +31,7 @@ def admin_panel(user=Depends(require_role)):
     return {"ok": True}
 
 print(show(c.get("/admin?role=x")))
-'''
+"""
 
 
 def check(ctx, q):

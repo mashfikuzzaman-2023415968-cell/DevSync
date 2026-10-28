@@ -371,7 +371,8 @@ class DeveloperPublicProfile(BaseModel):
     visibility: VisibilityName
     skills: list[PublicSkill]
     verified_scores: list[VerifiedScore] = Field(
-        description="Practice-test results (best per skill); not evidence for bidding."
+        description="Practice-test and admin-verified results (best per skill); role "
+        "assessments are listed separately.",
     )
     role_assessments: list[PublicRoleAssessment] = Field(
         default_factory=list,

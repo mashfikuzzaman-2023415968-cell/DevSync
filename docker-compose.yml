@@ -14,8 +14,8 @@ x-backend-env: &backend-env
   DEVSYNC_ENV: ${DEVSYNC_ENV:-development}
   SECRET_KEY: ${SECRET_KEY:?run make env}
   CAPTCHA_HMAC_KEY: ${CAPTCHA_HMAC_KEY:?run make env}
-  DATABASE_URL: postgresql+asyncpg://devsync_app:${DEVSYNC_APP_PASSWORD:?run make env}@postgres:5432/devsync
-  WORKER_DATABASE_URL: postgresql+asyncpg://devsync_worker:${DEVSYNC_WORKER_PASSWORD:?run make env}@postgres:5432/devsync
+  DATABASE_URL: postgresql+asyncpg://devsync_app:${DEVSYNC_APP_PASSWORD:?run make env}@postgres:5432/${DEVSYNC_DB_NAME:-devsync}
+  WORKER_DATABASE_URL: postgresql+asyncpg://devsync_worker:${DEVSYNC_WORKER_PASSWORD:?run make env}@postgres:5432/${DEVSYNC_DB_NAME:-devsync}
   REDIS_URL: redis://:${REDIS_PASSWORD:?run make env}@redis:6379/0
   PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-https://localhost}
   ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,api}
@@ -112,7 +112,7 @@ services:
     profiles: ["tools"]
     command: ["alembic", "upgrade", "head"]
     environment:
-      MIGRATION_DATABASE_URL: postgresql+psycopg://devsync_migrator:${DEVSYNC_MIGRATOR_PASSWORD:?run make env}@postgres:5432/devsync
+      MIGRATION_DATABASE_URL: postgresql+psycopg://devsync_migrator:${DEVSYNC_MIGRATOR_PASSWORD:?run make env}@postgres:5432/${DEVSYNC_DB_NAME:-devsync}
     read_only: true
     security_opt: ["no-new-privileges:true"]
     cap_drop: ["ALL"]
@@ -124,7 +124,7 @@ services:
   postgres:
     image: postgres:16@sha256:ca0bd484cb98bf4b24eb1010e73fb3fcbd6714d240fbc1a10eea5b7dbecb641d
     environment:
-      POSTGRES_DB: devsync
+      POSTGRES_DB: ${DEVSYNC_DB_NAME:-devsync}
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run make env}
       DEVSYNC_MIGRATOR_PASSWORD: ${DEVSYNC_MIGRATOR_PASSWORD}
@@ -136,7 +136,7 @@ services:
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
     security_opt: ["no-new-privileges:true"]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d devsync"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${DEVSYNC_DB_NAME:-devsync}"]
       interval: 5s
       timeout: 3s
       retries: 20

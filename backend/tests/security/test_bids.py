@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 
-from tests.helpers import Api
+from tests.helpers import Api, SeededUser
 
 pytestmark = pytest.mark.api
 
@@ -21,6 +21,14 @@ def _skill_id(api: Api) -> str:
     skills = api.get("/api/v1/skills").json()
     assert skills, "seeded skills expected"
     return skills[0].get("skill_id") or skills[0]["id"]
+
+
+def _bidder(api: Api, pid: str, slot_id: str) -> SeededUser:
+    """A newcomer allowed to bid for the slot (role assessment spec §8.3; the gate itself is
+    tested in test_role_assessment_api.py)."""
+    user = api.sign_in_as("DEVELOPER")
+    api.qualify_for_slot(user, pid, slot_id, api.get("/api/v1/skills").json()[0]["name"])
+    return user
 
 
 def _publish_project(api: Api) -> tuple[str, str]:
@@ -63,7 +71,7 @@ def test_place_edit_and_withdraw_a_bid(api: Api) -> None:
     api.sign_in_as("CLIENT")
     pid, slot_id = _publish_project(api)
 
-    api.sign_in_as("DEVELOPER")
+    _bidder(api, pid, slot_id)
     created = api.post(f"/api/v1/projects/{pid}/bids", json=_bid_body(slot_id))
     assert created.status_code == 201, created.text
     bid_id = created.json()["id"]
@@ -84,7 +92,7 @@ def test_place_edit_and_withdraw_a_bid(api: Api) -> None:
 def test_one_active_bid_per_project(api: Api) -> None:
     api.sign_in_as("CLIENT")
     pid, slot_id = _publish_project(api)
-    api.sign_in_as("DEVELOPER")
+    _bidder(api, pid, slot_id)
     assert api.post(f"/api/v1/projects/{pid}/bids", json=_bid_body(slot_id)).status_code == 201
     dup = api.post(f"/api/v1/projects/{pid}/bids", json=_bid_body(slot_id))
     assert dup.status_code == 409
@@ -95,7 +103,7 @@ def test_bids_are_sealed_between_developers(api: Api) -> None:
     api.sign_in_as("CLIENT")
     pid, slot_id = _publish_project(api)
 
-    api.sign_in_as("DEVELOPER")
+    _bidder(api, pid, slot_id)
     bid_id = api.post(f"/api/v1/projects/{pid}/bids", json=_bid_body(slot_id)).json()["id"]
 
     # A different developer sees nothing of it and cannot touch it (sealed → 404).
@@ -108,8 +116,8 @@ def test_bids_are_sealed_between_developers(api: Api) -> None:
 def test_client_sees_all_bids_with_eligibility(api: Api) -> None:
     client = api.sign_in_as("CLIENT")
     pid, slot_id = _publish_project(api)
-    api.sign_in_as("DEVELOPER")
-    api.post(f"/api/v1/projects/{pid}/bids", json=_bid_body(slot_id))
+    _bidder(api, pid, slot_id)
+    assert api.post(f"/api/v1/projects/{pid}/bids", json=_bid_body(slot_id)).status_code == 201
 
     # Back to the owning client.
     api.login(client)

@@ -1,6 +1,6 @@
 """Check for fastapi-api-security-08: wildcard origins + credentials reflects the caller's Origin."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 import json
@@ -28,7 +28,7 @@ print(json.dumps({
     "pre_acao": pre.headers.get("access-control-allow-origin"),
     "pre_acac": pre.headers.get("access-control-allow-credentials"),
 }))
-'''
+"""
 
 
 def check(ctx, q):
@@ -36,7 +36,9 @@ def check(ctx, q):
 
     got = json.loads(ctx.python(CODE))
     assert got["status"] == 200, got  # not blocked server-side (distractor A)
-    assert got["cookie_acao"] == "https://evil.example", got  # echoed, not "*" (B), not app origin (C)
+    assert got["cookie_acao"] == "https://evil.example", (
+        got
+    )  # echoed, not "*" (B), not app origin (C)
     assert got["cookie_acac"] == "true", got
     assert got["pre_acao"] == "https://evil.example" and got["pre_acac"] == "true", got
     opts = q["options"]

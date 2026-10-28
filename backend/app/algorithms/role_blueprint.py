@@ -212,7 +212,9 @@ class _Candidate:
         return (-self.score, 0 if c.is_core else 1, c.position, c.code)
 
 
-def related_skills(primary: str, milestones: Sequence[frozenset[str]], names: Mapping[str, str]) -> list[tuple[str, int]]:
+def related_skills(
+    primary: str, milestones: Sequence[frozenset[str]], names: Mapping[str, str]
+) -> list[tuple[str, int]]:
     """The (skill id, milestone count) of the top two other skills next to the primary (step 2)."""
     counts: dict[str, int] = {}
     for skills in milestones:
@@ -226,7 +228,7 @@ def related_skills(primary: str, milestones: Sequence[frozenset[str]], names: Ma
 
 def _candidates(inp: BlueprintInput, related: list[tuple[str, int]], text: str) -> list[_Candidate]:
     min_total = inp.params.min_approved_per_competency
-    primary = [c for c in inp.catalogue.get(inp.primary_skill_id, ())]
+    primary = list(inp.catalogue.get(inp.primary_skill_id, ()))
     others = [c for skill, _ in related for c in inp.catalogue.get(skill, ()) if c.is_core]
     pools = [(c, True) for c in primary] + [(c, False) for c in others]
     codes = [c.code for c, _ in pools]
@@ -251,9 +253,7 @@ def _select(ranked: list[_Candidate]) -> list[_Candidate]:
     chosen = ranked[:MAX_COMPETENCIES]
     spare_primary = [c for c in ranked[MAX_COMPETENCIES:] if c.primary]
     while sum(c.primary for c in chosen) < MIN_PRIMARY and spare_primary:
-        lowest_related = max(
-            (i for i, c in enumerate(chosen) if not c.primary), default=None
-        )
+        lowest_related = max((i for i, c in enumerate(chosen) if not c.primary), default=None)
         if lowest_related is None:
             break
         chosen[lowest_related] = spare_primary.pop(0)
@@ -297,7 +297,11 @@ def weights_bp(chosen: Sequence[_Candidate]) -> dict[str, int] | None:
         excess = max(0, weights[largest] - MAX_WEIGHT_BP)
         weights[largest] -= excess
         while excess > 0:
-            below = [k for k in sorted(weights, key=lambda k: (-weights[k], k)) if weights[k] < MAX_WEIGHT_BP]
+            below = [
+                k
+                for k in sorted(weights, key=lambda k: (-weights[k], k))
+                if weights[k] < MAX_WEIGHT_BP
+            ]
             if not below:
                 return None
             weights[below[0]] += WEIGHT_STEP_BP
@@ -305,7 +309,11 @@ def weights_bp(chosen: Sequence[_Candidate]) -> dict[str, int] | None:
     elif diff < 0:
         deficit = -diff
         while deficit > 0:
-            above = [k for k in sorted(weights, key=lambda k: (-weights[k], k)) if weights[k] > MIN_WEIGHT_BP]
+            above = [
+                k
+                for k in sorted(weights, key=lambda k: (-weights[k], k))
+                if weights[k] > MIN_WEIGHT_BP
+            ]
             if not above:
                 return None
             take = min(deficit, weights[above[0]] - MIN_WEIGHT_BP)
@@ -365,7 +373,9 @@ def assign_difficulties(
     return assigned
 
 
-def _reasons(cand: _Candidate, primary_name: str, related_counts: Mapping[str, int], names: Mapping[str, str]) -> tuple[str, ...]:
+def _reasons(
+    cand: _Candidate, primary_name: str, related_counts: Mapping[str, int], names: Mapping[str, str]
+) -> tuple[str, ...]:
     c = cand.competency
     reasons: list[str] = []
     if cand.primary:
@@ -452,7 +462,12 @@ def build_blueprint(inp: BlueprintInput) -> Blueprint | Unavailable:
         "algo_version": BLUEPRINT_ALGO_VERSION,
         "primary_skill_id": inp.primary_skill_id,
         "competencies": [
-            [c.code, c.weight_bp, c.question_count, {"easy": c.easy, "medium": c.medium, "hard": c.hard}]
+            [
+                c.code,
+                c.weight_bp,
+                c.question_count,
+                {"easy": c.easy, "medium": c.medium, "hard": c.hard},
+            ]
             for c in sorted(comps, key=lambda c: c.code)
         ],
         "time_limit_seconds": p.time_limit_seconds,

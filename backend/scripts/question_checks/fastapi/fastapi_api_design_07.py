@@ -1,6 +1,6 @@
 """Check for fastapi_api_design_07: run the snippet for real; the marked option must equal the result."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 import json
@@ -25,7 +25,7 @@ def by_slug(slug: str):
     return "by-slug"
 
 print(show(c.get("/items/abc")))
-'''
+"""
 
 
 def check(ctx, q):

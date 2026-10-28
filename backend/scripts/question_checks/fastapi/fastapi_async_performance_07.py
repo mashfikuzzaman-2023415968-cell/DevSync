@@ -1,6 +1,6 @@
 """Check for fastapi-async-performance-07: async background task blocks the loop; def task does not."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 import asyncio, time, json
@@ -46,7 +46,7 @@ async def measure(variant):
         return round(ping_done, 1)
 
 print(json.dumps({v: asyncio.run(measure(v)) for v in ["async_task", "def_route", "sync_task"]}))
-'''
+"""
 
 
 def check(ctx, q):

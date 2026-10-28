@@ -1,6 +1,6 @@
 """Check for fastapi-validation-schemas-03: evaluate every option; only the marked one may raise."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 import json
@@ -17,7 +17,7 @@ for src in json.loads(OPTIONS):
     except ValidationError:
         raised.append(True)
 print(json.dumps(raised))
-'''
+"""
 
 
 def check(ctx, q):

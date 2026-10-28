@@ -16,6 +16,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from app.schemas.common import StrictRequest
+from app.schemas.role_assessments import AssessmentStatusOut
 
 Price = Field(gt=0, le=10_000_000_000, description="Bid price in paisa")
 Days = Field(ge=1, le=365)
@@ -123,6 +124,9 @@ class EligibilityOut(BaseModel):
     reason: str | None  # the first failing reason code, or null when eligible
     message: str  # human text, e.g. "Would be filtered out: needs 31 days (deadline 30)"
     checks: list[ConstraintCheck]
+    assessment: AssessmentStatusOut | None = Field(
+        None, description="The slot's role assessment status for you (role assessment §8.3)."
+    )
 
 
 class PortfolioRef(BaseModel):
@@ -157,11 +161,25 @@ class BidDetailOut(BidOut):
     eligibility: EligibilityOut | None = None
 
 
+class AssessmentLineOut(BaseModel):
+    """A newcomer's role assessment as the client sees it (role assessment spec §8.5): the
+    result only — never answers, focus events or flags."""
+
+    score: int = Field(description="0–100")
+    outcome: Literal["PASSED", "NOT_PASSED", "ENDED_EARLY", "VOIDED", "EXPIRED"]
+    strongest: str | None
+    weakest: str | None
+    taken_at: datetime
+
+
 class NewcomerEvidence(BaseModel):
-    """The skill test that lets a newcomer through the newcomer rule (§9.2 step 2)."""
+    """What lets a newcomer through the newcomer rule (§9.2 step 2): a role assessment for the
+    slot, or a practice test where the slot has no assessment yet (Decision 10)."""
 
     skill: str
     score: float  # 0–1, shown as a percentage
+    kind: Literal["ROLE", "PRACTICE"] = "PRACTICE"
+    assessment: AssessmentLineOut | None = None
 
 
 class ClientBidOut(BaseModel):

@@ -111,7 +111,7 @@ def _competencies(doc: dict[str, Any], where: str, report: Report) -> dict[str, 
     return seen
 
 
-def _question(  # noqa: C901 - one rule per branch, kept flat on purpose
+def _question(
     q: dict[str, Any],
     skill_slug: str,
     competencies: dict[str, dict[str, Any]],
@@ -270,10 +270,13 @@ def _skill_rules(
         per = [counts.get((code, d), 0) for d in (1, 2, 3)]
         if name in DEMO_SKILLS and min(per) < MIN_PER_DIFFICULTY_DEMO:
             report.error(
-                name, f"{code}: approved easy/medium/hard {per}, needs ≥ {MIN_PER_DIFFICULTY_DEMO} each"
+                name,
+                f"{code}: approved easy/medium/hard {per}, needs ≥ {MIN_PER_DIFFICULTY_DEMO} each",
             )
         elif name not in DEMO_SKILLS and c.get("is_core") and sum(per) < MIN_PER_CORE_OTHER:
-            report.warn(name, f"{code}: {sum(per)} approved, target {MIN_PER_CORE_OTHER} (fallback)")
+            report.warn(
+                name, f"{code}: {sum(per)} approved, target {MIN_PER_CORE_OTHER} (fallback)"
+            )
 
 
 def validate(sources: list[tuple[str, dict[str, Any]]]) -> Report:
@@ -320,7 +323,10 @@ def seed_document(sources: list[tuple[str, dict[str, Any]]]) -> dict[str, Any]:
             {
                 "name": doc["skill"],
                 "competencies": [
-                    {k: c[k] for k in ("code", "name", "description", "is_core", "keywords", "position")}
+                    {
+                        k: c[k]
+                        for k in ("code", "name", "description", "is_core", "keywords", "position")
+                    }
                     for c in doc["competencies"]
                 ],
                 "questions": [

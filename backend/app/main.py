@@ -25,6 +25,7 @@ from starlette.routing import Route
 
 from app.api.v1 import (
     admin,
+    admin_assessments,
     auth,
     bids,
     captcha,
@@ -35,6 +36,7 @@ from app.api.v1 import (
     profiles,
     projects,
     public,
+    role_assessments,
     skill_tests,
 )
 from app.core.auth_middleware import CsrfMiddleware, GlobalRateLimitMiddleware, SessionMiddleware
@@ -167,9 +169,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         auth,
         me,
         admin,
+        admin_assessments,
         profiles,
         files,
         skill_tests,
+        role_assessments,
         # marketplace before projects so /projects/search and /projects/recommended match their
         # own handlers, not /projects/{project_id}.
         marketplace,

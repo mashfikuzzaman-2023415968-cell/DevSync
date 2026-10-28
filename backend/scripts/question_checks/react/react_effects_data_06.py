@@ -2,10 +2,13 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
-from _jsh import PRELUDE, js, verify  # noqa: E402,F401
+from _jsh import PRELUDE, js, verify  # noqa: F401
+
 
 def check(ctx, q):
-    r = js(ctx, """
+    r = js(
+        ctx,
+        """
 (async () => {
   const delays = { 1: 120, 2: 10 };
   globalThis.fetch = (url) => { const id = Number(url.split('/').pop());
@@ -36,12 +39,16 @@ def check(ctx, q):
   }
   console.log(JSON.stringify(res));
 })();
-""")
-    ok = {k: v == "user2" for k, v in r.items()}   # correct = shows the user for id 2
+""",
+    )
+    ok = {k: v == "user2" for k, v in r.items()}  # correct = shows the user for id 2
     assert not ok["buggy"] and r["buggy"] == "user1", r
-    verify(q, {
-        "Set a local ignore flag": ok["ignore"],
-        "Remove id from the dependency array": ok["nodeps"],
-        "Wrap setUser in useCallback": ok["callback"],
-        "Make the effect callback async": ok["asyncEffect"],
-    })
+    verify(
+        q,
+        {
+            "Set a local ignore flag": ok["ignore"],
+            "Remove id from the dependency array": ok["nodeps"],
+            "Wrap setUser in useCallback": ok["callback"],
+            "Make the effect callback async": ok["asyncEffect"],
+        },
+    )

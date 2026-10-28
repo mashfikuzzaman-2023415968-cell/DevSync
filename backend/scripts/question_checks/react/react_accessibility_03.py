@@ -2,10 +2,13 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
-from _jsh import PRELUDE, js, verify  # noqa: E402,F401
+from _jsh import PRELUDE, js, verify  # noqa: F401
+
 
 def check(ctx, q):
-    r = js(ctx, """
+    r = js(
+        ctx,
+        """
 const { getByRole } = require('@testing-library/dom');
 const noop = () => {};
 const variants = {
@@ -25,12 +28,16 @@ for (const [name, make] of Object.entries(variants)) {
   res[name] = { isButton, focusable, keys };
 }
 console.log(JSON.stringify(res));
-""")
+""",
+    )
     fixes_both = {k: v["isButton"] and v["focusable"] and v["keys"] for k, v in r.items()}
     assert not any(fixes_both[k] for k in ("tabIndex", "ariaLabel", "keyDown")), r
-    verify(q, {
-        'Use <button type="button"': fixes_both["button"],
-        "Add tabIndex={0}": fixes_both["tabIndex"],
-        'Add aria-label="Save"': fixes_both["ariaLabel"],
-        "Add an onKeyDown handler": fixes_both["keyDown"],
-    })
+    verify(
+        q,
+        {
+            'Use <button type="button"': fixes_both["button"],
+            "Add tabIndex={0}": fixes_both["tabIndex"],
+            'Add aria-label="Save"': fixes_both["ariaLabel"],
+            "Add an onKeyDown handler": fixes_both["keyDown"],
+        },
+    )

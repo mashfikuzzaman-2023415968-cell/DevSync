@@ -138,9 +138,11 @@ async def seed(visibility: ProfileVisibility = ProfileVisibility.PUBLIC) -> Owne
     # Attempts and evidence only come from the definer functions, as the developer.
     start = text("SELECT attempt_id FROM start_test_attempt(:t, now(), :seed)")
     async with as_user(dev) as db:
-        attempt = (await db.execute(start, {"t": tests[0], "seed": 1})).scalar_one()
+        # One attempt scored, then one left open (one open attempt at a time: role assessment
+        # spec Decision 4).
         scored = (await db.execute(start, {"t": tests[1], "seed": 2})).scalar_one()
         await db.execute(text("SELECT * FROM score_test_attempt(:a, now())"), {"a": scored})
+        attempt = (await db.execute(start, {"t": tests[0], "seed": 1})).scalar_one()
         await db.commit()
     owned = Owned(dev, client, *ids, attempt)
     return owned

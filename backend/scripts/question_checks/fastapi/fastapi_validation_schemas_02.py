@@ -1,6 +1,6 @@
 """Check for fastapi_validation_schemas_02: run the snippet for real; the marked option must equal the result."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 import json
@@ -21,7 +21,7 @@ class Item(BaseModel):
     price: float | None = None
 
 print(Item(name="pen").price)
-'''
+"""
 
 
 def check(ctx, q):

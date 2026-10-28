@@ -29,7 +29,11 @@ def check(ctx, q):
         ),
     }
     results = {name: _enforces(ctx, ddl) for name, ddl in variants.items()}
-    assert results == {"partial unique index": True, "UNIQUE (user_id, status)": False, "lookup": False}, results
+    assert results == {
+        "partial unique index": True,
+        "UNIQUE (user_id, status)": False,
+        "lookup": False,
+    }, results
     # CHECK with a subquery is not even allowed (0A000 feature_not_supported).
     sub = (
         "ALTER TABLE subscriptions ADD CHECK ((SELECT count(*) FROM subscriptions s "

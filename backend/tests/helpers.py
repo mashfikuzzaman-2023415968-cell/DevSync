@@ -175,6 +175,30 @@ class Api:
         assert r.status_code == 200, r.text
         return user
 
+    def qualify_for_slot(
+        self, user: SeededUser, project_id: str, slot_id: str, skill_name: str
+    ) -> dict[str, Any]:
+        """Make the signed-in newcomer `user` able to bid for a slot (role assessment spec §8.3):
+        the skill on their profile with a passing practice score, and — where the slot has a
+        role assessment — a real passed attempt. Returns the slot's assessment status after."""
+        r = self.post(
+            f"/api/v1/__test__/developers/{user.user_id}/skill-evidence",
+            json={"skill": skill_name, "score": "0.900"},
+        )
+        assert r.status_code == 204, r.text
+        status_path = f"/api/v1/projects/{project_id}/slots/{slot_id}/assessment"
+        status = self.get(status_path).json()
+        if status["status"] == "REQUIRED":
+            r = self.post(
+                f"/api/v1/__test__/developers/{user.user_id}/role-evidence",
+                json={"project_id": project_id, "slot_id": slot_id, "outcome": "pass"},
+            )
+            assert r.status_code == 200, r.text
+            assert r.json()["passed"], r.text
+            status = self.get(status_path).json()
+        assert status["status"] in ("PASSED", "FALLBACK_PRACTICE", "NOT_REQUIRED"), status
+        return dict(status)
+
 
 def wait_for_next_totp_window(secret: str) -> str:
     """Code from the next 30-second window (for replay tests that need a fresh step)."""

@@ -811,3 +811,103 @@ alternatives were rejected: halving the authenticated example budget (20 → 10)
 second run, which would weaken a test threshold to fit the gate's time budget; and confirming the
 first run from its JUnit report, which meant parsing XML in the gate (semgrep's
 `use-defused-xml-parse`, and a parser we would rather not add a dependency for).
+
+**D71 · Role assessment replaces generic tests as newcomer evidence (Taeen, 2026-10-28; role assessment spec §3 decisions 1–16).**
+`ROLE_ASSESSMENT_BUILD_SPEC.md` wins over the build spec for this feature only. Its sixteen
+decisions are adopted as written:
+1. Newcomers bid on a role assessment's result; the generic skill tests become **practice**
+   (still on profiles, labelled practice).
+2. Blueprints are per project slot, rule-based, deterministic and versioned
+   (`BLUEPRINT_ALGO_VERSION = 1`), frozen at publish.
+3. A pass counts for any slot with the same fingerprint for 180 days.
+4. One scored attempt per fingerprint per 30 days, and one open attempt of any kind.
+5. Pass ⇔ overall ≥ 60 % and every competency weighing ≥ 20 % scores ≥ 40 %.
+6. Difficulty weights are 2/3/4.
+7. Navigation is one-way, with one 15-minute timer for 12 questions.
+8. Focus mode with the two-leave rule.
+9. Terminated attempts count toward the retake limit.
+10. A slot whose assessment can't be served falls back to the practice test of its skill.
+11. Bids from newcomers without a valid pass are rejected at creation (409
+    `ROLE_ASSESSMENT_REQUIRED`), and the evidence is linked to the bid.
+12. No LLM at runtime.
+13. Bid drafts are kept in `sessionStorage` through an allowlisted helper.
+14. The bank is self-verified before Demo 1 and human-reviewed after it (behind
+    `assessment.require_human_review`).
+15. New questions are never practice questions.
+16. Times are stored in UTC and shown in Asia/Dhaka.
+
+**D72 · How the role assessment fits the existing code (Taeen, 2026-10-28; role assessment spec §4–§10, plan `docs/plans/role-assessment.md`).**
+- **Migration and grace.** The migration is `0011_role_assessment`; the spec's `0007` example
+  was taken.
+- **Bind parameters.** Function DDL runs on the raw driver cursor, because SQLAlchemy and psycopg
+  would read array slices and plpgsql `%` as parameters.
+- **Enum change.** `evidence_source` gains `ROLE_ASSESSMENT` in its own transaction. This is the
+  first enum change in the repo, and the downgrade rebuilds the type.
+- **Grace period.** The 5 s grace after the deadline applies to role attempts only; practice
+  tests keep their own rule.
+- **Practice functions and open attempts.** The four practice-test functions now refuse role
+  attempts. Without that, `attempt_questions` would have served a role attempt's questions all at
+  once and bypassed one-way navigation. Practice starts also take the per-developer lock and
+  refuse while any attempt is open (decision 4).
+- **Question `slug` column.** Questions gain a `slug` column, the stable YAML id. Migration 0011
+  finds the 128 original questions by text and tags them.
+- **Duplicate competency codes.** Competency codes are unique across skills, because a blueprint
+  mixes skills' competencies and keys them by code. UI/UX `accessibility` became
+  `accessible_design` and Node.js `error_handling` became `node_errors`; the names shown are
+  unchanged.
+- **Bank thresholds.** A competency whose bank has fewer than `min_approved_per_competency`
+  approved questions is left out before selection, so a better-stocked one can take its place.
+  One that can't supply its difficulties is removed and the weights are redone without
+  backfilling (§5.1 step 9).
+- **Retired tokens.** The window token is stored hashed. The last ten retired hashes are kept so
+  an old window gets `ATTEMPT_MOVED` and a forged token gets `ATTEMPT_TOKEN_INVALID`. The token is
+  compared in constant time in Python and again in SQL.
+- **Idempotent start.** A repeated `Idempotency-Key` on start resumes the attempt with a fresh
+  token. The idempotency record holds only the attempt id, so the token is never stored in plain
+  text.
+- **Blueprints for older projects.** Projects published before this feature get their slot
+  blueprints on first need, in a SYSTEM session, with the same result publishing would have
+  given.
+- **Voided evidence.** A bid whose linked evidence was voided uses a later valid pass for the same
+  blueprint if one exists, so a retake restores the bid. Otherwise it is ineligible with "Role
+  assessment voided by an admin".
+- **Unverified accounts.** The `assessment.take` policy lets a PENDING developer through, so the
+  status endpoint can answer `BLOCKED / ACCOUNT_NOT_VERIFIED` (§8.1) instead of a bare 403.
+  Starting needs an ACTIVE account (403 `ACCOUNT_NOT_VERIFIED`).
+
+**D73 · The demo stack gets its own database; the answer key is an operator tool (Taeen, 2026-10-28; role assessment spec §14.1).**
+- **Separate demo database.** The answer-key tool must refuse any database whose name doesn't end
+  in `_demo`, but the demo stack used `devsync`. The demo overlay therefore runs `devsync_demo` on
+  its own volume (`pgdata_demo`), with the name parameterised in compose (`DEVSYNC_DB_NAME`).
+  Development and demo data no longer share a database, and the first `make demo-up` after this
+  starts empty (it migrates and seeds anyway).
+- **How the answer key runs.** `make demo-answer-key USER=…` runs `scripts/demo_answer_key.py` on
+  the host. It uses only the standard library, has no HTTP route and isn't imported by the app.
+  It reads through the Postgres container as the migrator and passes the password by name, so it
+  never appears in a command line. It refuses without `DEVSYNC_DEMO_TOOLS=1`, against a
+  non-`_demo` database and inside a container.
+- **E2E answer key.** The Playwright container has no database access and no Python, so the E2E
+  suite can't spawn the script. On the TEST stack it uses the test-only route
+  `/__test__/assessment-attempts/{id}/answer-key`, mounted only when `DEVSYNC_ENV=test`
+  (`assert_no_test_routes`). That route calls the same answer-key query the seed helpers use.
+- **Seeded attempts are real.** Seeded and test-fixture role results are real attempts, taken
+  through the definer functions in the developer's own session (`services/testing/role_attempts`).
+
+**D74 · Question bank verification for Demo 1 (Taeen, 2026-10-28; role assessment spec §13.3).**
+- **Writing and checking.** Claude Code wrote the bank: 370 questions over 8 skills, 128 of them
+  the original ones, now tagged and explained. 99 code questions have execution checks (Python,
+  Node with the app's React 18, PostgreSQL 16) proving the marked option right and each
+  distractor wrong.
+- **Blind second solve.** Every question was solved again by a separate reviewer that saw only the
+  question and options. 354 passed every check and are `APPROVED / SELF_VERIFIED`.
+  - One question (`postgresql-sql-queries-03`) stays a draft. Its execution check shows the key is
+    right, but the blind reviewer chose another option, and the spec requires agreement.
+  - Seven weak original questions stay practice-only. So do seven originals whose labelled
+    difficulty was two levels off, because their difficulty can't change while 0004's rows are
+    matched as they are.
+- **Report and team review.** Results are in `docs/question-review/verification-report.md`. The
+  team's human review follows after Demo 1, through `docs/question-review/{skill}.md` and
+  `scripts/question_review.py approve`. After it, `assessment.require_human_review` is switched
+  on.
+- **Lint policy.** The execution checks follow the tests' lint policy (`pyproject.toml`
+  per-file rules), since they are test code.

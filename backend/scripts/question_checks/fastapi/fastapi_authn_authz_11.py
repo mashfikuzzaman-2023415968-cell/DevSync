@@ -1,6 +1,6 @@
 """Check for fastapi_authn_authz_11: run the snippet for real; the marked option must equal the result."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 import json
@@ -27,7 +27,7 @@ def create(order: Order, token: str = Depends(oauth2)):
 assert c.post("/orders", json={"qty": "many"}, headers={"Authorization": "Bearer t"}).status_code == 422
 
 print(show(c.post("/orders", json={"qty": "many"})))
-'''
+"""
 
 
 def check(ctx, q):

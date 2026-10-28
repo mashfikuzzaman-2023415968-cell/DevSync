@@ -15,6 +15,61 @@
         "title": "AcceptedResponse",
         "type": "object"
       },
+      "AccommodationIn": {
+        "additionalProperties": false,
+        "properties": {
+          "extra_time_pct": {
+            "enum": [
+              0,
+              25,
+              50
+            ],
+            "title": "Extra Time Pct",
+            "type": "integer"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "extra_time_pct"
+        ],
+        "title": "AccommodationIn",
+        "type": "object"
+      },
+      "AccommodationOut": {
+        "properties": {
+          "extra_time_pct": {
+            "title": "Extra Time Pct",
+            "type": "integer"
+          },
+          "granted_at": {
+            "format": "date-time",
+            "title": "Granted At",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "extra_time_pct",
+          "note",
+          "granted_at"
+        ],
+        "title": "AccommodationOut",
+        "type": "object"
+      },
       "AdminSessionResponse": {
         "description": "Admin's own security status (also proves the admin area is hidden from others).",
         "properties": {
@@ -66,27 +121,636 @@
         "title": "AnswerAccepted",
         "type": "object"
       },
-      "AnswerIn": {
-        "additionalProperties": false,
-        "description": "Choose an option (0–3) for one question of the attempt.",
+      "AnswerOut": {
         "properties": {
+          "current_index": {
+            "title": "Current Index",
+            "type": "integer"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuestionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssessmentResultOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "NEXT",
+              "SCORED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status",
+          "current_index",
+          "total"
+        ],
+        "title": "AnswerOut",
+        "type": "object"
+      },
+      "AnswerTraceOut": {
+        "properties": {
+          "answered_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answered At"
+          },
           "choice": {
-            "maximum": 3.0,
-            "minimum": 0.0,
-            "title": "Choice",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "0–3, or null when skipped or not reached.",
+            "title": "Choice"
+          },
+          "competency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Competency"
+          },
+          "correct": {
+            "title": "Correct",
+            "type": "boolean"
+          },
+          "difficulty": {
+            "title": "Difficulty",
+            "type": "integer"
+          },
+          "index": {
+            "title": "Index",
             "type": "integer"
           },
           "question_id": {
             "format": "uuid",
             "title": "Question Id",
             "type": "string"
+          },
+          "seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Time since the previous answer (or the start).",
+            "title": "Seconds"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
           }
         },
         "required": [
+          "index",
           "question_id",
-          "choice"
+          "slug",
+          "competency",
+          "difficulty",
+          "choice",
+          "correct",
+          "answered_at",
+          "seconds"
         ],
-        "title": "AnswerIn",
+        "title": "AnswerTraceOut",
+        "type": "object"
+      },
+      "AssessmentLineOut": {
+        "description": "A newcomer's role assessment as the client sees it (role assessment spec §8.5): the\nresult only — never answers, focus events or flags.",
+        "properties": {
+          "outcome": {
+            "enum": [
+              "PASSED",
+              "NOT_PASSED",
+              "ENDED_EARLY",
+              "VOIDED",
+              "EXPIRED"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "score": {
+            "description": "0–100",
+            "title": "Score",
+            "type": "integer"
+          },
+          "strongest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strongest"
+          },
+          "taken_at": {
+            "format": "date-time",
+            "title": "Taken At",
+            "type": "string"
+          },
+          "weakest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weakest"
+          }
+        },
+        "required": [
+          "score",
+          "outcome",
+          "strongest",
+          "weakest",
+          "taken_at"
+        ],
+        "title": "AssessmentLineOut",
+        "type": "object"
+      },
+      "AssessmentResultOut": {
+        "description": "A scored attempt as its candidate sees it: no answers, no per-question correctness.",
+        "properties": {
+          "attempt_id": {
+            "format": "uuid",
+            "title": "Attempt Id",
+            "type": "string"
+          },
+          "competencies": {
+            "items": {
+              "$ref": "#/components/schemas/CompetencyScoreOut"
+            },
+            "title": "Competencies",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "next_allowed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When a new attempt may start.",
+            "title": "Next Allowed At"
+          },
+          "outcome": {
+            "enum": [
+              "PASSED",
+              "NOT_PASSED",
+              "ENDED_EARLY",
+              "VOIDED"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "pass_overall": {
+            "title": "Pass Overall",
+            "type": "integer"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          },
+          "score": {
+            "description": "Overall score 0–100, rounded down.",
+            "title": "Score",
+            "type": "integer"
+          },
+          "strongest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strongest"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "title": "Submitted At",
+            "type": "string"
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Until when a pass counts (passed only).",
+            "title": "Valid Until"
+          },
+          "weakest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weakest"
+          }
+        },
+        "required": [
+          "attempt_id",
+          "label",
+          "outcome",
+          "passed",
+          "score",
+          "pass_overall",
+          "competencies",
+          "strongest",
+          "weakest",
+          "submitted_at",
+          "valid_until",
+          "next_allowed_at"
+        ],
+        "title": "AssessmentResultOut",
+        "type": "object"
+      },
+      "AssessmentStatusOut": {
+        "description": "Drives the bid sheet's assessment card (§8.1).",
+        "properties": {
+          "attempt_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Your open attempt (IN_PROGRESS).",
+            "title": "Attempt Id"
+          },
+          "bidding_closes_soon": {
+            "default": false,
+            "description": "Bidding closes before an attempt started now would end (+5 min).",
+            "title": "Bidding Closes Soon",
+            "type": "boolean"
+          },
+          "bidding_deadline": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bidding Deadline"
+          },
+          "blueprint": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BlueprintOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fallback": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FallbackOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "next_allowed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Allowed At"
+          },
+          "open_elsewhere": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Your other open attempt.",
+            "title": "Open Elsewhere"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ACCOUNT_NOT_VERIFIED",
+                  "SKILL_NOT_ON_PROFILE"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssessmentResultOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Your latest result here."
+          },
+          "rules_version": {
+            "title": "Rules Version",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "NOT_REQUIRED",
+              "REQUIRED",
+              "IN_PROGRESS",
+              "OPEN_ELSEWHERE",
+              "PASSED",
+              "RETAKE_LOCKED",
+              "FALLBACK_PRACTICE",
+              "CLOSED",
+              "BLOCKED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "message",
+          "rules_version"
+        ],
+        "title": "AssessmentStatusOut",
+        "type": "object"
+      },
+      "AttemptDetailOut": {
+        "properties": {
+          "answers": {
+            "items": {
+              "$ref": "#/components/schemas/AnswerTraceOut"
+            },
+            "title": "Answers",
+            "type": "array"
+          },
+          "attempt_id": {
+            "format": "uuid",
+            "title": "Attempt Id",
+            "type": "string"
+          },
+          "breakdown": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Breakdown",
+            "type": "array"
+          },
+          "candidate_id": {
+            "format": "uuid",
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "candidate_name": {
+            "title": "Candidate Name",
+            "type": "string"
+          },
+          "connection_gaps": {
+            "title": "Connection Gaps",
+            "type": "integer"
+          },
+          "deadline_at": {
+            "format": "date-time",
+            "title": "Deadline At",
+            "type": "string"
+          },
+          "extra_time_seconds": {
+            "title": "Extra Time Seconds",
+            "type": "integer"
+          },
+          "flagged": {
+            "title": "Flagged",
+            "type": "boolean"
+          },
+          "focus_events": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Focus Events",
+            "type": "array"
+          },
+          "focus_leaves": {
+            "title": "Focus Leaves",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "last_heartbeat_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Heartbeat At"
+          },
+          "passed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Passed"
+          },
+          "reused_seen": {
+            "title": "Reused Seen",
+            "type": "boolean"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "0–100 once scored.",
+            "title": "Score"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "terminated_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terminated Reason"
+          },
+          "void_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Void Reason"
+          },
+          "voided": {
+            "title": "Voided",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "attempt_id",
+          "candidate_id",
+          "candidate_name",
+          "label",
+          "started_at",
+          "submitted_at",
+          "score",
+          "passed",
+          "terminated_reason",
+          "flagged",
+          "focus_leaves",
+          "connection_gaps",
+          "reviewed_at",
+          "voided",
+          "deadline_at",
+          "extra_time_seconds",
+          "reused_seen",
+          "focus_events",
+          "last_heartbeat_at",
+          "breakdown",
+          "answers",
+          "void_reason"
+        ],
+        "title": "AttemptDetailOut",
         "type": "object"
       },
       "AttemptOut": {
@@ -249,6 +913,93 @@
           "added_to_profile"
         ],
         "title": "AttemptResult",
+        "type": "object"
+      },
+      "AttemptStateOut": {
+        "description": "An attempt's state; `question` only with a valid window token while open.",
+        "properties": {
+          "current_index": {
+            "title": "Current Index",
+            "type": "integer"
+          },
+          "deadline_at": {
+            "format": "date-time",
+            "title": "Deadline At",
+            "type": "string"
+          },
+          "focus_leaves": {
+            "title": "Focus Leaves",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "leave_limit": {
+            "title": "Leave Limit",
+            "type": "integer"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuestionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssessmentResultOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "OPEN",
+              "SCORED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "state",
+          "current_index",
+          "total",
+          "started_at",
+          "deadline_at",
+          "server_now",
+          "focus_leaves",
+          "leave_limit"
+        ],
+        "title": "AttemptStateOut",
         "type": "object"
       },
       "BidCreate": {
@@ -809,6 +1560,100 @@
           "extend_days"
         ],
         "title": "BiddingWindow",
+        "type": "object"
+      },
+      "BlueprintCompetencyOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "question_count": {
+            "title": "Question Count",
+            "type": "integer"
+          },
+          "reasons": {
+            "description": "Why this competency is part of the role.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "weight_bp": {
+            "description": "Weight in basis points (10,000 = 100 %).",
+            "title": "Weight Bp",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "weight_bp",
+          "question_count",
+          "reasons"
+        ],
+        "title": "BlueprintCompetencyOut",
+        "type": "object"
+      },
+      "BlueprintOut": {
+        "description": "What the assessment for this role covers (the same for every newcomer).",
+        "properties": {
+          "competencies": {
+            "items": {
+              "$ref": "#/components/schemas/BlueprintCompetencyOut"
+            },
+            "title": "Competencies",
+            "type": "array"
+          },
+          "extra_time_seconds": {
+            "default": 0,
+            "title": "Extra Time Seconds",
+            "type": "integer"
+          },
+          "floor": {
+            "description": "Minimum for every competency weighing at least `heavy_weight`.",
+            "title": "Floor",
+            "type": "integer"
+          },
+          "heavy_weight": {
+            "description": "Weight (0–100) from which the floor applies.",
+            "title": "Heavy Weight",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "pass_overall": {
+            "description": "Overall pass mark, 0–100.",
+            "title": "Pass Overall",
+            "type": "integer"
+          },
+          "question_count": {
+            "title": "Question Count",
+            "type": "integer"
+          },
+          "time_limit_seconds": {
+            "description": "Base time; extra time granted to you is separate.",
+            "title": "Time Limit Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "label",
+          "competencies",
+          "question_count",
+          "time_limit_seconds",
+          "pass_overall",
+          "floor",
+          "heavy_weight"
+        ],
+        "title": "BlueprintOut",
         "type": "object"
       },
       "Body_add_portfolio_image_api_v1_me_portfolio__item_id__images_post": {
@@ -1506,6 +2351,35 @@
         "title": "CodeRequest",
         "type": "object"
       },
+      "CompetencyScoreOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "score": {
+            "description": "0–100, rounded down.",
+            "title": "Score",
+            "type": "integer"
+          },
+          "weight_bp": {
+            "title": "Weight Bp",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "weight_bp",
+          "score"
+        ],
+        "title": "CompetencyScoreOut",
+        "type": "object"
+      },
       "ConstraintCheck": {
         "description": "One Algorithm 1 check and whether the bid meets it (§9.2), with the values compared.\n\n`required`/`actual` are on the check's own scale: scores 0–1 (shown ×100), days, or paisa;\nnull for yes/no gates. `detail` is ready-to-show text.",
         "properties": {
@@ -1985,6 +2859,14 @@
             ],
             "description": "C, P and the newcomer flag; null for anonymous visitors (reputation snapshots are readable only when signed in)."
           },
+          "role_assessments": {
+            "description": "Valid passed role assessments: a competency result for a kind of role, not completed work (role assessment spec §11.6).",
+            "items": {
+              "$ref": "#/components/schemas/PublicRoleAssessment"
+            },
+            "title": "Role Assessments",
+            "type": "array"
+          },
           "skills": {
             "items": {
               "$ref": "#/components/schemas/PublicSkill"
@@ -1993,6 +2875,7 @@
             "type": "array"
           },
           "verified_scores": {
+            "description": "Practice-test results (best per skill); not evidence for bidding.",
             "items": {
               "$ref": "#/components/schemas/VerifiedScore"
             },
@@ -2149,6 +3032,17 @@
       "EligibilityOut": {
         "description": "The dry-run eligibility verdict for the bid sheet's live preview.",
         "properties": {
+          "assessment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssessmentStatusOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The slot's role assessment status for you (role assessment §8.3)."
+          },
           "checks": {
             "items": {
               "$ref": "#/components/schemas/ConstraintCheck"
@@ -2233,7 +3127,23 @@
           "STEP_UP_REQUIRED",
           "TOKEN_INVALID",
           "ALREADY_VERIFIED",
-          "PASSWORD_REJECTED"
+          "PASSWORD_REJECTED",
+          "NOT_REQUIRED",
+          "ALREADY_PASSED",
+          "ATTEMPT_OPEN",
+          "RETAKE_LOCKED",
+          "CONSENT_REQUIRED",
+          "BLUEPRINT_UNAVAILABLE",
+          "SKILL_NOT_ON_PROFILE",
+          "ACCOUNT_NOT_VERIFIED",
+          "BIDDING_CLOSED",
+          "NOT_CURRENT_QUESTION",
+          "ATTEMPT_CLOSED",
+          "ATTEMPT_MOVED",
+          "ATTEMPT_TOKEN_REQUIRED",
+          "ATTEMPT_TOKEN_INVALID",
+          "DEADLINE_PASSED",
+          "ROLE_ASSESSMENT_REQUIRED"
         ],
         "title": "ErrorCode",
         "type": "string"
@@ -2423,6 +3333,44 @@
         "title": "ExternalReviewUpdate",
         "type": "object"
       },
+      "FallbackOut": {
+        "description": "The slot's newcomer evidence while no role assessment is available (Decision 10).",
+        "properties": {
+          "pass_mark": {
+            "title": "Pass Mark",
+            "type": "integer"
+          },
+          "passes": {
+            "description": "Whether that result meets the newcomer pass mark.",
+            "title": "Passes",
+            "type": "boolean"
+          },
+          "practice_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Best practice-test result 0–100, if any.",
+            "title": "Practice Score"
+          },
+          "skill_name": {
+            "title": "Skill Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "skill_name",
+          "practice_score",
+          "passes",
+          "pass_mark"
+        ],
+        "title": "FallbackOut",
+        "type": "object"
+      },
       "FileOut": {
         "description": "Metadata of a stored file (download through `GET /files/{id}/download`).",
         "properties": {
@@ -2475,6 +3423,213 @@
           "height"
         ],
         "title": "FileOut",
+        "type": "object"
+      },
+      "FlaggedItemOut": {
+        "properties": {
+          "attempt_id": {
+            "format": "uuid",
+            "title": "Attempt Id",
+            "type": "string"
+          },
+          "candidate_id": {
+            "format": "uuid",
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "candidate_name": {
+            "title": "Candidate Name",
+            "type": "string"
+          },
+          "connection_gaps": {
+            "title": "Connection Gaps",
+            "type": "integer"
+          },
+          "flagged": {
+            "title": "Flagged",
+            "type": "boolean"
+          },
+          "focus_leaves": {
+            "title": "Focus Leaves",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "passed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Passed"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "0–100 once scored.",
+            "title": "Score"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "terminated_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terminated Reason"
+          },
+          "voided": {
+            "title": "Voided",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "attempt_id",
+          "candidate_id",
+          "candidate_name",
+          "label",
+          "started_at",
+          "submitted_at",
+          "score",
+          "passed",
+          "terminated_reason",
+          "flagged",
+          "focus_leaves",
+          "connection_gaps",
+          "reviewed_at",
+          "voided"
+        ],
+        "title": "FlaggedItemOut",
+        "type": "object"
+      },
+      "FocusEventIn": {
+        "additionalProperties": false,
+        "properties": {
+          "client_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client At"
+          },
+          "fullscreen_supported": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fullscreen Supported"
+          },
+          "seq": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Seq",
+            "type": "integer"
+          },
+          "type": {
+            "enum": [
+              "VISIBILITY_HIDDEN",
+              "FULLSCREEN_EXIT",
+              "WINDOW_BLUR",
+              "PAGE_UNLOAD"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seq",
+          "type"
+        ],
+        "title": "FocusEventIn",
+        "type": "object"
+      },
+      "FocusEventOut": {
+        "properties": {
+          "focus_leaves": {
+            "title": "Focus Leaves",
+            "type": "integer"
+          },
+          "leave_limit": {
+            "title": "Leave Limit",
+            "type": "integer"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssessmentResultOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "WARNING",
+              "TERMINATED",
+              "CLOSED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "focus_leaves",
+          "leave_limit"
+        ],
+        "title": "FocusEventOut",
         "type": "object"
       },
       "ForgotPasswordRequest": {
@@ -2544,6 +3699,110 @@
           "status"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "HeartbeatIn": {
+        "additionalProperties": false,
+        "properties": {
+          "fullscreen": {
+            "title": "Fullscreen",
+            "type": "boolean"
+          },
+          "visible": {
+            "title": "Visible",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "visible",
+          "fullscreen"
+        ],
+        "title": "HeartbeatIn",
+        "type": "object"
+      },
+      "HeartbeatOut": {
+        "properties": {
+          "deadline_at": {
+            "format": "date-time",
+            "title": "Deadline At",
+            "type": "string"
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          }
+        },
+        "required": [
+          "server_now",
+          "deadline_at"
+        ],
+        "title": "HeartbeatOut",
+        "type": "object"
+      },
+      "HistoryItemOut": {
+        "properties": {
+          "attempt_id": {
+            "format": "uuid",
+            "title": "Attempt Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "PASSED",
+              "NOT_PASSED",
+              "ENDED_EARLY",
+              "VOIDED"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          },
+          "score": {
+            "title": "Score",
+            "type": "integer"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "title": "Submitted At",
+            "type": "string"
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Until"
+          }
+        },
+        "required": [
+          "attempt_id",
+          "label",
+          "outcome",
+          "score",
+          "passed",
+          "started_at",
+          "submitted_at",
+          "valid_until"
+        ],
+        "title": "HistoryItemOut",
         "type": "object"
       },
       "LoginRequest": {
@@ -2896,8 +4155,27 @@
         "type": "object"
       },
       "NewcomerEvidence": {
-        "description": "The skill test that lets a newcomer through the newcomer rule (§9.2 step 2).",
+        "description": "What lets a newcomer through the newcomer rule (§9.2 step 2): a role assessment for the\nslot, or a practice test where the slot has no assessment yet (Decision 10).",
         "properties": {
+          "assessment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssessmentLineOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "default": "PRACTICE",
+            "enum": [
+              "ROLE",
+              "PRACTICE"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
           "score": {
             "title": "Score",
             "type": "number"
@@ -4176,6 +5454,38 @@
         "title": "PublicPortfolioItem",
         "type": "object"
       },
+      "PublicRoleAssessment": {
+        "description": "A passed role assessment as others see it (no project, no answers, no flags).",
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "score": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Score",
+            "type": "string"
+          },
+          "valid_until": {
+            "format": "date-time",
+            "title": "Valid Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "score",
+          "at",
+          "valid_until"
+        ],
+        "title": "PublicRoleAssessment",
+        "type": "object"
+      },
       "PublicSkill": {
         "description": "A claimed skill on a public profile.",
         "properties": {
@@ -4251,6 +5561,354 @@
           }
         },
         "title": "PublishIn",
+        "type": "object"
+      },
+      "QuestionAdminOut": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "code_snippet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code Snippet"
+          },
+          "competency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Competency"
+          },
+          "competency_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Competency Id"
+          },
+          "correct_index": {
+            "title": "Correct Index",
+            "type": "integer"
+          },
+          "difficulty": {
+            "title": "Difficulty",
+            "type": "integer"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "review_level": {
+            "enum": [
+              "NONE",
+              "SELF_VERIFIED",
+              "HUMAN_APPROVED"
+            ],
+            "title": "Review Level",
+            "type": "string"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewed_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By Name"
+          },
+          "skill": {
+            "title": "Skill",
+            "type": "string"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "source": {
+            "enum": [
+              "HUMAN",
+              "CLAUDE_GENERATED"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "DRAFT",
+              "APPROVED",
+              "RETIRED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "times_served": {
+            "title": "Times Served",
+            "type": "integer"
+          },
+          "verification": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "skill",
+          "competency_id",
+          "competency",
+          "difficulty",
+          "text",
+          "code_snippet",
+          "options",
+          "correct_index",
+          "explanation",
+          "status",
+          "source",
+          "review_level",
+          "reviewed_by_name",
+          "reviewed_at",
+          "verification",
+          "active",
+          "times_served",
+          "version"
+        ],
+        "title": "QuestionAdminOut",
+        "type": "object"
+      },
+      "QuestionOut": {
+        "description": "The current question only (one-way navigation, §6.4).",
+        "properties": {
+          "code_snippet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Plain text, shown in a monospace block.",
+            "title": "Code Snippet"
+          },
+          "competency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Competency"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "index": {
+            "description": "0-based position of this question.",
+            "title": "Index",
+            "type": "integer"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "index",
+          "total",
+          "text",
+          "code_snippet",
+          "options",
+          "competency"
+        ],
+        "title": "QuestionOut",
+        "type": "object"
+      },
+      "QuestionPatch": {
+        "additionalProperties": false,
+        "description": "Edits to a DRAFT question (an approved one is retired and replaced instead).",
+        "properties": {
+          "code_snippet": {
+            "anyOf": [
+              {
+                "maxLength": 1500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code Snippet"
+          },
+          "competency_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Competency Id"
+          },
+          "correct_index": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correct Index"
+          },
+          "difficulty": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "maxLength": 600,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 4,
+                "minItems": 4,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Options"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "minLength": 5,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "title": "QuestionPatch",
         "type": "object"
       },
       "ReadinessResponse": {
@@ -4932,6 +6590,120 @@
         "title": "SlotsReplace",
         "type": "object"
       },
+      "StartIn": {
+        "additionalProperties": false,
+        "properties": {
+          "consent": {
+            "description": "The candidate accepted the rules shown on the consent screen.",
+            "title": "Consent",
+            "type": "boolean"
+          },
+          "rules_version": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Rules Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "consent",
+          "rules_version"
+        ],
+        "title": "StartIn",
+        "type": "object"
+      },
+      "StartedOut": {
+        "description": "A started or resumed attempt with its window token (returned once; send it as\n`X-Attempt-Token` with every answer, focus event and heartbeat).",
+        "properties": {
+          "attempt_token": {
+            "title": "Attempt Token",
+            "type": "string"
+          },
+          "current_index": {
+            "title": "Current Index",
+            "type": "integer"
+          },
+          "deadline_at": {
+            "format": "date-time",
+            "title": "Deadline At",
+            "type": "string"
+          },
+          "focus_leaves": {
+            "title": "Focus Leaves",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "leave_limit": {
+            "title": "Leave Limit",
+            "type": "integer"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuestionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssessmentResultOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "OPEN",
+              "SCORED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "state",
+          "current_index",
+          "total",
+          "started_at",
+          "deadline_at",
+          "server_now",
+          "focus_leaves",
+          "leave_limit",
+          "attempt_token"
+        ],
+        "title": "StartedOut",
+        "type": "object"
+      },
       "TeamCostOut": {
         "description": "Cheapest eligible way to fill every slot, against the budget after the platform fee.",
         "properties": {
@@ -5286,6 +7058,100 @@
         ],
         "title": "VerifiedScore",
         "type": "object"
+      },
+      "VoidIn": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 20,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "VoidIn",
+        "type": "object"
+      },
+      "VoidOut": {
+        "properties": {
+          "attempt_id": {
+            "format": "uuid",
+            "title": "Attempt Id",
+            "type": "string"
+          },
+          "bids_affected": {
+            "title": "Bids Affected",
+            "type": "integer"
+          },
+          "voided_at": {
+            "format": "date-time",
+            "title": "Voided At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "attempt_id",
+          "voided_at",
+          "bids_affected"
+        ],
+        "title": "VoidOut",
+        "type": "object"
+      },
+      "app__schemas__role_assessments__AnswerIn": {
+        "additionalProperties": false,
+        "properties": {
+          "choice": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "0–3, or null to skip.",
+            "title": "Choice"
+          },
+          "question_id": {
+            "format": "uuid",
+            "title": "Question Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question_id",
+          "choice"
+        ],
+        "title": "AnswerIn",
+        "type": "object"
+      },
+      "app__schemas__skill_tests__AnswerIn": {
+        "additionalProperties": false,
+        "description": "Choose an option (0–3) for one question of the attempt.",
+        "properties": {
+          "choice": {
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Choice",
+            "type": "integer"
+          },
+          "question_id": {
+            "format": "uuid",
+            "title": "Question Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question_id",
+          "choice"
+        ],
+        "title": "AnswerIn",
+        "type": "object"
       }
     }
   },
@@ -5295,6 +7161,1684 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/admin/assessments": {
+      "get": {
+        "description": "Newest first, at most 200; filter by flag, start date and skill.",
+        "operationId": "list_attempts_api_v1_admin_assessments_get",
+        "parameters": [
+          {
+            "description": "Only flagged (or unflagged)",
+            "in": "query",
+            "name": "flagged",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only flagged (or unflagged)",
+              "title": "Flagged"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skill_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Skill Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "attempt_id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+                    "candidate_id": "5a3d6c8e-1f7b-4c9d-8e0f-3a4b5c6d7e8f",
+                    "candidate_name": "Rafsan Haque",
+                    "connection_gaps": 0,
+                    "flagged": true,
+                    "focus_leaves": 2,
+                    "label": "React · State and hooks, Components and props, Effects and data fetching",
+                    "passed": false,
+                    "score": 25,
+                    "started_at": "2026-10-28T09:00:00Z",
+                    "submitted_at": "2026-10-28T09:03:12Z",
+                    "terminated_reason": "FOCUS_LIMIT",
+                    "voided": false
+                  }
+                ],
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FlaggedItemOut"
+                  },
+                  "title": "Response List Attempts Api V1 Admin Assessments Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Role assessment attempts (review queue)",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/assessments/{attempt_id}": {
+      "get": {
+        "description": "Focus events, gaps, per-question correctness and response times, and the result.",
+        "operationId": "attempt_detail_api_v1_admin_assessments__attempt_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "answers": [
+                    {
+                      "answered_at": "2026-10-28T09:00:41Z",
+                      "choice": 1,
+                      "competency": "State and hooks",
+                      "correct": true,
+                      "difficulty": 2,
+                      "index": 0,
+                      "question_id": "4f2c5b7d-0e6a-4b8c-9d9e-2f3a4b5c6d7e",
+                      "seconds": 41,
+                      "slug": "react-state-hooks-04"
+                    }
+                  ],
+                  "attempt_id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+                  "breakdown": [
+                    {
+                      "code": "state_hooks",
+                      "earned_w": 3,
+                      "name": "State and hooks",
+                      "possible_w": 12,
+                      "score_bp": 2500,
+                      "weight_bp": 3500
+                    }
+                  ],
+                  "candidate_id": "5a3d6c8e-1f7b-4c9d-8e0f-3a4b5c6d7e8f",
+                  "candidate_name": "Rafsan Haque",
+                  "connection_gaps": 0,
+                  "deadline_at": "2026-10-28T09:15:00Z",
+                  "extra_time_seconds": 0,
+                  "flagged": true,
+                  "focus_events": [
+                    {
+                      "seq": 1,
+                      "server_at": "2026-10-28T09:01:40Z",
+                      "type": "VISIBILITY_HIDDEN"
+                    },
+                    {
+                      "seq": 2,
+                      "server_at": "2026-10-28T09:03:12Z",
+                      "type": "FULLSCREEN_EXIT"
+                    }
+                  ],
+                  "focus_leaves": 2,
+                  "label": "React · State and hooks, Components and props, Effects and data fetching",
+                  "last_heartbeat_at": "2026-10-28T09:03:00Z",
+                  "passed": false,
+                  "reused_seen": false,
+                  "score": 25,
+                  "started_at": "2026-10-28T09:00:00Z",
+                  "submitted_at": "2026-10-28T09:03:12Z",
+                  "terminated_reason": "FOCUS_LIMIT",
+                  "voided": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/AttemptDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "A role assessment attempt in full",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/assessments/{attempt_id}/review": {
+      "post": {
+        "description": "Takes a flagged attempt out of the queue without voiding it.",
+        "operationId": "mark_reviewed_api_v1_admin_assessments__attempt_id__review_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "attempt_id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+                  "candidate_id": "5a3d6c8e-1f7b-4c9d-8e0f-3a4b5c6d7e8f",
+                  "candidate_name": "Rafsan Haque",
+                  "connection_gaps": 0,
+                  "flagged": true,
+                  "focus_leaves": 2,
+                  "label": "React · State and hooks, Components and props, Effects and data fetching",
+                  "passed": false,
+                  "score": 25,
+                  "started_at": "2026-10-28T09:00:00Z",
+                  "submitted_at": "2026-10-28T09:03:12Z",
+                  "terminated_reason": "FOCUS_LIMIT",
+                  "voided": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FlaggedItemOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Send the request body as JSON.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Send the request body as JSON."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Mark a role assessment reviewed",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/assessments/{attempt_id}/void": {
+      "post": {
+        "description": "Needs a step-up. The result stops counting, bids relying on it are re-evaluated and their\nbidders told, and the developer may retake at once.",
+        "operationId": "void_attempt_api_v1_admin_assessments__attempt_id__void_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoidIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "attempt_id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+                  "bids_affected": 1,
+                  "voided_at": "2026-10-28T10:00:00Z"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/VoidOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "The request could not be understood.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request could not be understood."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Send the request body as JSON.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Send the request body as JSON."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Void a role assessment",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/question-bank": {
+      "get": {
+        "description": "With answers, explanations and verification records (admins only).",
+        "operationId": "list_questions_api_v1_admin_question_bank_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "skill_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Skill Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "competency_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Competency Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "difficulty",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 3,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Difficulty"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "DRAFT",
+                    "APPROVED",
+                    "RETIRED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "HUMAN",
+                    "CLAUDE_GENERATED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "active": false,
+                    "competency": "State and hooks",
+                    "competency_id": "6b4e7d9f-2a8c-4d0e-9f1a-4b5c6d7e8f90",
+                    "correct_index": 0,
+                    "difficulty": 2,
+                    "explanation": "Both calls read the same `count`; use the updater form.",
+                    "id": "4f2c5b7d-0e6a-4b8c-9d9e-2f3a4b5c6d7e",
+                    "options": [
+                      "Stale state in both calls",
+                      "React batches renders",
+                      "StrictMode",
+                      "A bug"
+                    ],
+                    "review_level": "SELF_VERIFIED",
+                    "reviewed_at": "2026-10-28T06:00:00Z",
+                    "skill": "React",
+                    "slug": "react-state-hooks-04",
+                    "source": "CLAUDE_GENERATED",
+                    "status": "APPROVED",
+                    "text": "A counter increments twice in one click handler but shows +1. Why?",
+                    "times_served": 7,
+                    "verification": {
+                      "checks_passed": true,
+                      "method": "execution",
+                      "solver_agreement": true
+                    },
+                    "version": 1
+                  }
+                ],
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/QuestionAdminOut"
+                  },
+                  "title": "Response List Questions Api V1 Admin Question Bank Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Question bank",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/question-bank/{question_id}": {
+      "patch": {
+        "description": "Drafts only: an approved question is retired and replaced by a new version.",
+        "operationId": "edit_question_api_v1_admin_question_bank__question_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Question Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "active": false,
+                  "competency": "State and hooks",
+                  "competency_id": "6b4e7d9f-2a8c-4d0e-9f1a-4b5c6d7e8f90",
+                  "correct_index": 0,
+                  "difficulty": 2,
+                  "explanation": "Both calls read the same `count`; use the updater form.",
+                  "id": "4f2c5b7d-0e6a-4b8c-9d9e-2f3a4b5c6d7e",
+                  "options": [
+                    "Stale state in both calls",
+                    "React batches renders",
+                    "StrictMode",
+                    "A bug"
+                  ],
+                  "review_level": "SELF_VERIFIED",
+                  "reviewed_at": "2026-10-28T06:00:00Z",
+                  "skill": "React",
+                  "slug": "react-state-hooks-04",
+                  "source": "CLAUDE_GENERATED",
+                  "status": "APPROVED",
+                  "text": "A counter increments twice in one click handler but shows +1. Why?",
+                  "times_served": 7,
+                  "verification": {
+                    "checks_passed": true,
+                    "method": "execution",
+                    "solver_agreement": true
+                  },
+                  "version": 1
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionAdminOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "The request could not be understood.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request could not be understood."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Send the request body as JSON.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Send the request body as JSON."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Edit a draft question",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/question-bank/{question_id}/approve": {
+      "post": {
+        "description": "Human approval (HUMAN_APPROVED, named after you).",
+        "operationId": "approve_question_api_v1_admin_question_bank__question_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Question Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "active": false,
+                  "competency": "State and hooks",
+                  "competency_id": "6b4e7d9f-2a8c-4d0e-9f1a-4b5c6d7e8f90",
+                  "correct_index": 0,
+                  "difficulty": 2,
+                  "explanation": "Both calls read the same `count`; use the updater form.",
+                  "id": "4f2c5b7d-0e6a-4b8c-9d9e-2f3a4b5c6d7e",
+                  "options": [
+                    "Stale state in both calls",
+                    "React batches renders",
+                    "StrictMode",
+                    "A bug"
+                  ],
+                  "review_level": "SELF_VERIFIED",
+                  "reviewed_at": "2026-10-28T06:00:00Z",
+                  "skill": "React",
+                  "slug": "react-state-hooks-04",
+                  "source": "CLAUDE_GENERATED",
+                  "status": "APPROVED",
+                  "text": "A counter increments twice in one click handler but shows +1. Why?",
+                  "times_served": 7,
+                  "verification": {
+                    "checks_passed": true,
+                    "method": "execution",
+                    "solver_agreement": true
+                  },
+                  "version": 1
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionAdminOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Send the request body as JSON.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Send the request body as JSON."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Approve a question",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/question-bank/{question_id}/retire": {
+      "post": {
+        "description": "Never below a practice test's question count.",
+        "operationId": "retire_question_api_v1_admin_question_bank__question_id__retire_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Question Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "active": false,
+                  "competency": "State and hooks",
+                  "competency_id": "6b4e7d9f-2a8c-4d0e-9f1a-4b5c6d7e8f90",
+                  "correct_index": 0,
+                  "difficulty": 2,
+                  "explanation": "Both calls read the same `count`; use the updater form.",
+                  "id": "4f2c5b7d-0e6a-4b8c-9d9e-2f3a4b5c6d7e",
+                  "options": [
+                    "Stale state in both calls",
+                    "React batches renders",
+                    "StrictMode",
+                    "A bug"
+                  ],
+                  "review_level": "SELF_VERIFIED",
+                  "reviewed_at": "2026-10-28T06:00:00Z",
+                  "skill": "React",
+                  "slug": "react-state-hooks-04",
+                  "source": "CLAUDE_GENERATED",
+                  "status": "APPROVED",
+                  "text": "A counter increments twice in one click handler but shows +1. Why?",
+                  "times_served": 7,
+                  "verification": {
+                    "checks_passed": true,
+                    "method": "execution",
+                    "solver_agreement": true
+                  },
+                  "version": 1
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionAdminOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Send the request body as JSON.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Send the request body as JSON."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Retire a question",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/session": {
       "get": {
         "description": "Used by the admin UI to confirm access before loading its bundle.",
@@ -5404,6 +8948,1708 @@
         "summary": "Admin session security status",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{user_id}/accommodation": {
+      "post": {
+        "description": "25 % or 50 % extra time (0 removes it) for assessments started from now on. Step-up.",
+        "operationId": "set_accommodation_api_v1_admin_users__user_id__accommodation_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccommodationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "extra_time_pct": 25,
+                  "granted_at": "2026-10-28T10:00:00Z",
+                  "note": "",
+                  "user_id": "5a3d6c8e-1f7b-4c9d-8e0f-3a4b5c6d7e8f"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/AccommodationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "The request could not be understood.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request could not be understood."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Send the request body as JSON.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Send the request body as JSON."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Grant assessment extra time",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/assessment-attempts/{attempt_id}": {
+      "get": {
+        "description": "State, position, deadline and server time; the current question only with a valid window\ntoken. An attempt whose time ran out is scored first.",
+        "operationId": "get_attempt_api_v1_assessment_attempts__attempt_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Window token from start/resume",
+            "in": "header",
+            "name": "X-Attempt-Token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Window token from start/resume",
+              "title": "X-Attempt-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "current_index": 3,
+                  "deadline_at": "2026-10-28T09:15:00Z",
+                  "focus_leaves": 0,
+                  "id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+                  "label": "FastAPI · Authentication and authorization, API design and HTTP, Databases and ORM",
+                  "leave_limit": 2,
+                  "question": {
+                    "code_snippet": "1  @app.post('/login')\n2  def login(body: Login):\n",
+                    "competency": "Authentication and authorization",
+                    "id": "4f2c5b7d-0e6a-4b8c-9d9e-2f3a4b5c6d7e",
+                    "index": 3,
+                    "options": [
+                      "Line 1",
+                      "Line 2",
+                      "Line 3",
+                      "Line 4"
+                    ],
+                    "text": "A login endpoint returns 200 for a wrong password. Which line causes it?",
+                    "total": 12
+                  },
+                  "server_now": "2026-10-28T09:04:31Z",
+                  "started_at": "2026-10-28T09:00:00Z",
+                  "state": "OPEN",
+                  "total": 12
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/AttemptStateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "The request could not be understood.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request could not be understood."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "A role assessment attempt",
+        "tags": [
+          "role-assessments"
+        ]
+      }
+    },
+    "/api/v1/assessment-attempts/{attempt_id}/answer": {
+      "post": {
+        "description": "Locks your answer (or a skip, `choice: null`) to the current question and moves on; there\nis no going back. After the last question the attempt is scored.",
+        "operationId": "answer_api_v1_assessment_attempts__attempt_id__answer_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Window token from start/resume",
+            "in": "header",
+            "name": "X-Attempt-Token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Window token from start/resume",
+              "title": "X-Attempt-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/app__schemas__role_assessments__AnswerIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "current_index": 4,
+                  "question": {
+                    "code_snippet": "1  @app.post('/login')\n2  def login(body: Login):\n",
+                    "competency": "Authentication and authorization",
+                    "id": "4f2c5b7d-0e6a-4b8c-9d9e-2f3a4b5c6d7e",
+                    "index": 3,
+                    "options": [
+                      "Line 1",
+                      "Line 2",
+                      "Line 3",
+                      "Line 4"
+                    ],
+                    "text": "A login endpoint returns 200 for a wrong password. Which line causes it?",
+                    "total": 12
+                  },
+                  "status": "NEXT",
+                  "total": 12
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/AnswerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "The request could not be understood.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request could not be understood."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Send the request body as JSON.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Send the request body as JSON."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Answer the current question",
+        "tags": [
+          "role-assessments"
+        ]
+      }
+    },
+    "/api/v1/assessment-attempts/{attempt_id}/finish": {
+      "post": {
+        "description": "Ends the attempt now; questions not answered count as wrong.",
+        "operationId": "finish_api_v1_assessment_attempts__attempt_id__finish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Window token from start/resume",
+            "in": "header",
+            "name": "X-Attempt-Token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Window token from start/resume",
+              "title": "X-Attempt-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "attempt_id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+                  "competencies": [
+                    {
+                      "code": "authn_authz",
+                      "name": "Authentication and authorization",
+                      "score": 85,
+                      "weight_bp": 3500
+                    },
+                    {
+                      "code": "api_design",
+                      "name": "API design and HTTP",
+                      "score": 72,
+                      "weight_bp": 2000
+                    }
+                  ],
+                  "label": "FastAPI · Authentication and authorization, API design and HTTP, Databases and ORM",
+                  "outcome": "PASSED",
+                  "pass_overall": 60,
+                  "passed": true,
+                  "score": 78,
+                  "strongest": "Authentication and authorization",
+                  "submitted_at": "2026-10-28T09:14:00Z",
+                  "valid_until": "2027-04-26T09:14:00Z",
+                  "weakest": "API design and HTTP"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentResultOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "The request could not be understood.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request could not be understood."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Send the request body as JSON.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Send the request body as JSON."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Finish a role assessment early",
+        "tags": [
+          "role-assessments"
+        ]
+      }
+    },
+    "/api/v1/assessment-attempts/{attempt_id}/focus-events": {
+      "post": {
+        "description": "One leave (idempotent by `seq`): the first is a warning; reaching the limit ends the\nattempt, which is scored but can't count as a pass.",
+        "operationId": "focus_event_api_v1_assessment_attempts__attempt_id__focus_events_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Window token from start/resume",
+            "in": "header",
+            "name": "X-Attempt-Token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Window token from start/resume",
+              "title": "X-Attempt-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FocusEventIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "focus_leaves": 1,
+                  "leave_limit": 2,
+                  "status": "WARNING"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FocusEventOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "The request could not be understood.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request could not be understood."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Send the request body as JSON.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Send the request body as JSON."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Report leaving the assessment",
+        "tags": [
+          "role-assessments"
+        ]
+      }
+    },
+    "/api/v1/assessment-attempts/{attempt_id}/heartbeat": {
+      "post": {
+        "description": "Keeps the server's clock and yours in step; long gaps are recorded, never counted as a\nleave.",
+        "operationId": "heartbeat_api_v1_assessment_attempts__attempt_id__heartbeat_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Window token from start/resume",
+            "in": "header",
+            "name": "X-Attempt-Token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Window token from start/resume",
+              "title": "X-Attempt-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeartbeatIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "deadline_at": "2026-10-28T09:15:00Z",
+                  "server_now": "2026-10-28T09:04:31Z"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/HeartbeatOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "The request could not be understood.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request could not be understood."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Send the request body as JSON.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Send the request body as JSON."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Assessment heartbeat",
+        "tags": [
+          "role-assessments"
+        ]
+      }
+    },
+    "/api/v1/assessment-attempts/{attempt_id}/result": {
+      "get": {
+        "description": "Your score per competency and overall; never the answers.",
+        "operationId": "get_result_api_v1_assessment_attempts__attempt_id__result_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "attempt_id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+                  "competencies": [
+                    {
+                      "code": "authn_authz",
+                      "name": "Authentication and authorization",
+                      "score": 85,
+                      "weight_bp": 3500
+                    },
+                    {
+                      "code": "api_design",
+                      "name": "API design and HTTP",
+                      "score": 72,
+                      "weight_bp": 2000
+                    }
+                  ],
+                  "label": "FastAPI · Authentication and authorization, API design and HTTP, Databases and ORM",
+                  "outcome": "PASSED",
+                  "pass_overall": 60,
+                  "passed": true,
+                  "score": 78,
+                  "strongest": "Authentication and authorization",
+                  "submitted_at": "2026-10-28T09:14:00Z",
+                  "valid_until": "2027-04-26T09:14:00Z",
+                  "weakest": "API design and HTTP"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentResultOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Role assessment result",
+        "tags": [
+          "role-assessments"
+        ]
+      }
+    },
+    "/api/v1/assessment-attempts/{attempt_id}/resume": {
+      "post": {
+        "description": "A new window token for your open attempt (after a reload or on another device); the old\nwindow's next request gets ATTEMPT_MOVED. The deadline doesn't change.",
+        "operationId": "resume_api_v1_assessment_attempts__attempt_id__resume_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "attempt_token": "q3Wd8n1Zr0-example-window-token-Xf2k",
+                  "current_index": 3,
+                  "deadline_at": "2026-10-28T09:15:00Z",
+                  "focus_leaves": 0,
+                  "id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+                  "label": "FastAPI · Authentication and authorization, API design and HTTP, Databases and ORM",
+                  "leave_limit": 2,
+                  "question": {
+                    "code_snippet": "1  @app.post('/login')\n2  def login(body: Login):\n",
+                    "competency": "Authentication and authorization",
+                    "id": "4f2c5b7d-0e6a-4b8c-9d9e-2f3a4b5c6d7e",
+                    "index": 3,
+                    "options": [
+                      "Line 1",
+                      "Line 2",
+                      "Line 3",
+                      "Line 4"
+                    ],
+                    "text": "A login endpoint returns 200 for a wrong password. Which line causes it?",
+                    "total": 12
+                  },
+                  "server_now": "2026-10-28T09:04:31Z",
+                  "started_at": "2026-10-28T09:00:00Z",
+                  "state": "OPEN",
+                  "total": 12
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/StartedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Send the request body as JSON.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Send the request body as JSON."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Resume a role assessment",
+        "tags": [
+          "role-assessments"
         ]
       }
     },
@@ -5587,7 +10833,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AnswerIn"
+                "$ref": "#/components/schemas/app__schemas__skill_tests__AnswerIn"
               }
             }
           },
@@ -13875,6 +19121,129 @@
         ]
       }
     },
+    "/api/v1/me/role-assessments": {
+      "get": {
+        "description": "Every scored role assessment of yours, newest first.",
+        "operationId": "my_history_api_v1_me_role_assessments_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "attempt_id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+                    "label": "FastAPI · Authentication and authorization, API design and HTTP, Databases and ORM",
+                    "outcome": "PASSED",
+                    "passed": true,
+                    "score": 78,
+                    "started_at": "2026-10-28T09:00:00Z",
+                    "submitted_at": "2026-10-28T09:14:00Z",
+                    "valid_until": "2027-04-26T09:14:00Z"
+                  }
+                ],
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HistoryItemOut"
+                  },
+                  "title": "Response My History Api V1 Me Role Assessments Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "My role assessments",
+        "tags": [
+          "role-assessments"
+        ]
+      }
+    },
     "/api/v1/me/skills": {
       "put": {
         "description": "Up to 20 skills, each with a self-assessed level 1–5 (verified scores come from tests).",
@@ -18504,6 +23873,475 @@
         "summary": "Replace the project's skill slots",
         "tags": [
           "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/slots/{slot_id}/assessment": {
+      "get": {
+        "description": "Whether you need a role assessment to bid for this role, what it covers and where you\nstand. Developers only: clients and admins get 403 ROLE_NOT_ALLOWED.",
+        "operationId": "slot_status_api_v1_projects__project_id__slots__slot_id__assessment_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "slot_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Slot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "bidding_closes_soon": false,
+                  "bidding_deadline": "2026-11-05T12:30:00Z",
+                  "blueprint": {
+                    "competencies": [
+                      {
+                        "code": "authn_authz",
+                        "name": "Authentication and authorization",
+                        "question_count": 4,
+                        "reasons": [
+                          "Core skill of this role (FastAPI)",
+                          "The requirements mention: sign in, roles, permissions"
+                        ],
+                        "weight_bp": 3500
+                      },
+                      {
+                        "code": "api_design",
+                        "name": "API design and HTTP",
+                        "question_count": 3,
+                        "reasons": [
+                          "Core skill of this role (FastAPI)"
+                        ],
+                        "weight_bp": 2000
+                      }
+                    ],
+                    "extra_time_seconds": 0,
+                    "floor": 40,
+                    "heavy_weight": 20,
+                    "label": "FastAPI · Authentication and authorization, API design and HTTP, Databases and ORM",
+                    "pass_overall": 60,
+                    "question_count": 12,
+                    "time_limit_seconds": 900
+                  },
+                  "message": "As a new developer on DevSync, you show your competency for this role with a short assessment.",
+                  "rules_version": 1,
+                  "status": "REQUIRED"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Role assessment status for a slot",
+        "tags": [
+          "role-assessments"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/slots/{slot_id}/assessment/attempts": {
+      "post": {
+        "description": "Starts the attempt after you accept the rules (`consent`, `rules_version`). An open attempt\nfor the same role is resumed instead (200). The window token is returned once.",
+        "operationId": "start_api_v1_projects__project_id__slots__slot_id__assessment_attempts_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "slot_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Slot Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "UUID; a repeat resumes the attempt",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UUID; a repeat resumes the attempt",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "attempt_token": "q3Wd8n1Zr0-example-window-token-Xf2k",
+                  "current_index": 3,
+                  "deadline_at": "2026-10-28T09:15:00Z",
+                  "focus_leaves": 0,
+                  "id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+                  "label": "FastAPI · Authentication and authorization, API design and HTTP, Databases and ORM",
+                  "leave_limit": 2,
+                  "question": {
+                    "code_snippet": "1  @app.post('/login')\n2  def login(body: Login):\n",
+                    "competency": "Authentication and authorization",
+                    "id": "4f2c5b7d-0e6a-4b8c-9d9e-2f3a4b5c6d7e",
+                    "index": 3,
+                    "options": [
+                      "Line 1",
+                      "Line 2",
+                      "Line 3",
+                      "Line 4"
+                    ],
+                    "text": "A login endpoint returns 200 for a wrong password. Which line causes it?",
+                    "total": 12
+                  },
+                  "server_now": "2026-10-28T09:04:31Z",
+                  "started_at": "2026-10-28T09:00:00Z",
+                  "state": "OPEN",
+                  "total": 12
+                }
+              }
+            },
+            "description": "Your open attempt for this role, with a new window token"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "attempt_token": "q3Wd8n1Zr0-example-window-token-Xf2k",
+                  "current_index": 3,
+                  "deadline_at": "2026-10-28T09:15:00Z",
+                  "focus_leaves": 0,
+                  "id": "3e1b4a6c-9d5f-4a7b-8c8d-1e2f3a4b5c6d",
+                  "label": "FastAPI · Authentication and authorization, API design and HTTP, Databases and ORM",
+                  "leave_limit": 2,
+                  "question": {
+                    "code_snippet": "1  @app.post('/login')\n2  def login(body: Login):\n",
+                    "competency": "Authentication and authorization",
+                    "id": "4f2c5b7d-0e6a-4b8c-9d9e-2f3a4b5c6d7e",
+                    "index": 3,
+                    "options": [
+                      "Line 1",
+                      "Line 2",
+                      "Line 3",
+                      "Line 4"
+                    ],
+                    "text": "A login endpoint returns 200 for a wrong password. Which line causes it?",
+                    "total": 12
+                  },
+                  "server_now": "2026-10-28T09:04:31Z",
+                  "started_at": "2026-10-28T09:00:00Z",
+                  "state": "OPEN",
+                  "total": 12
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/StartedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "The request could not be understood.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request could not be understood."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Send the request body as JSON.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Send the request body as JSON."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Start a role assessment",
+        "tags": [
+          "role-assessments"
         ]
       }
     },

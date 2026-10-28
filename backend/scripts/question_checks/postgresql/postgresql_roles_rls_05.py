@@ -1,4 +1,3 @@
-
 import uuid
 
 import psycopg
@@ -17,16 +16,16 @@ class Env:
         for r in self.roles:
             c.execute(f"DROP ROLE IF EXISTS {r}")
             c.execute(f"CREATE ROLE {r}")
-        c.execute(f"CREATE SCHEMA \"{self.schema}\"")
-        c.execute(f"SET search_path TO \"{self.schema}\"")
+        c.execute(f'CREATE SCHEMA "{self.schema}"')
+        c.execute(f'SET search_path TO "{self.schema}"')
         for r in self.roles:
-            c.execute(f"GRANT USAGE ON SCHEMA \"{self.schema}\" TO {r}")
+            c.execute(f'GRANT USAGE ON SCHEMA "{self.schema}" TO {r}')
         return c
 
     def __exit__(self, *exc):
         c = self.conn
         c.execute("RESET ROLE")
-        c.execute(f"DROP SCHEMA \"{self.schema}\" CASCADE")
+        c.execute(f'DROP SCHEMA "{self.schema}" CASCADE')
         for r in self.roles:
             c.execute(f"DROP ROLE IF EXISTS {r}")
         c.close()

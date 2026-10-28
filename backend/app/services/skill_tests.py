@@ -2,9 +2,12 @@
 
 The server clock decides everything: the deadline is set at start, late answers are refused,
 and attempts left open past their deadline are scored as they stand (on the next read, or by
-the `score_expired_attempts` job). One scored attempt per test every 30 days; no practice mode,
-which protects the question bank. Scoring happens inside the database, so correct answers never
-reach this process.
+the `score_expired_attempts` job). One scored attempt per test every 30 days, and one open attempt
+of any kind at a time (role assessments included). Scoring happens inside the database, so
+correct answers never reach this process.
+
+These are the *practice tests* of the role assessment spec (Decision 1): results still show on
+profiles, but newcomers bid on a role assessment's result (`services/role_assessments.py`).
 """
 
 from __future__ import annotations
@@ -33,6 +36,7 @@ from app.schemas.skill_tests import (
 from app.services.context import Ctx
 
 RETAKE_AFTER = timedelta(days=30)
+ROLE_GRACE_SECONDS = 5.0  # a role attempt stays open 5 s past its deadline (role assessment §6.3)
 SEED_BITS = 62
 
 # SQLSTATEs raised by the definer functions of migration 0004.
@@ -92,6 +96,8 @@ async def list_tests(ctx: Ctx) -> list[SkillTestOut]:
 
 
 async def _view(ctx: Ctx, attempt: TestAttempt) -> AttemptOut:
+    if attempt.test_id is None:  # pragma: no cover - the repository returns practice attempts only
+        raise NotFoundError
     test = await repo.get_test(ctx.db, attempt.test_id)
     questions = await repo.attempt_questions(ctx.db, attempt.id)
     return AttemptOut(
@@ -122,6 +128,13 @@ async def start_attempt(ctx: Ctx, test_id: uuid.UUID) -> AttemptOut:
             "You already have this test open.", "IN_PROGRESS", ["resume"],
             attempt_id=str(open_attempt.id),
         )  # fmt: skip
+    other = await repo.open_attempt_any_kind(ctx.db, ctx.uid, ctx.now, ROLE_GRACE_SECONDS)
+    if other is not None:  # one open attempt at a time, practice or role (Decision 4)
+        raise DomainError(
+            "Finish or let your other assessment expire first.",
+            code=ErrorCode.ATTEMPT_OPEN,
+            extra={"attempt_id": str(other.id), "kind": other.kind.value},
+        )
     allowed_at = next_attempt_at(mine, ctx.now)
     if allowed_at is not None:
         raise _state_error(

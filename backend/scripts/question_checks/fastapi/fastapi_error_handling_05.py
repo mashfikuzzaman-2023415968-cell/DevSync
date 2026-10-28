@@ -1,6 +1,6 @@
 """Check for fastapi_error_handling_05: run the snippet for real; the marked option must equal the result."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 import json
@@ -28,7 +28,7 @@ r = c.get("/no-such-route")
 assert r.status_code == 404
 
 print(json.dumps(r.json()))
-'''
+"""
 
 
 def check(ctx, q):

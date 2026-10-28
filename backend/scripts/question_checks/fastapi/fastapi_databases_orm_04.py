@@ -1,6 +1,6 @@
 """Check for fastapi-databases-orm-04: count the SELECTs the loop sends (SQLite, 3 authors)."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 from sqlalchemy import ForeignKey, create_engine, event, select
@@ -44,7 +44,7 @@ with Session(engine) as db:
     for author in db.scalars(select(Author).options(selectinload(Author.books))):
         [b.title for b in author.books]
 print(len(selects))
-'''
+"""
 
 
 def check(ctx, q):

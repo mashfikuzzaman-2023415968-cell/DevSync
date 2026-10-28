@@ -1,6 +1,6 @@
 """Shared helpers for the React question checks (not a check itself; no question id)."""
+
 import json
-import re
 
 PRELUDE = r"""
 process.on('uncaughtException', () => {});

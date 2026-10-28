@@ -1,6 +1,6 @@
 """Check for fastapi-async-performance-06: 50 sync-def sleeps use 40 threads; 50 async-def sleeps serialise."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 import asyncio, time
@@ -27,7 +27,7 @@ async def run(path):
         return time.perf_counter() - t
 
 print(round(asyncio.run(run("/a")), 1), round(asyncio.run(run("/b")), 1))
-'''
+"""
 
 
 def check(ctx, q):

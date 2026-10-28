@@ -1,6 +1,6 @@
 """Check for fastapi_validation_schemas_05: run the snippet for real; the marked option must equal the result."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 import json
@@ -25,7 +25,7 @@ def create(item: Item):
     return item
 
 print(show(c.post("/items", json={"name": "pen"})))
-'''
+"""
 
 
 def check(ctx, q):

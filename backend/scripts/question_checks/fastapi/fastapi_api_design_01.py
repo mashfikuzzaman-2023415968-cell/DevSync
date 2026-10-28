@@ -1,6 +1,6 @@
 """Check for fastapi_api_design_01: run the snippet for real; the marked option must equal the result."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 import json
@@ -25,7 +25,7 @@ def get_me():
     return {"route": "current-user"}
 
 print(show(c.get("/users/me")))
-'''
+"""
 
 
 def check(ctx, q):

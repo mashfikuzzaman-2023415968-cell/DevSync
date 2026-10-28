@@ -23,7 +23,9 @@ def _attempt(ctx, statement):
             conn.execute(statement)
         except psycopg.Error as exc:
             state = exc.sqlstate
-        has = conn.execute(f"SELECT has_table_privilege('{ROLE}', 'orders', 'SELECT')").fetchone()[0]
+        has = conn.execute(f"SELECT has_table_privilege('{ROLE}', 'orders', 'SELECT')").fetchone()[
+            0
+        ]
         return state, has
     finally:
         conn.execute(f'DROP SCHEMA "{schema}" CASCADE')

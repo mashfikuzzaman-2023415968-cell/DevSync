@@ -11,5 +11,7 @@ def check(ctx, q):
     assert ctx.sql_error(BASE + "DELETE FROM customers WHERE id = 1;\n") == "23503"
     # The alternatives only happen with an explicit ON DELETE clause, not by default.
     for clause in ("CASCADE", "SET NULL"):
-        ddl = BASE.replace("REFERENCES customers (id)", f"REFERENCES customers (id) ON DELETE {clause}")
+        ddl = BASE.replace(
+            "REFERENCES customers (id)", f"REFERENCES customers (id) ON DELETE {clause}"
+        )
         assert ctx.sql_error(ddl + "DELETE FROM customers WHERE id = 1;\n") is None

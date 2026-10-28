@@ -1,6 +1,6 @@
 """Check for fastapi-async-performance-02: two concurrent requests, time.sleep vs asyncio.sleep."""
 
-CODE = r'''
+CODE = r"""
 import warnings
 warnings.filterwarnings("ignore")
 import asyncio, time
@@ -27,7 +27,7 @@ async def both(path):
         return time.perf_counter() - t
 
 print(round(asyncio.run(both("/slow")), 2), round(asyncio.run(both("/ok")), 2))
-'''
+"""
 
 
 def check(ctx, q):
