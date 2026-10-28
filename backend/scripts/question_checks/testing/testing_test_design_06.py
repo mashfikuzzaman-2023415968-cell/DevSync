@@ -67,7 +67,7 @@ def split_files(snippet: str) -> dict[str, str]:
 
 def check(ctx: Ctx, q: dict[str, Any]) -> None:
     ns: dict[str, Any] = {}
-    exec(q["code_snippet"], ns)  # noqa: S102
+    exec(q["code_snippet"], ns)  # noqa: S102  # forbidden-ok: runs the bank's reviewed snippet, offline check only
     f = ns["is_leap"]
     for y in (2024, 2023, 1900):  # the tests the question says already pass
         assert f(y) == calendar.isleap(y)

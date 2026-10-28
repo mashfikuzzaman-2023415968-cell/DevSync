@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.testclient import TestClient
 
 app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True)
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True)  # forbidden-ok: the misconfiguration this question asks about, run offline only
 
 @app.get("/me")
 def me():

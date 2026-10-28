@@ -66,7 +66,7 @@ def split_files(snippet: str) -> dict[str, str]:
 
 def check(ctx: Ctx, q: dict[str, Any]) -> None:
     ns: dict[str, Any] = {}
-    exec(q["code_snippet"], ns)  # noqa: S102 - our own snippet
+    exec(q["code_snippet"], ns)  # noqa: S102  # forbidden-ok: runs the bank's reviewed snippet, offline check only
 
     def spec(t: float) -> int:
         return 0 if t >= 50 else 5

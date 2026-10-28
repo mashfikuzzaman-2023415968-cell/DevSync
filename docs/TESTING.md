@@ -23,6 +23,18 @@ signing, storage), `tests/unit/test_question_bank_seed.py`, `tests/integration/t
 `e2e/files/gps-photo.jpg`). Backend tests that write files use `UPLOAD_DIR=/tmp/uploads` in the
 test container.
 
+Role assessment adds (`docs/ROLE_ASSESSMENT.md`): `tests/algorithms/test_role_blueprint.py`,
+`test_assessment_selection.py` and `test_assessment_scoring.py` (179 algorithm tests, with the 35
+shared vectors in `tests/fixtures/assessment_scoring_vectors.json` that the SQL scoring must match);
+`tests/integration/test_role_assessment_db.py` (166: every definer as the web role, RLS on the new
+tables, triggers, grants, SQL/Python scoring parity); `tests/security/test_role_assessment_api.py`
+(91: lifecycle, one-way answers, window token, deadline and grace, two-leave rule, IDOR, mass
+assignment, the 2 KB body limit, admin void/accommodations with step-up, and every JSON response
+scanned for answer data); frontend `features/assessment/assessment.test.tsx` (22); E2E
+`e2e/role-assessment.spec.ts` (6) and the rewritten Demo 1 walkthrough. The question bank has its
+own checks: `make question-bank` (validator, `--check` in the gate) and `make question-checks` (99
+execution checks that run each code question's snippet in Python, Node or a throwaway PostgreSQL).
+
 E2E notes: every test starts with fresh rate-limit counters (`e2e/test.ts`, D27) and runs on one
 worker; signed-in tests seed users through the test-only router and sign in via the API. Screens
 with a fixed address are listed in `e2e/screens.ts`; screens that need state (verification, the
@@ -143,7 +155,7 @@ covered nor listed here.
 
 `smoke` (2), `auth` (6), `shell` (7), `home` (11), `csp` (2), `a11y` (2, every screen in
 `e2e/screens.ts`), `responsive` (3, viewport matrix), `visual` (4) + `kit` (2) (130 baselines),
-`perf` (1, `@gpu`), `phase3` (4), `phase4` (3), `phase5` (6), `demos/demo-1` (1, the Demo 1
+`perf` (1, `@gpu`), `phase3` (4), `phase4` (3), `phase5` (6), `role-assessment` (6), `demos/demo-1` (1, the Demo 1
 walkthrough). The axe, responsive and visual specs each add one run over the screens that need
 state (`e2e/stateful-screens.ts`).
 
