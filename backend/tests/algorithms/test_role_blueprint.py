@@ -318,3 +318,90 @@ def test_duplicate_codes_across_candidate_skills_are_refused() -> None:
     inp = dataclasses.replace(_input(milestones=[{FASTAPI, PG}]), catalogue=clash)
     with pytest.raises(ValueError, match="unique"):
         rb.build_blueprint(inp)
+
+
+# ------------------------------------------------------------------ edge branches of the steps
+
+
+def _cand(code: str, score: int, primary: bool = True, pos: int = 1) -> rb._Candidate:
+    comp = rb.Competency(f"x.{code}", "x", code, code, primary, (code,), pos)
+    return rb._Candidate(comp, primary, rb.Fraction(score), ())
+
+
+def test_competency_count_by_difficulty() -> None:
+    c = rb.BlueprintCompetency("id", "s", "code", "Name", 3000, 4, 1, 2, 1, ())
+    assert [c.of(d) for d in (1, 2, 3)] == [1, 2, 1]
+    with pytest.raises(KeyError):
+        c.of(4)
+
+
+def test_a_blank_keyword_never_matches() -> None:
+    text = rb.normalise_text("Login with roles")
+    assert rb.keyword_hits(text, "") == 0
+    assert rb.keyword_hits(text, " \t\x00 ") == 0
+    assert rb.keyword_hits(text, "login") == 1
+
+
+def test_select_swaps_low_related_for_primary_until_three_are_primary() -> None:
+    # Top six hold only two primary competencies; two more primary ones rank lower (step 7a).
+    ranked = sorted(
+        [_cand(f"p{i}", 100 - i, True, i) for i in (1, 2)]
+        + [_cand(f"r{i}", 90 - i, False, i) for i in range(1, 5)]
+        + [_cand(f"p{i}", 50 - i, True, i) for i in (3, 4)],
+        key=rb._Candidate.rank_key,
+    )
+    chosen = rb._select(ranked)
+    codes = [c.competency.code for c in chosen]
+    assert len(chosen) == 6
+    assert sum(c.primary for c in chosen) == 3
+    assert "p3" in codes  # the best spare primary
+    assert "p4" not in codes
+    assert "r4" not in codes  # the lowest-ranked related one made room
+    assert codes == [c.competency.code for c in sorted(chosen, key=rb._Candidate.rank_key)]
+
+
+def test_select_keeps_the_top_six_when_enough_are_primary() -> None:
+    ranked = [_cand(f"p{i}", 100 - i, True, i) for i in range(1, 9)]
+    assert [c.competency.code for c in rb._select(ranked)] == [f"p{i}" for i in range(1, 7)]
+
+
+def test_weights_when_every_share_is_clamped_at_once() -> None:
+    # One huge score and three tiny ones: every share is clamped in the same pass.
+    w = rb.weights_bp([_cand("a", 10_000), _cand("b", 1), _cand("c", 1), _cand("d", 1)])
+    assert w is not None
+    assert sum(w.values()) == 10_000
+    assert all(1_000 <= v <= 4_000 and v % 500 == 0 for v in w.values())
+    assert w["a"] == 4_000
+
+
+def test_weights_spread_the_excess_over_the_cap_to_the_next_largest() -> None:
+    # Three competencies at the 4,000 cap would make 12,000; two at the cap make 8,000 and the
+    # third takes the rest — the rounding excess over the cap moves down, never past it.
+    w = rb.weights_bp([_cand("a", 1000), _cand("b", 1000), _cand("c", 1)])
+    assert w is not None
+    assert sum(w.values()) == 10_000
+    assert max(w.values()) <= 4_000
+
+
+def test_no_valid_weights_for_too_few_competencies() -> None:
+    # Two competencies can't reach 10,000 under the 4,000 cap: no valid set (step 8).
+    assert rb.weights_bp([_cand("a", 5), _cand("b", 5)]) is None
+
+
+def test_no_valid_weights_for_too_many_competencies() -> None:
+    # Eleven at the 1,000 minimum already exceed 10,000.
+    assert rb.weights_bp([_cand(f"c{i}", 5) for i in range(11)]) is None
+
+
+def test_allocation_takes_back_questions_when_the_minimum_of_one_overshoots() -> None:
+    # Quotas 2.0 and 4 × 0.75: the minimum of one makes 6 questions for 5; the only competency
+    # with more than one gives one back.
+    weights = {"a": 4_000, "b": 1_500, "c": 1_500, "d": 1_500, "e": 1_500}
+    assert rb.allocate_questions(weights, 5) == {"a": 1, "b": 1, "c": 1, "d": 1, "e": 1}
+    assert rb.allocate_questions(weights, 6) == {"a": 2, "b": 1, "c": 1, "d": 1, "e": 1}
+
+
+def test_allocation_refuses_fewer_questions_than_competencies() -> None:
+    weights = {"a": 4_000, "b": 1_500, "c": 1_500, "d": 1_500, "e": 1_500}
+    with pytest.raises(ValueError, match="fewer questions"):
+        rb.allocate_questions(weights, 4)

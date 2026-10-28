@@ -324,6 +324,8 @@ def weights_bp(chosen: Sequence[_Candidate]) -> dict[str, int] | None:
 
 def allocate_questions(weights: Mapping[str, int], question_count: int) -> dict[str, int]:
     """Largest remainder over the weights, minimum one question each (step 9)."""
+    if question_count < len(weights):  # settings allow 8–20 questions for at most 6 competencies
+        raise ValueError("fewer questions than competencies: one each is impossible")
     quotas = {k: Fraction(question_count * w, TOTAL_BP) for k, w in weights.items()}
     counts = {k: max(1, floor(q)) for k, q in quotas.items()}
     remainder = {k: quotas[k] - floor(quotas[k]) for k in quotas}
