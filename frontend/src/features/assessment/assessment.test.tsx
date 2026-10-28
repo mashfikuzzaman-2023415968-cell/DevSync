@@ -3,12 +3,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse, type JsonBodyType } from "msw";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AssessmentResult, AssessmentStatus } from "@/api/types";
 import { secondsLeft } from "@/components/ui/CountdownTimer";
 import { server } from "@/test/server";
 import { resumeAttempt } from "./api";
+import AssessmentPage from "./AssessmentPage";
 import { AssessmentRunner } from "./AssessmentRunner";
 import { AssessmentStatusCard, canBid } from "./AssessmentStatusCard";
 import { ResultView } from "./ResultView";
@@ -485,5 +486,90 @@ describe("useBidDraft", () => {
       again.result.current.clear();
     });
     expect(window.sessionStorage.getItem(`devsync:bid-draft:${PID}`)).toBeNull();
+  });
+});
+
+describe("AssessmentPage", () => {
+  function page() {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={[`/dev/assessments/${AID}`]}>
+          <Routes>
+            <Route path="/dev/assessments/:attemptId" element={<AssessmentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  }
+
+  function resumeWith(response: () => Response) {
+    server.use(
+      http.get(`${API}/auth/csrf`, () => new HttpResponse(null, { status: 204 })),
+      http.post(`${API}/assessment-attempts/${AID}/resume`, response),
+      http.post(`${API}/assessment-attempts/${AID}/heartbeat`, () =>
+        HttpResponse.json({
+          server_now: new Date().toISOString(),
+          deadline_at: new Date().toISOString(),
+        }),
+      ),
+    );
+  }
+
+  it("resumes an open attempt and opens the runner only on the click", async () => {
+    resumeWith(() => HttpResponse.json(attemptState() as JsonBodyType));
+    page();
+    const go = await screen.findByRole("button", { name: "Continue assessment" });
+    expect(screen.getByText(/timer didn’t stop/)).toBeInTheDocument();
+    // Nothing of the question is shown before the candidate chooses to continue.
+    expect(screen.queryByText("Question number 1?")).not.toBeInTheDocument();
+    await userEvent.click(go);
+    expect(await screen.findByText("Question number 1?")).toBeInTheDocument();
+  });
+
+  it("shows the result of an attempt that already ended", async () => {
+    resumeWith(() =>
+      HttpResponse.json(
+        {
+          error: {
+            code: "ATTEMPT_CLOSED",
+            message: "This assessment has ended.",
+            request_id: "r-1",
+            result: RESULT,
+          },
+        } as JsonBodyType,
+        { status: 409 },
+      ),
+    );
+    page();
+    expect(await screen.findByRole("heading", { name: /Passed/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Find projects" })).toHaveAttribute(
+      "href",
+      "/dev/find",
+    );
+    expect(screen.queryByRole("button", { name: "Continue assessment" })).not.toBeInTheDocument();
+  });
+
+  it("says when the attempt isn't there (another developer's, or unknown)", async () => {
+    resumeWith(() =>
+      HttpResponse.json(
+        { error: { code: "NOT_FOUND", message: "We couldn't find that.", request_id: "r-2" } },
+        { status: 404 },
+      ),
+    );
+    page();
+    expect(await screen.findByText("We couldn’t find this assessment")).toBeInTheDocument();
+  });
+
+  it("offers a retry when the server fails", async () => {
+    resumeWith(() =>
+      HttpResponse.json(
+        { error: { code: "INTERNAL_ERROR", message: "Something went wrong.", request_id: "r-3" } },
+        { status: 500 },
+      ),
+    );
+    page();
+    expect(await screen.findByText("The assessment didn’t open")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Try again/i })).toBeInTheDocument();
   });
 });

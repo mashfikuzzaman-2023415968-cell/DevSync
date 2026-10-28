@@ -5,6 +5,12 @@ otherwise. The test-only routes (`/__test__/...`) seed reputation, skills, passe
 attempts and read the answer key; they are not part of the product API and their responses are
 never scanned for answer data. Everything a candidate or a client can reach IS scanned: every
 JSON response made through `call()` is checked for answer or correctness fields.
+
+Through the API these tests drive `app/api/v1/role_assessments.py` and
+`app/api/v1/admin_assessments.py`, the services `app/services/role_assessments.py` and
+`app/services/assessment_admin.py` (with `app/schemas/assessment_admin.py`), the repository
+`app/repositories/role_assessments.py` and, through the test-only routes,
+`app/services/testing/role_attempts.py`.
 """
 
 from __future__ import annotations
