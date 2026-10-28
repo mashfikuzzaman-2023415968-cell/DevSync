@@ -349,6 +349,15 @@ class ReputationSummary(BaseModel):
     seeded: bool
 
 
+class PublicRoleAssessment(BaseModel):
+    """A passed role assessment as others see it (no project, no answers, no flags)."""
+
+    label: str
+    score: Decimal
+    at: datetime
+    valid_until: datetime
+
+
 class DeveloperPublicProfile(BaseModel):
     """What others may see of a developer (never email or phone)."""
 
@@ -361,7 +370,14 @@ class DeveloperPublicProfile(BaseModel):
     github_username: str | None
     visibility: VisibilityName
     skills: list[PublicSkill]
-    verified_scores: list[VerifiedScore]
+    verified_scores: list[VerifiedScore] = Field(
+        description="Practice-test results (best per skill); not evidence for bidding."
+    )
+    role_assessments: list[PublicRoleAssessment] = Field(
+        default_factory=list,
+        description="Valid passed role assessments: a competency result for a kind of role, "
+        "not completed work (role assessment spec §11.6).",
+    )
     portfolio: list[PublicPortfolioItem]
     certificates: list[PublicCertificate]
     reputation: ReputationSummary | None = Field(

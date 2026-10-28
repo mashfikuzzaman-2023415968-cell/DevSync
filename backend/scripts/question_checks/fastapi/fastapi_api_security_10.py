@@ -18,7 +18,7 @@ def done(next: str = "/"):
 
 c = TestClient(app, follow_redirects=False)
 out = {}
-for v in ["https://evil.example/x", "evil.example/x", "//evil.example/x", "javascript:alert(1)"]:
+for v in ["https://evil.example/x", "evil.example.net/x", "//evil.example/x", "javascript:alert(1)"]:
     out[v] = c.get("/login/done", params={"next": v}).headers["location"]
 print(json.dumps(out))
 '''

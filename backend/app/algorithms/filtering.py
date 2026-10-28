@@ -79,6 +79,10 @@ class BidInput:
     active: bool  # account active and not suspended
     available: bool  # availability reservation feasible (§9.17)
     self_dealing: bool  # open confirmed SELF_DEALING flag with this client
+    # Role assessment (role assessment spec §8.2): False when the evidence is a role assessment
+    # that was not passed (failed, ended early or voided); None when the evidence is not a role
+    # assessment (a slot falling back to practice tests). A pass never relaxes anything else.
+    assessment_passed: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -149,6 +153,16 @@ _PRECEDENCE = (
 )
 
 
+def _has_evidence(bid: BidInput, params: FilterParams) -> bool:
+    """The newcomer evidence check: score ≥ pass mark and not a failed role assessment (§8.2)."""
+    score = bid.skill_evidence_score
+    return (
+        score is not None
+        and _ge(score, params.newcomer_pass_mark)
+        and bid.assessment_passed is not False
+    )
+
+
 def classify_bid(
     bid: BidInput, project: ProjectInput, params: FilterParams, p0: float, c0: float
 ) -> ReasonCode | None:
@@ -158,9 +172,7 @@ def classify_bid(
     thresholds are the relaxable ones; everything else is a fixed gate.
     """
     newcomer = bid.is_newcomer and params.mode is Mode.DEVSYNC
-    has_evidence = bid.skill_evidence_score is not None and _ge(
-        bid.skill_evidence_score, params.newcomer_pass_mark
-    )
+    has_evidence = _has_evidence(bid, params)
     # Fixed gates, then the newcomer/performance and competency gates (the relaxable P0/C0 ones).
     # Newcomer rule (§9.2): the P0 check becomes "skill evidence ≥ pass_mark"; the C0 check applies
     # only when `newcomer_competency_check` is on (newcomer C is built from starting values).
@@ -309,12 +321,7 @@ def explain_bid(
     if newcomer:
         score = bid.skill_evidence_score
         checks.append(
-            Check(
-                "skill_evidence",
-                score is not None and _ge(score, params.newcomer_pass_mark),
-                params.newcomer_pass_mark,
-                score,
-            )
+            Check("skill_evidence", _has_evidence(bid, params), params.newcomer_pass_mark, score)
         )
     else:
         checks.append(Check("performance", _ge(bid.p, p0), p0, bid.p))

@@ -11,7 +11,13 @@ from sqlalchemy import func, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.bidding import AvailabilityReservation, Bid, BidStatus, ReservationStatus
-from app.models.profiles import DeveloperProfile, DeveloperSkill, PortfolioItem, SkillEvidence
+from app.models.profiles import (
+    DeveloperProfile,
+    DeveloperSkill,
+    EvidenceSource,
+    PortfolioItem,
+    SkillEvidence,
+)
 
 
 async def get_bid(db: AsyncSession, bid_id: uuid.UUID, *, for_update: bool = False) -> Bid | None:
@@ -128,12 +134,17 @@ async def skills_by_developer(
 async def best_evidence_by_developer(
     db: AsyncSession, developer_ids: Sequence[uuid.UUID]
 ) -> dict[uuid.UUID, dict[uuid.UUID, float]]:
-    """Best skill-evidence score per (developer, skill) — the newcomer rule's input."""
+    """Best practice/other skill-evidence score per (developer, skill). Role assessment results
+    are per role, not per skill, and are read separately (`services/role_assessments.py`); this
+    is the newcomer rule's input only where a slot falls back to practice tests (Decision 10)."""
     out: dict[uuid.UUID, dict[uuid.UUID, float]] = defaultdict(dict)
     if developer_ids:
         rows = await db.execute(
             select(SkillEvidence.user_id, SkillEvidence.skill_id, func.max(SkillEvidence.score))
-            .where(SkillEvidence.user_id.in_(developer_ids))
+            .where(
+                SkillEvidence.user_id.in_(developer_ids),
+                SkillEvidence.source != EvidenceSource.ROLE_ASSESSMENT,
+            )
             .group_by(SkillEvidence.user_id, SkillEvidence.skill_id)
         )
         for user_id, skill_id, score in rows:

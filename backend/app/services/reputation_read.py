@@ -18,12 +18,12 @@ import uuid
 from dataclasses import dataclass
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.algorithms.reputation import NewcomerInputs, NewcomerParams, newcomer_snapshot
 from app.models.identity import User
-from app.models.profiles import DeveloperProfile, Skill, SkillEvidence
+from app.models.profiles import DeveloperProfile, EvidenceSource, Skill, SkillEvidence
 from app.models.reputation import ReputationSnapshot
 from app.schemas.platform_settings import PlatformSettingsValues
 
@@ -80,11 +80,23 @@ async def _verified_items(db: AsyncSession, developer_id: uuid.UUID) -> int:
 
 
 async def _evidence_domains(db: AsyncSession, developer_id: uuid.UUID, pass_mark: Decimal) -> int:
-    """Distinct skill domains with a passing skill-evidence score (for ω⁰)."""
+    """Distinct skill domains with a passing skill-evidence score (for ω⁰). A role assessment
+    counts only while it is a valid pass (passed, not voided, not expired; role assessment spec
+    §8.4); practice tests count as before."""
+    role = SkillEvidence.source == EvidenceSource.ROLE_ASSESSMENT
+    valid_role_pass = and_(
+        SkillEvidence.passed.is_(True),
+        SkillEvidence.voided_at.is_(None),
+        SkillEvidence.valid_until > func.now(),
+    )
     rows = await db.execute(
         select(Skill.domain)
         .join(SkillEvidence, SkillEvidence.skill_id == Skill.id)
-        .where(SkillEvidence.user_id == developer_id, SkillEvidence.score >= pass_mark)
+        .where(
+            SkillEvidence.user_id == developer_id,
+            SkillEvidence.score >= pass_mark,
+            or_(~role, valid_role_pass),
+        )
         .distinct()
     )
     return len(rows.all())

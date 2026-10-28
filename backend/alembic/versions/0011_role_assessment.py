@@ -24,6 +24,7 @@ Create Date: 2026-10-28 00:00:00.000000+00:00
 
 from __future__ import annotations
 
+import importlib.util
 import json
 from collections.abc import Sequence
 from pathlib import Path
@@ -799,6 +800,41 @@ CREATE TRIGGER assessment_blueprints_immutable BEFORE UPDATE OR DELETE ON assess
 """
 
 TRIGGER_FUNCTIONS = ("question_bank_guard()", "blueprint_immutable()")
+
+
+def _profile_0008() -> str:
+    """`public_developer_profile` as migration 0008 left it (restored on downgrade)."""
+    spec = importlib.util.spec_from_file_location(
+        "m0008", Path(__file__).with_name("0008_public_best_score.py")
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return str(module.BEST)
+
+
+# Public profiles (§11.6): `verified_scores` are practice-test results only (best per skill, as
+# in 0008); `role_assessments` lists valid passes with the role label — never project names,
+# failed or ended attempts, flags or answers.
+_OLD_SCORES = """FROM (SELECT DISTINCT ON (skill_id) skill_id, score, at FROM skill_evidence
+            WHERE user_id = u.id ORDER BY skill_id, score DESC, at DESC) e
+      JOIN skills s ON s.id = e.skill_id), '[]'),"""
+_NEW_SCORES = """FROM (SELECT DISTINCT ON (skill_id) skill_id, score, at FROM skill_evidence
+            WHERE user_id = u.id AND source = 'TEST'
+            ORDER BY skill_id, score DESC, at DESC) e
+      JOIN skills s ON s.id = e.skill_id), '[]'),
+    'role_assessments', coalesce((
+      SELECT jsonb_agg(jsonb_build_object('label', b.label, 'score', e.score::text, 'at', e.at,
+                                          'valid_until', e.valid_until) ORDER BY e.at DESC)
+      FROM skill_evidence e JOIN assessment_blueprints b ON b.id = e.blueprint_id
+      WHERE e.user_id = u.id AND e.source = 'ROLE_ASSESSMENT' AND e.passed
+        AND e.voided_at IS NULL AND e.valid_until > now()), '[]'),"""
+
+
+def _profile_0011() -> str:
+    old = _profile_0008()
+    assert _OLD_SCORES in old, "0008's public_developer_profile changed"
+    return old.replace(_OLD_SCORES, _NEW_SCORES)
 NEW_TABLES = ("competencies", "assessment_blueprints", "slot_assessments", "user_accommodations")
 
 
@@ -1125,6 +1161,7 @@ def upgrade() -> None:
     _ddl(HELPERS)
     _ddl(DEFINERS)
     _ddl(TRIGGERS)
+    _ddl(_profile_0011())
     for fn in HELPER_NAMES:
         op.execute(f"REVOKE ALL ON FUNCTION {fn} FROM PUBLIC")
     for fn in DEFINER_NAMES:
@@ -1158,6 +1195,7 @@ def downgrade() -> None:
     for fn in TRIGGER_FUNCTIONS:
         op.execute(f"DROP FUNCTION IF EXISTS {fn}")
     _ddl(ORIGINAL_PRACTICE)
+    _ddl(_profile_0008())
 
     # Role data goes first: its rows can't exist in the 0010 schema.
     op.execute("UPDATE bids SET assessment_evidence_id = NULL")
