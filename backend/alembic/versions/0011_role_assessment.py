@@ -277,7 +277,7 @@ BEGIN
   SELECT jsonb_agg(jsonb_build_object(
            'competency_id', id, 'code', code, 'name', name, 'weight_bp', weight_bp,
            'earned_w', earned, 'possible_w', possible, 'score_bp', score_bp) ORDER BY ord),
-         (sum(weight_bp::bigint * score_bp) / 10000)::int,
+         (sum(weight_bp::bigint * score_bp)::bigint / 10000)::int,  -- integer division: floor
          bool_and(weight_bp < (b.pass_rule ->> 'heavy_weight_bp')::int
                   OR score_bp >= (b.pass_rule ->> 'floor_bp')::int)
   INTO v_breakdown, v_overall, v_heavy_ok
@@ -289,7 +289,7 @@ BEGIN
   UPDATE test_attempts SET
     submitted_at = p_now, score = v_score, breakdown = v_breakdown, overall_bp = v_overall,
     passed = v_passed, terminated_reason = v_reason,
-    flagged = flagged OR v_reason = 'FOCUS_LIMIT', updated_at = p_now
+    flagged = flagged OR coalesce(v_reason = 'FOCUS_LIMIT', false), updated_at = p_now
   WHERE id = p_attempt;
   INSERT INTO skill_evidence (user_id, skill_id, source, score, attempt_id, at, blueprint_id,
                               passed, valid_until)
@@ -518,6 +518,7 @@ CREATE FUNCTION record_role_answer(p_attempt uuid, p_question uuid, p_choice int
                                    p_now timestamptz, p_token_hash bytea)
 RETURNS TABLE (status text, current_index int)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public AS $$
+#variable_conflict use_column
 DECLARE
   a test_attempts%ROWTYPE;
   v_total int;
@@ -541,7 +542,7 @@ BEGIN
   IF a.current_index > 0 THEN
     v_last := a.answers_locked -> (jsonb_array_length(a.answers_locked) - 1);
     IF (v_last ->> 'question_id')::uuid = p_question THEN
-      IF (v_last -> 'choice') IS NOT DISTINCT FROM to_jsonb(p_choice) THEN
+      IF (v_last -> 'choice') = coalesce(to_jsonb(p_choice), 'null'::jsonb) THEN
         RETURN QUERY SELECT 'DUPLICATE', a.current_index::int;
         RETURN;
       END IF;
@@ -588,6 +589,7 @@ CREATE FUNCTION record_focus_event(p_attempt uuid, p_seq int, p_type text, p_now
                                    p_token_hash bytea)
 RETURNS TABLE (status text, focus_leaves int)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public AS $$
+#variable_conflict use_column
 DECLARE
   a test_attempts%ROWTYPE;
   v_event jsonb;
@@ -1171,7 +1173,12 @@ def upgrade() -> None:
     _ddl(TRIGGERS)
     _ddl(_profile_0011())
     for fn in HELPER_NAMES:
-        op.execute(f"REVOKE ALL ON FUNCTION {fn} FROM PUBLIC")
+        # The database's default privileges grant EXECUTE to the runtime roles; only the
+        # definers (running as the owner) may call these.
+        op.execute(
+            f"REVOKE ALL ON FUNCTION {fn} FROM PUBLIC, devsync_app, devsync_worker, "
+            "devsync_readonly"
+        )
     for fn in DEFINER_NAMES:
         op.execute(f"REVOKE ALL ON FUNCTION {fn} FROM PUBLIC, devsync_readonly")
         op.execute(f"GRANT EXECUTE ON FUNCTION {fn} TO {DML_ROLES}")

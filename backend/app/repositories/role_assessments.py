@@ -50,9 +50,12 @@ def domain_code(exc: DBAPIError) -> tuple[str | None, dict[str, Any]]:
     """The domain code (P0001 message) and its JSON detail, if the function raised one."""
     if sqlstate(exc) != "P0001":
         return None, {}
+    # asyncpg keeps the server's message and detail on the original error (the DBAPI adapter's
+    # `__cause__`); psycopg on `diag`.
+    cause = getattr(exc.orig, "__cause__", None)
     diag = getattr(exc.orig, "diag", None)
-    message = getattr(diag, "message_primary", None)
-    detail = getattr(diag, "message_detail", None)
+    message = getattr(cause, "message", None) or getattr(diag, "message_primary", None)
+    detail = getattr(cause, "detail", None) or getattr(diag, "message_detail", None)
     try:
         extra = json.loads(detail) if detail else {}
     except ValueError:
