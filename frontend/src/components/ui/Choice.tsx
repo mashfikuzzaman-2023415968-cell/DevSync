@@ -85,7 +85,12 @@ export function RadioGroup({
       <legend className={cn("mb-2 text-body-sm font-medium text-text", hideLegend && "sr-only")}>
         {legend}
       </legend>
-      <RadioGroupPrimitive.Root {...rest} className={cn(cards ? "grid gap-3" : "space-y-1")}>
+      {/* A flex column, not a one-column grid: WebKit keeps a grid row at its old height when a
+          resize makes a card's text wrap onto more lines, so the text spills out of the card. */}
+      <RadioGroupPrimitive.Root
+        {...rest}
+        className={cn(cards ? "flex flex-col gap-3" : "space-y-1")}
+      >
         {options.map((o) => {
           const id = `${base}-${o.value}`;
           return (
