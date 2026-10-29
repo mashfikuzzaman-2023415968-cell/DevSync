@@ -102,7 +102,7 @@ test("leaving twice ends the attempt, and the admin sees it flagged @e2e", async
   const dev = await apiSignIn(page, base, "DEVELOPER", name);
   await addSkillEvidence(page.request, base, dev.userId, "React", 0.7);
   await openSlot(page, projectId);
-  await startAssessment(page);
+  const attemptId = await startAssessment(page);
   await answerNext(page, 0, 1);
   await leave(page);
   const warning = page.getByRole("alertdialog", { name: "You left the assessment" });
@@ -124,8 +124,13 @@ test("leaving twice ends the attempt, and the admin sees it flagged @e2e", async
   const row = admin.getByRole("listitem").filter({ hasText: name });
   await expect(row).toBeVisible();
   await expect(row.getByText("Ended (left twice)")).toBeVisible();
-  await row.getByRole("link", { name: "Open" }).click();
-  await expect(admin.getByRole("heading", { name: "Focus events" })).toBeVisible();
+  const open = row.getByRole("link", { name: "Open" });
+  await expect(open).toHaveAttribute("href", `/admin/assessments/${attemptId}`);
+  await open.click();
+  await admin.waitForURL((url) => url.pathname === `/admin/assessments/${attemptId}`);
+  await expect(admin.getByRole("heading", { name: "Focus events" })).toBeVisible({
+    timeout: 15_000,
+  });
   await expect(admin.getByText("visibility hidden").first()).toBeVisible();
   await ctx.close();
 });
@@ -161,6 +166,8 @@ test("a reload counts one leave and resumes at the same question @e2e", async ({
   const key = await roleAnswerKey(page.request, attemptId);
   await answerNext(page, key[0]?.answer ?? 0, 1);
   await answerNext(page, key[1]?.answer ?? 0, 2);
+  // The answer is saved once the next question shows; a reload before that cancels the request.
+  await expect(page.getByTestId("assessment-runner").getByText("Question 3 of 12")).toBeVisible();
   await page.reload();
   await openSlot(page, projectId);
   await expect(page.getByText("Your assessment for this role is in progress.")).toBeVisible();
