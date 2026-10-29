@@ -911,3 +911,17 @@ decisions are adopted as written:
   on.
 - **Lint policy.** The execution checks follow the tests' lint policy (`pyproject.toml`
   per-file rules), since they are test code.
+
+**D75 · Gate fixes found while closing the role assessment branch (Taeen, 2026-10-29).**
+- **A documented 413 counts as rejecting invalid data in the fuzz suite.** `POST /client-errors`
+  refuses an oversized body before parsing it (as it should), so a body that is both invalid and
+  too large gets 413, not 422. Schemathesis's negative-data check doesn't list 413, and failed
+  the first time the derandomised fuzzer drew such a body. Only that one check is skipped, and
+  only for a 413 response; the status must still be documented, and every other check (no 5xx,
+  response schema, headers) applies. Same shape as the existing fuzzed-cursor exception.
+- **Smooth scrolling is off on every test page**, including pages a test opens in a context of
+  its own (`noSmoothScroll` in `e2e/test.ts`, extending D53).
+- **Answer cards stack in a flex column** (`Choice.tsx`): in a one-column grid WebKit kept a row
+  at its old height after a resize made the text wrap, so a long option spilled out of its card.
+- **`dnspython` 2.9.0** for CVE-2026-114605 (transitive, via `email-validator`; only that
+  package re-resolved).

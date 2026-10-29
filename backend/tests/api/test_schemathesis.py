@@ -42,7 +42,7 @@ from hypothesis.stateful import (
     run_state_machine_as_test,
 )
 from schemathesis.python.asgi import ASGIClient
-from schemathesis.specs.openapi.checks import positive_data_acceptance
+from schemathesis.specs.openapi.checks import negative_data_rejection, positive_data_acceptance
 
 from app.core.config import Environment
 from app.main import create_app
@@ -92,15 +92,19 @@ def _validate(
     excluded: list[schemathesis.CheckFunction] | None = None,
     **transport: Any,
 ) -> None:
-    """Full validation, except that a 422 naming a fuzzed page cursor is the right answer to
-    it: a cursor is an opaque token only the server issues, so a generated one is (almost) never
-    valid. Any other response to such a request — and every request without a cursor — is
+    """Full validation, with two answers that are right but that schemathesis doesn't expect:
+    a 422 naming a fuzzed page cursor (a cursor is an opaque token only the server issues, so a
+    generated one is almost never valid), and a documented 413 — an oversized body is refused
+    before it is parsed, so an invalid body that is also too large gets 413, not 422; only the
+    "invalid data is rejected with 4xx-but-not-413" check is skipped for it. Everything else is
     validated in full."""
     assert response.status_code < 500, response.text
     fuzzed_cursor = isinstance(case.query, dict) and case.query.get("cursor") is not None
     refused = response.status_code == 422 and response.json()["error"].get("fields", {})
     if fuzzed_cursor and refused and "cursor" in refused:
         return
+    if response.status_code == 413:
+        excluded = [*(excluded or []), negative_data_rejection]
     case.validate_response(response, excluded_checks=excluded, transport_kwargs=transport or None)
 
 
