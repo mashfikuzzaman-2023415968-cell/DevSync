@@ -16,21 +16,28 @@ export async function resetLimits(request: APIRequestContext): Promise<void> {
   if (r.status() !== 204) throw new Error(`rate-limit reset failed: ${String(r.status())}`);
 }
 
+/**
+ * The app scrolls smoothly (index.css). When Playwright scrolls an element into view to click it,
+ * Firefox and WebKit can still be animating, so the click lands where the element used to be and
+ * is lost (D53). Tests turn the animation off — the fixture's page, and any page a test opens in
+ * a context of its own; nothing asserts on scroll motion.
+ */
+export async function noSmoothScroll(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    // The <html> element may not exist yet (WebKit) or be replaced (Firefox) when this runs,
+    // so set it again once the page is parsed.
+    const off = () => {
+      const root = document.documentElement as HTMLElement | null;
+      if (root) root.style.scrollBehavior = "auto";
+    };
+    document.addEventListener("DOMContentLoaded", off);
+    off();
+  });
+}
+
 export const test = base.extend<{ freshLimits: undefined }>({
-  // The app scrolls smoothly (index.css). When Playwright scrolls an element into view to click
-  // it, Firefox and WebKit can still be animating, so the click lands where the element used to
-  // be and is lost (D53). Tests turn the animation off; nothing asserts on scroll motion.
   page: async ({ page }, provide) => {
-    await page.addInitScript(() => {
-      // The <html> element may not exist yet (WebKit) or be replaced (Firefox) when this runs,
-      // so set it again once the page is parsed.
-      const off = () => {
-        const root = document.documentElement as HTMLElement | null;
-        if (root) root.style.scrollBehavior = "auto";
-      };
-      document.addEventListener("DOMContentLoaded", off);
-      off();
-    });
+    await noSmoothScroll(page);
     await provide(page);
   },
   freshLimits: [

@@ -10,7 +10,7 @@
  * deadline through the database: the shortest time limit a setting allows is five minutes.
  */
 import type { Page } from "@playwright/test";
-import { expect, optionChosen, test } from "./test";
+import { expect, noSmoothScroll, optionChosen, test } from "./test";
 
 /** Eight letters from the clock (display names allow letters, not digits). */
 function uniqueLetters(): string {
@@ -119,6 +119,7 @@ test("leaving twice ends the attempt, and the admin sees it flagged @e2e", async
 
   const ctx = await browser.newContext({ ignoreHTTPSErrors: true, baseURL: base });
   const admin = await ctx.newPage();
+  await noSmoothScroll(admin); // older flagged attempts can push this row below the fold
   await apiSignIn(admin, base, "ADMIN", "Administrator");
   await admin.goto("/admin/assessments");
   const row = admin.getByRole("listitem").filter({ hasText: name });
