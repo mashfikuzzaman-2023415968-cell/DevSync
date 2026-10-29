@@ -924,6 +924,14 @@ decisions are adopted as written:
   a value padded with control characters past the limit was accepted (201) although the schema
   says it is refused (found by the fuzz suite on `POST /me/portfolio`). The raw input is now
   checked first (`string_too_long`, 422); cleaning is unchanged.
+- **`make demo-reset` keeps the question bank.** The bank's `reviewed_by_user` foreign key (0011)
+  put it in the `TRUNCATE users … CASCADE`, so every demo reset emptied it and the demo seed then
+  failed with BLUEPRINT_UNAVAILABLE (the test stack never runs the reset, so the gate didn't see
+  it). The reset now holds the bank's rows in memory and puts them back without the reviewer link
+  (the migrator may not create temporary tables). A test fails if another table gains a foreign
+  key to `users` without being classified as user data or preserved. The demo database's bank,
+  already emptied once, was refilled from the test database's migration-seeded rows by skill name
+  and competency code.
 - **Smooth scrolling is off on every test page**, including pages a test opens in a context of
   its own (`noSmoothScroll` in `e2e/test.ts`, extending D53).
 - **Answer cards stack in a flex column** (`Choice.tsx`): in a one-column grid WebKit kept a row
