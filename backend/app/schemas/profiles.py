@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 import unicodedata
 import uuid
+from collections.abc import Callable
 from datetime import date, datetime
 from decimal import Decimal
 from functools import lru_cache
@@ -23,6 +24,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from pydantic_core import PydanticCustomError
 
 from app.schemas.common import StrictRequest
 
@@ -85,10 +87,27 @@ def _unique(values: list[uuid.UUID]) -> list[uuid.UUID]:
     return values
 
 
-Line120 = Annotated[str, BeforeValidator(_line), Field(max_length=120)]
-Title = Annotated[str, BeforeValidator(_line), Field(min_length=1, max_length=120)]
-SourceName = Annotated[str, BeforeValidator(_line), Field(min_length=1, max_length=80)]
-Text2000 = Annotated[str, BeforeValidator(_text), Field(max_length=2000)]
+def _cleaned(clean: Callable[[object], object], limit: int) -> BeforeValidator:
+    """Clean the text, but hold the input to the documented maxLength first: otherwise a value
+    padded with control characters would pass once they are stripped, and the API would accept
+    a body its own schema rejects."""
+
+    def run(value: object) -> object:
+        if isinstance(value, str) and len(value) > limit:
+            raise PydanticCustomError(
+                "string_too_long",
+                "String should have at most {max_length} characters",
+                {"max_length": limit},
+            )
+        return clean(value)
+
+    return BeforeValidator(run)
+
+
+Line120 = Annotated[str, _cleaned(_line, 120), Field(max_length=120)]
+Title = Annotated[str, _cleaned(_line, 120), Field(min_length=1, max_length=120)]
+SourceName = Annotated[str, _cleaned(_line, 80), Field(min_length=1, max_length=80)]
+Text2000 = Annotated[str, _cleaned(_text, 2000), Field(max_length=2000)]
 HttpsUrl = Annotated[str | None, AfterValidator(_https)]
 SkillIds = Annotated[list[uuid.UUID], AfterValidator(_unique), Field(max_length=8)]
 

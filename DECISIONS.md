@@ -919,6 +919,11 @@ decisions are adopted as written:
   the first time the derandomised fuzzer drew such a body. Only that one check is skipped, and
   only for a 413 response; the status must still be documented, and every other check (no 5xx,
   response schema, headers) applies. Same shape as the existing fuzzed-cursor exception.
+- **Profile text is held to its documented maxLength before it is cleaned.** `Line120`,
+  `Title`, `SourceName` and `Text2000` stripped control characters first and measured after, so
+  a value padded with control characters past the limit was accepted (201) although the schema
+  says it is refused (found by the fuzz suite on `POST /me/portfolio`). The raw input is now
+  checked first (`string_too_long`, 422); cleaning is unchanged.
 - **Smooth scrolling is off on every test page**, including pages a test opens in a context of
   its own (`noSmoothScroll` in `e2e/test.ts`, extending D53).
 - **Answer cards stack in a flex column** (`Choice.tsx`): in a one-column grid WebKit kept a row
