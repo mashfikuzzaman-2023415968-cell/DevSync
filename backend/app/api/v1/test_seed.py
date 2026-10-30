@@ -41,6 +41,7 @@ class SeedUserResponse(BaseModel):
     """Created user and, for admins, the TOTP secret and recovery codes."""
 
     user_id: str
+    phone: str | None = None
     totp_secret: str | None = None
     recovery_codes: list[str] = []
 
@@ -59,6 +60,7 @@ async def seed_user(
         display_name=body.display_name,
         verified=body.verified,
         with_totp=body.with_totp,
+        swap_taken_phone=True,
     )
     return SeedUserResponse(**result)
 

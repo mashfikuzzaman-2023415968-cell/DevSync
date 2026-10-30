@@ -6,6 +6,7 @@ to insert users directly or create admins under row-level security).
 
 from __future__ import annotations
 
+import secrets
 import uuid
 from datetime import timedelta
 from decimal import Decimal
@@ -13,6 +14,7 @@ from typing import Any
 
 import pyotp
 from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import write_audit
 from app.core.clock import get_clock
@@ -46,6 +48,10 @@ from app.models.reputation import ReputationSnapshot
 from app.services.auth.common import totp_key
 
 
+async def _phone_taken(db: AsyncSession, phone: str) -> bool:
+    return await db.scalar(select(User.id).where(User.phone_e164 == phone)) is not None
+
+
 async def create_user(
     settings: Settings,
     *,
@@ -57,11 +63,18 @@ async def create_user(
     verified: bool,
     with_totp: bool,
     actor: str = "test-seed",
+    swap_taken_phone: bool = False,
 ) -> dict[str, Any]:
-    """Create a user (ACTIVE when `verified`); admins get TOTP + recovery codes."""
+    """Create a user (ACTIVE when `verified`); admins get TOTP + recovery codes. With
+    `swap_taken_phone` (the test router only), a phone number already in use is replaced by a
+    free one and the number used is returned."""
     now = get_clock().now()
     password_hash = await hash_password_async(password)  # before the transaction opens
     async with open_session(DbContext.system(), job=True) as db:
+        # Test runs pile up users in one database, and random numbers from the 8-digit
+        # Bangladeshi range start to collide.
+        while swap_taken_phone and phone is not None and await _phone_taken(db, phone):
+            phone = f"+88017{secrets.randbelow(90_000_000) + 10_000_000}"
         user = User(
             email=email,
             phone_e164=phone,
@@ -76,6 +89,7 @@ async def create_user(
         await db.flush()
         result: dict[str, Any] = {
             "user_id": str(user.id),
+            "phone": phone,
             "totp_secret": None,
             "recovery_codes": [],
         }

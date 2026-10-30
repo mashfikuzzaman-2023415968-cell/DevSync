@@ -144,7 +144,7 @@ class Api:
             email=email,
             password=password,
             role=role,
-            phone=phone,
+            phone=body.get("phone", phone),  # the seed swaps a number already taken
             totp_secret=body["totp_secret"],
             recovery_codes=body["recovery_codes"],
         )
