@@ -1,5 +1,6 @@
 /** Marketplace: Find Projects (filters, results) and the project bid sheet with live eligibility. */
-import { screen, waitFor } from "@testing-library/react";
+import { focusManager } from "@tanstack/react-query";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse, type JsonBodyType } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -246,6 +247,55 @@ describe("ProjectBidPage", () => {
     await waitFor(() => {
       expect(posted).toMatchObject({ slot_id: SLOT, days_needed: 31, price_paisa: 2_000_000 });
     });
+  });
+
+  it("checks the bid again once the role assessment is passed", async () => {
+    const user = userEvent.setup();
+    base();
+    let passed = false;
+    server.use(
+      http.get(`${API}/projects/${PID}/slots/:slot/assessment`, () =>
+        HttpResponse.json({
+          status: passed ? "PASSED" : "REQUIRED",
+          message: "",
+          rules_version: 1,
+        } as JsonBodyType),
+      ),
+      http.post(`${API}/projects/${PID}/bids/eligibility`, () =>
+        HttpResponse.json(
+          passed
+            ? { eligible: true, reason: null, message: "You meet every requirement.", checks: [] }
+            : {
+                eligible: false,
+                reason: "NO_ROLE_ASSESSMENT",
+                message: "Would be filtered out: no passing role assessment for this role.",
+                checks: [],
+              },
+        ),
+      ),
+    );
+    routes("/dev/projects/:id", <ProjectBidPage />, `/dev/projects/${PID}`);
+    expect(await screen.findByText("Online ordering system")).toBeInTheDocument();
+    await user.click(screen.getByRole("combobox"));
+    await user.click(await screen.findByRole("option", { name: /React/ }));
+    await user.type(screen.getByLabelText(/Your price/), "16000");
+    await user.type(screen.getByLabelText(/Days you need/), "20");
+    expect(
+      await screen.findByText(/no passing role assessment/i, {}, { timeout: 3000 }),
+    ).toBeInTheDocument();
+
+    // The assessment is passed (the runner refetches the status when it closes); nothing in the
+    // draft changes, yet the preview must not keep the old verdict.
+    passed = true;
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+    expect(
+      await screen.findByText(/meet every requirement/i, {}, { timeout: 3000 }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/no passing role assessment/i)).not.toBeInTheDocument();
+    focusManager.setFocused(undefined);
   });
 
   it("shows an existing bid with a withdraw action", async () => {

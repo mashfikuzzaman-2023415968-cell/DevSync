@@ -416,7 +416,10 @@ test("Demo 1 — accounts, planning, profiles, sealed bidding and filtering @dem
     .filter({ visible: true })
     .click();
   await expect(
-    page.getByRole("dialog", { name: "Lamia Akter" }).getByText(/below the pass mark of 60/),
+    page
+      .getByRole("dialog", { name: "Lamia Akter" })
+      .getByText(/below the pass mark of 60/)
+      .first(), // the summary line and the step that failed both say it
   ).toBeVisible();
   await shots.take("why-failed-assessment", "Lamia failed her FastAPI role assessment");
   await closeDialog(page, "Lamia Akter");

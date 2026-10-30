@@ -116,7 +116,9 @@ export default function ProjectBidPage() {
   const ownIds = new Set((portfolio.data ?? []).map((item) => item.id));
   const attached = portfolio.data ? portfolioIds.filter((x) => ownIds.has(x)) : portfolioIds;
   const hoursValue = Number(hours) > 0 ? Number(hours) : undefined;
-  const previewKey = `${slotId}|${priceTaka}|${days}|${hours}`;
+  // The verdict also depends on the role assessment: passing it (or a retake lock) changes the
+  // newcomer rule's answer without any field of the draft changing.
+  const previewKey = `${slotId}|${priceTaka}|${days}|${hours}|${assessment.data?.status ?? ""}`;
   const runPreview = preview.mutate;
 
   // Debounced live eligibility preview as the developer edits the draft bid.
@@ -139,7 +141,7 @@ export default function ProjectBidPage() {
     return () => {
       window.clearTimeout(timer);
     };
-    // previewKey stands for the draft bid fields.
+    // previewKey stands for the draft bid fields and the assessment status.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewKey, ready, runPreview]);
 
