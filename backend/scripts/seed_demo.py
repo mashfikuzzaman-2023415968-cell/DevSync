@@ -266,8 +266,8 @@ MARKET_PROJECTS: list[
         [
             ("Brand and layout", 4, 1500, []),
             ("Catalogue and cart", 8, 3000, [0]),
-            ("Checkout and payments", 7, 3000, [1]),
-            ("Polish and accessibility", 4, 1500, [2]),
+            ("Checkout and payments", 6, 3000, [0]),
+            ("Polish and accessibility", 4, 1500, [1, 2]),
             ("Launch checks", 3, 1000, [3]),
         ],
     ),
