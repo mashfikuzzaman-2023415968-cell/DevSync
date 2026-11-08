@@ -3,9 +3,9 @@
 ## Current state
 - **Current owner:** Salwa Baki (backend developer), Phases 4–5, from 2026-10-18 (hand-off from Mashfikuzzaman Taeen: `docs/handoffs/handoff-01-taeen-to-salwa.md`); Phase 5 gate finished by Taeen.
 - **Current phase:** 5 done. The Demo 1 completion work (spec gaps, two logic audits, D55–D70) is finished on branch `wizard-drafts`, 81 commits ahead of `main` (`main` = `origin/main` = `f8d9ee4`, which already includes `gantt-polish`). `make demo-check DEMO=1` passed on 2026-10-27; waiting for Taeen's approval to merge into `main` and push.
-- **Last gate result:** `PHASE 5 GATE: PASS` (2026-10-27 01:21 UTC, Taeen's laptop, branch `wizard-drafts` at `dea8e40`): backend 1215 tests (95.9% coverage), security suite 443, schemathesis 426, frontend 458 (81.1% lines), E2E 204 × 3 on chromium/firefox/webkit/mobile, axe 6, visual 184 baselines, Lighthouse desktop 100/100/96/100, mobile 94/100/96/100; Demo 1 walkthrough 12/12 (4 browsers × 3).
-- **In progress (2026-11-08):** branch `role-assessment` (role assessment, D71–D76, plus the developer SMS inbox and the fuller demo seed, D77). Its gate re-run (`devsync-gate-7`, after the Firefox `domcontentloaded` fix in `role-assessment.spec.ts`) was running when this was written; earlier runs on this branch passed steps 1–12 and failed step 13 on one load-sensitive browser test. Not merged until a green `PHASE 5 GATE: PASS`.
-- **Very next step:** read the gate result; if it passes, push `role-assessment` (token from Taeen, never stored) and ask before merging into the Demo 1 branch or `main`. Before the demo: rebuild the images (`docker compose … build api tests nginx`, the demo seed script is baked into the image) and run `make demo-up STAGE=1`, so a later `make demo-reset` keeps the new projects.
+- **Last gate result (2026-11-09, branch `role-assessment`, Taeen's laptop):** steps 1–14 passed in one full run (backend 1629 tests at 96.4%, security 544, contract 521, frontend 499 at 79.9%, E2E 232 × 3 browsers, a11y); step 15 failed once on a stale baseline (`public-profile-dark-1440`, missed on 2026-10-29), which was refreshed after review; steps 15, 16, 18 then passed in a partial run (`--only`, 202 baselines) and 17 is N/A (ZAP starts in phase 9); step 19 passed with real counts in a second partial run (1629 / 499 vs baseline 1588 / 484). There is no single end-to-end `PHASE 5 GATE: PASS` line on this exact commit; the earlier full PASS is 2026-10-29 21:07 UTC.
+- **In progress (2026-11-09):** nothing; `role-assessment` (role assessment D71–D76, SMS inbox, fuller demo seed D77) is merged into `main` for Demo 1.
+- **Very next step:** run `make demo-preflight` about 30 minutes before Demo 1, then start Phase 6 (move to Node 22 LTS first, see Known issues). Demo logins are printed by `make demo-up` and saved in `runs/demos/accounts-1.txt`.
 - **Open human tasks:** review the 128 drafted test questions (D34); tester's human check of the Phase 3, 4 and 5 security reviews; sanity-check D39 (simulated payment-method verification).
 
 ## Phase table
@@ -23,6 +23,7 @@
 | Finished (UTC) | Phase | Result | Tests |
 |---|---|---|---|
 <!-- gate-log -->
+| 2026-11-08T18:41:11+00:00 | phase 5 | FAIL (step 15) | backend 1629 / frontend 499 tests |
 | 2026-11-08T15:29:20+00:00 | phase 5 | FAIL (step 13) | backend 1629 / frontend 499 tests |
 | 2026-11-08T13:24:36+00:00 | phase 5 | FAIL (step 7) | backend - / frontend - tests |
 | 2026-11-05T15:53:48+00:00 | phase 5 | FAIL (step 13) | backend 1592 / frontend 485 tests |
