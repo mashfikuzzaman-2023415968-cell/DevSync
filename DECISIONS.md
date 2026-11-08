@@ -938,3 +938,29 @@ decisions are adopted as written:
   at its old height after a resize made the text wrap, so a long option spilled out of its card.
 - **`dnspython` 2.9.0** for CVE-2026-114605 (transitive, via `email-validator`; only that
   package re-resolved).
+
+**D76 · Developer SMS inbox for demos and development (Taeen, 2026-11-08; not in the original
+plan, added on request so a presenter can show the phone-code step without a phone).**
+- **What:** `/sandbox/sms` (page) over `GET|DELETE /api/v1/dev-sandbox/sms`. Every text sent
+  through `deliver_sms` is also kept in a Redis list (newest 100, six-hour expiry) when
+  `Settings.sms_sandbox_enabled`. The page shows the newest code, copy buttons, a number filter,
+  live refresh and a link to Mailpit. Email already has Mailpit, so nothing new for email.
+- **Where it exists:** development, the test environment, and the offline demo stack
+  (`DEVSYNC_ENV=production` **and** `DEMO_STACK=1`, which production validation allows only with
+  a localhost origin). In a real deployment the routes are not mounted, nothing is recorded, the
+  page says the inbox is off, and `create_app` refuses to start if the router is mounted there.
+- **No sign-in:** the first code is read before an account exists. The routes are left out of
+  OpenAPI (so the contract check, the fuzzers and the authz matrix never see them) and are
+  exempt from the global per-IP limit like the test router, because the page polls every 3 s and
+  shares an IP with the demo browser (anonymous limit 60/min). The exemption exists only where
+  the routes do.
+- **Known limit:** the base compose file publishes Nginx on all interfaces, and the demo stack
+  inherits that (only Mailpit is bound to 127.0.0.1). A host-name check (`ALLOWED_HOSTS`) blocks
+  casual access by IP, but someone on the same network who forges the `Host` header could read
+  demo codes. Demo accounts hold fake data. To close it, bind the demo's ports to 127.0.0.1 in
+  `docker-compose.demo.yml`; not done here because it changes how the demo stack is reached.
+- **Tests:** unit (code extraction incl. non-ASCII digits, the switch, the guard, capping,
+  filtering, a failing Redis never blocks a real send), API (sign-up → inbox → the code verifies
+  the account, filter, clear, bad query values), app wiring (absent in production, present on the
+  demo stack, exemptions only where mounted), page tests (14) and a four-browser E2E
+  (`e2e/sms-sandbox.spec.ts`: axe, CSP, no sideways scroll, the shown code verifies the account).

@@ -133,6 +133,15 @@ class Settings(BaseSettings):
         """Swagger UI and the public OpenAPI file exist only in development (§10.1, §14.18)."""
         return self.DEVSYNC_ENV is Environment.DEVELOPMENT
 
+    @property
+    def sms_sandbox_enabled(self) -> bool:
+        """The developer SMS inbox exists only where codes are already readable: development,
+        the test environment and the offline demo stack (`DEMO_STACK`, localhost origins only).
+        Anywhere else it is off, so a real deployment never exposes one-time codes."""
+        return self.DEVSYNC_ENV in (Environment.DEVELOPMENT, Environment.TEST) or (
+            self.DEMO_STACK and self.DEVSYNC_ENV is Environment.PRODUCTION
+        )
+
 
 def _secret_key_bytes(value: str) -> int:
     """Return the decoded length of a base64 secret, or 0 if it is not valid base64."""

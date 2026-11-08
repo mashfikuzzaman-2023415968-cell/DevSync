@@ -13,7 +13,11 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import re
 import smtplib
+import uuid
+from datetime import UTC, datetime
 from email.message import EmailMessage
 from typing import Protocol
 
@@ -85,6 +89,42 @@ class MailpitSms:
         except (OSError, smtplib.SMTPException) as exc:
             # Like a lost text: the account change is already saved and "Resend code" works.
             log.warning("demo_sms_failed", to_last4=phone_e164[-4:], error=type(exc).__name__)
+
+
+SANDBOX_KEY = "sandbox:sms"
+SANDBOX_MAX = 100
+SANDBOX_TTL = 6 * 3600
+_CODE = re.compile(r"(?<![0-9])[0-9]{4,8}(?![0-9])")  # ASCII digits only
+
+
+def extract_code(text: str) -> str | None:
+    """The first 4-8 digit run in a text message (the one-time code), if any."""
+    found = _CODE.search(text)
+    return found.group(0) if found else None
+
+
+async def record_sandbox_sms(redis: Redis, phone_e164: str, text: str) -> None:
+    """Keep the newest texts (a capped, expiring list) for the developer SMS inbox."""
+    entry = {
+        "id": uuid.uuid4().hex,
+        "to": phone_e164,
+        "text": text,
+        "code": extract_code(text),
+        "at": datetime.now(UTC).isoformat(),
+    }
+    await redis.lpush(SANDBOX_KEY, json.dumps(entry))
+    await redis.ltrim(SANDBOX_KEY, 0, SANDBOX_MAX - 1)
+    await redis.expire(SANDBOX_KEY, SANDBOX_TTL)
+
+
+async def deliver_sms(settings: Settings, redis: Redis, phone_e164: str, text: str) -> None:
+    """Send one text; where the sandbox is on, also keep a copy for the developer inbox."""
+    if settings.sms_sandbox_enabled:
+        try:
+            await record_sandbox_sms(redis, phone_e164, text)
+        except Exception:  # a broken inbox must never block a real send
+            log.warning("sandbox_sms_record_failed")
+    await sms_sender(settings, redis).send(phone_e164, text)
 
 
 def sms_sender(settings: Settings, redis: Redis) -> SmsSender:

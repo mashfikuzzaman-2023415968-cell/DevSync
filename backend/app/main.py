@@ -68,6 +68,7 @@ from app.db.session import dispose_engines
 API_PREFIX = "/api/v1"
 TEST_ROUTER_MARKER = "/__test__"
 TEST_ROUTER_MODULE = "app.api.v1.test_seed"
+SANDBOX_ROUTER_MODULE = "app.api.v1.sms_sandbox"
 
 
 @asynccontextmanager
@@ -141,6 +142,21 @@ def assert_no_test_routes(app: FastAPI, settings: Settings) -> None:
         )
 
 
+def assert_no_sandbox_routes(app: FastAPI, settings: Settings) -> None:
+    """Fail closed if the developer SMS inbox exists where `sms_sandbox_enabled` is false."""
+    if settings.sms_sandbox_enabled:
+        return
+    leaked = [
+        str(ctx.path)
+        for ctx in iter_route_contexts(app.router.routes)
+        if str(getattr(ctx.endpoint, "__module__", "")).startswith(SANDBOX_ROUTER_MODULE)
+    ]
+    if leaked:
+        raise InsecureConfigurationError(
+            f"Refusing to start: developer SMS inbox mounted where it is off: {leaked}"
+        )
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Build the ASGI app. Fails closed on insecure production settings."""
     settings = settings or get_settings()
@@ -185,9 +201,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         from app.api.v1 import test_seed  # noqa: PLC0415 - imported only in the test environment
 
         app.include_router(test_seed.router, prefix=API_PREFIX)
+    if settings.sms_sandbox_enabled:
+        from app.api.v1 import sms_sandbox  # noqa: PLC0415 - imported only where it is enabled
+
+        app.include_router(sms_sandbox.router, prefix=API_PREFIX)
     # Internal only: Nginx denies /metrics from outside (spec §15.7).
     app.router.routes.append(Route("/metrics", metrics_endpoint, include_in_schema=False))
     assert_no_test_routes(app, settings)
+    assert_no_sandbox_routes(app, settings)
 
     install_exception_handlers(app)
     app.openapi = _with_global_responses(app)  # type: ignore[method-assign]
@@ -200,7 +221,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # The test-only router (DEVSYNC_ENV=test) is outside the per-IP limit so E2E helpers keep
     # working; it does not exist in any other environment.
     test_prefix = (f"{API_PREFIX}/__test__",) if settings.DEVSYNC_ENV is Environment.TEST else ()
-    app.add_middleware(GlobalRateLimitMiddleware, extra_exempt=test_prefix)  # 7
+    # The developer SMS inbox is polled by its page every few seconds; like the test router it
+    # exists only where `sms_sandbox_enabled`.
+    sandbox_prefix = (f"{API_PREFIX}/dev-sandbox",) if settings.sms_sandbox_enabled else ()
+    app.add_middleware(GlobalRateLimitMiddleware, extra_exempt=test_prefix + sandbox_prefix)  # 7
     app.add_middleware(CsrfMiddleware, settings=settings)  # 6
     app.add_middleware(SessionMiddleware, settings=settings)  # 5
     app.add_middleware(TrailingSlashRedirectMiddleware)  # 4b

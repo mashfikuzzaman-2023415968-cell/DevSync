@@ -24,7 +24,7 @@ from app.core.security import (
     token_digest,
 )
 from app.core.sessions import SessionPolicy, SessionStore
-from app.integrations.sms import sms_sender
+from app.integrations.sms import deliver_sms
 from app.models.identity import EmailTokenPurpose, OtpPurpose, User, UserStatus
 from app.repositories import users as repo
 from app.services import outbox
@@ -101,7 +101,7 @@ async def register(
         after={"role": role, "status": "PENDING"},
     )
     await db.commit()
-    await sms_sender(deps.settings, deps.redis).send(phone, f"Your DevSync code is {code}")
+    await deliver_sms(deps.settings, deps.redis, phone, f"Your DevSync code is {code}")
 
 
 async def _issue_email_token(
@@ -175,9 +175,7 @@ async def send_phone_otp(deps: AuthDeps, principal: Principal, now: datetime) ->
         raise RateLimited(wait)
     code = await _issue_otp(deps, user.id, now)
     await deps.db.commit()
-    await sms_sender(deps.settings, deps.redis).send(
-        user.phone_e164, f"Your DevSync code is {code}"
-    )
+    await deliver_sms(deps.settings, deps.redis, user.phone_e164, f"Your DevSync code is {code}")
 
 
 async def verify_phone_otp(deps: AuthDeps, principal: Principal, code: str, now: datetime) -> None:

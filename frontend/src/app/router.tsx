@@ -96,6 +96,13 @@ const publicPages: RouteObject[] = [
     }),
   },
   {
+    // The developer SMS inbox: the server only mounts its API in development, tests and the
+    // offline demo stack, so elsewhere this page just says it is off.
+    path: "sandbox/sms",
+    handle: { title: "SMS inbox" },
+    lazy: async () => ({ Component: (await import("@/features/sandbox/SmsSandboxPage")).default }),
+  },
+  {
     path: "privacy",
     handle: { title: "Privacy" },
     lazy: async () => ({ Component: (await import("@/features/legal/LegalPage")).PrivacyPage }),

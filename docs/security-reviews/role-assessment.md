@@ -39,6 +39,19 @@ No high-confidence vulnerabilities were found.
 | XSS | The new screens use no `dangerouslySetInnerHTML`, `innerHTML`, `eval` or `new Function`. Question text and code snippets are rendered as React text. The sessionStorage helper stores only two non-secret draft prefixes. |
 | Public profile | It adds only valid, unvoided passes: label, score, date and expiry. It shows no project, failed attempts, flags or answers. |
 
+## Developer SMS inbox (added after the review above; D76)
+
+A small page and two routes (`/api/v1/dev-sandbox/sms`) that show the texts DevSync "sent", for
+demos. It deliberately has no sign-in, so the fail-closed switch is the whole defence:
+
+| Area | Conclusion |
+|---|---|
+| Never in a real deployment | Mounted only when `sms_sandbox_enabled` (development, test, or production with `DEMO_STACK`, which production validation allows only with a localhost origin). `create_app` raises if the router exists elsewhere; tests build a production-style app and get 404 for both methods. Nothing is recorded either, so a real deployment holds no copy of any code. |
+| What it holds | Only the newest 100 texts for six hours, in Redis. Codes are 5-minute one-time codes of demo and test accounts. Real SMS content is never different from the code text the app already sends. |
+| Input handling | The phone filter is validated (`^\+?[0-9 ]*$`, 20 characters) and the limit is 1–100; anything else is 422. Redis values are parsed as data and unreadable entries are skipped. The page renders every value as React text. |
+| Abuse | `DELETE` needs the CSRF token like every unsafe request. The routes skip the global per-IP limit (the page polls) but exist only where they are mounted. |
+| Residual risk (accepted, documented) | On the offline demo stack Nginx listens on all interfaces; the host-name check blocks casual access by IP, but a peer on the same network who forges the `Host` header could read demo codes. Fix if wanted: bind the demo's ports to 127.0.0.1. |
+
 ## Findings fixed during the build
 
 | # | Severity | Finding | Status |

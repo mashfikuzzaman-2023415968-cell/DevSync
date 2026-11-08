@@ -128,13 +128,43 @@ def test_production_app_has_no_test_router_or_docs() -> None:
         PUBLIC_ORIGIN="https://testserver",
     )
     app = create_app(prod)
-    paths = {getattr(r, "path", "") for r in app.router.routes}
+    paths = _all_paths(app)
+    assert paths  # the walker sees the included routers
     assert not any("__test__" in p for p in paths)
     # …and nothing is exempt from the per-IP limit except health checks.
     assert _global_limit_exemptions(app) == ()
+    assert not any("dev-sandbox" in p for p in paths)  # the SMS inbox never exists in production
     with TestClient(app, base_url="https://testserver") as c:
-        for path in ("/api/v1/openapi.json", "/api/v1/docs", "/api/v1/__test__/sms?phone=x"):
+        for path in (
+            "/api/v1/openapi.json",
+            "/api/v1/docs",
+            "/api/v1/__test__/sms?phone=x",
+            "/api/v1/dev-sandbox/sms",
+        ):
             assert c.get(path).status_code == 404, path
+        assert c.delete("/api/v1/dev-sandbox/sms").status_code in (403, 404)  # CSRF or no route
+
+
+def test_demo_stack_has_the_sms_inbox_but_no_test_router() -> None:
+    """The offline demo (production settings + DEMO_STACK) shows codes in the inbox."""
+    import base64  # noqa: PLC0415
+    import secrets  # noqa: PLC0415
+
+    demo = make_settings(
+        DEVSYNC_ENV=Environment.PRODUCTION,
+        SECRET_KEY=base64.b64encode(secrets.token_bytes(64)).decode(),
+        SMS_PROVIDER="mailpit",
+        SMTP_HOST="mailpit",
+        DEMO_STACK=True,
+        REDIS_URL="redis://:pw@redis:6379/0",
+        ALLOWED_HOSTS="testserver",
+        PUBLIC_ORIGIN="https://localhost",
+    )
+    app = create_app(demo)
+    paths = _all_paths(app)
+    assert "/api/v1/dev-sandbox/sms" in paths
+    assert not any("__test__" in p for p in paths)
+    assert _global_limit_exemptions(app) == ("/api/v1/dev-sandbox",)
 
 
 def test_test_router_exists_only_in_test_environment(settings: object) -> None:
@@ -143,6 +173,13 @@ def test_test_router_exists_only_in_test_environment(settings: object) -> None:
     assert isinstance(settings, Settings)
     with TestClient(create_app(make_settings(DEVSYNC_ENV=Environment.DEVELOPMENT))) as c:
         assert c.get("/api/v1/__test__/sms?phone=x").status_code == 404
+
+
+def _all_paths(app: object) -> set[str]:
+    """Every route path, including routers included under a prefix (they are nested)."""
+    from fastapi.routing import iter_route_contexts  # noqa: PLC0415
+
+    return {str(ctx.path) for ctx in iter_route_contexts(app.router.routes)}  # type: ignore[attr-defined]
 
 
 def _global_limit_exemptions(app: object) -> tuple[str, ...]:
@@ -154,9 +191,12 @@ def _global_limit_exemptions(app: object) -> tuple[str, ...]:
     raise AssertionError("GlobalRateLimitMiddleware missing")
 
 
-def test_only_the_test_environment_exempts_its_router_from_the_global_limit() -> None:
+def test_only_the_dev_routers_are_exempt_from_the_global_limit() -> None:
+    # The test router (test only) and the developer SMS inbox (development, test, offline demo)
+    # are polled or hammered by tooling; each exists only where it is exempt.
     assert _global_limit_exemptions(create_app(make_settings(DEVSYNC_ENV=Environment.TEST))) == (
         "/api/v1/__test__",
+        "/api/v1/dev-sandbox",
     )
     dev = create_app(make_settings(DEVSYNC_ENV=Environment.DEVELOPMENT))
-    assert _global_limit_exemptions(dev) == ()
+    assert _global_limit_exemptions(dev) == ("/api/v1/dev-sandbox",)
