@@ -4,8 +4,8 @@
 - **Current owner:** Salwa Baki (backend developer), Phases 4–5, from 2026-10-18 (hand-off from Mashfikuzzaman Taeen: `docs/handoffs/handoff-01-taeen-to-salwa.md`); Phase 5 gate finished by Taeen.
 - **Current phase:** 5 done. The Demo 1 completion work (spec gaps, two logic audits, D55–D70) is finished on branch `wizard-drafts`, 81 commits ahead of `main` (`main` = `origin/main` = `f8d9ee4`, which already includes `gantt-polish`). `make demo-check DEMO=1` passed on 2026-10-27; waiting for Taeen's approval to merge into `main` and push.
 - **Last gate result:** `PHASE 5 GATE: PASS` (2026-10-27 01:21 UTC, Taeen's laptop, branch `wizard-drafts` at `dea8e40`): backend 1215 tests (95.9% coverage), security suite 443, schemathesis 426, frontend 458 (81.1% lines), E2E 204 × 3 on chromium/firefox/webkit/mobile, axe 6, visual 184 baselines, Lighthouse desktop 100/100/96/100, mobile 94/100/96/100; Demo 1 walkthrough 12/12 (4 browsers × 3).
-- **In progress:** nothing; `wizard-drafts` is complete and waiting to be merged.
-- **Very next step:** fast-forward `main` to `wizard-drafts` and push (token from Taeen); run `make demo-preflight` again about 30 minutes before Demo 1 (Mon 2 Nov 2026, Phases 0–5); then Phase 6 (start by moving to Node 22 LTS, see Known issues).
+- **In progress (2026-11-08):** branch `role-assessment` (role assessment, D71–D76, plus the developer SMS inbox and the fuller demo seed, D77). Its gate re-run (`devsync-gate-7`, after the Firefox `domcontentloaded` fix in `role-assessment.spec.ts`) was running when this was written; earlier runs on this branch passed steps 1–12 and failed step 13 on one load-sensitive browser test. Not merged until a green `PHASE 5 GATE: PASS`.
+- **Very next step:** read the gate result; if it passes, push `role-assessment` (token from Taeen, never stored) and ask before merging into the Demo 1 branch or `main`. Before the demo: rebuild the images (`docker compose … build api tests nginx`, the demo seed script is baked into the image) and run `make demo-up STAGE=1`, so a later `make demo-reset` keeps the new projects.
 - **Open human tasks:** review the 128 drafted test questions (D34); tester's human check of the Phase 3, 4 and 5 security reviews; sanity-check D39 (simulated payment-method verification).
 
 ## Phase table
@@ -23,6 +23,28 @@
 | Finished (UTC) | Phase | Result | Tests |
 |---|---|---|---|
 <!-- gate-log -->
+| 2026-11-08T15:29:20+00:00 | phase 5 | FAIL (step 13) | backend 1629 / frontend 499 tests |
+| 2026-11-08T13:24:36+00:00 | phase 5 | FAIL (step 7) | backend - / frontend - tests |
+| 2026-11-05T15:53:48+00:00 | phase 5 | FAIL (step 13) | backend 1592 / frontend 485 tests |
+| 2026-11-05T13:51:03+00:00 | phase 5 | FAIL (step 7) | backend - / frontend - tests |
+| 2026-11-05T12:27:21+00:00 | phase 5 | FAIL (step 2) | backend - / frontend - tests |
+| 2026-11-03T22:24:56+00:00 | phase 5 | FAIL (step 13) | backend 1592 / frontend 485 tests |
+| 2026-11-03T17:05:21+00:00 | phase 5 | FAIL (step 13) | backend 1592 / frontend 485 tests |
+| 2026-11-02T21:51:13+00:00 | phase 5 | FAIL (step 9) | backend - / frontend - tests |
+| 2026-11-02T19:33:15+00:00 | phase 5 | FAIL (step 9) | backend - / frontend - tests |
+| 2026-11-02T17:26:31+00:00 | phase 5 | FAIL (step 13) | backend 1592 / frontend 485 tests |
+| 2026-10-30T14:18:43+00:00 | phase 5 | FAIL (step 9) | backend - / frontend - tests |
+| 2026-10-30T13:40:30+00:00 | phase 5 | FAIL (step 10) | backend 1590 / frontend - tests |
+| 2026-10-30T09:50:00+00:00 | phase 5 | FAIL (step 13) | backend 1590 / frontend 484 tests |
+| 2026-10-29T21:07:55+00:00 | phase 5 | PASS | backend 1588 / frontend 484 tests |
+| 2026-10-29T17:43:17+00:00 | phase 5 | FAIL (step 2) | backend - / frontend - tests |
+| 2026-10-29T17:33:42+00:00 | phase 5 | FAIL (step 11) | backend 1577 / frontend - tests |
+| 2026-10-29T16:46:35+00:00 | phase 5 | FAIL (step 13) | backend 1577 / frontend 484 tests |
+| 2026-10-29T15:18:49+00:00 | phase 5 | FAIL (step 11) | backend 1577 / frontend - tests |
+| 2026-10-29T13:44:06+00:00 | phase 5 | FAIL (step 13) | backend 1577 / frontend 484 tests |
+| 2026-10-29T04:08:52+00:00 | phase 5 | FAIL (step 13) | backend 1577 / frontend 484 tests |
+| 2026-10-28T22:13:37+00:00 | phase 5 | FAIL (step 9) | backend - / frontend 484 tests |
+| 2026-10-28T20:00:44+00:00 | phase 5 | FAIL (step 6) | backend - / frontend - tests |
 | 2026-10-27T01:21:22+00:00 | phase 5 | PASS | backend 1215 / frontend 458 tests |
 | 2026-10-26T16:36:47+00:00 | phase 5 | FAIL (step 11) | backend 1209 / frontend - tests |
 | 2026-10-26T14:03:03+00:00 | phase 5 | FAIL (step 11) | backend 1202 / frontend - tests |
@@ -91,6 +113,12 @@
 - The full gate needs about 3 GB of free memory (7 GB laptop): close Chrome first. Under swap pressure WebKit E2E runs time out, and those failures say nothing about the code.
 
 ## Session log (newest first)
+### 2026-11-08 — Taeen (with Claude Code), demo readiness for Demo 1
+- Built the developer SMS inbox (`/sandbox/sms`, D76) and a fuller demo seed (D77: second client Farzana and five more open projects; no completed projects, those are stage 2).
+- Gate/demo-check runs: steps 1–12 pass (1629 backend, 544 security, 521 contract, 499 frontend tests; scanners clean after rebuilding images without cache); step 13 failed on one Firefox timing test under memory pressure; the demo walkthrough passed 11 of 12 (one 502 on the seed call). Fix: the second tab waits for `domcontentloaded`. Gate re-run started 21:50.
+- Wrote four role sheets for the presentation in `~/Downloads/DAA1/devsync-demo-prep/` (not in the repo).
+- Open: green gate on this branch, push (token), human checks (D34 question review, tester check of the role-assessment security review), bind demo ports to 127.0.0.1 (D76 note).
+
 ### 2026-10-24 to 2026-10-27 — Taeen (with Claude Code), Demo 1 completion on `wizard-drafts`
 - Closed the gaps from a review of Phases 0–5 against the spec and from two logic audits (D55–D70):
   - drafts in the create-project wizard reopen where the client left off;

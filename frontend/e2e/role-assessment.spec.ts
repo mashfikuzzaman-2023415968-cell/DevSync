@@ -187,7 +187,9 @@ test("opening the attempt in another window stops this one @e2e", async ({ page,
   await openSlot(page, projectId);
   const attemptId = await startAssessment(page);
   const other = await page.context().newPage();
-  await other.goto(`/dev/assessments/${attemptId}`);
+  // The test waits for the button below, so it need not also wait for every asset's load event
+  // (a second Firefox tab under a loaded machine could sit on it for the whole timeout).
+  await other.goto(`/dev/assessments/${attemptId}`, { waitUntil: "domcontentloaded" });
   await expect(other.getByRole("button", { name: "Continue assessment" })).toBeVisible();
   await answerNext(page, 0, 1);
   await expect(
