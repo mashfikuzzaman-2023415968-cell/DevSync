@@ -964,3 +964,15 @@ plan, added on request so a presenter can show the phone-code step without a pho
   the account, filter, clear, bad query values), app wiring (absent in production, present on the
   demo stack, exemptions only where mounted), page tests (14) and a four-browser E2E
   (`e2e/sms-sandbox.spec.ts`: axe, CSP, no sideways scroll, the shown code verifies the account).
+
+**D77 · A fuller demo marketplace: a second client and five more open projects (Taeen, 2026-11-08; spec §18.4).**
+- **Why:** the stage-1 seed had one client and two open projects, so Find Projects, its filters
+  and a guest's public list looked empty.
+- **What:** `seed_demo.py` adds Farzana (Studio Nokshi, payment verified) and five BIDDING projects
+  (Boutique online store, Clinic appointment portal, Delivery rider tracking, School results
+  dashboard, Restaurant website refresh) across all eight skills, each with slots, a valid plan
+  (shares sum to 100 %, CPM duration within the deadline) and role-assessment links. They carry no
+  bids, so the documented "Online ordering system" numbers (12 bids, 10 eligible) are unchanged.
+- **Not added:** completed, in-progress or disputed projects. Those lifecycle states are built in
+  Phases 9 to 12 and stage 2 loads them; showing them now would show features that do not exist.
+  Guests can browse open projects and public developer profiles only.

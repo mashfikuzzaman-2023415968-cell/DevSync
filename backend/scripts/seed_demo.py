@@ -233,6 +233,109 @@ CYCLE_MILESTONES = [
 ]
 # Wizard step (1-based) of the Milestones step, for the cycle draft's direct link.
 MILESTONES_STEP = 4
+# A second client and more open projects, so Find Projects, the filters and a guest's public list
+# have something to browse. They are real BIDDING projects with plans and no bids; only the
+# "Online ordering system" carries the documented bids.
+FARZANA = "farzana"
+# (owner slug, title, summary, requirements, budget_paisa, deadline_days, bidding days left,
+#  start in days, slots [skill, count], milestones [(name, days, share_bp, predecessors)]).
+MARKET_PROJECTS: list[
+    tuple[
+        str,
+        str,
+        str,
+        str,
+        int,
+        int,
+        int,
+        int,
+        list[tuple[str, int]],
+        list[tuple[str, int, int, list[int]]],
+    ]
+] = [
+    (
+        "farzana",
+        "Boutique online store",
+        "An online shop for a Dhaka boutique: catalogue, cart and card or mobile-wallet checkout.",
+        "React storefront, Node.js API, tidy product photos, tested checkout.",
+        9_500_000,
+        28,
+        9,
+        4,
+        [("React", 1), ("Node.js", 1), ("UI/UX", 1)],
+        [
+            ("Brand and layout", 4, 1500, []),
+            ("Catalogue and cart", 8, 3000, [0]),
+            ("Checkout and payments", 7, 3000, [1]),
+            ("Polish and accessibility", 4, 1500, [2]),
+            ("Launch checks", 3, 1000, [3]),
+        ],
+    ),
+    (
+        "farzana",
+        "Clinic appointment portal",
+        "Patients book, move and cancel visits; reception sees the day's queue.",
+        "React front end, FastAPI back end, PostgreSQL, SMS reminders, tested.",
+        11_000_000,
+        35,
+        11,
+        6,
+        [("React", 1), ("FastAPI", 1), ("PostgreSQL", 1)],
+        [
+            ("Requirements", 3, 1000, []),
+            ("Data model", 5, 1500, [0]),
+            ("Booking API", 10, 3000, [1]),
+            ("Booking screens", 10, 2500, [0]),
+            ("Reminders and launch", 5, 2000, [2, 3]),
+        ],
+    ),
+    (
+        "rahim",
+        "Delivery rider tracking",
+        "Riders share their position and customers follow the order on a map.",
+        "Flutter rider app, FastAPI events API, Docker deployment.",
+        7_500_000,
+        21,
+        6,
+        3,
+        [("Flutter", 1), ("FastAPI", 1), ("DevOps", 1)],
+        [
+            ("Rider app skeleton", 5, 2000, []),
+            ("Events API", 6, 3000, []),
+            ("Live map screen", 6, 2500, [0, 1]),
+            ("Deploy and monitor", 4, 2500, [2]),
+        ],
+    ),
+    (
+        "farzana",
+        "School results dashboard",
+        "Teachers enter marks; parents read term reports and class trends.",
+        "PostgreSQL reports, React dashboard, regression tests.",
+        6_000_000,
+        18,
+        8,
+        5,
+        [("PostgreSQL", 1), ("React", 1), ("Testing", 1)],
+        [
+            ("Schema and imports", 4, 2000, []),
+            ("Report queries", 4, 2500, [0]),
+            ("Dashboard", 6, 3000, [1]),
+            ("Regression tests", 3, 2500, [2]),
+        ],
+    ),
+    (
+        "rahim",
+        "Restaurant website refresh",
+        "A faster, clearer website with the menu, opening hours and online table requests.",
+        "UI/UX design, React pages, mobile first.",
+        4_500_000,
+        14,
+        5,
+        2,
+        [("UI/UX", 1), ("React", 1)],
+        [("Design", 4, 3000, []), ("Pages", 6, 4000, [0]), ("Review and launch", 3, 3000, [1])],
+    ),
+]
 
 
 def demo_passwords(slugs: list[str], fixed: str | None) -> dict[str, str]:
@@ -301,6 +404,17 @@ async def _make_users(settings: Settings, pw: dict[str, str]) -> dict[str, uuid.
         with_totp=False,
     )
     ids["rahim"] = uuid.UUID(res["user_id"])
+    res = await create_user(
+        settings,
+        role="CLIENT",
+        email="farzana@devsync.local",
+        phone="+8801788888888",
+        password=pw[FARZANA],
+        display_name="Farzana (Studio Nokshi)",
+        verified=True,
+        with_totp=False,
+    )
+    ids[FARZANA] = uuid.UUID(res["user_id"])
     return ids
 
 
@@ -598,6 +712,58 @@ async def _seed_too_few(ids: dict[str, uuid.UUID], skills: dict[str, uuid.UUID])
         await db.commit()
 
 
+async def _seed_market(ids: dict[str, uuid.UUID], skills: dict[str, uuid.UUID]) -> list[uuid.UUID]:
+    """Farzana's profile and the extra open projects (no bids), so browsing looks like a market."""
+    farzana = ids[FARZANA]
+    async with _as(farzana, "CLIENT") as db:
+        user = await db.get(User, farzana)
+        if user is None:
+            raise SystemExit("client row missing after create_user")
+        user.payment_verified_at = get_clock().now()
+        db.add(
+            ClientProfile(
+                user_id=farzana,
+                organization="Studio Nokshi",
+                description="A small design studio in Gulshan, Dhaka, building shops and portals "
+                "for local businesses.",
+            )
+        )
+        await db.commit()
+    created: list[uuid.UUID] = []
+    for owner, title, summary, reqs, budget, days, bid_days, start, slots, plan in MARKET_PROJECTS:
+        async with _as(ids[owner], "CLIENT") as db:
+            project = Project(
+                client_id=ids[owner],
+                title=title,
+                summary=summary,
+                requirements=reqs,
+                budget_paisa=budget,
+                deadline_days=days,
+                team_size=sum(n for _skill, n in slots),
+                status=ProjectStatus.BIDDING,
+                start_date=get_clock().now().date() + timedelta(days=start),
+                bidding_deadline=datetime.now(UTC) + timedelta(days=bid_days),
+            )
+            db.add(project)
+            await db.flush()
+            for skill_name, count in slots:
+                db.add(
+                    ProjectSlot(
+                        project_id=project.id,
+                        skill_id=skills[skill_name],
+                        label=f"{skill_name} developer",
+                        count=count,
+                    )
+                )
+            await db.flush()
+            await _add_plan(db, project.id, plan)
+            created.append(project.id)
+            await db.commit()
+    for pid in created:
+        await role_assessments.ensure_links_as_system(pid)
+    return created
+
+
 async def _make_admin(settings: Settings, password: str) -> dict[str, str]:
     res = await create_user(
         settings,
@@ -619,6 +785,7 @@ def _print_accounts(
     `make demo-preflight` reads the `client` line: role, email, password."""
     print("=== DEMO ACCOUNTS (STAGE 1) ===")
     print(f"client       rahim@devsync.local            {pw['rahim']}")
+    print(f"client       farzana@devsync.local          {pw[FARZANA]}")
     for slug in EXPERIENCED:
         print(f"developer    {slug}@devsync.local{' ' * (18 - len(slug))}{pw[slug]}")
     for slug in NEWCOMERS:
@@ -641,10 +808,11 @@ async def seed_stage1() -> None:
     async with open_session(DbContext.system(), job=True) as db:
         skills = await _skill_ids(db)
     needed = {n for p in PROFILES.values() for n in p[3]} | set(SLOTS)
+    needed |= {sk for m in MARKET_PROJECTS for sk, _n in m[8]}
     missing = sorted(needed - set(skills))
     if missing:
         raise SystemExit(f"skills not seeded: {missing}; run migrations first")
-    pw = demo_passwords([*PROFILES, "rahim", "admin"], os.environ.get("DEMO_PASSWORD"))
+    pw = demo_passwords([*PROFILES, "rahim", FARZANA, "admin"], os.environ.get("DEMO_PASSWORD"))
     ids = await _make_users(settings, pw)
     admin = await _make_admin(settings, pw["admin"])
     await _seed_reputation(ids)
@@ -655,6 +823,7 @@ async def seed_stage1() -> None:
     evidence = await _seed_role_results(ids, pid, slot_ids)
     await _seed_bids(ids, pid, slot_ids, evidence)
     await _seed_too_few(ids, skills)
+    await _seed_market(ids, skills)
     cycle_id = await _seed_cycle_draft(ids["rahim"], skills)
     await _assert_filter(pid)
     _print_accounts(admin, pw, settings.PUBLIC_ORIGIN.rstrip("/"), cycle_id)
