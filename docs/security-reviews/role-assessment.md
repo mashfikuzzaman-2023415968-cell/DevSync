@@ -68,3 +68,17 @@ demos. It deliberately has no sign-in, so the fail-closed switch is the whole de
   question was right. The question itself is never named.
 - The 113 legacy questions are also used in practice tests. A practice result shows only an
   aggregate score, under a 30-day retake limit, so it reveals no individual answers.
+
+## Quick sign-in tab (added after the review above; D78)
+
+- **What it is:** two more routes in the sandbox router (`/dev-sandbox/accounts`, `/dev-sandbox/sign-in`)
+  that start an ordinary session for a seeded demo person without a password.
+- **Where it exists:** only where `sms_sandbox_enabled` (development, test, the offline demo stack);
+  not in OpenAPI; `assert_no_sandbox_routes` makes the app refuse to start if it is mounted
+  elsewhere; the production test asserts both methods answer 404/403 there.
+- **What it can open:** only `@devsync.local` clients and developers that exist and are active.
+  Never an administrator, never another domain, never a suspended or deleted account, all a plain
+  401. CSRF and Origin are still required. Every use is audited (`auth.demo_signin`).
+- **Residual risk:** same as the SMS inbox (D76): reachable by anyone who can reach the demo port
+  and forge the `Host`. Fake data only; binding the demo ports to 127.0.0.1 would close it.
+

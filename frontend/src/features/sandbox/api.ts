@@ -44,3 +44,29 @@ export function useClearSmsInbox() {
 export function digitsOnly(value: string): string {
   return value.replace(/[^0-9]/g, "");
 }
+
+export interface DemoAccount {
+  email: string;
+  name: string;
+  role: "CLIENT" | "DEVELOPER";
+}
+
+export const demoAccountsKey = ["sandbox", "accounts"] as const;
+
+/** The seeded demo clients and developers the quick sign-in tab offers (never an administrator). */
+export function useDemoAccounts() {
+  return useQuery<{ accounts: DemoAccount[] }, ApiError>({
+    queryKey: demoAccountsKey,
+    queryFn: () => api<{ accounts: DemoAccount[] }>("/dev-sandbox/accounts"),
+    retry: (count, error) => !(error instanceof ApiError && error.status === 404) && count < 1,
+  });
+}
+
+/** One click, one session: the server only accepts seeded `@devsync.local` clients and developers. */
+export function useQuickSignIn() {
+  return useMutation({
+    mutationFn: (email: string) =>
+      api<{ redirect_to: string }>("/dev-sandbox/sign-in", { method: "POST", body: { email } }),
+    meta: { inlineErrors: true },
+  });
+}

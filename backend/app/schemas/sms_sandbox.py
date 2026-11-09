@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SandboxSms(BaseModel):
@@ -22,3 +22,31 @@ class SandboxSmsList(BaseModel):
 
     messages: list[SandboxSms]
     newest_code: str | None
+
+
+class DemoAccount(BaseModel):
+    """A seeded demo account the quick sign-in tab can open (never an administrator)."""
+
+    email: str
+    name: str
+    role: str
+
+
+class DemoAccountList(BaseModel):
+    """Every seeded demo client and developer."""
+
+    accounts: list[DemoAccount]
+
+
+class DemoSignInRequest(BaseModel):
+    """Which demo account to sign in as."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    email: str = Field(min_length=3, max_length=254)
+
+
+class DemoSignInResponse(BaseModel):
+    """Where the browser goes after the quick sign-in."""
+
+    redirect_to: str

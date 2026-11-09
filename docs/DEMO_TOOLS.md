@@ -20,6 +20,15 @@ there and type it on the verify page. It keeps the newest 100 texts for six hour
 
 If the page says "The SMS inbox is off here", the server is not in one of those environments.
 
+## Quick sign-in (one click per person)
+
+The second tab of the same page, **https://localhost/sandbox/sms?tab=signin**, lists the seeded
+demo people in the order the Demo 1 walkthrough uses them (Rahim, Nusrat, Rafsan, Farzana, Arif,
+Nadia, Lamia, Mehjabin, Shakib, Tahmid, then the rest). One click signs in as that person and
+opens their home page, with no password. It replaces whoever is signed in in that window, so use
+a private window for a second person. The administrator has no shortcut: sign in normally and
+type the authenticator code.
+
 ## Email
 
 Mailpit, the local mail catcher, shows every email (verification and reset links, invitations):

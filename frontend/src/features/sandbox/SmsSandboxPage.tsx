@@ -3,17 +3,19 @@
  * account exists); the server only mounts it in development, tests and the offline demo stack. */
 import { Check, Copy, ExternalLink, MailOpen, Radio, Smartphone, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { ApiError } from "@/api/client";
 import { Wordmark } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/Button";
 import { Switch } from "@/components/ui/Choice";
 import { Badge, Card, CardHeader, Skeleton } from "@/components/ui/Display";
 import { EmptyState, ErrorState, PageHeader } from "@/components/ui/Feedback";
+import { Tabs } from "@/components/ui/Disclosure";
 import { Input } from "@/components/ui/Field";
 import { toast } from "@/components/ui/toast-store";
 import { formatRelative } from "@/lib/format";
 import { digitsOnly, useClearSmsInbox, useSmsInbox, type SandboxSms } from "./api";
+import { QuickSignIn } from "./QuickSignIn";
 
 /** Mailpit, the local mail catcher every development and demo stack already runs. */
 const MAIL_INBOX_URL = "http://127.0.0.1:8025";
@@ -120,6 +122,8 @@ function MessageRow({ message, now }: { message: SandboxSms; now: Date }) {
 }
 
 export default function SmsSandboxPage() {
+  const [params, setParams] = useSearchParams();
+  const tab = params.get("tab") === "signin" ? "signin" : "sms";
   const [live, setLive] = useState(true);
   const [filter, setFilter] = useState("");
   const inbox = useSmsInbox(live);
@@ -137,6 +141,112 @@ export default function SmsSandboxPage() {
   const newest = shown.find((m) => m.code);
   const off = inbox.error instanceof ApiError && inbox.error.status === 404;
 
+  const smsPanel = (
+    <>
+      {off ? (
+        <Card>
+          <EmptyState
+            icon={<Smartphone aria-hidden="true" />}
+            title="The SMS inbox is off here"
+            description="It only runs in development, in tests and on the offline demo stack, so real deployments never expose codes."
+          />
+        </Card>
+      ) : inbox.isError ? (
+        <Card>
+          <ErrorState
+            title="The inbox didn’t load"
+            requestId={inbox.error instanceof ApiError ? inbox.error.requestId : null}
+            onRetry={() => void inbox.refetch()}
+          />
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          <Card>
+            <div className="grid gap-2 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-6">
+              <div>
+                <label htmlFor="sms-filter" className="text-body-sm font-medium text-text">
+                  Show texts to
+                </label>
+                <Input
+                  id="sms-filter"
+                  type="search"
+                  inputMode="tel"
+                  autoComplete="off"
+                  placeholder="Any number, for example +880 17"
+                  value={filter}
+                  onChange={(e) => {
+                    setFilter(e.target.value);
+                  }}
+                  className="mt-1"
+                />
+              </div>
+              <Switch label="Refresh every few seconds" checked={live} onCheckedChange={setLive} />
+            </div>
+          </Card>
+
+          {inbox.isPending ? (
+            <div className="space-y-3" aria-busy="true" aria-label="Loading texts">
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+            </div>
+          ) : (
+            <>
+              {newest ? <NewestCode message={newest} now={now} /> : null}
+              <Card>
+                <CardHeader
+                  title="Texts"
+                  description={
+                    shown.length === 0
+                      ? undefined
+                      : `${String(shown.length)} ${shown.length === 1 ? "text" : "texts"}, newest first`
+                  }
+                  action={
+                    live ? (
+                      <span className="inline-flex items-center gap-1.5 text-caption text-text-muted">
+                        <Radio className="size-4 text-success" aria-hidden="true" /> Live
+                      </span>
+                    ) : null
+                  }
+                />
+                {shown.length === 0 ? (
+                  <EmptyState
+                    icon={<Smartphone aria-hidden="true" />}
+                    title={wanted === "" ? "No texts yet" : "No texts to that number"}
+                    description={
+                      wanted === ""
+                        ? "Create an account or ask for a new code on the verify page. The text appears here within a few seconds."
+                        : "Clear the number above to see every text."
+                    }
+                  />
+                ) : (
+                  <ul className="divide-y divide-border">
+                    {shown.map((m) => (
+                      <MessageRow key={m.id} message={m} now={now} />
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            </>
+          )}
+
+          <p className="flex flex-wrap items-center gap-x-2 text-body-sm text-text-muted">
+            <MailOpen className="size-4" aria-hidden="true" />
+            Looking for an email instead?
+            <a
+              href={MAIL_INBOX_URL}
+              rel="noopener noreferrer"
+              target="_blank" // forbidden-ok: rel="noopener noreferrer" is set on the line above
+              className="inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline"
+            >
+              Open the mail inbox <ExternalLink className="size-3.5" aria-hidden="true" />
+            </a>
+          </p>
+        </div>
+      )}
+    </>
+  );
+
   return (
     <div className="min-h-dvh bg-bg">
       <header className="mx-auto flex max-w-content items-center justify-between px-4 py-5 sm:px-6">
@@ -151,136 +261,48 @@ export default function SmsSandboxPage() {
       </header>
       <main id="main" className="mx-auto max-w-3xl px-4 pb-24 pt-4 sm:px-6">
         <PageHeader
-          title="SMS inbox"
-          description="The texts DevSync sent here. Nothing reaches a real phone."
+          title={tab === "signin" ? "Quick sign-in" : "SMS inbox"}
+          description={
+            tab === "signin"
+              ? "Open the demo as any seeded person in one click."
+              : "The texts DevSync sent here. Nothing reaches a real phone."
+          }
           action={
-            <Button
-              variant="outline"
-              icon={<Trash2 aria-hidden="true" />}
-              loading={clear.isPending}
-              disabled={off || (inbox.data?.messages.length ?? 0) === 0}
-              onClick={() => {
-                clear.mutate(undefined, {
-                  onSuccess: () => toast({ tone: "success", title: "Inbox cleared" }),
-                  onError: () =>
-                    toast({
-                      tone: "danger",
-                      title: "Couldn’t clear the inbox",
-                      description: "Try again.",
-                    }),
-                });
-              }}
-            >
-              Clear inbox
-            </Button>
+            tab === "signin" ? undefined : (
+              <Button
+                variant="outline"
+                icon={<Trash2 aria-hidden="true" />}
+                loading={clear.isPending}
+                disabled={off || (inbox.data?.messages.length ?? 0) === 0}
+                onClick={() => {
+                  clear.mutate(undefined, {
+                    onSuccess: () => toast({ tone: "success", title: "Inbox cleared" }),
+                    onError: () =>
+                      toast({
+                        tone: "danger",
+                        title: "Couldn’t clear the inbox",
+                        description: "Try again.",
+                      }),
+                  });
+                }}
+              >
+                Clear inbox
+              </Button>
+            )
           }
         />
 
-        {off ? (
-          <Card>
-            <EmptyState
-              icon={<Smartphone aria-hidden="true" />}
-              title="The SMS inbox is off here"
-              description="It only runs in development, in tests and on the offline demo stack, so real deployments never expose codes."
-            />
-          </Card>
-        ) : inbox.isError ? (
-          <Card>
-            <ErrorState
-              title="The inbox didn’t load"
-              requestId={inbox.error instanceof ApiError ? inbox.error.requestId : null}
-              onRetry={() => void inbox.refetch()}
-            />
-          </Card>
-        ) : (
-          <div className="space-y-6">
-            <Card>
-              <div className="grid gap-2 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-6">
-                <div>
-                  <label htmlFor="sms-filter" className="text-body-sm font-medium text-text">
-                    Show texts to
-                  </label>
-                  <Input
-                    id="sms-filter"
-                    type="search"
-                    inputMode="tel"
-                    autoComplete="off"
-                    placeholder="Any number, for example +880 17"
-                    value={filter}
-                    onChange={(e) => {
-                      setFilter(e.target.value);
-                    }}
-                    className="mt-1"
-                  />
-                </div>
-                <Switch
-                  label="Refresh every few seconds"
-                  checked={live}
-                  onCheckedChange={setLive}
-                />
-              </div>
-            </Card>
-
-            {inbox.isPending ? (
-              <div className="space-y-3" aria-busy="true" aria-label="Loading texts">
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-16 w-full" />
-              </div>
-            ) : (
-              <>
-                {newest ? <NewestCode message={newest} now={now} /> : null}
-                <Card>
-                  <CardHeader
-                    title="Texts"
-                    description={
-                      shown.length === 0
-                        ? undefined
-                        : `${String(shown.length)} ${shown.length === 1 ? "text" : "texts"}, newest first`
-                    }
-                    action={
-                      live ? (
-                        <span className="inline-flex items-center gap-1.5 text-caption text-text-muted">
-                          <Radio className="size-4 text-success" aria-hidden="true" /> Live
-                        </span>
-                      ) : null
-                    }
-                  />
-                  {shown.length === 0 ? (
-                    <EmptyState
-                      icon={<Smartphone aria-hidden="true" />}
-                      title={wanted === "" ? "No texts yet" : "No texts to that number"}
-                      description={
-                        wanted === ""
-                          ? "Create an account or ask for a new code on the verify page. The text appears here within a few seconds."
-                          : "Clear the number above to see every text."
-                      }
-                    />
-                  ) : (
-                    <ul className="divide-y divide-border">
-                      {shown.map((m) => (
-                        <MessageRow key={m.id} message={m} now={now} />
-                      ))}
-                    </ul>
-                  )}
-                </Card>
-              </>
-            )}
-
-            <p className="flex flex-wrap items-center gap-x-2 text-body-sm text-text-muted">
-              <MailOpen className="size-4" aria-hidden="true" />
-              Looking for an email instead?
-              <a
-                href={MAIL_INBOX_URL}
-                rel="noopener noreferrer"
-                target="_blank" // forbidden-ok: rel="noopener noreferrer" is set on the line above
-                className="inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline"
-              >
-                Open the mail inbox <ExternalLink className="size-3.5" aria-hidden="true" />
-              </a>
-            </p>
-          </div>
-        )}
+        <Tabs
+          label="Developer sandbox"
+          value={tab}
+          onValueChange={(v) => {
+            setParams(v === "signin" ? { tab: "signin" } : {}, { replace: true });
+          }}
+          items={[
+            { value: "sms", label: "SMS inbox", content: smsPanel },
+            { value: "signin", label: "Quick sign-in", content: <QuickSignIn /> },
+          ]}
+        />
       </main>
     </div>
   );

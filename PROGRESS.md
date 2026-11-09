@@ -114,6 +114,9 @@
 - The full gate needs about 3 GB of free memory (7 GB laptop): close Chrome first. Under swap pressure WebKit E2E runs time out, and those failures say nothing about the code.
 
 ## Session log (newest first)
+### 2026-11-09 — Taeen (with Claude Code), quick sign-in tab (D78)
+- `/sandbox/sms?tab=signin`: one click signs in as a seeded demo client or developer (not admins), only where the sandbox is on (D76 switch). 15 API tests + 7 page tests; backend unit+api 1220 passed, frontend 506 passed; checked on the real demo stack. Demo stack now seeded with `DEMO_PASSWORD='DevSyncDemo#2026'` (one password for every account).
+
 ### 2026-11-08 — Taeen (with Claude Code), demo readiness for Demo 1
 - Built the developer SMS inbox (`/sandbox/sms`, D76) and a fuller demo seed (D77: second client Farzana and five more open projects; no completed projects, those are stage 2).
 - Gate/demo-check runs: steps 1–12 pass (1629 backend, 544 security, 521 contract, 499 frontend tests; scanners clean after rebuilding images without cache); step 13 failed on one Firefox timing test under memory pressure; the demo walkthrough passed 11 of 12 (one 502 on the seed call). Fix: the second tab waits for `domcontentloaded`. Gate re-run started 21:50.

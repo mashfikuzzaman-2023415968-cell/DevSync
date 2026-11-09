@@ -976,3 +976,22 @@ plan, added on request so a presenter can show the phone-code step without a pho
 - **Not added:** completed, in-progress or disputed projects. Those lifecycle states are built in
   Phases 9 to 12 and stage 2 loads them; showing them now would show features that do not exist.
   Guests can browse open projects and public developer profiles only.
+
+**D78 · Quick sign-in tab in the developer sandbox (Taeen, 2026-11-09; extends D76).**
+- **Why:** a demo switches between about a dozen seeded people; typing a password each time costs
+  minutes. `/sandbox/sms?tab=signin` lists them and signs in with one click.
+- **How:** `GET /api/v1/dev-sandbox/accounts` and `POST /api/v1/dev-sandbox/sign-in` sit in the
+  same router as the SMS inbox, so they exist only where `sms_sandbox_enabled` (development, test,
+  the offline demo stack), are left out of OpenAPI and are refused by `assert_no_sandbox_routes`
+  anywhere else. The sign-in starts a normal session through `login.start_session`
+  (`services/auth/demo_signin.py`) and is audited as `auth.demo_signin`.
+- **Narrow on purpose:** only addresses ending `@devsync.local` (registration cannot create one),
+  never an administrator (they keep their TOTP step), never a suspended or deleted account, and
+  everything else is a plain 401. The POST still needs the CSRF token and Origin like any other.
+- **Known limit (same as D76):** it needs no sign-in, so on a machine whose demo port is reachable
+  from a network, someone there could open a demo account (fake data) with a forged `Host`.
+  Binding the demo ports to 127.0.0.1 would close it; not done.
+- **Tests:** 15 API tests (list, sign-in for both roles, case-insensitive email, admin refused,
+  non-demo address refused, malformed and unknown addresses, bad bodies, CSRF, session works) and
+  7 page tests (order, one click, refusal, admin note, off, empty, tab switching).
+

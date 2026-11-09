@@ -327,6 +327,9 @@ async def _start_session(
     return SignedIn(token=token, data=data, redirect_to=redirect_to)
 
 
+start_session = _start_session  # for the demo sign-in shortcut (services/auth/demo_signin.py)
+
+
 def verify_totp_code(
     secret: str, code: str, now: datetime, last_used_step: int | None
 ) -> int | None:
