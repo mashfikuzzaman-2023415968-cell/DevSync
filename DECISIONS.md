@@ -995,3 +995,51 @@ plan, added on request so a presenter can show the phone-code step without a pho
   non-demo address refused, malformed and unknown addresses, bad bodies, CSRF, session works) and
   7 page tests (order, one click, refusal, admin note, off, empty, tab switching).
 
+
+**D79 · Two dependency security fixes (Taeen, 2026-11-19; D51 exception).** The gate's pip-audit
+(step 7) found `dnspython` 2.9.0 (CVE-2026-128089, fixed in 2.9.2) and `opentelemetry-api` 1.45.1
+(CVE-2026-126360, fixed in 1.45.2). Both were upgraded with
+`uv pip compile requirements.in --python-version 3.12 --generate-hashes -o requirements.lock
+--upgrade-package dnspython==2.9.2 --upgrade-package opentelemetry-api==1.45.2`; the diff touches
+only those two pins and their hashes. Under D51 a package may be newer than 14 days to fix a
+published vulnerability. The application code and tests are unchanged.
+
+**D80 · Flake fix in an E2E test: "signing out of every device" (Taeen, 2026-11-19; same kind as D41, D42).**
+In a full gate run, the Firefox run of `auth.spec.ts` "signing out of every device ends the other
+browser's session" timed out: the screenshot showed the Settings page loaded and the confirmation
+dialog not open, so the first click on "Sign out of every device" was lost while the machine was
+loaded (the test passed 12 of 12 alone, and 232 of 232 in the earlier full run). The app was not
+at fault. The test now clicks again until the dialog is visible (`expect(...).toPass`), then
+confirms as before. Nothing was relaxed: the dialog must still open, and the other browser must
+still be signed out. Checked 9 of 9 on Chromium, Firefox and WebKit.
+
+**D81 · A NUL character in request text is a 422, not a 500 (Taeen, 2026-11-19; found by the gate's fuzzing).**
+Step 11 (Schemathesis, signed in as a client) sent `POST /projects` with the title `"0000\u0000"`.
+PostgreSQL cannot store a NUL character in text, so the insert failed and the API answered 500
+(`unhandled_exception`). Earlier gate runs did not generate that string, so it was a latent bug.
+Two first attempts were wrong and are recorded so they are not repeated: refusing NUL in
+`JsonBodyMiddleware` broke `test_control_characters_are_removed_from_text` (profile text is meant to
+be cleaned, not refused), and stripping NUL from every field in `StrictRequest` turned the login
+email `x\0@y.z` into the valid-looking `x@y.z` (`test_sign_in_still_rejects_malformed_emails`);
+silently altering an identifier is the wrong behaviour. The fix is a field validator on
+`StrictRequest` (`app/schemas/common.py`) that runs *after* each field's own rules and refuses a
+NUL that is still there with a 422 naming the field. Fields that clean their text keep cleaning it,
+and an email still fails as malformed, exactly as before. Tests: 16 unit cases (strings, lists,
+tuples, dicts, nested models, a field that cleans its own text) and an API test on `POST /projects`.
+
+**D82 · Request fields refuse the wrong JSON type instead of coercing it (Taeen, 2026-11-20; found by the gate's fuzzing).**
+Step 11 sent `POST /projects` with `"budget_paisa": false` and `"start_date": 0`; the API answered
+201, taking `false` as a budget of 0 and `0` as 1970-01-01 (pydantic's lax mode). The OpenAPI file
+says integer and date, so the API accepted input that breaks its own contract.
+`StrictRequest` (`app/schemas/common.py`) now has a *before* validator on every field
+(`wrong_json_type`): a true/false value is refused where the field is not boolean, and a number is
+refused where the field is a date or a date-time (including pydantic's `AwareDatetime`). Everything
+else is left to the field's own rules; a field that allows several types, or an unusual annotation,
+is not touched. Tests: 48 unit cases in `tests/unit/test_schemas_common.py` (refused, still
+accepted, and the helper itself) and an API test on `POST /projects`.
+*Same run, second failure, not changed:* `POST /me/external-reviews` (a multipart upload form) was
+reported as accepting a "null" `source` and a numeric `file`. In a form every value is text, so
+the fuzzer's null arrives as the string "None", which is a valid source name. The case passed
+twice when that operation was run on its own, so it is a rare quirk of the fuzzer and not a
+change in behaviour; no test was relaxed. If it comes back in a full run, it will be looked at
+again before any exception is considered.

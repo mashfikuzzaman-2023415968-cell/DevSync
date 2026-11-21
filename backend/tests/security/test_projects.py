@@ -683,3 +683,24 @@ def test_a_99_9_percent_share_total_is_not_reported_as_100(api: Api) -> None:
     )
     assert r.status_code == 200
     assert "Milestone shares total 99.9%, not 100%." in r.json()["warnings"]
+
+
+def test_a_nul_character_in_project_text_is_a_422_never_a_500(api: Api) -> None:
+    """Found by the gate's fuzzing: PostgreSQL cannot store NUL, and the insert used to be a 500."""
+    api.sign_in_as("CLIENT")
+    body = {"title": "Online ordering", "summary": "s", "budget_paisa": 0, "deadline_days": 1}
+    for field, value in (("title", "0000\x00"), ("title", "Order\x00ing"), ("summary", "a\x00b")):
+        r = api.post("/api/v1/projects", json={**body, "team_size": 2, field: value})
+        assert r.status_code == 422, (field, r.text)
+        assert field in r.json()["error"]["fields"]
+        assert "NUL" in r.json()["error"]["fields"][field]
+
+
+def test_wrong_json_types_in_a_project_are_a_422_not_coerced(api: Api) -> None:
+    """Found by the gate's fuzzing: `false` was taken as a budget of 0, and `0` as a start date."""
+    api.sign_in_as("CLIENT")
+    body = {"title": "Online ordering", "budget_paisa": 1000, "deadline_days": 5, "team_size": 2}
+    for field, value in (("budget_paisa", False), ("budget_paisa", True), ("start_date", 0)):
+        r = api.post("/api/v1/projects", json={**body, field: value})
+        assert r.status_code == 422, (field, value, r.text)
+        assert field in r.json()["error"]["fields"]

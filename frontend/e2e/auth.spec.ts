@@ -115,8 +115,14 @@ test("signing out of every device ends the other browser's session @e2e", async 
   await signIn(b, user.email, user.password);
   await expect(b).toHaveURL(/\/dev$/);
   await a.goto("/settings");
-  await a.getByRole("button", { name: "Sign out of every device" }).click();
-  await a.getByRole("alertdialog").getByRole("button", { name: "Sign out everywhere" }).click();
+  // On a loaded machine Firefox can drop this first click before the page is ready, so click
+  // again until the confirmation dialog is really there (it must still open, and be confirmed).
+  const confirm = a.getByRole("alertdialog");
+  await expect(async () => {
+    await a.getByRole("button", { name: "Sign out of every device" }).click({ timeout: 5000 });
+    await expect(confirm).toBeVisible({ timeout: 3000 });
+  }).toPass({ timeout: 30_000 });
+  await confirm.getByRole("button", { name: "Sign out everywhere" }).click();
   await expect(a).toHaveURL(/\/$/);
   await b.goto("/settings");
   // The other browser is sent to sign in, back to where it was, and told why (D69).

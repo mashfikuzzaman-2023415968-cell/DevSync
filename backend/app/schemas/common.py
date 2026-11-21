@@ -2,17 +2,97 @@
 
 from __future__ import annotations
 
-from typing import Generic, TypeVar
+import types
+from datetime import date
+from typing import Annotated, Any, Generic, Literal, TypeVar, Union, get_args, get_origin
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
+from pydantic_core import PydanticCustomError
 
 from app.core.errors import ErrorCode
 
 
+def has_nul(value: object) -> bool:
+    """True if a string, or any string inside a list, tuple or dict, contains a NUL character."""
+    if isinstance(value, str):
+        return "\x00" in value
+    if isinstance(value, (list, tuple)):
+        return any(has_nul(item) for item in value)
+    if isinstance(value, dict):
+        return any(has_nul(key) or has_nul(item) for key, item in value.items())
+    return False
+
+
+def _leaf_types(annotation: object) -> set[object]:
+    """The plain types a field annotation allows (`int | None` gives int and NoneType). Anything
+    unusual gives `object`, which the callers treat as "allow anything"."""
+    origin = get_origin(annotation)
+    if origin is Annotated:
+        return _leaf_types(get_args(annotation)[0])
+    if origin is Union or origin is types.UnionType:
+        return set().union(*(_leaf_types(arg) for arg in get_args(annotation)))
+    if origin is Literal:
+        return {type(arg) for arg in get_args(annotation)}
+    if origin is not None:
+        return {origin}  # list, dict, ...: the container itself
+    return {annotation} if isinstance(annotation, type) else {object}
+
+
+# Pydantic's own date and time types are classes of their own, not subclasses of `date`.
+_DATE_TYPE_NAMES = frozenset(
+    {"AwareDatetime", "NaiveDatetime", "PastDate", "FutureDate", "PastDatetime", "FutureDatetime"}
+)
+
+
+def _is_date_type(kind: object) -> bool:
+    return isinstance(kind, type) and (issubclass(kind, date) or kind.__name__ in _DATE_TYPE_NAMES)
+
+
+def wrong_json_type(value: object, annotation: object) -> bool:
+    """True for the two coercions pydantic allows but the API contract does not: a true/false value
+    in a field that is not boolean (`false` would become 0), and a number in a date field (`0`
+    would become 1970-01-01). Everything else is left to the field's own rules."""
+    if value is None:
+        return False
+    kinds = _leaf_types(annotation)
+    if object in kinds:
+        return False
+    if isinstance(value, bool):
+        return bool not in kinds
+    if isinstance(value, (int, float)):
+        takes_date = any(_is_date_type(k) for k in kinds)
+        takes_number = any(isinstance(k, type) and issubclass(k, (int, float)) for k in kinds)
+        return takes_date and not takes_number
+    return False
+
+
 class StrictRequest(BaseModel):
-    """Base for request bodies: unknown fields are rejected (mass-assignment defence, §14.5)."""
+    """Base for request bodies: unknown fields are rejected (mass-assignment defence, §14.5).
+
+    A true/false value where a number or text is expected, and a number where a date is expected,
+    are refused with a 422 instead of being coerced (see `wrong_json_type`).
+
+    A NUL character left in any field is refused with a 422: PostgreSQL cannot store it, and it
+    would otherwise come back as a 500. This runs after each field's own rules, so fields that
+    clean their text (the profile schemas drop control characters) or that must be well formed
+    (an email) behave exactly as before."""
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def _refuse_wrong_json_type(cls, value: Any, info: ValidationInfo) -> Any:
+        field = cls.model_fields.get(info.field_name or "")
+        if field is not None and wrong_json_type(value, field.annotation):
+            raise PydanticCustomError("json_type", "That isn't the right kind of value here.")
+        return value
+
+    @field_validator("*", mode="after")
+    @classmethod
+    def _refuse_nul_character(cls, value: Any) -> Any:
+        if has_nul(value):
+            raise PydanticCustomError("nul_character", "Text can't contain a NUL character.")
+        return value
 
 
 class ErrorDetail(BaseModel):

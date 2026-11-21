@@ -1,15 +1,14 @@
-"""The phase gate (spec §16.5): `make gate PHASE=N`.
+"""Phase gate, run with `make gate PHASE=N` (spec §16.5).
 
-Runs the 20 gate steps in order, stops at the first failure unless
-`--keep-going`, prints a summary table, writes `runs/gates/phase-N.json`,
-appends the result to PROGRESS.md and writes `.phase` on PASS.
+Goes through the gate steps in order and stops at the first failure, unless you pass
+`--keep-going`. At the end it prints a summary table, saves `runs/gates/phase-N.json`, adds a
+line to PROGRESS.md and, if everything passed, writes `.phase`.
 
-Steps for parts of the system that don't exist yet report `N/A (from phase K)`
-with the reason, so the same gate grows with the project. Never weaken a step
-to pass (spec §16.10).
+A step for something that isn't built yet reports N/A and says why, so the same gate keeps
+working as the project grows. Don't loosen a step just to get a pass (spec §16.10).
 
-Runs on the host with the standard library only; every Python tool runs in the
-`tests` container (python:3.12) and scanners run from pinned images.
+The script itself uses only the standard library and runs on the host. Python tools run in the
+`tests` container, and the scanners run from pinned images.
 
 Usage:
   python3 backend/scripts/phase_gate.py --phase 0 [--keep-going] [--offline] [--only a,b]
@@ -48,16 +47,16 @@ COMPOSE = [
     "docker-compose.test.yml",
 ]
 
-# Pinned scanner images (update deliberately, spec §14.21).
+# Scanner images are pinned; bump them on purpose, not by accident (spec §14.21).
 SEMGREP_IMAGE = "semgrep/semgrep:1.95.0"
 GITLEAKS_IMAGE = "zricethezav/gitleaks:v8.21.2"
 TRIVY_IMAGE = "aquasec/trivy:0.57.1"
 PLAYWRIGHT_IMAGE = "mcr.microsoft.com/playwright:v1.63.0-noble"
 
 
-# Coverage thresholds by phase (spec §16.5): (backend, frontend).
+# Minimum coverage per phase as (backend, frontend), from spec §16.5.
 def coverage_thresholds(phase: int) -> tuple[int, int]:
-    """Backend/frontend line+branch coverage minimums for a phase."""
+    """Return the backend and frontend coverage minimums for this phase."""
     if phase <= 3:
         return 75, 60
     if phase <= 9:
@@ -65,7 +64,7 @@ def coverage_thresholds(phase: int) -> tuple[int, int]:
     return 90, 75
 
 
-# Modules that need ≥ 95% from the phase they appear in (spec §16.5 step 9).
+# These need at least 95% coverage from the phase they first appear in (spec §16.5, step 9).
 CRITICAL_MODULES = (
     "app/core/security.py",
     "app/core/sessions.py",
@@ -121,8 +120,8 @@ ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
 
 def _save_failed_output(cmd: list[str], output: str) -> str:
-    """Keep a failed command's whole output: the tail shown in the report often stops short of
-    the cause (pytest prints each failure's detail before its summary)."""
+    """Save the full output of a failed command to a file. The last lines we show in the report
+    often miss the real cause, because pytest prints each failure's details before its summary."""
     RUNS.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
     path = RUNS / f"failed-{stamp}.log"
@@ -139,8 +138,8 @@ def run(
     capture: bool = True,
     check: bool = True,
 ) -> subprocess.CompletedProcess[str]:
-    """Run a command; on failure raise StepFailed with the tail of its output."""
-    # Plain output: the gate parses test counts, and colour codes would break that.
+    """Run a command. If it fails, raise StepFailed with the last lines of its output."""
+    # No colours: the gate reads test counts from the output and colour codes get in the way.
     merged = {
         **os.environ,
         "HOST_UID_GID": f"{os.getuid()}:{os.getgid()}",
@@ -172,7 +171,7 @@ def run(
 def in_tests(
     args: list[str], *, timeout: int = 1800, no_deps: bool = False
 ) -> subprocess.CompletedProcess[str]:
-    """Run a command inside the `tests` container (python 3.12 + dev tooling)."""
+    """Run a command in the `tests` container (Python 3.12 plus the dev tools)."""
     base = [*COMPOSE, "run", "--rm", "-T"]
     if no_deps:
         base.append("--no-deps")
@@ -209,7 +208,7 @@ def step_build(g: Gate) -> str:
     notes = check_bundle_budget()
     if g.phase >= 2:
         notes += "; " + check_no_dev_tools()
-        # Development-tools build (UI kit, stills) for the visual step; never deployed.
+        # Separate build with the dev tools (UI kit, stills) for the visual step; never deployed.
         run(
             ["npx", "vite", "build", "--outDir", "dist-kit", "--emptyOutDir"],
             cwd=FRONTEND,
@@ -226,7 +225,7 @@ def _gzip_size(path: Path) -> int:
 
 
 def _chunk_closure(manifest: dict[str, Any], key: str) -> set[str]:
-    """Files a manifest entry needs at load time (itself + static imports, recursively)."""
+    """Return the files a manifest entry needs on load: itself plus everything it imports."""
     files: set[str] = set()
     stack = [key]
     seen: set[str] = set()
@@ -241,8 +240,8 @@ def _chunk_closure(manifest: dict[str, Any], key: str) -> set[str]:
 
 
 def check_bundle_budget() -> str:
-    """Initial JS ≤ 250 KB, homepage initial ≤ 250 KB, route chunks ≤ 150 KB, 3D chunk ≤ 220 KB
-    (all gzip, spec §13.7 and §13.12)."""
+    """Check the bundle sizes (all gzipped, spec §13.7 and §13.12): initial JS and the homepage
+    up to 250 KB, route chunks up to 150 KB, the 3D chunk up to 220 KB."""
     dist = FRONTEND / "dist"
     manifest = json.loads((dist / ".vite" / "manifest.json").read_text(encoding="utf-8"))
     entry = next(k for k, v in manifest.items() if v.get("isEntry"))
@@ -273,7 +272,7 @@ def check_bundle_budget() -> str:
 
 
 def check_no_dev_tools() -> str:
-    """The UI kit and stills renderer never ship (spec §17 Phase 2 #8–9)."""
+    """The UI kit and the stills renderer must not be in the production build (spec §17)."""
     hits = [
         f.name
         for f in (FRONTEND / "dist" / "assets").glob("*.js")
@@ -412,7 +411,7 @@ def step_dependency_audit(g: Gate) -> str:
     try:
         in_tests(pip_audit, no_deps=True)
     except StepFailed as exc:
-        # A timeout reaching the advisory database is not a finding: try once more. A real
+        # A timeout while reaching the advisory database is not a finding, so try once more. A real
         # vulnerability fails both attempts.
         if "Timeout" not in str(exc) and "timed out" not in str(exc):
             raise
@@ -432,7 +431,7 @@ def step_dependency_audit(g: Gate) -> str:
                 TRIVY_IMAGE,
                 "image",
                 "--quiet",
-                # mirror.gcr.io is unreachable from some networks; use GitHub's registry.
+                # Some networks can't reach mirror.gcr.io, so use GitHub's registry instead.
                 "--db-repository",
                 "ghcr.io/aquasecurity/trivy-db:2",
                 "--java-db-repository",
@@ -755,7 +754,7 @@ def phase0_checks(g: Gate) -> str:
     if unhealthy:
         raise StepFailed(f"unhealthy services: {unhealthy}")
     probe = in_tests(["python", "-c", HEALTH_PROBE])
-    # Compose prints container status lines first; the probe's answer is the last line.
+    # Compose prints some container status lines first, so the probe's answer is the last line.
     answer = probe.stdout.strip().splitlines()[-1] if probe.stdout.strip() else ""
     if not answer.startswith("200") or not answer.endswith("form-action 'none'"):
         raise StepFailed(f"health via nginx: {answer}")
@@ -823,8 +822,8 @@ def phase2_checks(g: Gate) -> str:
 
 
 def phase3_checks(g: Gate) -> str:
-    """Spec §17 Phase 3 gate checks: a crafted polyglot upload is rejected, a signed URL
-    expires (and a tampered one is refused), and test answers are absent from API responses."""
+    """Phase 3 checks (spec §17): a crafted polyglot upload is rejected, a signed URL expires
+    and a tampered one is refused, and no API response contains a test answer."""
     p2 = phase2_checks(g)
     in_tests(
         [
@@ -849,9 +848,10 @@ def phase3_checks(g: Gate) -> str:
 
 
 def phase4_checks(g: Gate) -> str:
-    """Spec §17 Phase 4 gate checks: the §18.2 "Online ordering system" plan reproduces the
-    documented CPM (duration 24, the critical path and Frontend's slack 4), a dependency cycle
-    is rejected, the publish guards hold, and draft projects stay private in the database."""
+    """Phase 4 checks (spec §17): the "Online ordering system" plan from §18.2 gives the
+    documented CPM result (24 days, the critical path, 4 days of slack on Frontend), a
+    dependency cycle is rejected, the publish guards hold, and drafts stay private in the
+    database."""
     p3 = phase3_checks(g)
     in_tests(
         [
@@ -876,12 +876,12 @@ def phase4_checks(g: Gate) -> str:
 
 
 def phase5_checks(g: Gate) -> str:
-    """Spec §17 Phase 5 gate checks: the §18.4 stage-1 seed reproduces the documented eligible /
-    ineligible counts and reasons for "Online ordering system" (10 eligible; Shakib TOO_SLOW,
-    Lamia NO_SKILL_EVIDENCE); Algorithm 1 boundaries and the newcomer rule hold; bids are sealed
-    between developers; and the bidding-deadline job behaves."""
+    """Phase 5 checks (spec §17): the stage-1 seed from §18.4 gives the documented eligible and
+    ineligible counts for "Online ordering system" (10 eligible, Shakib TOO_SLOW, Lamia
+    NO_SKILL_EVIDENCE), the Algorithm 1 boundaries and the newcomer rule hold, bids stay sealed
+    between developers, and the bidding-deadline job behaves."""
     p4 = phase4_checks(g)
-    # The seed self-asserts the §18.4 counts (it exits non-zero on any mismatch).
+    # The seed checks the §18.4 counts itself and exits with an error if they are off.
     in_tests(["python", "scripts/seed_demo.py", "--stage", "1"])
     in_tests(
         [
@@ -904,9 +904,9 @@ def phase5_checks(g: Gate) -> str:
 
 
 def role_assessment_checks() -> str:
-    """Role assessment (ROLE_ASSESSMENT_BUILD_SPEC.md §20): the question bank seed matches its
-    YAML sources and validates, every code question's execution check passes, SQL and Python
-    scoring agree on the shared vectors, and answers never leave the API."""
+    """Role assessment checks (ROLE_ASSESSMENT_BUILD_SPEC.md §20): the question bank seed matches
+    its YAML files and is valid, every code question's check runs and passes, the SQL and Python
+    scoring give the same results on the shared vectors, and answers never leave the API."""
     in_tests(["python", "scripts/build_question_bank.py", "--check"])
     run(["make", "question-checks"], cwd=ROOT, timeout=1200)
     in_tests(
@@ -948,7 +948,7 @@ def step_regression_guard(g: Gate) -> str:
         raise StepFailed(
             f"test counts dropped (baseline → now): {dropped}; needs a DECISIONS.md entry"
         )
-    # The coverage report of this run is on disk now, so the doc table quotes today's numbers.
+    # This run's coverage report is on disk by now, so the table in the docs gets today's numbers.
     doc = refresh_testing_doc()
     return f"no tests removed: {current} (baseline {baseline}); {doc}"
 
