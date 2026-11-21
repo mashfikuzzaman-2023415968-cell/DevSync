@@ -36,7 +36,10 @@ Phase 6 is started.
 ## 2. How to run it from scratch
 
 **Prerequisites:**
-- Linux, or Windows with WSL2. Taeen's laptop is Ubuntu with 8 GB RAM.
+- Native Linux with a GPU at `/dev/dri` (Intel or AMD preferred). The gate's performance step
+  measures the 3D scene's frame rate on real hardware (D28), so WSL2, macOS or a VM can be used
+  for development but **cannot pass the gate**. Taeen's laptop is Ubuntu with 8 GB RAM and Intel
+  graphics.
 - Docker Engine 24+ with Compose v2, plus `make`, `git` and Python 3.10+ on the host.
 - Node 22 LTS (Phase 6 moves the project from Node 20, see §5) and `uv`
   (`curl -LsSf https://astral.sh/uv/install.sh | sh`).
@@ -143,6 +146,10 @@ their gates shorter.
 - **SSE doesn't exist yet.** Phase 7's formation progress is the first Server-Sent Events
   endpoint (§10.3: cookie auth, Origin check, 20 s heartbeat, 30 min close, max 3 streams per
   user). Build it carefully: it sets the pattern for notifications later.
+  - Nginx currently buffers API responses and has `proxy_read_timeout 30s`
+    (`infra/nginx/proxy-api.conf`). A stream needs its own location with `proxy_buffering off`, a
+    longer timeout and `X-Accel-Buffering: no`.
+  - Test it through Nginx (`tests/edge/test_edge.py`).
 - **The demo port is reachable from the network** (D76, D78): the demo stack's port is open on
   all interfaces, which exposes the inbox and quick sign-in on fake data. Binding it to
   127.0.0.1 is still open.

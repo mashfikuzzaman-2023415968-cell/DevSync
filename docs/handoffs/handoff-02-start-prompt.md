@@ -23,8 +23,9 @@ important phases of the project:
 Mashfikuzzaman Taeen (team leader) built Phases 0–3 and the role assessment; Salwa Baki built
 Phases 4–5. Phases 0–5 are built, gated and tagged `phase-0` … `phase-5`, and Demo 1 has been
 presented. Work stops at `main`, which holds the latest code plus the hand-off documents.
-**Demo 2 is Monday 7 December 2026** and covers Phases 6–12, so time matters, but correctness
-matters more: these two phases are the research core the viva will examine.
+**Demo 2 is Monday 7 December 2026** (the spec's date; confirm it with Taeen) and covers Phases
+6–12, so time matters, but correctness matters more: these two phases are the research core the
+viva will examine.
 
 **Don't write any code yet.** Your first job is to understand the project and the repository
 completely and accurately, set up and verify this laptop, and report back. Then write the
@@ -36,9 +37,15 @@ question for me.
 
 Check what's installed first and tell me what is missing before installing anything system-wide.
 
-- **OS:** Linux, or Windows with WSL2. macOS works but some gate commands use `systemd-run` (see
-  Step 8 for the macOS alternative).
-- **Memory and disk:** about 8 GB RAM and 20 GB free disk space.
+- **OS: native Linux (Ubuntu or similar) with a real GPU** exposed at `/dev/dri`, preferably
+  Intel or AMD.
+  - The gate's performance step measures the homepage 3D scene's frame rate on real hardware
+    (DECISIONS D28), so a machine without `/dev/dri` (WSL2, macOS, a VM) **cannot pass the gate**.
+  - Development itself works on WSL2 or macOS, but the gate has to run on a Linux laptop with a
+    GPU. Check with `ls /dev/dri` and tell me what you find.
+- **Memory and disk:** about 8 GB RAM and 20 GB free disk space. The first build and the first
+  gate download several GB of pinned images (Playwright, Semgrep, Trivy, Postgres), so use a
+  good connection.
 - **Tools:**
   - Docker Engine 24+ with Compose v2 (`docker compose version`), able to run without sudo;
   - `git`, `make`, Python 3.10+ on the host;
@@ -243,19 +250,26 @@ Understand the code before you plan. Read the actual files, not just their names
   `docs/SECURITY.md`, `docs/API.md`, `docs/ARCHITECTURE.md`, `docs/UI_GUIDE.md`,
   `docs/DEMO_TOOLS.md`.
 
-## Step 5 — Verify the starting point on this laptop
+## Step 5 — Verify the starting point on this laptop (quick, not the full gate)
 
-Follow the session-start routine in `CLAUDE.md`:
+**Don't run the Phase 5 gate.** It takes 2–3 hours, and Taeen already ran it. Steps 1–12 passed
+on the final code, steps 14–19 passed on 2026-11-09, and the one known failure is described in
+the hand-off. Your first full gate run is the Phase 6 gate. Instead, check in about 15 minutes
+that this laptop works:
 
-1. `git pull`, `make up`, `make migrate`. Open https://localhost, sign in as the admin you
-   created, then try the demo stack and its Quick sign-in tab.
-2. Run the full Phase 5 gate **detached** (Step 8 shows how). This is the reference point on
-   this laptop.
-   - The hand-off says honestly that the final code has not yet had one clean end-to-end run.
-     The likely failure is the Firefox test `e2e/role-assessment.spec.ts:181` (a timing failure
-     that passes alone).
-   - Report what you get. Don't "fix" anything by weakening a test, threshold, lint rule or
-     security default.
+1. **Session-start routine** (`CLAUDE.md`): `git pull`, `make up`, `make migrate`.
+2. **The app:** open https://localhost and sign in as the admin you created (the TOTP step must
+   work). Register a test client and read its phone code at https://localhost/sandbox/sms.
+3. **The demo stack:** `DEMO_PASSWORD='<12+ chars>' make demo-up STAGE=1`, then
+   `make demo-preflight` (expect `ready (9/9)`). Open the "Online ordering system" as Rahim via
+   the Quick sign-in tab and look at its bids and plan. That is the seeded project your Phase 7
+   gate will run formation on.
+4. **Fast tests:** `cd backend && .venv/bin/pytest -m unit -q`, then
+   `cd frontend && npx vitest run`. Both must pass.
+5. **GPU:** `ls /dev/dri` shows a `renderD*` device. Without one the gate can't pass, see Step 0.
+
+Report anything that fails. Don't "fix" anything by weakening a test, threshold, lint rule or
+security default.
 
 ## Step 6 — Report back before planning
 
@@ -276,7 +290,7 @@ Give me a concise report:
    - The performance budgets (reputation, 50-project history, < 20 ms; PSO, |S| = 200 and
      N = 10, < 5 s; exact solver, 18 candidates, < 3 s), coverage (85% / 70%; `app/algorithms/`
      ≥ 95%) and Chromium-only E2E.
-5. The result of the Phase 5 gate on this laptop.
+5. The result of the quick checks in Step 5 (app, demo stack, fast tests, GPU).
 6. Risks and open questions, especially:
    - how the newcomer rule and ω⁰ use role-assessment evidence;
    - how `pcs_replication` must switch off each extension;
@@ -316,6 +330,16 @@ an exact answer, and behaviour that makes sense to a person.
 - The Reputation page (screen 16) and the reputation summaries on profiles and bid tables.
 - `docs/PAPER_ALIGNMENT.md` (equation → function → test) and the reputation section of
   `docs/ALGORITHMS.md` with a worked example.
+- **Keep the existing API shape (D58).** `GET /developers/{id}` and the public profile already
+  return `reputation = {competency, performance, is_newcomer, seeded}`, and the bid screens show
+  it. Fill it with computed values behind the same shape, and `seeded` becomes false.
+- **Admin pieces in the navigation.** The admin nav has a "Reputation" entry marked `phase: 6`,
+  and §10.2 lists `POST /admin/reputation/recalculate` (step-up, job, `reputation.recalculate_all`
+  in §11). In the plan, decide whether Phase 6 builds them or they move to the Phase 12 admin
+  console. Record the decision, and update the nav marker if they move.
+- **Stage seeds.** In §18.4, STAGE=2 is the full Demo 2 seed (after Phase 12). Phase 6 adds only
+  its first part: reputations computed from simulator histories. `make demo-up STAGE=1` and the
+  Demo 1 walkthrough (`e2e/demos/demo-1.spec.ts`) must keep working.
 
 **Algorithm quality tests (required, in addition to coverage):**
 1. **Each equation by hand.** Eq. 1–12 each get at least two hand-computed fixtures, with the
@@ -378,8 +402,34 @@ an exact answer, and behaviour that makes sense to a person.
   - SSE progress on `/jobs/{id}/events`. It is the first SSE endpoint in the project, so follow
     §10.3 exactly: cookie auth, Origin check, 20 s heartbeat, a 30-minute cap, at most 3 streams
     per user.
-- **Endpoints:** confirm (creates the team, tentative reservations and invitation records;
-  Phase 8 handles the responses) and admin verify.
+- **How a run starts.** A formation run first runs Algorithm 1 (`filtering.py`, already built)
+  with the run's own thresholds P0/C0, advancement choice and relaxation steps. It then passes the
+  per-slot shortlist (`K_s = max(shortlist_factor·count_s, shortlist_min)`, D46) to PSO. Reuse
+  `filtering.py`; never copy its logic. Report the relaxations in the explanation (§9.7).
+- **Numbers.** The PSO and fitness maths may use floats (NumPy). Any score that is stored or
+  shown is rounded consistently (3 places, like the reputation columns), and money stays integer
+  paisa. Write the rule in the plan and record it as a decision.
+- **Scope boundaries.** Don't build Phase 8 here: invitation responses and expiry, lead
+  selection, member leaving and team repair. Phase 7's confirm only creates the records Phase 8
+  will use. Real work evidence and reviews (Phases 9–11) don't exist yet, so don't build them;
+  the simulator stands in for them.
+- **Endpoints:** confirm (creates the team, **tentative** availability reservations through
+  `availability.py` §9.17, and invitation records; Phase 8 handles the responses) and admin
+  verify.
+- **SSE through Nginx.** `infra/nginx/proxy-api.conf` buffers API responses and has
+  `proxy_read_timeout 30s`, which would break a stream silently. Add a dedicated location for
+  `/api/v1/jobs/{id}/events` with `proxy_buffering off`, a read timeout above the 20 s heartbeat,
+  and `X-Accel-Buffering: no`. Test the stream **through Nginx** in `tests/edge/test_edge.py`,
+  not only in the API tests.
+- **Where the job runs.** `formation.run` runs in the RQ worker. Candidate data (reputation,
+  skills, evidence) must be read like eligibility is (a SYSTEM session, D50) and frozen into the
+  run's candidate snapshot. The snapshot is immutable after that (§14.13 row 7).
+- **Notification.** §12 lists "Team formation finished" (in-app, to the client). Use the existing
+  `app/services/notifications.py` (used for bid notices, D67).
+- **Admin and client navigation.** "Team formation runs" (admin nav, `phase: 7`) and "Teams"
+  (client nav `/client/teams`, `phase: 7`) are placeholders, and §10.2 lists
+  `GET /admin/formation-runs`. Decide in the Phase 7 plan what Phase 7 builds and what moves to
+  Phase 8 or 12. Record it, and leave no menu entry pointing at a page that will never come.
 - **Screens:**
   - Screen 24, team formation: PrioritySliders with linked normalization, presets mapped to the
     advancement choice, minimum standards with a live pass count, FairnessDial, run with live
@@ -393,7 +443,8 @@ an exact answer, and behaviour that makes sense to a person.
 **Algorithm quality tests (required, in addition to coverage):**
 1. **Fitness by hand:** two-member and three-member teams with the breakdown computed in the
    docstring. Infeasible → −∞ (A3). The optional C5·P_i term behaves as specified behind its
-   setting (A7).
+   setting (A7). `fitness.use_skill_competency` switches C_i to the per-skill C_{i,s} (§9.1.7)
+   and is off by default. Slider weights are normalized so C1 + C2 + C3 + C4 = 1.
 2. **Feasibility rules, one test each:** team size, slot counts, distinct developers, budget
    after the fee (A10), skill coverage, `min_newcomers`.
 3. **Repair invariants (property tests):** every returned solution is feasible or flagged
@@ -489,6 +540,12 @@ Phases 6–7 must look and behave as if the same person built the whole product.
 - Audit entries for state changes, and settings from `platform_settings` (never constants).
 - Money in paisa, scores as Decimal at 3 places, times in UTC shown in Asia/Dhaka.
 - Migrations `0012+` written like `0004` and `0011`, with a full downgrade.
+- After changing the API, run `make openapi` (the contract check compares `docs/api/openapi.json`
+  with the code, and the frontend types come from it). After adding tables, run `make erd`
+  (`docs/design/erd.svg`).
+- Every new module, backend or frontend, needs a test file of its own (`check_module_tests.py`,
+  gate step 6).
+- Don't break Phases 0–5: every existing test must stay green.
 
 **Frontend:**
 - Load `devsync-ui` and `frontend-design` for every screen.
@@ -501,6 +558,9 @@ Phases 6–7 must look and behave as if the same person built the whole product.
   swarm indicator is the only looping animation, and only while a job runs.
 - Every data view has its four states (loading, empty, error, success).
 - Mobile-first: test at 375, 390, 768, 1366 and 1440 px, in light and dark.
+- New screens get visual baselines with `make visual-update`. Review the diff and note it in
+  `PROGRESS.md`. If the homepage hero changes (D21's % chip), run `make stills`; the gate checks
+  the stills manifest.
 - Microcopy rules: sentence case, verbs on buttons, curly apostrophes, one sentence of "why" for
   every algorithmic result. Paper terms (C1–C4, Eq. 17) appear only in admin and explanation
   drawers.
