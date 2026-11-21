@@ -43,7 +43,7 @@ authority; proposal IDs are mapped in `FR_MAPPING.md`.
 | D1-1 | Demo 1 rehearsal on the demo laptop; mkcert certificate (D3); `make demo-preflight` | 5 | Core | todo | team |
 | D1-2 | Tester's human check of security reviews 00–05 | 5 | Core | todo | Sara |
 | D1-3 | Release tag `v0.1.0` at Demo 1 (§17.1) | 5 | Core | todo | Taeen |
-| P6-0 | Move laptops and the Nginx build stage to Node 22 LTS (D15) | 6 | Core | todo | — |
+| P6-0 | Move laptops and the Nginx build stage to Node 22 LTS (D15, D83) | 6 | Core | done | Raisa |
 | P7-H | Homepage example figures from a real PSO run (`build_homepage_example.py`, % chip, gate freshness check; D21) | 7 | Core | todo | — |
 
 ## Functional requirements (proposal FR-IDs, see `FR_MAPPING.md`)

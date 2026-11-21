@@ -1043,3 +1043,15 @@ the fuzzer's null arrives as the string "None", which is a valid source name. Th
 twice when that operation was run on its own, so it is a rare quirk of the fuzzer and not a
 change in behaviour; no test was relaxed. If it comes back in a full run, it will be looked at
 again before any exception is considered.
+
+## 2026-11-21 — Phase 6 (reputation engine and market simulator; Raisa with Claude Code)
+
+**D83 · Node 22 LTS for the frontend toolchain (backlog P6-0; follows D15).** Node 20 reached end
+of life in April 2026. The Nginx build stage now uses `node:22.23.4-bookworm-slim`, pinned by
+digest (`sha256:5ec23b7c…`, last rebuilt 2026-11-05, so it meets the 14-day rule; 22.23.5 was
+10 days old). CI uses `node-version: "22"`, `package.json` requires `>=22`, and
+`frontend/.nvmrc` says 22. The toolchain versions are unchanged (Vite 6.4, Vitest 4.1, D15); the
+move to Vite 8 / Vitest 5 is a separate follow-up, not part of Phase 6. Verified on Node
+22.23.5 (laptop) and 22.23.4 (image): `npx vitest run` 501 passed, `npm run build` passed, the
+rebuilt test stack's `home.spec.ts` on Chromium 10 passed. README, ARCHITECTURE and SECURITY
+no longer mention Node 20.

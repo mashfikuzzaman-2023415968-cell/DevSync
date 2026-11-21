@@ -114,7 +114,7 @@ E = Elevation of privilege.
 
 | | Threat | Mitigation as implemented | Residual risk |
 |---|---|---|---|
-| T | Vulnerable or malicious dependencies | Hashed lock files, 14-day age rule except for security fixes (D1, D51), pip-audit, npm audit, Trivy, Semgrep, Bandit, gitleaks in the gate; Dependabot weekly | Node 20 end-of-life on laptops and in the Nginx build stage (move to Node 22 in Phase 6, D15) |
+| T | Vulnerable or malicious dependencies | Hashed lock files, 14-day age rule except for security fixes (D1, D51), pip-audit, npm audit, Trivy, Semgrep, Bandit, gitleaks in the gate; Dependabot weekly | — (Node 22 LTS since Phase 6, D83) |
 | I | Committed secrets | `.env` gitignored, `make env` generates secrets, gitleaks over the working tree, `.dockerignore` allowlist | — |
 | E | Insecure production config | Startup refuses weak secrets, console SMS, debug, http origins, password-less Redis, `*` hosts, insecure cookies, CAPTCHA bypass (`app/core/config.py`) | — |
 | E | Container escape / lateral movement | Non-root, read-only root FS, `no-new-privileges`, `cap_drop: ALL`, only Nginx publishes ports, `sandbox` network internal (`docker-compose*.yml`) | Judge0's isolation (Phase 13) depends on Judge0 |
