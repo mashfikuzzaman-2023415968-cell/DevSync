@@ -346,6 +346,74 @@ The spec's §17 lists are the minimum. These phases decide whether the project's
 hold, so test them **as an examiner would**: hand-computed values, invariants, comparisons with
 an exact answer, and behaviour that makes sense to a person.
 
+### Requirements from other parts of the spec and from decisions (easy to miss)
+
+1. **State machines (§8), using the existing transition-table pattern.** An invalid transition
+   is a 409 `INVALID_STATE`, and every transition is audited.
+   - Project `BIDDING → FORMING` happens when the client starts formation or the bidding deadline
+     passes. This already exists in `services/bidding_terms.py` and the deadline job; reuse it.
+   - `FORMING → TEAM_PENDING` happens on confirm.
+   - A formation run goes `QUEUED → RUNNING → SUCCEEDED | INFEASIBLE | FAILED | TIMED_OUT`. A timed
+     out run returns the best feasible team, if there is one.
+   - On confirm, bids become `SELECTED` or `NOT_SELECTED`.
+2. **Inputs Phase 5 already decided.**
+   - The client's stored P0/C0 overrides from the too-few-bids actions (D47, D54) are a run's
+     default thresholds.
+   - Bid verdicts are recorded when bidding closes (D64). A bid never records its shortlist rank,
+     because that would leak other sealed bids.
+   - Reuse `explain_bid()` (D53, pure, in `filtering.py`) for the filter reasons in "why not
+     selected"; don't rewrite them.
+3. **Paper findings to resolve in Phase 7 (D9 items 1 and 3).**
+   - The paper prints Eq. 17's infeasible value as −1. The spec keeps −∞, because a feasible
+     fitness can be below −1.
+   - The paper initialises positions as U(b_l, b_u). The spec uses Bernoulli(N/k) positions and
+     U(b_l, b_u) velocities.
+   - Record both as explicit numbered resolutions, after the ones `DECISIONS.md` already uses, and
+     give each a named test.
+4. **Supervisor questions (§23):** "ask early (Phase 6 at the latest)". Ask Taeen whether they
+   have been sent. Record the answers in `DECISIONS.md`. Until then the §9.0 defaults stand.
+5. **Notifications (§12).**
+   - Phase 7 sends "Team formation finished" (client) and, on confirm, "Not selected" with a link
+     to the explanation (each non-selected developer).
+   - "Selected (invitation, 48 h)" sits on the Phase 7/8 boundary, and "Reputation updated" on the
+     Phase 6/11 boundary. Decide each in the plan and record it.
+6. **Jobs (§11).**
+   - `formation.run`: 60 s timeout, no retry. `formation.explanations`: 120 s, 1 retry.
+     `reputation.recalculate_all`: 30 min, admin only.
+   - Test them with RQ's `SimpleWorker` in `tests/jobs/` (`jobs` marker): idempotency, the retry
+     count, and a timeout producing `TIMED_OUT`.
+7. **The mandatory security list (§16.4) applies to every new route.**
+   - Authz matrix and IDOR (another user's run, job or explanation gives 404).
+   - Mass assignment: `status`, `seed`, `result`, `is_lead` and `candidate_snapshot` in a body
+     give 422.
+   - CSRF on every POST, and GETs never mutate.
+   - The injection corpus in any text field.
+   - SSE: a session is required, a foreign Origin is refused, the concurrent limit holds.
+   - RLS cross-user tests for each new table.
+   - Admin hiding: non-admins get 404 from admin routes.
+   - Malicious client: weights that don't sum to 1, `min_newcomers` above the team size,
+     out-of-range thresholds, a forged seed or snapshot, oversized parameters, all refused or
+     ignored.
+8. **Screen layouts (§13.9).** Team formation is "the centrepiece" of Demo 2. Follow its layout:
+   - settings on the left with presets, the four weight sliders with %, minimum performance and
+     newcomers 0/1/2, and "Form team";
+   - the result on the right, with the stat row (fitness, price of budget, finish days,
+     "✓ Optimal", cost of fairness), TeamCards, "Why this team?", the convergence chart, "Compare
+     top 3", "Recalculate" and "Confirm & invite".
+
+   The Reputation page follows its layout too: the six named parameters, competency and
+   performance, radar and trend charts, and "Why did this change?".
+9. **Unit tests are a supervisor requirement (§16.1).**
+   - Backend: every service function, validator, state transition and permission rule gets a
+     `unit` test, as well as the API and integration tests.
+   - Frontend: every component, hook, form schema and formatter gets a test.
+10. **Saved, reproducible runs (FR-TEAM-6).** Runs are stored with their snapshot, parameters and
+    seed, and re-running one reproduces it exactly. Decide in the plan how the client sees
+    earlier runs.
+11. **Each person can explain their modules (§22.10).** `docs/ALGORITHMS.md` gets a plain-English
+    section for every algorithm, with a worked example. Raisa will be asked about these in the
+    viva.
+
 ### Phase 6 — the reputation engine and market simulator
 
 **Build (per §17 Phase 6):**
@@ -359,7 +427,9 @@ an exact answer, and behaviour that makes sense to a person.
   milestone DAGs, outcomes from traits plus noise, deterministic per seed).
 - `make seed-demo STAGE=2` regenerates computed reputations; `reputation_read.py` stays the
   only read path, and the D48 "seeded" marker disappears for computed values.
-- The Reputation page (screen 16) and the reputation summaries on profiles and bid tables.
+- The Reputation page (screen 16), built from a reusable **ReputationPanel** component (the
+  six parameters with plain labels, C and P), a trend chart and the explanation log; plus the
+  reputation summaries on profiles and bid tables.
 - `docs/PAPER_ALIGNMENT.md` (equation → function → test) and the reputation section of
   `docs/ALGORITHMS.md` with a worked example.
 - **Keep the existing API shape (D58).** `GET /developers/{id}` and the public profile already
@@ -469,10 +539,14 @@ an exact answer, and behaviour that makes sense to a person.
   `GET /admin/formation-runs`. Decide in the Phase 7 plan what Phase 7 builds and what moves to
   Phase 8 or 12. Record it, and leave no menu entry pointing at a page that will never come.
 - **Screens:**
-  - Screen 24, team formation: PrioritySliders with linked normalization, presets mapped to the
-    advancement choice, minimum standards with a live pass count, FairnessDial, run with live
-    ConvergenceChart and swarm indicator, TeamCards, stat row, the "Why this team?" panel,
-    TeamComparison, recalculate, and the confirm dialog.
+  - Screen 24, team formation:
+    - PrioritySliders with linked normalization, and presets mapped to the advancement choice;
+    - minimum standards with a live pass count, and the FairnessDial;
+    - the run, with SSE progress, a live ConvergenceChart and the swarm indicator;
+    - result TeamCards with the flip-in animation (a token from `motion.ts`, removed under
+      reduced motion) and contribution bars;
+    - the stat row, the "Why this team?" panel, TeamComparison, recalculate, and the confirm
+      dialog.
   - "Why not selected" on bid detail (screen 12).
 - **The homepage rule (D21, backlog P7-H):** `scripts/build_homepage_example.py` produces
   `src/content/homepage-example.json` from a real run, the hero gets its % chip, and the gate
