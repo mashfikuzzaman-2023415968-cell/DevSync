@@ -10,6 +10,7 @@
 import { useId, useState } from "react";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { cn } from "@/lib/cn";
+import { useElementWidth } from "@/lib/useElementWidth";
 
 export interface TrendSeries {
   name: string;
@@ -30,7 +31,9 @@ const FILL = ["fill-chart-1", "fill-chart-2", "fill-chart-3", "fill-chart-4", "f
 const BG = ["bg-chart-1", "bg-chart-2", "bg-chart-3", "bg-chart-4", "bg-chart-5",
   "bg-chart-6"] as const; // prettier-ignore
 
-const WIDTH = 640;
+// Drawn at the container's real width (1 unit = 1 px) so labels stay 12 px; 640 until measured.
+const DEFAULT_WIDTH = 640;
+const MIN_WIDTH = 320;
 const HEIGHT = 220;
 const PAD = { left: 36, right: 16, top: 12, bottom: 24 };
 const GRID = [0, 25, 50, 75, 100];
@@ -51,8 +54,10 @@ export function TrendChart({
   const [view, setView] = useState<"chart" | "table">("chart");
   const [active, setActive] = useState<number | null>(null);
   const liveId = useId();
+  const [boxRef, measured] = useElementWidth<HTMLDivElement>();
+  const width = measured > 0 ? Math.max(MIN_WIDTH, measured) : DEFAULT_WIDTH;
   const n = points.length;
-  const innerW = WIDTH - PAD.left - PAD.right;
+  const innerW = width - PAD.left - PAD.right;
   const innerH = HEIGHT - PAD.top - PAD.bottom;
   const x = (i: number) => PAD.left + (n <= 1 ? innerW / 2 : (innerW * i) / (n - 1));
   const y = (v: number) => PAD.top + innerH * (1 - Math.min(1, Math.max(0, v)));
@@ -70,7 +75,7 @@ export function TrendChart({
   };
 
   return (
-    <div>
+    <div ref={boxRef}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <ul className="flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-text-muted">
           {series.map((s, i) => (
@@ -98,7 +103,7 @@ export function TrendChart({
         <>
           <div className="mt-3 overflow-x-auto">
             <svg
-              viewBox={`0 0 ${String(WIDTH)} ${String(HEIGHT)}`}
+              viewBox={`0 0 ${String(width)} ${String(HEIGHT)}`}
               className="block w-full min-w-[20rem]"
               role="group"
               aria-label={title}
@@ -108,7 +113,7 @@ export function TrendChart({
                   <line
                     key={g}
                     x1={PAD.left}
-                    x2={WIDTH - PAD.right}
+                    x2={width - PAD.right}
                     y1={y(g / 100)}
                     y2={y(g / 100)}
                   />

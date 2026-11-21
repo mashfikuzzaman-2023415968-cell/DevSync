@@ -4,7 +4,7 @@
 import { render as rtlRender, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DeveloperReputation, ReputationHistoryItem } from "@/api/types";
 import { RadarChart } from "@/components/RadarChart";
 import { ReputationPanel } from "@/components/ReputationPanel";
@@ -305,5 +305,52 @@ describe("reputation labels", () => {
     expect(PARAMETERS.map((p) => p.label)).toEqual([
       "Expertise", "Communication", "Teamwork", "Quality", "Client diversity", "Punctuality",
     ]); // prettier-ignore
+  });
+});
+
+describe("charts draw at their real size (12 px labels at every width)", () => {
+  function stubWidth(width: number) {
+    class FakeResizeObserver {
+      constructor(private readonly cb: ResizeObserverCallback) {}
+      observe() {
+        this.cb([{ contentRect: { width } } as ResizeObserverEntry], this);
+      }
+      unobserve() {}
+      disconnect() {}
+    }
+    vi.stubGlobal("ResizeObserver", FakeResizeObserver);
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("the trend chart's viewBox is the measured width, never below 320", () => {
+    stubWidth(800);
+    const { container, unmount } = rtlRender(
+      <TrendChart
+        title="T"
+        points={[{ label: "A" }, { label: "B" }]}
+        series={[{ name: "C", values: [0.2, 0.4] }]}
+      />,
+    );
+    expect(container.querySelector("svg")?.getAttribute("viewBox")).toBe("0 0 800 220");
+    unmount();
+    stubWidth(200);
+    const narrow = rtlRender(
+      <TrendChart
+        title="T"
+        points={[{ label: "A" }, { label: "B" }]}
+        series={[{ name: "C", values: [0.2, 0.4] }]}
+      />,
+    );
+    expect(narrow.container.querySelector("svg")?.getAttribute("viewBox")).toBe("0 0 320 220");
+  });
+
+  it("the radar keeps room for its labels in a narrow column", () => {
+    stubWidth(280); // the desktop side column: radius 140 − 92 = 48
+    const axes = PARAMETERS.map((p) => ({ label: p.label, value: 0.5 }));
+    const { container } = rtlRender(<RadarChart title="R" axes={axes} />);
+    expect(container.querySelector("svg")?.getAttribute("viewBox")).toBe("0 0 280 152");
   });
 });

@@ -1159,7 +1159,13 @@ it). Tested: the web role claiming SYSTEM can write neither a snapshot nor a his
 **D100 · Test maintenance in Phase 6.** `src/app/prefetch.test.ts` used `/dev/reputation` as its
 example of an unbuilt placeholder; the page now exists, so the example is `/dev/earnings`
 (Phase 10) — the check is unchanged. `test_demo_reset.py` classifies the three new user-scoped
-tables.
+tables. The responsive matrix and the visual baselines ran every stateful
+screen inside **one** test per theme and width (300 s and 180 s budgets); with the 14th screen
+(the Reputation page) the shared budget ran out on this laptop, so the run stopped on whichever
+screen happened to be last. Each stateful screen now has its own test (120 s responsive, 90 s
+visual) with exactly the same checks and the same screenshot names, so every existing baseline
+is unchanged and a slow screen fails on its own and by name. No check, threshold or baseline was
+relaxed; the test count only grew.
 
 **D101 · Reputation API shape.** `GET /developers/{id}/reputation` is a public value for active
 accounts and follows the profile's visibility (404 when hidden, unknown or not a developer). A

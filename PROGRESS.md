@@ -5,7 +5,7 @@
 - **Current phase:** 6 (reputation engine and market simulator), built on branch `phase-6`; **gate not run yet**. Plan `docs/plans/phase-06.md` (approved 2026-11-21), decisions D83–D101, security review `docs/security-reviews/phase-06.md` (0 unresolved high). `main` = `origin/main` = `c9e5d71` (hand-off 02).
 - **Last gate result:** none for Phase 6. Phase 5's last full PASS is 2026-10-29; on 2026-11-20 steps 1–12 passed on the final Phase 5 code (details in the hand-off).
 - **Verified on Raisa's laptop (WSL 2, 2026-11-21):** backend suite on the Phase 6 code: everything passes except `tests/security/test_rate_limits.py::test_admin_limit_is_per_user` under full-suite load (see Known issues); algorithms + property 292, API/engine/RLS/job 49, frontend 525, Phase 6 E2E 3/3, stage-1 and stage-2 seeds, `alembic` upgrade/downgrade/check, OpenAPI contract 0 problems.
-- **In progress:** visual baselines for the two new screens (`make visual-update`), then the full gate.
+- **In progress:** nothing; Phase 6 is built and checked on this laptop. Waiting for the gate on a native Linux machine.
 - **Very next step:** run `make gate PHASE=6` **on a native Linux laptop with an Intel/AMD GPU** (gate step 16 cannot pass on WSL 2, see Known issues), then update this file, commit `phase-6: …`, merge to `main`, tag `phase-6`, push. Then the Phase 7 plan.
 - **Open human tasks:** review the 128 drafted test questions (D34); tester's human check of the Phase 3, 4 and 5 security reviews; sanity-check D39 (simulated payment-method verification).
 
@@ -126,6 +126,8 @@
 - The full gate needs about 3 GB of free memory (7 GB laptop): close Chrome first. Under swap pressure WebKit E2E runs time out, and those failures say nothing about the code.
 
 - **Gate step 16 can't pass on WSL 2 (checked 2026-11-21).** `/dev/dri/renderD128` exists under WSLg, but inside the GPU Playwright image Chromium falls back to `llvmpipe` (software), and the `@perf|@gpu` tests correctly refuse it (5 failed). The real GPU is reached through `/dev/dxg` (Direct3D 12); the image has no Vulkan-on-D3D12 driver. Run the gate on a native Linux laptop (D28), or decide (with Taeen) whether to extend the GPU image for WSL.
+- **Load flakes seen on this WSL laptop (2026-11-21), all Phase 1–5 screens, none changed:** `login-totp` responsive (the sign-in CAPTCHA asked to "complete the verification check again"), `app shell light 390` visual (profile page slow to load) and `assessment-required light 768` visual (a 401 while its setup published a project). Each passed 2/2 when re-run alone, matching its baseline. Watch them in the gate.
+- **Visual baselines (2026-11-21):** 6 new — `reputation-experienced-{light,dark}-{390,768,1440}.png`, reviewed by eye (labels 12 px at every width after the chart-sizing fix); no existing baseline changed (the full `@visual` run matched all 202).
 - **`test_admin_limit_is_per_user` is timing-sensitive on slow machines.** It sends 300 admin requests that must all land inside a 60-second window. Alone on this WSL laptop it passes 3/3 but takes 52–54 s; under the full suite it went over and failed. Not a Phase 6 change; not modified. Watch it in the gate on a faster machine; if it fails there too, fix the test's timing at the cause (not by loosening the limit).
 
 ## Session log (newest first)

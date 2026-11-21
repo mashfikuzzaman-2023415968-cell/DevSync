@@ -8,6 +8,7 @@
  */
 import { useId, useState } from "react";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { useElementWidth } from "@/lib/useElementWidth";
 
 export interface RadarAxis {
   label: string;
@@ -15,17 +16,35 @@ export interface RadarAxis {
   value: number;
 }
 
-// Wide enough that end-anchored side labels ("Client diversity") never clip at the edge.
-const WIDTH = 400;
-const HEIGHT = 290;
-const CX = WIDTH / 2;
-const CY = HEIGHT / 2;
-const RADIUS = 96;
+// Drawn at the container's real width (1 unit = 1 px), so labels stay 12 px at every size. The
+// radius leaves about 92 px on each side for the longest side label ("Client diversity").
 const RINGS = [0.25, 0.5, 0.75, 1];
+const DEFAULT_WIDTH = 400;
+const LABEL_ROOM = 92;
+const MIN_RADIUS = 48;
+const MAX_RADIUS = 110;
 
-function point(i: number, n: number, fraction: number): [number, number] {
+interface Geometry {
+  width: number;
+  height: number;
+  cx: number;
+  cy: number;
+  radius: number;
+}
+
+function geometry(measured: number): Geometry {
+  const width = measured > 0 ? measured : DEFAULT_WIDTH;
+  const radius = Math.min(MAX_RADIUS, Math.max(MIN_RADIUS, width / 2 - LABEL_ROOM));
+  const height = Math.round(radius * 2 + 56);
+  return { width, height, cx: width / 2, cy: height / 2, radius };
+}
+
+function point(g: Geometry, i: number, n: number, fraction: number): [number, number] {
   const angle = -Math.PI / 2 + (2 * Math.PI * i) / n;
-  return [CX + RADIUS * fraction * Math.cos(angle), CY + RADIUS * fraction * Math.sin(angle)];
+  return [
+    g.cx + g.radius * fraction * Math.cos(angle),
+    g.cy + g.radius * fraction * Math.sin(angle),
+  ];
 }
 
 function clamp(v: number): number {
@@ -35,18 +54,20 @@ function clamp(v: number): number {
 export function RadarChart({ title, axes }: { title: string; axes: readonly RadarAxis[] }) {
   const [view, setView] = useState<"chart" | "table">("chart");
   const captionId = useId();
+  const [boxRef, measured] = useElementWidth<HTMLDivElement>();
+  const g = geometry(measured);
   const n = axes.length;
   const summary = axes.map((a) => `${a.label} ${Math.round(clamp(a.value) * 100)}`).join(", ");
   const polygon = axes
     .map((a, i) =>
-      point(i, n, clamp(a.value))
+      point(g, i, n, clamp(a.value))
         .map((v) => v.toFixed(1))
         .join(","),
     )
     .join(" ");
 
   return (
-    <div>
+    <div ref={boxRef}>
       <div className="flex justify-end">
         <SegmentedControl
           size="sm"
@@ -62,8 +83,8 @@ export function RadarChart({ title, axes }: { title: string; axes: readonly Rada
       {view === "chart" ? (
         <figure className="mt-2" aria-labelledby={captionId}>
           <svg
-            viewBox={`0 0 ${String(WIDTH)} ${String(HEIGHT)}`}
-            className="mx-auto block w-full max-w-[26rem]"
+            viewBox={`0 0 ${String(g.width)} ${String(g.height)}`}
+            className="block w-full"
             role="img"
             aria-label={`${title}: ${summary}`}
           >
@@ -73,7 +94,7 @@ export function RadarChart({ title, axes }: { title: string; axes: readonly Rada
                   key={r}
                   points={axes
                     .map((_a, i) =>
-                      point(i, n, r)
+                      point(g, i, n, r)
                         .map((v) => v.toFixed(1))
                         .join(","),
                     )
@@ -81,8 +102,8 @@ export function RadarChart({ title, axes }: { title: string; axes: readonly Rada
                 />
               ))}
               {axes.map((a, i) => {
-                const [x, y] = point(i, n, 1);
-                return <line key={a.label} x1={CX} y1={CY} x2={x} y2={y} />;
+                const [x, y] = point(g, i, n, 1);
+                return <line key={a.label} x1={g.cx} y1={g.cy} x2={x} y2={y} />;
               })}
             </g>
             <polygon
@@ -92,13 +113,13 @@ export function RadarChart({ title, axes }: { title: string; axes: readonly Rada
               strokeLinejoin="round"
             />
             {axes.map((a, i) => {
-              const [x, y] = point(i, n, clamp(a.value));
+              const [x, y] = point(g, i, n, clamp(a.value));
               return <circle key={a.label} cx={x} cy={y} r="3" className="fill-chart-2" />;
             })}
             <g className="fill-text-muted text-caption" aria-hidden="true">
               {axes.map((a, i) => {
-                const [x, y] = point(i, n, 1.16);
-                const anchor = Math.abs(x - CX) < 4 ? "middle" : x < CX ? "end" : "start";
+                const [x, y] = point(g, i, n, 1.16);
+                const anchor = Math.abs(x - g.cx) < 4 ? "middle" : x < g.cx ? "end" : "start";
                 return (
                   <text key={a.label} x={x} y={y} textAnchor={anchor} dominantBaseline="middle">
                     {a.label}
