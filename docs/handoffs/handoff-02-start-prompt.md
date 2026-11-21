@@ -292,6 +292,10 @@ that this laptop works:
    `make demo-preflight` (expect `ready (9/9)`). Open the "Online ordering system" as Rahim via
    the Quick sign-in tab and look at its bids and plan. That is the seeded project your Phase 7
    gate will run formation on.
+   - The dev and demo stacks use the same containers with different settings and databases, so
+     `make demo-up` replaces the dev stack.
+   - Afterwards run `make demo-down`, then `make up`, to return to development. Data is kept in
+     both databases.
 4. **Fast tests:** `cd backend && .venv/bin/pytest -m unit -q`, then
    `cd frontend && npx vitest run`. Both must pass.
 5. **GPU:** `ls /dev/dri` shows a `renderD*` device. Without one the gate can't pass, see Step 0.
@@ -427,6 +431,12 @@ an exact answer, and behaviour that makes sense to a person.
     applies quotas and Idempotency-Key, enqueues the job and persists results. The snapshot is
     immutable.
   - The jobs `formation.run` and `formation.explanations`.
+  - **The jobs API doesn't exist yet.** Build `GET /jobs/{id}` (requester or admin, 404 for
+    anyone else) and `GET /jobs/{id}/events` (SSE), following §10.1 ("long jobs return
+    `202 {"job_id"}`") and §10.3. They are shared infrastructure that later phases reuse, so
+    keep them generic, not formation-specific.
+  - **The quota setting already exists:** `ratelimit.formation_run` (10 per hour) in
+    `platform_settings.py`. Apply it with the existing `rate_limit(...)` dependency.
   - SSE progress on `/jobs/{id}/events`. It is the first SSE endpoint in the project, so follow
     §10.3 exactly: cookie auth, Origin check, 20 s heartbeat, a 30-minute cap, at most 3 streams
     per user.
@@ -585,6 +595,9 @@ Phases 6–7 must look and behave as if the same person built the whole product.
   `Skeleton`, `EmptyState`, `ErrorState`, `RingProgress`, `toast` and so on.
 - Charts follow the custom-SVG pattern of `Gantt.tsx` or use Recharts, with a "View as table"
   toggle and colours from `--chart-1..6`.
+  - Before committing to Recharts, prove it is clean under the strict CSP: run `csp.spec.ts` on a
+    screen that uses it. It must not inject a `<style>` element.
+  - Custom SVG is the proven-safe default here.
 - All motion comes from `motion.ts` via `useMotion()`, and reduced motion is respected. The PSO
   swarm indicator is the only looping animation, and only while a job runs.
 - Every data view has its four states (loading, empty, error, success).
@@ -601,6 +614,16 @@ Phases 6–7 must look and behave as if the same person built the whole product.
 **Tests:**
 - Never only the happy path: invalid input, boundaries, permission failures and IDOR in every
   feature.
+- **Mark every test with the existing pytest markers.** `pyproject.toml` uses
+  `--strict-markers`: `unit`, `property`, `integration`, `api`, `security`, `jobs`, `perf`,
+  `edge`, `fuzz`. The gate selects by marker: step 10 runs only `security`, step 16 runs `perf`,
+  and an unmarked test may never run in the step you expect.
+- **Playwright selects tests by tags in their titles:** `@e2e`, `@a11y`, `@visual`, `@perf`,
+  `@demo`. A new E2E test without `@e2e` in its title is silently skipped by the gate.
+- **E2E setup data goes through the test-only router** (`app/api/v1/test_seed.py`). It exists
+  only in the test environment, and `assert_no_test_routes` in `app/main.py` refuses to start if
+  it is mounted elsewhere. Add new seeding endpoints there (for example, reputation histories or
+  a finished formation run), never to the real API.
 - Never remove or weaken a test, threshold or lint rule to pass. The regression guard enforces
   test counts.
 
