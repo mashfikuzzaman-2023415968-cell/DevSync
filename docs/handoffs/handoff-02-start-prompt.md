@@ -145,7 +145,9 @@ Check what's installed first and tell me what is missing before installing anyth
 - **Tools:**
   - Docker Engine 24+ with Compose v2 (`docker compose version`), able to run without sudo;
   - `git`, `make`, Python **3.11 or newer** on the host (3.12 recommended). The gate script uses
-    `datetime.UTC`, which 3.10 doesn't have;
+    `datetime.UTC`, which 3.10 doesn't have. **Ubuntu 24.04 ships 3.12; Ubuntu 22.04 ships 3.10,
+    which is too old.** On 22.04, either upgrade, or install 3.12 with `uv python install 3.12`
+    and run the gate as `uv run --python 3.12 backend/scripts/phase_gate.py --phase N`;
   - `uv` (`curl -LsSf https://astral.sh/uv/install.sh | sh`);
   - Node 22 LTS with npm. The repository still says Node 20; moving to 22 is the first Phase 6
     task, see Step 6.
@@ -351,9 +353,11 @@ Understand the code before you plan. Read the actual files, not just their names
 
 ## Step 5 — Verify the starting point on this laptop (quick, not the full gate)
 
-**Don't run the Phase 5 gate.** It takes 2–3 hours, and Taeen already ran it. Steps 1–12 passed
-on the final code, steps 14–19 passed on 2026-11-09, and the one known failure is described in
-the hand-off. Your first full gate run is the Phase 6 gate. Instead, check in about 15 minutes
+**Don't run the Phase 5 gate.** It takes 2–3 hours, and Taeen already ran it:
+- steps 1–12 passed on the final code (2026-11-20);
+- step 14 passed in a full run that finished on 2026-11-09, and steps 15–19 in a partial run the
+  same day, both on the code before D79–D82;
+- the one known failure, in step 13, is described in the hand-off. Your first full gate run is the Phase 6 gate. Instead, check in about 15 minutes
 that this laptop works:
 
 1. **Session-start routine** (`CLAUDE.md`): `git pull`, `make up`, `make migrate`.

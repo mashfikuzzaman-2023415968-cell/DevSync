@@ -27,8 +27,9 @@ Phase 6 is started.
 **Gate status, stated honestly:**
 
 - The last full `PHASE 5 GATE: PASS` is 2026-10-29 (tag `phase-5`).
-- On the final code, steps 1–12 passed in one full run (2026-11-20), and steps 14–19 passed in a
-  partial run on 2026-11-09.
+- On the final code, steps 1–12 passed in one full run (2026-11-20). Step 14 passed in the full
+  run that finished on 2026-11-09, and steps 15–19 in a partial run the same day, both on the
+  code before D79–D82.
 - Step 13 had 231 passed and 1 failed. The failure is a Firefox-only timing test, see §5.
 - **There is no single end-to-end pass on the final commit.** Taeen decided to start Phase 6
   anyway. Every earlier check runs again inside the Phase 6 gate, so this is checked there.
@@ -43,7 +44,7 @@ Phase 6 is started.
   inside the Linux filesystem, `core.autocrlf input`); the start prompt has the steps. The gate on
   WSL2 is untested. If `/dev/dri` is missing there, run the gates on a native Linux machine.
 - Docker Engine 24+ with Compose v2, plus `make`, `git` and Python 3.11+ on the host (the gate
-  script uses `datetime.UTC`).
+  script uses `datetime.UTC`). Ubuntu 24.04 ships 3.12; 22.04 ships 3.10, which is too old.
 - Node 22 LTS (Phase 6 moves the project from Node 20, see §5) and `uv`
   (`curl -LsSf https://astral.sh/uv/install.sh | sh`).
 - About 20 GB of free disk space.
