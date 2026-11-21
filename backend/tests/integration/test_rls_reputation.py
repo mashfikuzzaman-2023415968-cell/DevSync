@@ -154,9 +154,12 @@ async def test_log_entries_are_unique_per_project_parameter_and_settings_version
     dev = await make_user("DEVELOPER")
     hist_id, _log_id = await _seed(dev)
     async with open_session(DbContext.system(), job=True) as db:
-        db.add(ReputationLog(developer_id=dev, history_id=hist_id, parameter="t",
-                             old=Decimal("0.5"), new=Decimal("0.4"), raw_new=Decimal("0.4"),
-                             reason_code="ON_TIME", formula_version=1, settings_version=5))  # fmt: skip
+        duplicate = ReputationLog(
+            developer_id=dev, history_id=hist_id, parameter="t", old=Decimal("0.5"),
+            new=Decimal("0.4"), raw_new=Decimal("0.4"), reason_code="ON_TIME",
+            formula_version=1, settings_version=5,
+        )  # fmt: skip
+        db.add(duplicate)
         with pytest.raises(DbErrors):
             await db.flush()
 
