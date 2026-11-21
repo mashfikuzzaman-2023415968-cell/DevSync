@@ -36,6 +36,7 @@ from app.api.v1 import (
     profiles,
     projects,
     public,
+    reputation,
     role_assessments,
     skill_tests,
 )
@@ -195,6 +196,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         marketplace,
         projects,
         bids,
+        reputation,
     ):
         app.include_router(module.router, prefix=API_PREFIX)
     if settings.DEVSYNC_ENV is Environment.TEST:

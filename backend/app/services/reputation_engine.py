@@ -46,6 +46,7 @@ from app.models.reputation import (
     ReputationLog,
     ReputationSkill,
     ReputationSnapshot,
+    ReputationSource,
 )
 from app.schemas.platform_settings import PlatformSettingsValues
 from app.services import reputation_inputs
@@ -99,6 +100,7 @@ async def _store(
         "omega": snap.omega, "x": snap.x, "xm": snap.xm, "beta": snap.beta, "mu": snap.mu,
         "t": snap.t, "c": snap.c, "p": snap.p, "completed_projects": snap.completed_projects,
         "distinct_clients": snap.distinct_clients, "settings_version": settings_version,
+        "simulated": any(r.source is ReputationSource.SIMULATED for r in rows),
     }  # fmt: skip
     await db.execute(
         insert(ReputationSnapshot)

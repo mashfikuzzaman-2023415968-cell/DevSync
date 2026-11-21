@@ -16,6 +16,7 @@ from decimal import Decimal
 
 from sqlalchemy import (
     ARRAY,
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -54,6 +55,8 @@ class ReputationSnapshot(UUIDPrimaryKey, Timestamps, Base):
     completed_projects: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     distinct_clients: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     settings_version: Mapped[int | None] = mapped_column(Integer)
+    # Phase 6 (D84): true when computed from simulated histories, so every view can label it.
+    simulated: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
 
     __table_args__ = tuple(
         CheckConstraint(f"{col} BETWEEN 0 AND 1", name=f"{col}_range") for col in _SCORE_COLUMNS

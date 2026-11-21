@@ -278,6 +278,11 @@ def upgrade() -> None:
     )
     # ### end Alembic commands ###
 
+    # Phase 6 snapshots say when they come from simulated histories (D84), for the UI label.
+    op.add_column(
+        "reputation_snapshots",
+        sa.Column("simulated", sa.Boolean(), server_default="false", nullable=False),
+    )
     op.execute(POLICIES)
     # Least privilege: the log is append-only for every runtime role (default privileges grant DML).
     op.execute(f"REVOKE UPDATE, DELETE, TRUNCATE ON reputation_log FROM {DML_ROLES}")
@@ -298,4 +303,5 @@ def downgrade() -> None:
     op.drop_index("ix_reputation_skill_skill", table_name="reputation_skill")
     op.drop_table("reputation_skill")
     # ### end Alembic commands ###
+    op.drop_column("reputation_snapshots", "simulated")
     op.execute("DROP TYPE IF EXISTS reputation_source")

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import secrets
 import uuid
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -16,6 +16,7 @@ import pyotp
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.algorithms.simulator import Persona, SimParams, simulate_market
 from app.core.audit import write_audit
 from app.core.clock import get_clock
 from app.core.config import Settings
@@ -40,11 +41,13 @@ from app.models.profiles import (
     EvidenceSource,
     Question,
     Skill,
+    SkillDomain,
     SkillEvidence,
     TestAttempt,
 )
 from app.models.projects import Project
-from app.models.reputation import ReputationSnapshot
+from app.models.reputation import ReputationHistory, ReputationSnapshot, ReputationSource
+from app.services import platform_settings, reputation_engine
 from app.services.auth.common import totp_key
 
 
@@ -214,3 +217,36 @@ async def answer_key(attempt_id: uuid.UUID) -> list[int] | None:
         )
         correct = {qid: int(idx) for qid, idx in rows.all()}
     return [correct[qid] for qid in question_ids]
+
+
+async def seed_reputation_history(user_id: uuid.UUID, projects: int, seed: int) -> None:
+    """Give a developer `projects` simulated completed projects and run the engine for them
+    (E2E and API tests of the Phase 6 reputation screens). Test environment only."""
+    persona = Persona(key="test", domains=("FRONTEND", "BACKEND"), projects=projects,
+                      clients=max(1, (projects + 1) // 2), skill=0.75, reliability=0.7,
+                      teamwork=0.7, communication=0.75)  # fmt: skip
+    market = simulate_market(SimParams(seed=seed, developers=0, clients=12), [persona])
+    start = datetime(2025, 1, 1, 12, tzinfo=UTC)
+    async with open_session(DbContext.system(), job=True) as db:
+        for n, proj in enumerate(market.developers[0].history):
+            db.add(
+                ReputationHistory(
+                    developer_id=user_id,
+                    source=ReputationSource.SIMULATED,
+                    project_label=f"Simulated project {n + 1}",
+                    client_key=proj.client_key,
+                    domain=SkillDomain(proj.domain),
+                    t_days=proj.t_days,
+                    deadline_days=proj.deadline_days,
+                    gamma_comm=Decimal(proj.gamma_comm),
+                    gamma_team=Decimal(proj.gamma_team),
+                    internal_slots=[Decimal(v) for v in proj.internal_slots],
+                    external_slots=[Decimal(v) for v in proj.external_slots],
+                    completed_at=start + timedelta(days=30 * n),
+                    sim_version=market.version,
+                )
+            )
+        await db.flush()
+        version, settings = await platform_settings.get_active(db)
+        await reputation_engine.recalculate(db, user_id, settings, version)
+        await db.commit()
