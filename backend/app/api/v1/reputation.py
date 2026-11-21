@@ -57,7 +57,7 @@ async def developer_reputation(
         200: {"content": {"application/json": {
             "example": {"items": [EX_HISTORY_ITEM], "next_cursor": None}
         }}},
-        **error_responses(401, 403, 422, 429),
+        **error_responses(401, 403, 404, 422, 429),
     },
 )  # fmt: skip
 async def my_history(
