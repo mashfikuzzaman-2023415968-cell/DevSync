@@ -1,15 +1,96 @@
 # Start prompt for Raisa's Claude Code (Phases 6–7)
 
-Paste everything below the line into Claude Code as the first message of the first session.
-Before you paste it:
+Paste everything below the line into Claude Code as the first message of the first session. Do
+the steps in this top part **yourself, by hand, before pasting**: Claude Code has to be running in
+the right place (Linux, or Ubuntu inside WSL on Windows), with the repository cloned, before it can
+follow the prompt.
 
-1. Clone the repository: `git clone https://github.com/mashfikuzzaman-2023415968-cell/DevSync.git`.
+The prompt is self-contained: it tells Claude Code how to set up the rest of the laptop, what to
+study, how to build, how to test the algorithms in depth, and how to stay consistent with Phases
+0–5. You need a Claude account that includes Claude Code (Pro, Max, Team or Enterprise; the free
+plan doesn't include it).
+
+### If your laptop runs Linux (Ubuntu or similar)
+
+1. Install Claude Code: `curl -fsSL https://claude.ai/install.sh | bash`, then check that
+   `claude --version` works. If `claude` isn't found, open a new terminal; the installer adds
+   it to your PATH.
+2. Run `git config --global core.autocrlf input`, then clone the repository:
+   `git clone https://github.com/mashfikuzzaman-2023415968-cell/DevSync.git ~/DevSync`.
    You need read access; ask Taeen if the clone is refused.
-2. Open Claude Code in the repository root.
-3. Turn Plan Mode on (Shift+Tab until "plan mode on").
+3. `cd ~/DevSync` and run `claude`. The first time, it opens the browser for you to sign in.
+4. Turn Plan Mode on (Shift+Tab until "plan mode on"), then paste the prompt.
 
-The prompt is self-contained: it tells Claude Code how to set up the laptop, what to study, how
-to build, how to test the algorithms in depth, and how to stay consistent with Phases 0–5.
+### If your laptop runs Windows: do everything inside WSL 2 (Ubuntu)
+
+The project's commands (`make`, bash scripts, `systemd-run`) only work on Linux. WSL 2 runs a
+real Ubuntu inside Windows. **Work only inside the Ubuntu terminal**, never in PowerShell or CMD:
+the project files, Docker, Node, Python and Claude Code all live inside Ubuntu.
+
+1. **Install WSL 2 with Ubuntu.** Open PowerShell **as administrator** and run
+   `wsl --install -d Ubuntu-24.04`. Restart Windows when asked. Open "Ubuntu" from the Start
+   menu and create your Linux user name and password. Then check that it is version 2: in
+   PowerShell, `wsl -l -v` must show `VERSION 2` (WSL 1 won't work).
+2. **Turn on systemd** (the gate's long runs use it). In Ubuntu run
+   `sudo nano /etc/wsl.conf` and put these two lines in it:
+   ```
+   [boot]
+   systemd=true
+   ```
+   Save, then in PowerShell run `wsl --shutdown` and reopen Ubuntu. `systemctl --user status`
+   must work without an error.
+3. **Give WSL enough memory.** In Windows, create the file `C:\Users\<you>\.wslconfig` with:
+   ```
+   [wsl2]
+   memory=6GB
+   ```
+   Use more if the laptop has more than 8 GB. Run `wsl --shutdown` again so it takes effect.
+4. **Install Docker, choosing one of two ways:**
+   - **Docker Desktop for Windows,** the simpler way. In Settings, turn on "Use the WSL 2 based
+     engine", and under Resources → WSL integration turn on Ubuntu.
+   - **Docker Engine inside Ubuntu.** Follow Docker's official "Install Docker Engine on Ubuntu"
+     page (the apt repository method), then run `sudo usermod -aG docker $USER` and reopen
+     Ubuntu.
+
+   Either way, in the **Ubuntu** terminal `docker compose version` and `docker run --rm
+   hello-world` must work **without sudo**.
+5. **Install the basic tools inside Ubuntu:**
+   `sudo apt update && sudo apt install -y git make python3 python3-venv curl build-essential`.
+6. **Install Node 22 inside Ubuntu,** not the Windows Node. Use nvm (see its official README on
+   GitHub), then `nvm install 22`. Check that `which node` prints a path under `/home/...` or
+   `/usr/...`; if it prints `/mnt/c/...`, Ubuntu is picking up the Windows Node, so fix the PATH
+   first.
+7. **Install Claude Code inside Ubuntu:** `curl -fsSL https://claude.ai/install.sh | bash`, then
+   `claude --version`. Don't install it with `sudo`.
+8. **Clone inside the Linux home folder, never under `/mnt/c/...`.** The Windows drive is very
+   slow for Docker and Node, and it breaks file permissions.
+   ```bash
+   git config --global core.autocrlf input   # keeps Linux line endings; the repo has no .gitattributes
+   git clone https://github.com/mashfikuzzaman-2023415968-cell/DevSync.git ~/DevSync
+   cd ~/DevSync
+   ```
+9. **Optional editor:** install VS Code on Windows with the "WSL" extension, then run `code .`
+   from `~/DevSync` in Ubuntu. That opens the Linux folder correctly; don't open it through
+   `\\wsl$` paths.
+10. **Start Claude Code:** in `~/DevSync` run `claude`, sign in through the browser, turn Plan
+    Mode on (Shift+Tab until "plan mode on"), then paste the prompt.
+
+**Things that behave differently on WSL:**
+- **The browser runs on Windows.** Open https://localhost and http://127.0.0.1:8025 in a Windows
+  browser; WSL 2 forwards localhost. The certificate warning is expected: click through it.
+  mkcert inside Ubuntu doesn't make Windows trust the certificate.
+- **Ports 80 or 443 may already be in use** on Windows (IIS, other web servers). If `make up`
+  can't bind them, set `HTTP_PORT=8080` and `HTTPS_PORT=8443` in `.env` and open
+  https://localhost:8443.
+- **The clock can drift after Windows sleeps,** which breaks the admin's TOTP code and
+  time-based tests. If codes are rejected, run `sudo hwclock -s` in Ubuntu, or `wsl --shutdown`
+  and reopen it.
+- **Windows sleep can't be blocked from Linux.** During a gate run, set Windows "Sleep" to
+  "Never" (plugged in), keep the lid open, and don't let Windows Update restart the laptop.
+- **The gate on WSL is unproven.** Its performance step needs a GPU device at `/dev/dri` inside
+  Linux (D28). Check `ls /dev/dri` in Ubuntu. If nothing is there, develop on Windows and run the
+  Phase 6 and 7 gates on a native Linux machine (Taeen's laptop or a Linux USB boot) by pulling
+  your branch there. Claude Code checks this in Step 0 too.
 
 ---
 
@@ -43,34 +124,21 @@ Check what's installed first and tell me what is missing before installing anyth
     (DECISIONS D28), so a machine without `/dev/dri` (WSL2, macOS, a VM) **cannot pass the gate**.
   - Development itself works on WSL2 or macOS, but the gate has to run on a Linux laptop with a
     GPU. Check with `ls /dev/dri` and tell me what you find.
-- **If this laptop runs Windows,** work inside WSL2. Everything here (`make`, bash scripts,
-  `systemd-run`) assumes Linux.
-  1. In an administrator PowerShell, run `wsl --install -d Ubuntu-24.04` and restart. Then
-     enable systemd: in Ubuntu, put `[boot]` and `systemd=true` in `/etc/wsl.conf`, then run
-     `wsl --shutdown` from PowerShell and reopen Ubuntu.
-  2. Install Docker one of two ways:
-     - Docker Desktop with "Use the WSL 2 based engine" and WSL integration for Ubuntu turned
-       on;
-     - or Docker Engine inside Ubuntu (Docker's apt repository).
+- **If this is WSL 2 on Windows** (`uname -r` contains `microsoft`), Raisa has already followed
+  the WSL steps at the top of `docs/handoffs/handoff-02-start-prompt.md`. Verify each one and
+  tell me what is wrong:
+  - `wsl.conf` has systemd on (`systemctl --user status` works);
+  - Docker runs without sudo inside Ubuntu;
+  - `which node` and `which claude` point inside Linux, not `/mnt/c`;
+  - the repository is under `/home/...`, not `/mnt/c/...`;
+  - `git config core.autocrlf` is `input`, and `file Makefile` doesn't report CRLF line endings;
+  - `free -h` shows about 6 GB or more for WSL.
 
-     Check that `docker compose version` works **inside Ubuntu** without sudo.
-  3. **Clone inside the Linux filesystem** (`~/DevSync`), never under `/mnt/c/...`. The Windows
-     drive is very slow for Docker and Node, and it breaks file permissions.
-  4. Before cloning, run `git config --global core.autocrlf input`, so shell scripts keep Linux
-     line endings.
-  5. Run Claude Code inside Ubuntu, from the repository folder. Open https://localhost in the
-     Windows browser; WSL2 forwards localhost.
-  6. Give WSL2 enough memory: `%UserProfile%\.wslconfig` with `[wsl2]` and `memory=6GB` or more.
-     The gate needs most of 8 GB.
-
-  **The gate on Windows is unproven.** Its performance step needs a GPU device at `/dev/dri`
-  inside Linux (D28).
-  - Check `ls /dev/dri` in Ubuntu. Some WSL2 setups have one and some don't, and nobody on the
-    team has run the gate on WSL2.
-  - If it's missing, or step 16 fails there, run the Phase 6 and 7 gates on a native Linux laptop
-    instead, such as Taeen's or a Linux USB boot. Develop on Windows and pull the branch there to
-    gate it.
-  - Tell me which case applies before planning, so the gate is not a surprise at the end.
+  Also check `ls /dev/dri`. If there's no GPU device, the gate can't pass here. Tell me before
+  planning, so the gates run on a native Linux machine and that isn't a surprise at the end.
+  Remember the WSL differences listed there: the browser is on Windows, ports 80/443 may be taken
+  (`HTTP_PORT`/`HTTPS_PORT` in `.env`), the clock can drift after Windows sleeps (`sudo hwclock
+  -s`), and Windows sleep must be turned off during a gate run.
 - **Memory and disk:** about 8 GB RAM and 20 GB free disk space. The first build and the first
   gate download several GB of pinned images (Playwright, Semgrep, Trivy, Postgres), so use a
   good connection.
