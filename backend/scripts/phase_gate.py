@@ -741,6 +741,7 @@ def step_phase_checks(g: Gate) -> str:
         3: phase3_checks,
         4: phase4_checks,
         5: phase5_checks,
+        6: phase6_checks,
     }
     if g.phase not in checks:
         raise StepFailed(f"no PHASE_CHECKS defined for phase {g.phase}")
@@ -900,6 +901,42 @@ def phase5_checks(g: Gate) -> str:
     return (
         f"{p4}; §18.4 stage-1 seed reproduces 10 eligible + TOO_SLOW/NO_SKILL_EVIDENCE; "
         f"Algorithm 1 boundaries + newcomer rule; bids sealed; bidding-deadline job verified; {ra}"
+    )
+
+
+def phase6_checks(g: Gate) -> str:
+    """Phase 6 checks (spec §17): docs/PAPER_ALIGNMENT.md lists Eq. 1–12 with an existing
+    function, and a test name carries every equation id (scripts/check_paper_alignment.py); the
+    stage-2 seed computes reputations from simulated histories that match the golden fixture and
+    still give the documented 10 eligible bids (D93); and the named Phase 6 checks hold: E5
+    (reputation tracks true ability, D96), replication switches every extension off, the log is
+    append-only and the web role can't write reputation."""
+    p5 = phase5_checks(g)
+    run([sys.executable, str(ROOT / "backend" / "scripts" / "check_paper_alignment.py"), str(ROOT)])
+    # The stage-1 seed above created the demo accounts; clear user data, then load stage 2 (it
+    # asserts the golden values and the eligibility counts itself and exits non-zero if off).
+    in_tests(["python", "scripts/demo_reset.py"])
+    in_tests(["python", "scripts/seed_demo.py", "--stage", "2"])
+    in_tests(
+        [
+            "pytest", "-q", "-p", "no:cacheprovider",
+            "tests/algorithms/test_simulator.py::test_E5_reputation_tracks_true_ability",
+            "tests/algorithms/test_simulator.py::test_same_seed_gives_byte_identical_output",
+            "tests/algorithms/test_reputation_snapshot.py::test_worked_example_two_projects",
+            "tests/algorithms/test_reputation_snapshot.py::test_replication_switches_off_the_change_cap",
+            "tests/algorithms/test_reputation_snapshot.py::test_replication_switches_off_newcomer_starting_values",
+            "tests/algorithms/test_reputation_snapshot.py::test_replication_switches_off_skill_competency",
+            "tests/integration/test_rls_reputation.py::test_reputation_log_is_append_only_even_for_system",
+            "tests/integration/test_rls_reputation.py::test_web_role_cannot_write_reputation_even_claiming_system",
+        ]
+    )  # fmt: skip
+    for doc in ("docs/plans/phase-06.md", "docs/PAPER_ALIGNMENT.md", "docs/SIMULATOR.md"):
+        if not (ROOT / doc).exists():
+            raise StepFailed(f"{doc} is missing")
+    return (
+        f"{p5}; Eq. 1–12 aligned with functions and tests; stage-2 seed matches the golden "
+        "reputations and keeps 10 eligible; E5, replication, append-only log and SYSTEM-only "
+        "writes verified"
     )
 
 

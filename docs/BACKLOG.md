@@ -115,13 +115,13 @@ Status as of 24 Oct 2026 (end of Phase 5). *done* = built, tested and behind a p
 | FR-PAY-5 | Release with [PCS] payment policy | 10 | Core | planned | |
 | FR-REV-1 | Blind participant reviews | 11 | Core | planned | |
 | FR-REV-2 | Review weights and integrity flags | 11 | Core | planned | |
-| FR-REP-1 | [PCS] reputation model | 6 | Core | planned | Phase 5 uses seeded snapshots (D44) |
-| FR-REP-2 | Parameters from evidence after integrity checks | 6, 11 | Core | planned | |
+| FR-REP-1 | [PCS] reputation model | 6 | Core | built (gate pending) | Eq. 1–12, engine, log (D84–D89) |
+| FR-REP-2 | Parameters from evidence after integrity checks | 6, 11 | Core | partial | Phase 6: simulated histories + trust formula (D84, D90); real evidence and integrity in Phase 11 |
 | FR-REP-3 | Updates after projects and disputes | 11, 12 | Core | planned | |
-| FR-REP-4 | Reputation dashboard | 6 | Core | planned | |
-| FR-REP-5 | Weights as settings; switchable calculation | 6 | Core | planned | |
-| FR-REP-6 | Newcomer starting values | 5, 6 | Core | partial | `newcomer_snapshot()` computed since Phase 5; full model in Phase 6 |
-| FR-REP-7 | Admin recalculation | 6, 12 | Expected | planned | |
+| FR-REP-4 | Reputation dashboard | 6 | Core | built (gate pending) | Screen 16 |
+| FR-REP-5 | Weights as settings; switchable calculation | 6 | Core | built (gate pending) | `rep.*`, `algorithm.mode` (D89) |
+| FR-REP-6 | Newcomer starting values | 5, 6 | Core | built (gate pending) | Certificate counted (D94); platform-mean β (D98) |
+| FR-REP-7 | Admin recalculation | 6, 12 | Expected | partial | Job + CLI in Phase 6; admin endpoint and page in Phase 12 (D92) |
 | FR-DIS-1 | Open a dispute | 12 | Core | planned | |
 | FR-DIS-2 | Dispute screen with automatic evidence | 12 | Core | planned | |
 | FR-DIS-3 | Admin decisions with reasons | 12 | Core | planned | |
