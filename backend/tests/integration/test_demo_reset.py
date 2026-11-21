@@ -15,7 +15,8 @@ USER_SCOPED = {
     "developer_profiles", "developer_skills", "devices_seen", "email_tokens", "external_reviews",
     "files", "idempotency_keys", "jobs", "notifications", "otp_codes", "plan_baselines",
     "plan_change_requests", "portfolio_items", "projects", "recovery_codes",
-    "reputation_snapshots", "sessions", "skill_evidence", "test_attempts", "totp_credentials",
+    "reputation_history", "reputation_log", "reputation_skill", "reputation_snapshots", "sessions",
+    "skill_evidence", "test_attempts", "totp_credentials",
     "user_accommodations",
 }  # fmt: skip
 
