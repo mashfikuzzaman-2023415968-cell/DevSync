@@ -25,3 +25,5 @@ email-validator
 python-magic
 pillow
 python-multipart  # multipart form parsing for upload endpoints (FastAPI File/Form)
+# Phase 6: seeded random generator for the market simulator and Phase 7 PSO (spec §3, D95)
+numpy==2.5.4
