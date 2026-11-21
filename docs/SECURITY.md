@@ -91,6 +91,16 @@ E = Elevation of privilege.
 | D | Expensive bids view | Batched reads: 200 bids in ≤ 25 queries, < 2 s (`tests/perf/test_bids_view_perf.py`) | — |
 | E | Double booking of developers | Availability reservations checked at bidding (`app/algorithms/availability.py`) | Must be re-checked when invitations are accepted (Phase 8) |
 
+### Reputation engine (Phase 6)
+
+| | Threat | Mitigation as implemented | Residual risk |
+|---|---|---|---|
+| T | Developers or clients writing reputation | No endpoint writes reputation (write methods 405); `reputation_history`, `reputation_snapshots`, `reputation_skill` and `reputation_log` are SYSTEM-write under RLS with `is_system()` (worker login role); the 0006 snapshot policy tightened the same way (D99) | Real evidence arrives in Phase 11 (until then histories are simulated and labelled, D84) |
+| R | Rewriting how a reputation changed | `reputation_log` append-only: row trigger refuses UPDATE/DELETE for every role; no UPDATE/DELETE/TRUNCATE grant (migration 0012) | — |
+| I | Reading another developer's history or evidence | History and log: developer and admins only (RLS + `reputation.history`); the newcomer basis (verified items) is returned only to the developer themself; hidden profiles' reputation is 404 (D101) | — |
+| T | Bad settings skewing reputations | Settings validation refuses κ ≤ 0.5, α_x/α_e ≥ 0.5, weights not summing to 1, cap ≤ 0 | — |
+| I | Simulator ground truth leaking | Latent traits stay in the simulator; only §9.1.1 inputs are stored (`test_ground_truth_is_not_part_of_the_records`) | — |
+
 ### Background jobs, email and Redis
 
 | | Threat | Mitigation as implemented | Residual risk |
@@ -123,7 +133,6 @@ E = Elevation of privilege.
 
 | Component | Phase |
 |---|---|
-| Reputation engine inputs only from server-side evidence; settings validation | 6 |
 | Formation runs (quotas, idempotency, timeouts, snapshot immutability, explanation visibility) | 7 |
 | Invitations, lead permissions, team repair | 8 |
 | Workspace, comments, SSE (cookie auth, Origin, connection limits), activity events | 9 |
@@ -206,6 +215,15 @@ E = Elevation of privilege.
 | Search input safety: `plainto_tsquery` (no user regex), whitelisted filters/sort → 422, tampered cursor → 422 | `app/services/marketplace.py` | search tests |
 | Bid rules: one ACTIVE bid per project (partial unique), bid only while BIDDING (409), rate limit 20/h; mass assignment (`status`, `developer_id`, `ineligible_reasons`) → 422 | `app/services/bids.py`, `app/schemas/bids.py` | `test_bids.py` |
 | Reputation snapshots public-read, SYSTEM-write; the "seeded" marker shows only outside production | migration 0006, `app/services/reputation_read.py` | `test_rls_bids.py` |
+
+## Controls implemented (Phase 6)
+| Control | Where | Tests |
+|---|---|---|
+| Reputation inputs only from server-side evidence: no write endpoint; SYSTEM-only writes via `is_system()` on all reputation tables | migration 0012, `app/api/v1/reputation.py` | `tests/integration/test_rls_reputation.py`, `tests/api/test_reputation_api.py::test_no_write_methods_exist` |
+| Append-only change log (trigger + revoked grants) | migration 0012 | `test_reputation_log_is_append_only_even_for_system` |
+| History and log private to the developer and admins; reputation follows profile visibility (404) | RLS, `app/core/authz.py` (`reputation.history`), `app/services/reputation.py` | `test_rls_reputation.py`, `test_reputation_api.py`, `test_authz_matrix.py` |
+| Settings validation for reputation weights | `app/schemas/platform_settings.py` | `test_settings_refuse_*` in `tests/algorithms/test_reputation_snapshot.py` |
+| Pure, tested algorithms (no DB/web/clock; seeded RNG) | `app/algorithms/reputation*.py`, `trust.py`, `simulator.py`; `check_layers.py` | `tests/algorithms`, `tests/property` (≥ 95 % coverage in the gate) |
 
 ## Dependency update policy (§14.21)
 Dependabot weekly (pip, npm, Docker, GitHub Actions). Critical vulnerabilities fixed within
