@@ -91,3 +91,9 @@ export type PublicRoleAssessment = Schemas["PublicRoleAssessment"];
 export type FlaggedAssessment = Schemas["FlaggedItemOut"];
 export type AssessmentDetail = Schemas["AttemptDetailOut"];
 export type AdminQuestion = Schemas["QuestionAdminOut"];
+// Phase 6: reputation (spec §10.2 Reputation, §13.5 #16).
+export type DeveloperReputation = Schemas["DeveloperReputation"];
+export type ReputationParameters = Schemas["ReputationParameters"];
+export type ReputationHistoryItem = Schemas["ReputationHistoryItem"];
+export type ReputationChange = Schemas["ReputationChange"];
+export type ReputationHistoryPage = Schemas["Page_ReputationHistoryItem_"];

@@ -15,6 +15,7 @@ const CHUNKS: Record<string, () => Promise<unknown>> = Object.assign(Object.crea
   "/dev/bids": () => import("@/features/bids/MyBidsPage"),
   "/dev/challenges": () => import("@/features/challenges/ChallengesPage"),
   "/dev/profile": () => import("@/features/profile/ProfilePage"),
+  "/dev/reputation": () => import("@/features/reputation/ReputationPage"),
   "/client": () => import("@/features/home/ClientHome"),
   "/client/projects": () => import("@/features/projects/MyProjectsPage"),
   "/client/projects/new": () => import("@/features/projects/CreateProjectPage"),

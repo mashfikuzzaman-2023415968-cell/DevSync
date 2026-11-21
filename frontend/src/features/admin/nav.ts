@@ -28,7 +28,8 @@ const sidebar: NavItem[] = [
   { label: "Integrity flags", to: "/admin/flags", icon: Flag, phase: 11 },
   { label: "Platform alerts", to: "/admin/alerts", icon: Siren, phase: 12 },
   { label: "Disputes", to: "/admin/disputes", icon: Gavel, phase: 12 },
-  { label: "Reputation", to: "/admin/reputation", icon: Medal, phase: 6 },
+  // Recalculation moves to the Phase 12 admin console with the jobs API (DECISIONS D92).
+  { label: "Reputation", to: "/admin/reputation", icon: Medal, phase: 12 },
   { label: "Payments", to: "/admin/payments", icon: CreditCard, phase: 10 },
   { label: "Fairness analytics", to: "/admin/fairness", icon: ChartPie, phase: 12 },
   { label: "Content", to: "/admin/content", icon: Library, phase: 3 },
