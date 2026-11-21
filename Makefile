@@ -14,7 +14,7 @@ PHASE ?= $(shell p=$$(cat .phase 2>/dev/null); [ "$$p" = "none" -o -z "$$p" ] &&
 	test test-unit test-backend test-frontend e2e a11y visual visual-update stills security fuzz zap \
 	load chaos gate demo-check demo-up demo-down demo-reset demo-preflight erd experiments backup \
 	restore-drill docs test-stack-up test-stack-down deps-update ledger-report \
-	question-bank question-checks demo-answer-key
+	question-bank question-checks demo-answer-key reputation-recalculate
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -94,6 +94,9 @@ visual-update: ## Re-create visual baselines in the pinned image (review the dif
 	cd frontend && VITE_DEV_TOOLS=1 npx vite build --outDir dist-kit --emptyOutDir
 	$(PW_RUN) --network container:$$($(COMPOSE_TEST) ps -q nginx) -e E2E_BASE_URL=https://localhost:8443 -e KIT_URL=http://127.0.0.1:4173 $(PW_IMAGE) \
 	  sh -c "npx vite preview --outDir dist-kit --port 4173 --host 127.0.0.1 >/tmp/kit.log 2>&1 & sleep 3; npx playwright test --grep @visual --project chromium --update-snapshots"
+
+reputation-recalculate: ## Recompute every reputation from its history (job reputation.recalculate_all, §11)
+	$(COMPOSE) run --rm worker python scripts/reputation_recalculate.py
 
 create-admin: ## Create an administrator (prints TOTP setup and recovery codes once)
 	$(COMPOSE) run --rm worker python scripts/create_admin.py

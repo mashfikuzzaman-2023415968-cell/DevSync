@@ -15,6 +15,16 @@ The script then runs Algorithm 1 over the seeded bids and asserts the documented
 eligible/ineligible counts, so the data can't drift (the gate relies on this). Run inside the
 worker container: `make seed-demo STAGE=1`.
 
+STAGE=2 (Phase 6 part of the Demo 2 seed, §18.4; DECISIONS D93) loads the same people and
+projects, but the experienced developers' reputations are **computed** by the Phase 6 engine from
+simulated project histories instead of the fixed stage-1 table: the market simulator generates
+each persona's completed projects (`seed_data/stage2_personas.json`, fixed seed), the histories
+are stored as SIMULATED `reputation_history` rows, and `reputation.recalculate_all` scores them.
+The script asserts the computed values against `tests/fixtures/stage2_reputation_golden.json`
+(so a change can't drift silently; `--write-golden` rewrites it after a deliberate change) and
+that the ordering project still gives the documented 10 eligible bids. The rest of the Demo 2 seed
+(in-progress, completed and disputed projects) arrives with Phases 8–12.
+
 Passwords are random per account and printed once (§18.1); `make demo-reset` saves the output to
 `runs/demos/accounts-N.txt` (gitignored, owner-only). For rehearsals, `DEMO_PASSWORD` (12+
 characters) gives every demo account that one password.
@@ -38,6 +48,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.algorithms.filtering import ReasonCode
+from app.algorithms.simulator import Market, Persona, SimParams, simulate_market
 from app.core.clock import get_clock
 from app.core.config import Settings, get_settings
 from app.core.settings_cache import active_settings
@@ -52,18 +63,38 @@ from app.models.profiles import (
     EvidenceSource,
     PortfolioItem,
     Skill,
+    SkillDomain,
     SkillEvidence,
 )
 from app.models.projects import Milestone, MilestoneDependency, Project, ProjectSlot, ProjectStatus
-from app.models.reputation import ReputationSnapshot
+from app.models.reputation import ReputationHistory, ReputationSnapshot, ReputationSource
 from app.services import bids as bids_svc
-from app.services import role_assessments
+from app.services import platform_settings, reputation_engine, role_assessments
 from app.services.testing import role_attempts
 from app.services.testing.seed import create_user
 
 MIN_FIXED_PASSWORD = 12
 
 SEED_DIR = Path(__file__).resolve().parent / "seed_data"
+STAGE2_FILE = SEED_DIR / "stage2_personas.json"
+GOLDEN_FILE = (
+    Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "stage2_reputation_golden.json"
+)
+# Simulated projects finish one every 40 days from this date (fixed, so the seed is reproducible).
+HISTORY_START = datetime(2024, 7, 1, 12, tzinfo=UTC)
+HISTORY_SPACING = timedelta(days=40)
+# Readable names for simulated projects, by domain (the UI labels them "Simulated").
+PROJECT_NAMES: dict[str, tuple[str, ...]] = {
+    "FRONTEND": ("Clinic booking site", "Bakery ordering page", "Tutor finder", "Event tickets"),
+    "BACKEND": ("Courier tracking API", "Pharmacy stock API", "Payroll service", "School fees API"),
+    "DATABASE": ("Library catalogue", "Retail sales reports", "Hospital records", "Hostel ledger"),
+    "MOBILE": ("Bus pass app", "Grocery delivery app", "Field survey app", "Fitness tracker"),
+    "DESIGN": ("NGO website redesign", "Food app UI kit", "Bank onboarding flow", "Shop branding"),
+    "TESTING": ("Microfinance regression suite", "E-commerce release checks", "Clinic app QA",
+                "Telecom portal tests"),
+    "DEVOPS": ("CI pipeline setup", "Cloud migration", "Monitoring stack", "Backup automation"),
+    "DATA": ("Sales dashboard", "Crop yield analysis", "Survey data cleanup", "Footfall report"),
+}  # fmt: skip
 
 # Experienced developers (fixed snapshots) → display name.
 EXPERIENCED = {
@@ -645,7 +676,7 @@ async def _seed_bids(
             await db.commit()
 
 
-async def _assert_filter(pid: uuid.UUID) -> None:
+async def _assert_filter(pid: uuid.UUID, stage: int = 1) -> None:
     """Run Algorithm 1 over the seeded bids and assert the documented counts (§18.4)."""
     async with open_session(DbContext.system(), job=True) as db:
         settings = await active_settings(db)
@@ -658,7 +689,7 @@ async def _assert_filter(pid: uuid.UUID) -> None:
     rejected = dict(result.rejected)
     reasons = sorted(r.value for r in rejected.values())
     eligible = len(result.eligible)
-    print(f"seed-demo STAGE=1: {eligible} eligible, {len(rejected)} ineligible {reasons}")
+    print(f"seed-demo STAGE={stage}: {eligible} eligible, {len(rejected)} ineligible {reasons}")
     expected = sorted([ReasonCode.TOO_SLOW.value, ReasonCode.NO_SKILL_EVIDENCE.value])
     if eligible != 10 or reasons != expected or result.too_few:
         raise SystemExit(
@@ -802,7 +833,99 @@ def _print_accounts(
     print("codes        texts and emails arrive in Mailpit: http://127.0.0.1:8025")
 
 
+def stage2_market() -> Market:
+    """The personas' simulated histories (deterministic: fixed seed, no random developers)."""
+    data = json.loads(STAGE2_FILE.read_text(encoding="utf-8"))
+    personas = [Persona(**{**p, "domains": tuple(p["domains"])}) for p in data["personas"]]
+    params = SimParams(seed=data["seed"], developers=0, clients=data["clients"])
+    return simulate_market(params, personas)
+
+
+def _label(domain: str, used: set[str], n: int) -> str:
+    names = PROJECT_NAMES[domain]
+    label = names[n % len(names)]
+    suffix = 2
+    while label in used:
+        label = f"{names[n % len(names)]} ({suffix})"
+        suffix += 1
+    used.add(label)
+    return label
+
+
+async def _seed_computed_reputation(ids: dict[str, uuid.UUID]) -> None:
+    """Stage 2: store each persona's simulated completed projects and run the engine (D93)."""
+    market = stage2_market()
+    async with open_session(DbContext.system(), job=True) as db:
+        for dev in market.developers:
+            used: set[str] = set()
+            for n, proj in enumerate(dev.history):
+                db.add(
+                    ReputationHistory(
+                        developer_id=ids[dev.key],
+                        source=ReputationSource.SIMULATED,
+                        project_label=_label(proj.domain, used, n),
+                        client_key=proj.client_key,
+                        domain=SkillDomain(proj.domain),
+                        t_days=proj.t_days,
+                        deadline_days=proj.deadline_days,
+                        gamma_comm=Decimal(proj.gamma_comm),
+                        gamma_team=Decimal(proj.gamma_team),
+                        internal_slots=[Decimal(v) for v in proj.internal_slots],
+                        external_slots=[Decimal(v) for v in proj.external_slots],
+                        completed_at=HISTORY_START + HISTORY_SPACING * n,
+                        sim_version=market.version,
+                    )
+                )
+        await db.flush()
+        version, settings = await platform_settings.get_active(db)
+        summary = await reputation_engine.recalculate_all(db, settings, version)
+        await db.commit()
+    print(
+        f"seed-demo STAGE=2: computed reputations for {summary.developers} developers from "
+        f"simulated histories (seed {market.seed}); newcomer β {summary.newcomer_review:.3f}"
+    )
+
+
+GOLDEN_FIELDS = ("omega", "x", "xm", "beta", "mu", "t", "c", "p")
+
+
+async def _computed(ids: dict[str, uuid.UUID]) -> dict[str, dict[str, str | int]]:
+    keys = [p["key"] for p in json.loads(STAGE2_FILE.read_text(encoding="utf-8"))["personas"]]
+    out: dict[str, dict[str, str | int]] = {}
+    async with open_session(DbContext.system(), job=True) as db:
+        for key in keys:
+            snap = await db.scalar(
+                select(ReputationSnapshot).where(ReputationSnapshot.developer_id == ids[key])
+            )
+            if snap is None or snap.settings_version is None:
+                raise SystemExit(f"seed assertion failed: no computed reputation for {key}")
+            row: dict[str, str | int] = {f: str(getattr(snap, f)) for f in GOLDEN_FIELDS}
+            row["completed_projects"] = snap.completed_projects
+            row["distinct_clients"] = snap.distinct_clients
+            out[key] = row
+    return out
+
+
+async def _assert_golden(ids: dict[str, uuid.UUID], write: bool) -> None:
+    """The stage-2 values for named developers are pinned in a fixture (§17 Phase 6 tests)."""
+    computed = await _computed(ids)
+    if write:
+        GOLDEN_FILE.write_text(json.dumps(computed, indent=2, sort_keys=True) + "\n", "utf-8")
+        print(f"seed-demo STAGE=2: wrote {GOLDEN_FILE.name}")
+        return
+    golden = json.loads(GOLDEN_FILE.read_text(encoding="utf-8"))
+    if computed != golden:
+        diff = {k: (golden.get(k), v) for k, v in computed.items() if golden.get(k) != v}
+        raise SystemExit(f"seed assertion failed: stage-2 reputations drifted: {diff}")
+    print(f"seed-demo STAGE=2: {len(computed)} computed reputations match the golden fixture")
+
+
 async def seed_stage1() -> None:
+    """Stage 1 (Demo 1): fixed reputation snapshots."""
+    await seed_stage(1)
+
+
+async def seed_stage(stage: int, *, write_golden: bool = False) -> None:
     check_seed_data()
     settings = get_settings()
     async with open_session(DbContext.system(), job=True) as db:
@@ -815,8 +938,11 @@ async def seed_stage1() -> None:
     pw = demo_passwords([*PROFILES, "rahim", FARZANA, "admin"], os.environ.get("DEMO_PASSWORD"))
     ids = await _make_users(settings, pw)
     admin = await _make_admin(settings, pw["admin"])
-    await _seed_reputation(ids)
+    if stage == 1:
+        await _seed_reputation(ids)
     await _seed_dev_data(ids, skills)
+    if stage == 2:  # the stage number
+        await _seed_computed_reputation(ids)
     await _seed_client_profile(ids["rahim"])
     pid, slot_ids = await _seed_project(ids, skills)
     await role_assessments.ensure_links_as_system(pid)  # blueprints, as at publish (§4.4)
@@ -825,17 +951,25 @@ async def seed_stage1() -> None:
     await _seed_too_few(ids, skills)
     await _seed_market(ids, skills)
     cycle_id = await _seed_cycle_draft(ids["rahim"], skills)
-    await _assert_filter(pid)
+    await _assert_filter(pid, stage)
+    if stage == 2:  # the stage number
+        await _assert_golden(ids, write_golden)
     _print_accounts(admin, pw, settings.PUBLIC_ORIGIN.rstrip("/"), cycle_id)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="DevSync demo seed")
     parser.add_argument("--stage", type=int, default=1)
+    parser.add_argument(
+        "--write-golden", action="store_true",
+        help="stage 2: rewrite tests/fixtures/stage2_reputation_golden.json (a reviewed change)",
+    )  # fmt: skip
     args = parser.parse_args()
-    if args.stage != 1:
+    if args.stage not in (1, 2):
         raise SystemExit(f"stage {args.stage} is not available yet")
-    asyncio.run(seed_stage1())
+    if args.write_golden and args.stage != 2:  # the stage number
+        raise SystemExit("--write-golden applies to stage 2 only")
+    asyncio.run(seed_stage(args.stage, write_golden=args.write_golden))
     return 0
 
 
