@@ -17,9 +17,14 @@ plan doesn't include it).
    it to your PATH.
 2. Run `git config --global core.autocrlf input`, then clone the repository:
    `git clone https://github.com/mashfikuzzaman-2023415968-cell/DevSync.git ~/DevSync`.
-   You need read access; ask Taeen if the clone is refused.
+   The repository is public, so cloning needs no account. **Pushing does:** ask Taeen to add
+   your GitHub account as a collaborator with write access, then create your own fine-grained
+   personal access token for this repository (Contents: read and write). Keep it private and
+   never paste it into files.
 3. `cd ~/DevSync` and run `claude`. The first time, it opens the browser for you to sign in.
-4. Turn Plan Mode on (Shift+Tab until "plan mode on"), then paste the prompt.
+4. Paste the prompt **in the normal mode, not Plan Mode.** The first steps run setup commands
+   (`make env`, `make up` and so on), which Plan Mode would block. When Claude reaches the
+   planning step it will ask you to turn Plan Mode on (Shift+Tab until "plan mode on").
 
 ### If your laptop runs Windows: do everything inside WSL 2 (Ubuntu)
 
@@ -72,8 +77,12 @@ the project files, Docker, Node, Python and Claude Code all live inside Ubuntu.
 9. **Optional editor:** install VS Code on Windows with the "WSL" extension, then run `code .`
    from `~/DevSync` in Ubuntu. That opens the Linux folder correctly; don't open it through
    `\\wsl$` paths.
-10. **Start Claude Code:** in `~/DevSync` run `claude`, sign in through the browser, turn Plan
-    Mode on (Shift+Tab until "plan mode on"), then paste the prompt.
+10. **Start Claude Code:** in `~/DevSync` run `claude`, sign in through the browser, and paste
+    the prompt **in the normal mode, not Plan Mode.** The setup steps need to run commands; Claude
+    will ask you to turn Plan Mode on when it reaches the planning step.
+11. **For pushing later:** ask Taeen to add your GitHub account as a collaborator with write
+    access, and create your own fine-grained personal access token for this repository
+    (Contents: read and write). The repository is public, so cloning needs no account.
 
 **Things that behave differently on WSL:**
 - **The browser runs on Windows.** Open https://localhost and http://127.0.0.1:8025 in a Windows
@@ -110,7 +119,10 @@ viva will examine.
 
 **Don't write any code yet.** Your first job is to understand the project and the repository
 completely and accurately, set up and verify this laptop, and report back. Then write the
-Phase 6 plan for my approval. Work through the steps below in order. Read the files yourself:
+Phase 6 plan for my approval. **We start in the normal mode** because Steps 0 and 5 run setup
+commands; ask permission before anything that installs software system-wide. When you reach
+the planning step, ask me to switch on Plan Mode (or enter it yourself) and stay in it until I
+approve the plan. Work through the steps below in order. Read the files yourself:
 don't skim, and don't guess. Where something is ambiguous or contradictory, list it as a
 question for me.
 
@@ -159,7 +171,7 @@ make env          # creates .env with strong random secrets for this laptop; nev
 make certs        # dev TLS certificate (mkcert if installed, otherwise openssl, DECISIONS D3)
 make up           # dev stack: https://localhost (accept the certificate), Mailpit http://127.0.0.1:8025
 make migrate      # migrations 0001–0011 as the migrator role
-make create-admin # prints the admin TOTP secret and recovery codes once; I keep them privately
+make create-admin # prints the admin TOTP secret and recovery codes ONCE; I keep them privately
 ```
 
 - If port 80 or 443 is busy, set `HTTP_PORT=8080` and/or `HTTPS_PORT=8443` in `.env`, then use
@@ -353,20 +365,28 @@ Understand the code before you plan. Read the actual files, not just their names
 
 ## Step 5 — Verify the starting point on this laptop (quick, not the full gate)
 
-**Don't run the Phase 5 gate.** It takes 2–3 hours, and Taeen already ran it:
+**Don't run the Phase 5 gate.** It takes 2–3 hours, and Taeen already ran it.
 - steps 1–12 passed on the final code (2026-11-20);
 - step 14 passed in a full run that finished on 2026-11-09, and steps 15–19 in a partial run the
   same day, both on the code before D79–D82;
-- the one known failure, in step 13, is described in the hand-off. Your first full gate run is the Phase 6 gate. Instead, check in about 15 minutes
-that this laptop works:
+- the one known failure, in step 13, is described in the hand-off.
+
+Your first full gate run is the Phase 6 gate. Instead, check that this laptop works. These checks
+take about 15 minutes once the images are built; the **first** `make up` and `make demo-up` build
+Docker images and run `npm ci`, which can take 30–60 minutes on a home connection.
 
 1. **Session-start routine** (`CLAUDE.md`): `git pull`, `make up`, `make migrate`.
-2. **The app:** open https://localhost and sign in as the admin you created (the TOTP step must
-   work). Register a test client and read its phone code at https://localhost/sandbox/sms.
+2. **The app (I do this part in the browser; you can't).** Check first that
+   `curl -sk -o /dev/null -w "%{http_code}" https://localhost/` answers 200. Then ask me to:
+   - open https://localhost and sign in as the admin `make create-admin` created. The second
+     step asks for a 6-digit code: I add the TOTP secret it printed to an authenticator app on
+     my phone (Google or Microsoft Authenticator, "enter a setup key", time-based) and type its
+     current code. Show me the secret and recovery codes once; never write them to any file;
+   - register a test client and read its phone code at https://localhost/sandbox/sms.
 3. **The demo stack:** `DEMO_PASSWORD='<12+ chars>' make demo-up STAGE=1`, then
-   `make demo-preflight` (expect `ready (9/9)`). Open the "Online ordering system" as Rahim via
-   the Quick sign-in tab and look at its bids and plan. That is the seeded project your Phase 7
-   gate will run formation on.
+   `make demo-preflight` (expect `ready (9/9)`). Then ask me to open the "Online ordering system"
+   as Rahim via the Quick sign-in tab and look at its bids and plan. That is the seeded project
+   your Phase 7 gate will run formation on.
    - The dev and demo stacks use the same containers with different settings and databases, so
      `make demo-up` replaces the dev stack.
    - Afterwards run `make demo-down`, then `make up`, to return to development. Data is kept in

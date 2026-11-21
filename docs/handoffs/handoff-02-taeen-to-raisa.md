@@ -254,7 +254,9 @@ their gates shorter.
 
 - **Generate your own secrets** with `make env`, and your own admin with `make create-admin`.
   Never commit `.env`, certificates or `runs/` output.
-- **The GitHub push token is passed privately**, per command:
+- **Push access:** the repository is public, so cloning needs no account. To push, Taeen adds
+  Raisa's GitHub account as a collaborator with write access, and Raisa creates her own
+  fine-grained token for this repository (Contents: read and write). It is used per command:
   `git -c http.extraHeader="Authorization: Basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" push origin refs/heads/<branch> refs/tags/<tag>`.
   Never store it, and revoke it after use.
 - **No secrets were handed over in this document.**
