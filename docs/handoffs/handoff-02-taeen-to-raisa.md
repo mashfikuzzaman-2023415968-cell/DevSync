@@ -42,7 +42,8 @@ Phase 6 is started.
   graphics. **On Windows,** use WSL2 (Ubuntu, systemd on, Docker in WSL, the repository cloned
   inside the Linux filesystem, `core.autocrlf input`); the start prompt has the steps. The gate on
   WSL2 is untested. If `/dev/dri` is missing there, run the gates on a native Linux machine.
-- Docker Engine 24+ with Compose v2, plus `make`, `git` and Python 3.10+ on the host.
+- Docker Engine 24+ with Compose v2, plus `make`, `git` and Python 3.11+ on the host (the gate
+  script uses `datetime.UTC`).
 - Node 22 LTS (Phase 6 moves the project from Node 20, see §5) and `uv`
   (`curl -LsSf https://astral.sh/uv/install.sh | sh`).
 - About 20 GB of free disk space.
@@ -57,7 +58,8 @@ make migrate      # alembic upgrade head as devsync_migrator
 make create-admin # prints the admin's TOTP secret and recovery codes ONCE; keep them private
 ```
 
-- **If port 80 is taken** (Apache on Taeen's laptop), set `HTTP_PORT=8080` in `.env`.
+- **If port 80 or 443 is taken** (Apache on Taeen's laptop; IIS or others on Windows), set
+  `HTTP_PORT=8080` and/or `HTTPS_PORT=8443` in `.env`.
 - **The offline demo stack** (production settings, own database `devsync_demo`) is started with
   `DEMO_PASSWORD='<12+ chars>' make demo-up STAGE=1`. It prints every demo account; with
   `DEMO_PASSWORD`, all accounts share that password. Then run `make demo-preflight`.

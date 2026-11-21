@@ -144,7 +144,8 @@ Check what's installed first and tell me what is missing before installing anyth
   good connection.
 - **Tools:**
   - Docker Engine 24+ with Compose v2 (`docker compose version`), able to run without sudo;
-  - `git`, `make`, Python 3.10+ on the host;
+  - `git`, `make`, Python **3.11 or newer** on the host (3.12 recommended). The gate script uses
+    `datetime.UTC`, which 3.10 doesn't have;
   - `uv` (`curl -LsSf https://astral.sh/uv/install.sh | sh`);
   - Node 22 LTS with npm. The repository still says Node 20; moving to 22 is the first Phase 6
     task, see Step 6.
@@ -159,7 +160,8 @@ make migrate      # migrations 0001–0011 as the migrator role
 make create-admin # prints the admin TOTP secret and recovery codes once; I keep them privately
 ```
 
-- If port 80 is busy, set `HTTP_PORT=8080` in `.env`.
+- If port 80 or 443 is busy, set `HTTP_PORT=8080` and/or `HTTPS_PORT=8443` in `.env`, then use
+  https://localhost:8443.
 - **Fast local loops for development:**
   - `cd backend && uv venv --python 3.12 .venv && uv pip sync --python .venv/bin/python requirements.lock requirements-dev.lock`,
     then `.venv/bin/pytest -m unit`.
@@ -190,8 +192,9 @@ Read these completely, in this order:
    - D15 (Node), D21 (homepage numbers from a real PSO run), D27 (E2E rate limits);
    - D44, D48 (seeded reputation and the "seeded" marker), D49–D50 (bids, eligibility in a
      SYSTEM session), D51 (dependency security fixes);
-   - D53–D54 (cross-browser E2E), D64–D66 (bid verdicts, plain-language reasons, optimistic
-     concurrency), D71–D75 (role assessment as newcomer evidence);
+   - D53 (cross-browser E2E), D54 (Phase 5 follow-ups, including the pure `explain_bid()` in
+     `filtering.py`), D64–D66 (bid verdicts, plain-language reasons, optimistic concurrency),
+     D71–D75 (role assessment as newcomer evidence);
    - D79–D82 (gate fixes: CVEs, flaky test, NUL and wrong-type input).
 
    The next new decision is **D83**.
@@ -327,8 +330,8 @@ Understand the code before you plan. Read the actual files, not just their names
 - `src/app/router.tsx`, `navigation.ts` (the "Reputation" `phase: 6` and "Teams" `phase: 7`
   entries are coming-soon placeholders you replace), `features/admin/nav.ts`, `guards.tsx`,
   `queryClient.ts`.
-- `src/api/client.ts` (`api()`, CSRF, errors), `src/api/schema.d.ts` (generated from OpenAPI by
-  `make openapi`), `src/api/types.ts`, `src/lib/format.ts` (money, dates in Asia/Dhaka, scores
+- `src/api/client.ts` (`api()`, CSRF, errors), `src/api/schema.d.ts` (generated from
+  `docs/api/openapi.json` by `npm run api:types`; never edit it by hand), `src/api/types.ts`, `src/lib/format.ts` (money, dates in Asia/Dhaka, scores
   0–1 shown ×100), `src/lib/redirects.ts` (`pageLoad`).
 - **Feature patterns to copy:** `features/bids/*` (how eligibility reasons and "why eligible"
   panels are presented, plain words for developers and the trace for clients, D65),
@@ -364,8 +367,9 @@ that this laptop works:
      `make demo-up` replaces the dev stack.
    - Afterwards run `make demo-down`, then `make up`, to return to development. Data is kept in
      both databases.
-4. **Fast tests:** `cd backend && .venv/bin/pytest -m unit -q`, then
-   `cd frontend && npx vitest run`. Both must pass.
+4. **Fast tests**, from the repository root: `(cd backend && .venv/bin/pytest -m unit -q)` and
+   `(cd frontend && npx vitest run)`. Both must pass. The backend `.venv` is created by the
+   fast-loop command in Step 0.
 5. **GPU:** `ls /dev/dri` shows a `renderD*` device. Without one the gate can't pass, see Step 0.
 
 Report anything that fails. Don't "fix" anything by weakening a test, threshold, lint rule or
@@ -419,7 +423,9 @@ an exact answer, and behaviour that makes sense to a person.
 1. **State machines (§8), using the existing transition-table pattern.** An invalid transition
    is a 409 `INVALID_STATE`, and every transition is audited.
    - Project `BIDDING → FORMING` happens when the client starts formation or the bidding deadline
-     passes. This already exists in `services/bidding_terms.py` and the deadline job; reuse it.
+     passes. The deadline move already exists in `app/jobs/bidding_jobs.py` (and in
+     `app/services/bidding_terms.py` after a terms change); reuse it. Phase 7 adds the
+     "client starts formation" move.
    - `FORMING → TEAM_PENDING` happens on confirm.
    - A formation run goes `QUEUED → RUNNING → SUCCEEDED | INFEASIBLE | FAILED | TIMED_OUT`. A timed
      out run returns the best feasible team, if there is one.
@@ -429,13 +435,13 @@ an exact answer, and behaviour that makes sense to a person.
      default thresholds.
    - Bid verdicts are recorded when bidding closes (D64). A bid never records its shortlist rank,
      because that would leak other sealed bids.
-   - Reuse `explain_bid()` (D53, pure, in `filtering.py`) for the filter reasons in "why not
-     selected"; don't rewrite them.
+   - Reuse `explain_bid()` (D54, pure, in `app/algorithms/filtering.py`) for the filter reasons in
+     "why not selected"; don't rewrite them.
 3. **Paper findings to resolve in Phase 7 (D9 items 1 and 3).**
    - The paper prints Eq. 17's infeasible value as −1. The spec keeps −∞, because a feasible
      fitness can be below −1.
-   - The paper initialises positions as U(b_l, b_u). The spec uses Bernoulli(N/k) positions and
-     U(b_l, b_u) velocities.
+   - The paper initialises positions as U(b_l, b_u) and velocities as U(−|b|, |b|). The spec uses
+     Bernoulli(N/k) positions and U(b_l, b_u) velocities.
    - Record both as explicit numbered resolutions, after the ones `DECISIONS.md` already uses, and
      give each a named test.
 4. **Supervisor questions (§23):** "ask early (Phase 6 at the latest)". Ask Taeen whether they
@@ -698,8 +704,8 @@ an exact answer, and behaviour that makes sense to a person.
   ```
   On macOS, use `caffeinate -i nohup python3 backend/scripts/phase_gate.py --phase 6 > runs/gate-p6.log 2>&1 &`.
   On WSL2 the same `systemd-run` command works once systemd is on, but `systemd-inhibit` can't
-  stop **Windows** from sleeping. Set Windows "Sleep" to "Never" while it plugs in, and don't
-  close the lid.
+  stop **Windows** from sleeping. Set Windows "Sleep" to "Never" (when plugged in),
+  keep the lid open, and pause Windows Update restarts.
 - **Expect 2–3 hours.** Keep the laptop on power, close browsers and extra editors, and avoid
   updates or restarts. Memory pressure causes browser-test timeouts.
 - **When a step fails,** read `runs/gates/failed-*.log`, find the cause, and fix it at the cause.
@@ -716,16 +722,21 @@ Phases 6–7 must look and behave as if the same person built the whole product.
 **Backend:**
 - Same layers (`api → services → repositories → models`; pure `algorithms/`), the same
   `Ctx`-taking services, the same error envelope and codes.
-- `StrictRequest` for every body; OpenAPI examples and declared errors on every operation (run
-  `make openapi`, which regenerates `schema.d.ts`).
+- `StrictRequest` for every body; OpenAPI examples and declared errors on every operation.
 - An authz-matrix entry for every route; RLS (ENABLE + FORCE) on every new table, or an
   `rls_exempt.yml` entry with a reason; definers with a pinned `search_path`.
 - Audit entries for state changes, and settings from `platform_settings` (never constants).
 - Money in paisa, scores as Decimal at 3 places, times in UTC shown in Asia/Dhaka.
 - Migrations `0012+` written like `0004` and `0011`, with a full downgrade.
-- After changing the API, run `make openapi` (the contract check compares `docs/api/openapi.json`
-  with the code, and the frontend types come from it). After adding tables, run `make erd`
-  (`docs/design/erd.svg`).
+- **After changing the API**, do these three steps in order. The gate's contract check compares
+  `docs/api/openapi.json` with the code.
+  1. Rebuild the test image, because `make openapi` reads the code baked into it:
+     `docker compose -p devsync-test -f docker-compose.yml -f docker-compose.test.yml build tests`.
+  2. Run `make openapi`.
+  3. Regenerate the frontend types with `cd frontend && npm run api:types`, which writes
+     `src/api/schema.d.ts`.
+- **After adding tables,** run `make erd` (`docs/design/erd.svg`), also after rebuilding the test
+  image.
 - Every new module, backend or frontend, needs a test file of its own (`check_module_tests.py`,
   gate step 6).
 - Don't break Phases 0–5: every existing test must stay green.
