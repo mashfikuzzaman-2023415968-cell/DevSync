@@ -43,6 +43,34 @@ Check what's installed first and tell me what is missing before installing anyth
     (DECISIONS D28), so a machine without `/dev/dri` (WSL2, macOS, a VM) **cannot pass the gate**.
   - Development itself works on WSL2 or macOS, but the gate has to run on a Linux laptop with a
     GPU. Check with `ls /dev/dri` and tell me what you find.
+- **If this laptop runs Windows,** work inside WSL2. Everything here (`make`, bash scripts,
+  `systemd-run`) assumes Linux.
+  1. In an administrator PowerShell, run `wsl --install -d Ubuntu-24.04` and restart. Then
+     enable systemd: in Ubuntu, put `[boot]` and `systemd=true` in `/etc/wsl.conf`, then run
+     `wsl --shutdown` from PowerShell and reopen Ubuntu.
+  2. Install Docker one of two ways:
+     - Docker Desktop with "Use the WSL 2 based engine" and WSL integration for Ubuntu turned
+       on;
+     - or Docker Engine inside Ubuntu (Docker's apt repository).
+
+     Check that `docker compose version` works **inside Ubuntu** without sudo.
+  3. **Clone inside the Linux filesystem** (`~/DevSync`), never under `/mnt/c/...`. The Windows
+     drive is very slow for Docker and Node, and it breaks file permissions.
+  4. Before cloning, run `git config --global core.autocrlf input`, so shell scripts keep Linux
+     line endings.
+  5. Run Claude Code inside Ubuntu, from the repository folder. Open https://localhost in the
+     Windows browser; WSL2 forwards localhost.
+  6. Give WSL2 enough memory: `%UserProfile%\.wslconfig` with `[wsl2]` and `memory=6GB` or more.
+     The gate needs most of 8 GB.
+
+  **The gate on Windows is unproven.** Its performance step needs a GPU device at `/dev/dri`
+  inside Linux (D28).
+  - Check `ls /dev/dri` in Ubuntu. Some WSL2 setups have one and some don't, and nobody on the
+    team has run the gate on WSL2.
+  - If it's missing, or step 16 fails there, run the Phase 6 and 7 gates on a native Linux laptop
+    instead, such as Taeen's or a Linux USB boot. Develop on Windows and pull the branch there to
+    gate it.
+  - Tell me which case applies before planning, so the gate is not a surprise at the end.
 - **Memory and disk:** about 8 GB RAM and 20 GB free disk space. The first build and the first
   gate download several GB of pinned images (Playwright, Semgrep, Trivy, Postgres), so use a
   good connection.
@@ -517,6 +545,9 @@ an exact answer, and behaviour that makes sense to a person.
     bash -c 'python3 backend/scripts/phase_gate.py --phase 6 > runs/gate-p6.log 2>&1'
   ```
   On macOS, use `caffeinate -i nohup python3 backend/scripts/phase_gate.py --phase 6 > runs/gate-p6.log 2>&1 &`.
+  On WSL2 the same `systemd-run` command works once systemd is on, but `systemd-inhibit` can't
+  stop **Windows** from sleeping. Set Windows "Sleep" to "Never" while it plugs in, and don't
+  close the lid.
 - **Expect 2–3 hours.** Keep the laptop on power, close browsers and extra editors, and avoid
   updates or restarts. Memory pressure causes browser-test timeouts.
 - **When a step fails,** read `runs/gates/failed-*.log`, find the cause, and fix it at the cause.

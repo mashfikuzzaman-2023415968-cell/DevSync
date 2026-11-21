@@ -39,7 +39,9 @@ Phase 6 is started.
 - Native Linux with a GPU at `/dev/dri` (Intel or AMD preferred). The gate's performance step
   measures the 3D scene's frame rate on real hardware (D28), so WSL2, macOS or a VM can be used
   for development but **cannot pass the gate**. Taeen's laptop is Ubuntu with 8 GB RAM and Intel
-  graphics.
+  graphics. **On Windows,** use WSL2 (Ubuntu, systemd on, Docker in WSL, the repository cloned
+  inside the Linux filesystem, `core.autocrlf input`); the start prompt has the steps. The gate on
+  WSL2 is untested. If `/dev/dri` is missing there, run the gates on a native Linux machine.
 - Docker Engine 24+ with Compose v2, plus `make`, `git` and Python 3.10+ on the host.
 - Node 22 LTS (Phase 6 moves the project from Node 20, see §5) and `uv`
   (`curl -LsSf https://astral.sh/uv/install.sh | sh`).
