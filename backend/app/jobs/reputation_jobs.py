@@ -13,8 +13,12 @@ import asyncio
 from dataclasses import asdict
 from typing import Any
 
+from rq import Queue
+from rq.job import Job as RqJob
+
 from app.db.context import DbContext
 from app.db.session import open_session
+from app.jobs.queues import get_queue
 from app.jobs.runs import run_recorded
 from app.services import platform_settings, reputation_engine
 
@@ -37,3 +41,10 @@ async def recalculate_everyone() -> dict[str, Any]:
 def recalculate_all() -> dict[str, Any]:
     """RQ entry point (sync wrapper); the run is recorded in `jobs` (§11)."""
     return asyncio.run(run_recorded(JOB_TYPE, recalculate_everyone))
+
+
+def enqueue_recalculate_all(queue: Queue | None = None) -> RqJob:
+    """Queue the job with the §11 limits: 30-minute timeout and no automatic retry (an admin
+    re-runs it). Low priority: it never competes with formation or auth emails."""
+    target = queue if queue is not None else get_queue("low")
+    return target.enqueue(recalculate_all, job_timeout=TIMEOUT_SECONDS, result_ttl=86_400)
