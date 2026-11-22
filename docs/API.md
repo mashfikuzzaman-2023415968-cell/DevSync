@@ -123,4 +123,36 @@ Marketplace is developer-only and read-only; it never returns any bid data (seal
 - No endpoint writes reputation: it is computed by the `reputation.recalculate_all` job from the
   stored histories (`make reputation-recalculate`; the admin endpoint arrives in Phase 12, D92).
 
+## Phase 7 endpoints — team formation and jobs (spec §10.2 Formation, §10.3; D106–D110)
+
+- `POST /projects/{id}/formation-runs` (client, own FORMING project; `Idempotency-Key`; quota
+  `ratelimit.formation_run` 10/h; one run at a time per project) — body `preset`
+  (`balanced|quality|fast|budget`), optional `weights` {competency, teamwork, time, cost} 0–1
+  (normalised; all zero is 422), `min_newcomers` 0–2, optional `min_performance` /
+  `min_competency` (≥ the D54 floor). Any other field (`seed`, `status`, `result`, …) is 422.
+  → 202 `{run_id, job_id, status, progress}`. 409 `INVALID_STATE` when not FORMING or no eligible
+  bids, 409 `LIMIT_REACHED` while a run is in progress, 503 when the queue is down.
+- `GET /projects/{id}/formation-runs` (client own, admin) → the runs, newest first, up to 50
+  (`id, status, preset, min_newcomers, fitness, optimal, price_paisa, confirmed, …`).
+- `GET /formation-runs/{id}` (client own, admin) → params, seed, `result` (team with each
+  member's contribution, fitness, price/budget and finish/deadline shares, risks, deciding term
+  and runner-up difference, exact verification, fairness with the cost of fairness, top three
+  teams, convergence, relaxations), `can_confirm`, `confirmed`.
+- `POST /formation-runs/{id}/confirm` (client own) → `{team_id, project_status: TEAM_PENDING,
+  members, invitations_sent: false}`; 409 when the project isn't FORMING, the run has no team, or
+  a chosen bidder withdrew.
+- `POST /formation-runs/{id}/verify` (admin, step-up; others 404) → 202; re-runs the frozen
+  inputs and records `admin_verification.reproduced` on the run.
+- `GET /admin/formation-runs?cursor=&limit=` (admin) → cursor page of every run.
+- `GET /bids/{id}/explanation` (the bidder; admin) → why the bid was not selected: `reasons`,
+  `main_gap` (`comp|team|time|cost`), `hint`, `gap`, `price_counterfactual_paisa`, and `compare`
+  (the selected bid's days and price in that slot — never who). 404 until a team was confirmed
+  without the bid (or for anyone else's bid).
+- `GET /jobs/{id}` (requester, admin) → `{id, type, status, progress, error_code, created_at,
+  started_at, finished_at}`; others' jobs and system jobs 404.
+- `GET /jobs/{id}/events` (requester, admin) → `text/event-stream`: a `status` event, then
+  `progress` events with `id` (resume with `Last-Event-ID`), a heartbeat comment every 20 s, the
+  end on a final status or after 30 min. 403 `CSRF_FAILED` for a foreign `Origin` or a
+  cross-site `Sec-Fetch-Site`, 429 for a fourth open stream.
+
 Error envelope: `{"error": {"code", "message", "fields"?, "request_id"}}`.
