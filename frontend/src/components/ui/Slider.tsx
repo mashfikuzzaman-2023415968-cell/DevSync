@@ -53,11 +53,14 @@ export function Slider({
         <SliderPrimitive.Track className="relative h-1.5 grow overflow-hidden rounded-full bg-surface-2">
           <SliderPrimitive.Range className="absolute h-full bg-primary" />
         </SliderPrimitive.Track>
+        {/* A 44 px hit area (§13.14 touch targets) around the visible 28/20 px thumb. */}
         <SliderPrimitive.Thumb
           aria-labelledby={labelId}
           aria-valuetext={format(value)}
-          className="block size-7 rounded-full border-2 border-primary bg-surface shadow-sm transition-shadow duration-fast hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary md:size-5"
-        />
+          className="group flex size-11 items-center justify-center rounded-full outline-none"
+        >
+          <span className="block size-7 rounded-full border-2 border-primary bg-surface shadow-sm transition-shadow duration-fast group-hover:shadow-md group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-primary md:size-5" />
+        </SliderPrimitive.Thumb>
       </SliderPrimitive.Root>
     </div>
   );

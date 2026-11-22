@@ -2,12 +2,12 @@
 
 ## Current state
 - **Current owner:** Raisa Tabassum (frontend developer), Phases 6–7, from 2026-11-21 (hand-off from Taeen: `docs/handoffs/handoff-02-taeen-to-raisa.md`; paste-in prompt `docs/handoffs/handoff-02-start-prompt.md`).
-- **Current phase:** 6 (reputation engine and market simulator), built on branch `phase-6`, **gate PASS 2026-11-22** on Taeen's laptop (native Linux), merged to `main`, tagged `phase-6`. Plan `docs/plans/phase-06.md` (approved 2026-11-21), decisions D83–D102, security review `docs/security-reviews/phase-06.md` (0 unresolved high).
-- **Last gate result:** Phase 6 PASS, 2026-11-22 06:16 Asia/Dhaka (`runs/gate-p6e.log`): backend 1,857 (96.7%), security 567, contract 531, frontend 527 (80.6%), E2E 74, a11y 6, visual 113 (208 baselines), Lighthouse desktop 100/100/96/100 and mobile 94/100/96/100, regression guard clean. Two fixes were needed (session log 2026-11-22).
-- **Verified on Raisa's laptop (WSL 2, 2026-11-21):** backend suite on the Phase 6 code: everything passes except `tests/security/test_rate_limits.py::test_admin_limit_is_per_user` under full-suite load (see Known issues); algorithms + property 292, API/engine/RLS/job 49, frontend 525, Phase 6 E2E 3/3, stage-1 and stage-2 seeds, `alembic` upgrade/downgrade/check, OpenAPI contract 0 problems.
+- **Current phase:** 7 (team formation), built on branch `phase-7` (from `main` after the Phase 6 merge). Plan `docs/plans/phase-07.md` (approved 2026-11-22), decisions D103–D116, security review `docs/security-reviews/phase-07.md` (0 unresolved high). **Gate not run yet**: it runs on a native Linux laptop after the push (WSL 2 can't pass step 16 or the step timeouts).
+- **Last gate result:** Phase 6 PASS, 2026-11-22 06:16 Asia/Dhaka (`runs/gate-p6e.log`).
+- **Verified on Raisa's laptop (WSL 2, 2026-11-22/23):** backend security + api + integration + jobs 1,533 passed after one fix (the `formation_run` rate-limit test was missing); algorithms/property/unit all pass (explain, bpso, fitness, baselines, E1 script, SSE paths, job events); perf budgets (PSO |S| = 200, N = 10 ≈ 2.5 s < 5 s; exact 18 candidates 0.04 s < 3 s); E1 298 instances 98.3 % optimal, mean gap 0.042 %; edge 24/24 (SSE location through Nginx); frontend 545 Vitest; Phase 7 E2E 1/1; axe and viewport matrix on the two new screens; 12 new visual baselines (`team-formation`, `bid-not-selected`); stage-2 seed → FORMING and `formation_check.py` reproduces the fixture team; paper alignment Eq. 1–19; OpenAPI contract 0 problems; `alembic` upgrade/downgrade/check; `check_rls` 0 unprotected.
 - **In progress:** nothing.
-- **Very next step:** Raisa pulls `main` (it has the two gate fixes), branches `phase-7` from it, and starts the Phase 7 plan in Plan Mode. Gates for Phase 7 run on a native Linux laptop with an Intel/AMD GPU (step 16 can't pass on WSL 2).
-- **Open human tasks:** review the 128 drafted test questions (D34); tester's human check of the Phase 3, 4 and 5 security reviews; sanity-check D39 (simulated payment-method verification).
+- **Very next step:** push `phase-7` (needs a fresh token), run `make gate PHASE=7` on the native Linux laptop, merge to `main`, tag `phase-7`. Then Phase 8 (invitations, lead selection, team repair) — invitations are already recorded unsent (D108).
+- **Open human tasks:** review the 128 drafted test questions (D34); tester's human check of the Phase 3–7 security reviews; sanity-check D39 (simulated payment-method verification); decide whether the homepage should show the real cost of fairness at dial 1 (16.2 % on the seed, D113) as is.
 
 ## Phase table
 | Phase | Owner | Status | Gate | Date | Tag |
@@ -19,7 +19,8 @@
 | 4 Projects & CPM | Salwa (review fixes: Taeen) | done | PASS | 2026-10-20 | phase-4 |
 | 5 Marketplace & filtering | Salwa (gate fixes: Taeen) | done | PASS | 2026-10-21 | phase-5 |
 | 6 Reputation & simulator | Raisa (gate fixes: Taeen) | done | PASS | 2026-11-22 | phase-6 |
-| 7–15 | — | not started | — | — | — |
+| 7 Team formation | Raisa | built, gate pending | — | — | — |
+| 8–15 | — | not started | — | — | — |
 
 ## Gate log (newest first, appended by `make gate`)
 | Finished (UTC) | Phase | Result | Tests |
@@ -136,6 +137,13 @@
 - **`test_admin_limit_is_per_user` is timing-sensitive on slow machines.** It sends 300 admin requests that must all land inside a 60-second window. Alone on this WSL laptop it passes 3/3 but takes 52–54 s; under the full suite it went over and failed. Not a Phase 6 change; not modified. Watch it in the gate on a faster machine; if it fails there too, fix the test's timing at the cause (not by loosening the limit).
 
 ## Session log (newest first)
+### 2026-11-22 to 2026-11-23 — Raisa (with Claude Code), Phase 7 build
+- Carried over the audit-chain fix (0013, D103) and the per-screen CSP/axe checks (D104).
+- Pure algorithms: fitness Eq. 17–19, binary PSO (Algorithm 2) with repair, exact solver, fairness dial, explanations (risks, comparison, why this team, why not selected with a property-tested price counterfactual), greedy baseline, `run_formation`; presets D115; E1 script.
+- Migration 0014 (runs with immutable inputs, explanations sealed to the bidder, teams, members, unsent invitations; SYSTEM-only writes). Generic jobs API + SSE with an unbuffered Nginx location (D107). Formation service, runner, jobs and endpoints (D106, D108–D110), admin verify with step-up.
+- Frontend: team formation screen (presets, priority sliders, standards, fairness dial, live swarm and convergence, team cards, why this team, comparison, runs, confirm), "why it wasn't selected" card; slider thumbs and breadcrumb links got 44 px touch targets.
+- Stage-2 seed leaves the ordering project FORMING (D116); `formation_check.py` gate check + homepage fairness figures from the real run (D113).
+- Bugs found and fixed while testing: evaluation must run in a SYSTEM session (D50); a sync Redis dependency shared one client across event loops (`loop_redis`); a non-selected bidder couldn't read their explanation (joined to a team RLS hides); touch targets; contribution bars were rose for every cost.
 ### 2026-11-22 — Taeen (with Claude Code), Phase 6 gate on a native Linux laptop
 - Ran `make gate PHASE=6` on Raisa's `phase-6` (`45247ca`). Runs 1–2 stopped at step 9: two rate-limit tests failed under memory pressure, then the step hit its 60-minute limit (the cut-off run finished on its own: 1,850 passed, 0 failed). No test or limit was changed; later runs took 19 minutes.
 - Run 3 failed step 11: schemathesis sent `budget_min=370372298551098867712` to `GET /projects/search`, which overflowed BIGINT and returned a 500 (Phase 5 code). Fixed with `le=10_000_000_000` on `budget_min`/`budget_max` (D102), tests in `tests/security/test_bids.py`, `docs/api/openapi.json` regenerated. The same run flagged `POST /me/external-reviews` for accepting a multipart "wrong type" (a number sent as text, an array sent as a file part, which are indistinguishable from valid input on the wire); it passed alone and in the next two full runs, so it was left as is.

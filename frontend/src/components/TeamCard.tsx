@@ -1,7 +1,9 @@
 /**
  * Team card (spec §13.3, §9.7): one member of the recommended team: who, which role, price and
  * days, competency and teamwork, and how much each fitness term contributed (bars on a shared
- * scale, numbers beside them, so colour is never the only signal). Newcomers get the amber ring
+ * scale, numbers beside them, so colour is never the only signal; speed and cost are subtracted
+ * in Eq. 17, so their numbers carry a minus sign, and the bars keep their term colour — rose is
+ * for risks). Newcomers get the amber ring
  * and badge.
  */
 import type { TeamMember } from "@/api/types";
@@ -63,10 +65,7 @@ export function TeamCard({ member, scale }: { member: TeamMember; scale: number 
                   aria-hidden="true"
                 >
                   <span
-                    className={cn(
-                      "block h-full origin-left rounded-full",
-                      v < 0 ? "bg-danger" : BAR[t],
-                    )}
+                    className={cn("block h-full origin-left rounded-full", BAR[t])}
                     style={{ transform: `scaleX(${share.toFixed(3)})` }}
                   />
                 </span>
