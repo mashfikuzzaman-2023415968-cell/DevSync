@@ -24,14 +24,14 @@ import asyncio
 import json
 import uuid
 from collections.abc import Coroutine, Iterator
-from typing import Any, TypeVar
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 
-from app.jobs.formation_jobs import execute_run, execute_verify, write_explanations
 from app.core.redis import forget_clients
+from app.jobs.formation_jobs import execute_run, execute_verify, write_explanations
 from app.main import create_app
 from tests.helpers import ORIGIN, Api, SeededUser, stack_available, stack_settings
 from tests.helpers import wait_for_next_totp_window as next_totp
@@ -39,7 +39,6 @@ from tests.helpers import wait_for_next_totp_window as next_totp
 pytestmark = [pytest.mark.security, pytest.mark.api]
 BASE = "/api/v1"
 UNKNOWN = "00000000-0000-4000-8000-000000000000"
-T = TypeVar("T")
 
 
 @pytest.fixture
@@ -60,7 +59,7 @@ def _sql(url: str, stmt: str, **params: Any) -> list[Any]:
         engine.dispose()
 
 
-def _job(coro: Coroutine[Any, Any, T]) -> T:
+def _job[T](coro: Coroutine[Any, Any, T]) -> T:
     """Run a job here (the test stack has no worker), then drop the Redis clients it cached:
     they belong to its event loop, which has ended."""
     try:
@@ -357,24 +356,27 @@ def test_confirm_forms_the_team_and_explains_to_the_others(
 
     assert _job(write_explanations(uuid.UUID(run["id"])))["explanations"] == 3
     assert _job(write_explanations(uuid.UUID(run["id"])))["explanations"] == 3  # idempotent
-    # The last bidder (api2) — selected or not — reads only their own.
-    own = world["bidders"][-1][1]
+    # A bidder who wasn't selected reads their own explanation, which names nobody else.
+    loser_user, loser_bid = next((d, b) for d, b in world["bidders"] if b not in team)
+    assert api2.login(loser_user).status_code == 200
+    own = loser_bid
     others = {b for _d, b in world["bidders"]} - {own}
     r = api2.get(f"{BASE}/bids/{own}/explanation")
-    if own in team:
-        assert r.status_code == 404  # selected: nothing to explain
-    else:
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert body["reasons"] == ["NOT_SELECTED"]
-        assert body["compare"] is None or body["compare"]["your_price_paisa"] > 0
-        text_body = json.dumps(body)
-        for other in others:
-            assert other not in text_body
-        for m in run["result"]["team"]:
-            assert m["developer_name"] not in text_body
-            assert m["developer_id"] not in text_body
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["reasons"] in (["NOT_SELECTED"], ["NOT_SHORTLISTED"])
+    assert body["compare"] is None or body["compare"]["your_price_paisa"] > 0
+    text_body = json.dumps(body)
+    for other in others:
+        assert other not in text_body
+    for m in run["result"]["team"]:
+        assert m["developer_name"] not in text_body
+        assert m["developer_id"] not in text_body
     for other in others:
         assert api2.get(f"{BASE}/bids/{other}/explanation").status_code == 404
+    # A selected bidder has nothing to explain.
+    winner_user, winner_bid = next((d, b) for d, b in world["bidders"] if b in team)
+    assert api2.login(winner_user).status_code == 200
+    assert api2.get(f"{BASE}/bids/{winner_bid}/explanation").status_code == 404
     assert api.get(f"{BASE}/bids/{own}/explanation").status_code == 403  # the client: no
     assert api2.get(f"{BASE}/bids/{UNKNOWN}/explanation").status_code == 404

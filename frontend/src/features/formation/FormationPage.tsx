@@ -397,8 +397,9 @@ function EarlierRuns({
               className="flex min-h-11 w-full items-center justify-between gap-3 rounded-md px-2 py-2 text-left text-body-sm hover:bg-surface-2 aria-[current=true]:bg-primary-soft"
             >
               <span className="min-w-0">
-                <span className="block font-medium capitalize text-text">
-                  {r.preset}, {r.min_newcomers} {r.min_newcomers === 1 ? "newcomer" : "newcomers"}
+                <span className="block font-medium text-text">
+                  {PRESETS.find((p) => p.value === r.preset)?.label ?? r.preset}, {r.min_newcomers}{" "}
+                  {r.min_newcomers === 1 ? "newcomer" : "newcomers"}
                 </span>
                 <span className="block text-caption text-text-muted" data-volatile>
                   {formatDateTime(r.created_at)}

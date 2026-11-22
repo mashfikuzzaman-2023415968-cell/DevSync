@@ -630,10 +630,14 @@ async def bid_explanation(ctx: Ctx, bid_id: uuid.UUID) -> BidExplanationOut:
         raise NotFoundError
     if bid.status != BidStatus.NOT_SELECTED:
         raise NotFoundError
+    # Explanations are written only for the confirmed run (one team per project), and RLS lets
+    # the bidder read only their own. No join to `teams`: a bidder who isn't in the team can't
+    # see it (RLS), which would hide their own explanation.
     row = await ctx.db.scalar(
         select(BidExplanation)
-        .join(Team, Team.run_id == BidExplanation.run_id)
-        .where(BidExplanation.bid_id == bid.id, Team.project_id == bid.project_id)
+        .where(BidExplanation.bid_id == bid.id)
+        .order_by(BidExplanation.created_at.desc())
+        .limit(1)
     )
     if row is None:
         raise NotFoundError("The explanation is still being prepared. Check back in a minute.")
