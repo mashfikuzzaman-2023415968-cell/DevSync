@@ -570,7 +570,6 @@ function Result({
             action={
               <Button
                 variant="outline"
-                size="sm"
                 aria-expanded={shown}
                 onClick={() => {
                   setShown((s) => !s);

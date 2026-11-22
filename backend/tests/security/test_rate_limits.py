@@ -49,7 +49,6 @@ BOT_OK = {"captcha": "test-bypass"}
 
 # §14.8 rows that have no endpoint yet → the phase that builds (and must test) them.
 PENDING_SCOPES = {
-    "formation_run": "Phase 7 (formation runs; also 1 concurrent per project)",
     "coding_submit": "Phase 13 (coding challenges)",
     "coding_practice": "Phase 13 (coding challenges, practice mode)",
     "comment": "Phase 9 (workspace comments and discussion)",
@@ -75,6 +74,8 @@ TESTED_SCOPES = {
     # Role assessment (role assessment spec §9).
     "assessment_read": "test_assessment_read_limit_is_per_user",
     "assessment_start": "test_assessment_start_limit_is_per_user",
+    # Team formation (Phase 7; one run at a time per project is tested in test_formation_api.py).
+    "formation_run": "test_formation_run_limit_is_per_user",
     "assessment_resume": "test_assessment_resume_limit_is_per_user",
     "assessment_answer": "test_assessment_answer_limit_is_per_user",
     "assessment_finish": "test_assessment_finish_limit_is_per_user",
@@ -565,6 +566,21 @@ def test_assessment_start_limit_is_per_user(api: Api, api2: Api) -> None:
         "assessment_start",
         lambda: api.post(path, json=body),
         lambda: api2.post(path, json=body),
+        10,
+        HOUR,
+    )
+
+
+def test_formation_run_limit_is_per_user(api: Api, api2: Api) -> None:
+    """Starting team formation: 10/hour per client. Refused starts count too (an unknown
+    project is a 404), like bids, so probing can't go around the limit."""
+    api.sign_in_as("CLIENT")
+    api2.sign_in_as("CLIENT")
+    path = f"/api/v1/projects/{uuid.uuid4()}/formation-runs"
+    _per_user(
+        "formation_run",
+        lambda: api.post(path, json={}),
+        lambda: api2.post(path, json={}),
         10,
         HOUR,
     )
