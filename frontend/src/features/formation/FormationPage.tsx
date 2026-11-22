@@ -549,9 +549,16 @@ function Result({
         </Alert>
       ) : null}
       <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-        {result.team.map((m) => (
-          <TeamCard key={m.bid_id} member={m} scale={scale} />
-        ))}
+        {/* By role, then name: the stored order follows the bids' order, which is arbitrary. */}
+        {[...result.team]
+          .sort(
+            (a, b) =>
+              a.slot_label.localeCompare(b.slot_label) ||
+              a.developer_name.localeCompare(b.developer_name),
+          )
+          .map((m) => (
+            <TeamCard key={m.bid_id} member={m} scale={scale} />
+          ))}
       </div>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 2xl:grid-cols-2">
         <WhyThisTeam result={result} />
