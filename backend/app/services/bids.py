@@ -258,12 +258,14 @@ def _project_input(
     )
 
 
-def _params(settings: PlatformSettingsValues, terms: Terms) -> FilterParams:
+def _params(
+    settings: PlatformSettingsValues, terms: Terms, advancement: Advancement = _ADVANCEMENT
+) -> FilterParams:
     f = settings.filter
     return FilterParams(
         p0=terms.p0,
         c0=terms.c0,
-        advancement=_ADVANCEMENT,
+        advancement=advancement,
         team_size=sum(terms.slot_counts.values()),
         newcomer_pass_mark=float(settings.newcomer.pass_mark),
         newcomer_competency_check=f.newcomer_competency_check,
@@ -856,10 +858,12 @@ async def evaluate(
     settings: PlatformSettingsValues,
     today: date,
     terms: Terms | None = None,
+    *,
+    advancement: Advancement = _ADVANCEMENT,
 ) -> Evaluation:
     """Run Algorithm 1 over a project's standing (ACTIVE or INELIGIBLE) bids, optionally under
-    changed `terms` (a what-if for the too-few-bids actions). Ctx-free so the deadline job can
-    reuse it."""
+    changed `terms` (a what-if for the too-few-bids actions) and with the advancement choice of a
+    formation preset. Ctx-free so the deadline job and the formation service can reuse it."""
     bids = list(await repo.list_standing_for_project(db, project.id))
     slots = list(await projrepo.load_slots(db, project.id))
     terms = terms or project_terms(project, slots, settings)
@@ -897,7 +901,7 @@ async def evaluate(
         for b in bids
     ]
     proj = _project_input(terms, project, slots, settings.pay.platform_fee_bp)
-    params = _params(settings, terms)
+    params = _params(settings, terms, advancement)
     return Evaluation(
         project=project,
         terms=terms,

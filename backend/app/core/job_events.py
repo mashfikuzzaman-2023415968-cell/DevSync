@@ -14,6 +14,7 @@ import json
 import uuid
 from typing import Any
 
+from redis import Redis as SyncRedis
 from redis.asyncio import Redis
 
 MAX_EVENTS = 500
@@ -43,6 +44,19 @@ async def publish(redis: Redis, job_id: uuid.UUID, event: dict[str, Any]) -> Non
     pipe.ltrim(key, -MAX_EVENTS, -1)
     pipe.expire(key, TTL_SECONDS)
     await pipe.execute()
+
+
+def publish_sync(redis: SyncRedis, job_id: uuid.UUID, event: dict[str, Any]) -> None:
+    """`publish` for code running in a worker thread (the PSO progress callback)."""
+    unknown = set(event) - ALLOWED_KEYS
+    if unknown:
+        raise ValueError(f"unexpected event keys: {sorted(unknown)}")
+    key = events_key(job_id)
+    pipe = redis.pipeline(transaction=True)
+    pipe.rpush(key, json.dumps(event, separators=(",", ":")))
+    pipe.ltrim(key, -MAX_EVENTS, -1)
+    pipe.expire(key, TTL_SECONDS)
+    pipe.execute()
 
 
 async def read_from(redis: Redis, job_id: uuid.UUID, start: int) -> list[dict[str, Any]]:

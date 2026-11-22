@@ -1269,3 +1269,44 @@ concurrent stream is 429 (`sse:concurrent:{user}`, a slot expires after 31 min i
 dies). The route timeout spares exactly the SSE paths (`SSE_PATHS`), and Nginx has a dedicated
 location for them (`proxy-sse.conf`: `proxy_buffering off`, no compression, `X-Accel-Buffering:
 no`, read timeout 60 s).
+
+**D106 · How a formation run starts.** Only the project's client starts a run, and only while the
+project is FORMING (the bidding-deadline job moves it there; a BIDDING project whose deadline has
+just passed gets 409 "try again shortly" rather than a second copy of the close logic). The body
+takes a preset (Quality→P, Balanced→C, Fast→t, Budget→c for Algorithm 1's advancement; D115
+weights), optional weights C1–C4 (0–1, normalised server-side, all-zero refused), the fairness dial
+`min_newcomers` 0–2 (default 1 when a newcomer is shortlisted, else 0) and optional minimum
+standards within the D54 floor. Any other field — `seed`, `status`, `result`,
+`candidate_snapshot`, … — is 422. Algorithm 1 is re-run through `bids.evaluate` in a SYSTEM
+session (D50: the client can't read bidders' skills) and its per-slot shortlist, with the slot
+counts, budget after fee, deadline, required and critical-path skills, is frozen as the run's
+candidate snapshot next to the parameters (weights, dial, PSO/exact settings, mode) and a
+server-generated 31-bit seed. One run at a time per project (a QUEUED/RUNNING run older than 5 min
+belongs to a dead worker and no longer blocks), 10 starts an hour per client
+(`ratelimit.formation_run`, refused requests count, like bids), and an Idempotency-Key replays the
+first 202. Services queue jobs by name through `core/task_queue.py` (an allow-list with each
+job's §11 timeout and retries), because the layering forbids services importing `app.jobs`.
+
+**D108 · Invitations are recorded, not sent, in Phase 7.** Confirm (FORMING → TEAM_PENDING) marks
+the team's bids SELECTED and every other ACTIVE bid NOT_SELECTED (INELIGIBLE ones stay), creates
+the team, its members (INVITED), one invitation row each with `sent_at`/`expires_at` NULL (a check
+constraint keeps them NULL together) and TENTATIVE availability reservations over the project
+period (§9.17). Phase 8 sends the invitations and starts their 48 h clock, so nobody is invited to
+something they can't answer yet. Phase 7 tells the client "Team formation finished" and each
+non-selected bidder "Your bid was not selected" (link to the bid, where the explanation is shown);
+"You were selected" arrives with Phase 8's invitation. A confirmed run's "why not selected" rows
+are written by `formation.explanations` (idempotent per bid and run): a full analysis (gap,
+counterfactual price, main gap) for up to 50 bids within a 90 s budget, a reason code for the rest
+(NOT_SELECTED, NOT_SHORTLISTED or the Algorithm 1 reason under the run's standards).
+
+**D109 · Saved runs and reproduction.** Every run is kept (deleting is refused by a trigger and the
+grants) and listed for the client at `GET /projects/{id}/formation-runs`, newest first, up to 50
+(not in the §10 table; it backs "earlier runs" and Recalculate). A run's inputs can't change after
+insert, even for SYSTEM (trigger). Re-running the frozen snapshot, parameters and seed gives the
+same team and fitness (`run_formation` is pure; tested in the API test through the admin verify
+job, which records `admin_verification.reproduced` on the run).
+
+**D110 · Admin pieces and nav markers.** Built now as API only: `POST /formation-runs/{id}/verify`
+(admin with step-up, queues `formation.verify`, 202) and `GET /admin/formation-runs` (cursor
+page). The admin page moves to Phase 12 (admin nav "Team formation runs" → 12) and the client's
+"Teams" page to Phase 8 (nav marker → 8), where a confirmed team becomes something to manage.

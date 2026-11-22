@@ -1,0 +1,379 @@
+"""Team formation over HTTP (spec §10.2 Formation, §14.13 row 7, §17 Phase 7; D106–D110).
+
+A client's FORMING project with five bidders (one a newcomer) for two places. The run is queued
+through the API and executed here by calling the job directly (the test stack has no worker), so
+each step is deterministic:
+
+- only the owning client starts and confirms; others get 404, other roles 403; admins read and
+  verify (step-up);
+- the server picks the seed (a body `seed` is 422) and refuses mass-assigned fields, impossible
+  dials, all-zero weights and standards below the floor; one run at a time; an Idempotency-Key
+  replays the same run; a BIDDING project is 409;
+- the result is optimal on this small problem, the fairness dial includes the newcomer, the
+  stored run reproduces;
+- confirm creates the team (TEAM_PENDING), marks bids SELECTED / NOT_SELECTED, records unsent
+  invitations and tentative reservations, and tells the non-selected bidders; a second confirm is
+  409;
+- "why not selected" is the bidder's own only and names no other bid, price or person; its
+  counterfactual price, applied, would really have selected the bid.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import uuid
+from collections.abc import Coroutine, Iterator
+from typing import Any, TypeVar
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, text
+
+from app.jobs.formation_jobs import execute_run, execute_verify, write_explanations
+from app.core.redis import forget_clients
+from app.main import create_app
+from tests.helpers import ORIGIN, Api, SeededUser, stack_available, stack_settings
+from tests.helpers import wait_for_next_totp_window as next_totp
+
+pytestmark = [pytest.mark.security, pytest.mark.api]
+BASE = "/api/v1"
+UNKNOWN = "00000000-0000-4000-8000-000000000000"
+T = TypeVar("T")
+
+
+@pytest.fixture
+def api3(migrated: str) -> Iterator[Api]:
+    if not stack_available():
+        pytest.skip("needs the test compose stack")
+    with TestClient(create_app(stack_settings()), base_url=ORIGIN) as c:
+        yield Api(c)
+
+
+def _sql(url: str, stmt: str, **params: Any) -> list[Any]:
+    engine = create_engine(url)
+    try:
+        with engine.begin() as conn:
+            result = conn.execute(text(stmt), params)
+            return list(result) if result.returns_rows else []
+    finally:
+        engine.dispose()
+
+
+def _job(coro: Coroutine[Any, Any, T]) -> T:
+    """Run a job here (the test stack has no worker), then drop the Redis clients it cached:
+    they belong to its event loop, which has ended."""
+    try:
+        return asyncio.run(coro)
+    finally:
+        forget_clients()
+
+
+def _code(r: Any) -> str:
+    return str(r.json()["error"]["code"])
+
+
+def _skill_id(api: Api) -> str:
+    skill = api.get(f"{BASE}/skills").json()[0]
+    return str(skill.get("skill_id") or skill["id"])
+
+
+def _publish(api: Api, *, count: int = 2) -> tuple[str, str]:
+    sid = _skill_id(api)
+    pid = api.post(
+        f"{BASE}/projects",
+        json={
+            "title": "Online ordering system",
+            "summary": "Order and track restaurant orders.",
+            "budget_paisa": 12_000_000,
+            "deadline_days": 30,
+            "team_size": count,
+        },
+    ).json()["id"]
+    slots = api.put(
+        f"{BASE}/projects/{pid}/slots", json={"slots": [{"skill_id": sid, "count": count}]}
+    ).json()
+    api.put(
+        f"{BASE}/projects/{pid}/milestones",
+        json={
+            "milestones": [
+                {"name": "Design", "duration_days": 5, "share_bp": 6000, "skill_ids": [sid]},
+                {"name": "Build", "duration_days": 10, "share_bp": 4000, "skill_ids": [sid]},
+            ]
+        },
+    )
+    assert api.post(f"{BASE}/me/payment-method/verify").status_code == 204
+    assert api.post(f"{BASE}/projects/{pid}/publish", json={}).status_code == 200
+    return pid, slots[0]["id"]
+
+
+def _bidder(
+    api: Api,
+    url: str,
+    pid: str,
+    slot: str,
+    *,
+    price: int,
+    days: int,
+    p: float,
+    c: float,
+    newcomer: bool = False,
+) -> tuple[SeededUser, str]:
+    dev = api.sign_in_as("DEVELOPER")
+    r = api.put(
+        f"{BASE}/me/skills", json={"skills": [{"skill_id": _skill_id(api), "self_level": 4}]}
+    )
+    assert r.status_code == 200, r.text
+    if newcomer:
+        assert (
+            api.post(
+                f"{BASE}/__test__/developers/{dev.user_id}/skill-evidence",
+                json={"skill": api.get(f"{BASE}/skills").json()[0]["name"], "score": "0.900"},
+            ).status_code
+            == 204
+        )
+        api.qualify_for_slot(dev, pid, slot, api.get(f"{BASE}/skills").json()[0]["name"])
+    else:
+        _sql(
+            url,
+            "INSERT INTO reputation_snapshots (id, developer_id, omega, x, xm, beta, mu, t, "
+            "c, p, completed_projects, distinct_clients) VALUES (:id, :dev, 0.6, 0.7, 0.66, 0.8, "
+            "0.7, 0.8, :c, :p, 6, 4)",
+            id=str(uuid.uuid4()),
+            dev=dev.user_id,
+            c=c,
+            p=p,
+        )
+    r = api.post(
+        f"{BASE}/projects/{pid}/bids",
+        json={"slot_id": slot, "price_paisa": price, "days_needed": days},
+    )
+    assert r.status_code == 201, r.text
+    return dev, r.json()["id"]
+
+
+def _forming(url: str, pid: str) -> None:
+    _sql(
+        url,
+        "UPDATE projects SET bidding_deadline = now() - interval '1 hour', "
+        "status = 'FORMING' WHERE id = :pid",
+        pid=pid,
+    )
+
+
+@pytest.fixture
+def world(api: Api, api2: Api, migration_url: str) -> dict[str, Any]:
+    """Client (api) with a FORMING project and five bidders; api2 is left signed in as the
+    last bidder."""
+    client = api.sign_in_as("CLIENT")
+    pid, slot = _publish(api)
+    specs = [
+        (3_000_000, 20, 0.85, 0.80),
+        (2_400_000, 18, 0.70, 0.65),
+        (4_200_000, 25, 0.90, 0.88),
+        (2_000_000, 28, 0.60, 0.55),
+    ]
+    bidders = [
+        _bidder(api2, migration_url, pid, slot, price=pr, days=d, p=p, c=c) for pr, d, p, c in specs
+    ]
+    bidders.append(
+        _bidder(api2, migration_url, pid, slot, price=1_900_000, days=22, p=0, c=0, newcomer=True)
+    )
+    _forming(migration_url, pid)
+    return {"client": client, "pid": pid, "slot": slot, "bidders": bidders}
+
+
+def _start(api: Api, pid: str, **body: Any) -> Any:
+    """Start a run; the 10-an-hour quota is reset first (it counts refused requests too)."""
+    assert api.get(f"{BASE}/__test__/ratelimits/reset").status_code == 204
+    return api.post(f"{BASE}/projects/{pid}/formation-runs", json=body)
+
+
+def _run(api: Api, pid: str, **body: Any) -> dict[str, Any]:
+    r = _start(api, pid, **body)
+    assert r.status_code == 202, r.text
+    accepted = r.json()
+    assert _job(execute_run(uuid.UUID(accepted["run_id"]))).value == "SUCCEEDED"
+    out = api.get(f"{BASE}/formation-runs/{accepted['run_id']}")
+    assert out.status_code == 200, out.text
+    return {**out.json(), "job": accepted["job_id"]}
+
+
+# --------------------------------------------------------------------------------- start
+
+
+def test_start_validates_and_refuses_mass_assignment(api: Api, world: dict[str, Any]) -> None:
+    pid = world["pid"]
+    for body in (
+        {"seed": 42},
+        {"status": "SUCCEEDED"},
+        {"result": {}},
+        {"is_lead": True},
+        {"candidate_snapshot": {}},
+        {"min_newcomers": 3},
+        {"min_newcomers": -1},
+        {"preset": "cheapest"},
+        {"min_performance": "1.5"},
+        {"weights": {"competency": 0, "teamwork": 0, "time": 0, "cost": 0}},
+        {"weights": {"competency": "0.5", "teamwork": "0.5", "time": "0.5"}},
+    ):
+        r = _start(api, pid, **body)
+        assert r.status_code == 422, (body, r.text)
+    r = _start(api, pid, min_performance="0.05")  # below the platform floor (D54)
+    assert (r.status_code, _code(r)) == (422, "VALIDATION_ERROR")
+    assert _start(api, UNKNOWN).status_code == 404
+
+
+def test_only_the_owner_starts_and_one_run_at_a_time(
+    api: Api, api3: Api, world: dict[str, Any]
+) -> None:
+    pid = world["pid"]
+    api3.sign_in_as("CLIENT")
+    assert _start(api3, pid).status_code == 404  # another client: not found
+    key = {"Idempotency-Key": str(uuid.uuid4())}
+    first = api.post(f"{BASE}/projects/{pid}/formation-runs", json={}, headers=key)
+    assert first.status_code == 202, first.text
+    replay = api.post(f"{BASE}/projects/{pid}/formation-runs", json={}, headers=key)
+    assert replay.status_code == 202
+    assert replay.json()["run_id"] == first.json()["run_id"]
+    busy = _start(api, pid)
+    assert (busy.status_code, _code(busy)) == (409, "LIMIT_REACHED")
+    _job(execute_run(uuid.UUID(first.json()["run_id"])))
+    assert _start(api, pid).status_code == 202  # finished: a new run may start
+
+
+def test_a_bidding_project_cannot_form_a_team(api: Api) -> None:
+    api.sign_in_as("CLIENT")
+    pid, _slot = _publish(api)
+    r = _start(api, pid)
+    assert (r.status_code, _code(r)) == (409, "INVALID_STATE")
+
+
+# ---------------------------------------------------------------------------- result
+
+
+def test_run_result_is_optimal_fair_and_reproducible(
+    api: Api, api3: Api, world: dict[str, Any], migration_url: str
+) -> None:
+    run = _run(api, world["pid"], min_newcomers=1)
+    result = run["result"]
+    assert run["status"] == "SUCCEEDED"
+    assert run["params"]["min_newcomers"] == 1
+    assert len(result["team"]) == 2
+    assert result["verification"]["available"] is True
+    assert result["verification"]["optimal"] is True
+    assert result["newcomers"] >= 1  # the dial put the newcomer in
+    assert result["fairness"]["applied_k"] == 1
+    assert result["fairness"]["cost"] >= 0
+    assert 1 <= len(result["top"]) <= 3
+    assert result["top"][0]["recommended"] is True
+    assert result["price_paisa"] <= result["budget_after_fee_paisa"]
+    assert run["can_confirm"] is True
+    # The job and its stream are the client's.
+    job = api.get(f"{BASE}/jobs/{run['job']}").json()
+    assert (job["status"], job["progress"]) == ("SUCCEEDED", 100)
+    listed = api.get(f"{BASE}/projects/{world['pid']}/formation-runs").json()
+    assert listed[0]["id"] == run["id"]
+    # A developer and another client can't read it.
+    api3.sign_in_as("CLIENT")
+    assert api3.get(f"{BASE}/formation-runs/{run['id']}").status_code == 404
+    assert api3.get(f"{BASE}/projects/{world['pid']}/formation-runs").status_code == 404
+    # The admin verifies with a step-up; the run reproduces.
+    admin = api3.sign_in_as("ADMIN")
+    assert api3.get(f"{BASE}/formation-runs/{run['id']}").status_code == 200
+    r = api3.post(f"{BASE}/formation-runs/{run['id']}/verify")
+    assert (r.status_code, _code(r)) == (403, "STEP_UP_REQUIRED")
+    assert (
+        api3.post(
+            f"{BASE}/auth/step-up", json={"code": next_totp(admin.totp_secret or "")}
+        ).status_code
+        == 204
+    )
+    r = api3.post(f"{BASE}/formation-runs/{run['id']}/verify")
+    assert r.status_code == 202, r.text
+    assert _job(execute_verify(uuid.UUID(run["id"]), uuid.UUID(r.json()["job_id"])))
+    page = api3.get(f"{BASE}/admin/formation-runs").json()
+    mine = next(x for x in page["items"] if x["id"] == run["id"])
+    assert mine["verified"] is True
+    assert api3.get(f"{BASE}/admin/formation-runs?cursor=bad").status_code == 422
+
+
+def test_the_dial_at_zero_costs_nothing(api: Api, world: dict[str, Any]) -> None:
+    run = _run(api, world["pid"], min_newcomers=0)
+    fairness = run["result"]["fairness"]
+    assert (fairness["requested_k"], fairness["cost"], fairness["binding"]) == (0, 0.0, False)
+
+
+# ---------------------------------------------------------------------------- confirm
+
+
+def test_confirm_forms_the_team_and_explains_to_the_others(
+    api: Api, api2: Api, api3: Api, world: dict[str, Any], migration_url: str
+) -> None:
+    run = _run(api, world["pid"], min_newcomers=1)
+    team = {m["bid_id"] for m in run["result"]["team"]}
+    dev = api3.sign_in_as("DEVELOPER")
+    assert api3.post(f"{BASE}/formation-runs/{run['id']}/confirm").status_code == 403
+    del dev
+    r = api.post(f"{BASE}/formation-runs/{run['id']}/confirm")
+    assert r.status_code == 200, r.text
+    assert r.json()["project_status"] == "TEAM_PENDING"
+    assert r.json()["invitations_sent"] is False
+    again = api.post(f"{BASE}/formation-runs/{run['id']}/confirm")
+    assert (again.status_code, _code(again)) == (409, "INVALID_STATE")
+    assert _start(api, world["pid"]).status_code == 409  # no more runs once a team is formed
+    statuses = dict(
+        _sql(
+            migration_url,
+            "SELECT id::text, status::text FROM bids WHERE project_id = :pid",
+            pid=world["pid"],
+        )
+    )
+    for bid_id, status in statuses.items():
+        assert status == ("SELECTED" if bid_id in team else "NOT_SELECTED"), bid_id
+    rows = _sql(
+        migration_url,
+        "SELECT count(*), count(i.sent_at) FROM team_members m "
+        "JOIN invitations i ON i.team_member_id = m.id JOIN teams t ON t.id = m.team_id "
+        "WHERE t.project_id = :pid",
+        pid=world["pid"],
+    )
+    assert tuple(rows[0]) == (2, 0)  # two members, invitations not sent (D108)
+    reservations = _sql(
+        migration_url,
+        "SELECT count(*) FROM availability_reservations "
+        "WHERE project_id = :pid AND status = 'TENTATIVE'",
+        pid=world["pid"],
+    )
+    assert reservations[0][0] == 2
+    told = _sql(
+        migration_url,
+        "SELECT count(*) FROM notifications n JOIN bids b "
+        "ON n.link_path = '/dev/bids/' || b.id::text WHERE b.project_id = :pid "
+        "AND n.type = 'BID_NOT_SELECTED'",
+        pid=world["pid"],
+    )
+    assert told[0][0] == 3
+
+    assert _job(write_explanations(uuid.UUID(run["id"])))["explanations"] == 3
+    assert _job(write_explanations(uuid.UUID(run["id"])))["explanations"] == 3  # idempotent
+    # The last bidder (api2) — selected or not — reads only their own.
+    own = world["bidders"][-1][1]
+    others = {b for _d, b in world["bidders"]} - {own}
+    r = api2.get(f"{BASE}/bids/{own}/explanation")
+    if own in team:
+        assert r.status_code == 404  # selected: nothing to explain
+    else:
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["reasons"] == ["NOT_SELECTED"]
+        text_body = json.dumps(body)
+        for other in others:
+            assert other not in text_body
+        for m in run["result"]["team"]:
+            assert m["developer_name"] not in text_body
+            assert m["developer_id"] not in text_body
+    for other in others:
+        assert api2.get(f"{BASE}/bids/{other}/explanation").status_code == 404
+    assert api.get(f"{BASE}/bids/{own}/explanation").status_code == 403  # the client: no
+    assert api2.get(f"{BASE}/bids/{UNKNOWN}/explanation").status_code == 404

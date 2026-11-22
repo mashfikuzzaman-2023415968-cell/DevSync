@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, EmailStr, Field
 from redis.asyncio import Redis
 
-from app.api.deps import app_settings, redis_client
+from app.api.deps import app_settings, loop_redis, redis_client
 from app.core.config import Settings
 from app.schemas.common import StrictRequest
 from app.services.testing import role_attempts, seed
@@ -88,7 +88,7 @@ async def totp_now(secret: Annotated[str, Query(max_length=64)]) -> dict[str, st
 
 
 @router.get("/ratelimits/reset", status_code=204)
-async def reset_rate_limits(redis: Annotated[Redis, Depends(redis_client)]) -> Response:
+async def reset_rate_limits(redis: Annotated[Redis, Depends(loop_redis)]) -> Response:
     """Clear rate-limit and failed-sign-in counters so independent E2E tests from one IP don't
     throttle each other (every browser shares the test runner's address).
 

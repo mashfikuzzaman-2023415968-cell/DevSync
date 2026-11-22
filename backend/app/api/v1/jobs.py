@@ -82,7 +82,7 @@ async def _stream(
     try:
         yield f"retry: {RETRY_MS}\n\n"
         yield _event(job.model_dump(mode="json", include={"status", "progress"}), name="status")
-        if job.status.value in TERMINAL:
+        if job.status in TERMINAL:
             return
         index, began = start, time.monotonic()
         last_beat = began
@@ -99,7 +99,7 @@ async def _stream(
                 yield ": heartbeat\n\n"
                 # The worker may have died without a final event: the row is the truth.
                 latest = await _current(principal, job.id)
-                if latest.status.value in TERMINAL:
+                if latest.status in TERMINAL:
                     yield _event(latest.model_dump(mode="json", include={"status", "progress"}),
                                  name="status")  # fmt: skip
                     return
