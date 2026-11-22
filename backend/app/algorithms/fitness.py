@@ -225,3 +225,25 @@ def breakdown(problem: Problem, selection: Sequence[int]) -> tuple[Breakdown, ..
         out.append(Breakdown(problem.candidates[i].bid_id, t.comp, t.team, t.time, t.cost,
                              t.perf, t.total))  # fmt: skip
     return tuple(out)
+
+
+# --------------------------------------------------------------------------- presets (D115)
+
+BALANCED = Weights(0.35, 0.25, 0.2, 0.2)
+PRESET_EMPHASIS = 1.0  # weight added to the preset's own term before normalising
+
+
+def preset_weights(preset: str) -> Weights:
+    """The four presets (§9.2: Quality→P, Balanced→C, Fast→t, Budget→c for Algorithm 1's
+    advancement). Each is Balanced plus extra weight on its own term, so its best team is never
+    worse on that term than Balanced's (exchange argument, D115): Quality never less competent,
+    Fast never slower, Budget never more expensive."""
+    base = [BALANCED.competency, BALANCED.teamwork, BALANCED.time, BALANCED.cost]
+    emphasis = {"balanced": None, "quality": 0, "fast": 2, "budget": 3}
+    if preset not in emphasis:
+        raise ValueError(f"unknown preset {preset!r}")
+    index = emphasis[preset]
+    if index is not None:
+        base[index] += PRESET_EMPHASIS
+    total = sum(base)
+    return Weights(*(w / total for w in base))
