@@ -1201,3 +1201,12 @@ drawn meanwhile — it fails on the old trigger (`6648 > 6649`) and passes on th
 30-writer stress check of the chain. Phase 0 code; written on the Phase 6 branch after it went
 to the gate (as D102 there, on Raisa's local branch only) and carried into Phase 7 as its first
 change, as approved with the Phase 7 plan.
+
+**D104 · CSP and axe checks run one test per screen (extends D100).** `csp.spec.ts` and
+`a11y.spec.ts` checked all of a role's signed-in screens inside one test (Playwright's default
+60 s), and the stateful axe check all 14 stateful screens inside 240 s; with the Phase 6 screens a
+slow machine ran out of budget and the failure named whichever screen happened to be last. Each
+screen now has its own test with exactly the same checks (CSP violations, console errors,
+off-origin requests; serious/critical axe rules in both colour schemes). The gate selects by tag,
+not by count, so only the test count grows. Written on the Phase 6 branch and carried into
+Phase 7 with the plan.
