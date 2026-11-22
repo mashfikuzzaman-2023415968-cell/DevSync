@@ -51,8 +51,10 @@ async def search_projects(
     *,
     q: Annotated[str | None, Query(max_length=200)] = None,
     skills: Annotated[list[str] | None, Query()] = None,
-    budget_min: Annotated[int | None, Query(ge=0)] = None,
-    budget_max: Annotated[int | None, Query(ge=0)] = None,
+    # Capped at the largest project budget (schemas/projects.py): anything bigger overflowed
+    # the database's BIGINT and became a 500 (schemathesis, D102).
+    budget_min: Annotated[int | None, Query(ge=0, le=10_000_000_000)] = None,
+    budget_max: Annotated[int | None, Query(ge=0, le=10_000_000_000)] = None,
     deadline_max: Annotated[int | None, Query(ge=1, le=365)] = None,
     team_size: Annotated[int | None, Query(ge=2, le=10)] = None,
     role: Annotated[str | None, Query(min_length=1, max_length=80)] = None,

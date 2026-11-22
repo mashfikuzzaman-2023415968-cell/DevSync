@@ -200,6 +200,25 @@ def test_search_text_is_inert(api: Api, q: str) -> None:
     assert isinstance(r.json()["items"], list)
 
 
+@pytest.mark.parametrize("param", ["budget_min", "budget_max"])
+@pytest.mark.parametrize("value", [10_000_000_001, 370372298551098867712, -1])
+def test_search_budget_out_of_range_is_a_422_never_a_500(api: Api, param: str, value: int) -> None:
+    """A budget past BIGINT reached PostgreSQL and became a 500 (schemathesis, D102)."""
+    api.sign_in_as("DEVELOPER")
+    r = api.get("/api/v1/projects/search", params={param: value})
+    assert r.status_code == 422, r.text
+    assert param in r.json()["error"]["fields"]
+
+
+def test_search_budget_at_the_cap_is_accepted(api: Api) -> None:
+    api.sign_in_as("DEVELOPER")
+    r = api.get(
+        "/api/v1/projects/search",
+        params={"budget_min": 0, "budget_max": 10_000_000_000},
+    )
+    assert r.status_code == 200, r.text
+
+
 def test_search_limits_skill_filters(api: Api) -> None:
     api.sign_in_as("DEVELOPER")
     r = api.get("/api/v1/projects/search", params={"skills": [f"s{i}" for i in range(21)]})

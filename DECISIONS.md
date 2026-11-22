@@ -1174,3 +1174,11 @@ newcomer without a stored snapshot sees their own starting values with where the
 private data (D58). `GET /me/reputation/history` is the developer's own, newest project first,
 cursor-paged, each project with its latest log entries and a plain sentence per change; when a
 change was capped the sentence says so. Neither endpoint writes; write methods are 405.
+
+**D102 · Search budget filters are bounded.** The Phase 6 gate's contract fuzzing (step 11, run
+on 2026-11-22) sent `budget_min=370372298551098867712` to `GET /projects/search`; the value
+passed `ge=0`, overflowed PostgreSQL's BIGINT and became a 500. `budget_min` and `budget_max`
+now also have `le=10_000_000_000`, the same cap as a project's budget, so anything larger is a
+422 naming the field. Tests: `test_search_budget_out_of_range_is_a_422_never_a_500` and
+`test_search_budget_at_the_cap_is_accepted` (`tests/security/test_bids.py`). These were the only
+integer query parameters without an upper bound. Nothing was relaxed.

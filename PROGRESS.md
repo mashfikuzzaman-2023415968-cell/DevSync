@@ -2,11 +2,11 @@
 
 ## Current state
 - **Current owner:** Raisa Tabassum (frontend developer), Phases 6–7, from 2026-11-21 (hand-off from Taeen: `docs/handoffs/handoff-02-taeen-to-raisa.md`; paste-in prompt `docs/handoffs/handoff-02-start-prompt.md`).
-- **Current phase:** 6 (reputation engine and market simulator), built on branch `phase-6`; **gate not run yet**. Plan `docs/plans/phase-06.md` (approved 2026-11-21), decisions D83–D101, security review `docs/security-reviews/phase-06.md` (0 unresolved high). `main` = `origin/main` = `c9e5d71` (hand-off 02).
-- **Last gate result:** none for Phase 6. Phase 5's last full PASS is 2026-10-29; on 2026-11-20 steps 1–12 passed on the final Phase 5 code (details in the hand-off).
+- **Current phase:** 6 (reputation engine and market simulator), built on branch `phase-6`, **gate PASS 2026-11-22** on Taeen's laptop (native Linux), merged to `main`, tagged `phase-6`. Plan `docs/plans/phase-06.md` (approved 2026-11-21), decisions D83–D102, security review `docs/security-reviews/phase-06.md` (0 unresolved high).
+- **Last gate result:** Phase 6 PASS, 2026-11-22 06:16 Asia/Dhaka (`runs/gate-p6e.log`): backend 1,857 (96.7%), security 567, contract 531, frontend 527 (80.6%), E2E 74, a11y 6, visual 113 (208 baselines), Lighthouse desktop 100/100/96/100 and mobile 94/100/96/100, regression guard clean. Two fixes were needed (session log 2026-11-22).
 - **Verified on Raisa's laptop (WSL 2, 2026-11-21):** backend suite on the Phase 6 code: everything passes except `tests/security/test_rate_limits.py::test_admin_limit_is_per_user` under full-suite load (see Known issues); algorithms + property 292, API/engine/RLS/job 49, frontend 525, Phase 6 E2E 3/3, stage-1 and stage-2 seeds, `alembic` upgrade/downgrade/check, OpenAPI contract 0 problems.
-- **In progress:** nothing; Phase 6 is built and checked on this laptop. Waiting for the gate on a native Linux machine.
-- **Very next step:** run `make gate PHASE=6` **on a native Linux laptop with an Intel/AMD GPU** (gate step 16 cannot pass on WSL 2, see Known issues), then update this file, commit `phase-6: …`, merge to `main`, tag `phase-6`, push. Then the Phase 7 plan.
+- **In progress:** nothing.
+- **Very next step:** Raisa pulls `main` (it has the two gate fixes), branches `phase-7` from it, and starts the Phase 7 plan in Plan Mode. Gates for Phase 7 run on a native Linux laptop with an Intel/AMD GPU (step 16 can't pass on WSL 2).
 - **Open human tasks:** review the 128 drafted test questions (D34); tester's human check of the Phase 3, 4 and 5 security reviews; sanity-check D39 (simulated payment-method verification).
 
 ## Phase table
@@ -18,13 +18,18 @@
 | 3 Profiles & skill tests | Taeen | done | PASS | 2026-10-18 | phase-3 |
 | 4 Projects & CPM | Salwa (review fixes: Taeen) | done | PASS | 2026-10-20 | phase-4 |
 | 5 Marketplace & filtering | Salwa (gate fixes: Taeen) | done | PASS | 2026-10-21 | phase-5 |
-| 6 Reputation & simulator | Raisa | built, gate pending | — | — | — |
+| 6 Reputation & simulator | Raisa (gate fixes: Taeen) | done | PASS | 2026-11-22 | phase-6 |
 | 7–15 | — | not started | — | — | — |
 
 ## Gate log (newest first, appended by `make gate`)
 | Finished (UTC) | Phase | Result | Tests |
 |---|---|---|---|
 <!-- gate-log -->
+| 2026-11-22T00:15:26+00:00 | phase 6 | PASS | backend 1857 / frontend 527 tests |
+| 2026-11-21T22:55:00+00:00 | phase 6 | FAIL (step 13) | backend 1857 / frontend 527 tests |
+| 2026-11-21T21:54:13+00:00 | phase 6 | FAIL (step 11) | backend 1850 / frontend - tests |
+| 2026-11-21T21:03:52+00:00 | phase 6 | FAIL (step 9) | backend - / frontend - tests |
+| 2026-11-21T18:50:06+00:00 | phase 6 | FAIL (step 9) | backend - / frontend - tests |
 | 2026-11-20T14:12:10+00:00 | phase 5 | FAIL (step 11) | backend 1694 / frontend - tests |
 | 2026-11-20T13:12:16+00:00 | phase 5 | FAIL (step 11) | backend 1694 / frontend - tests |
 | 2026-11-20T08:15:06+00:00 | phase 5 | FAIL (step 13) | backend 1694 / frontend 506 tests |
@@ -131,6 +136,12 @@
 - **`test_admin_limit_is_per_user` is timing-sensitive on slow machines.** It sends 300 admin requests that must all land inside a 60-second window. Alone on this WSL laptop it passes 3/3 but takes 52–54 s; under the full suite it went over and failed. Not a Phase 6 change; not modified. Watch it in the gate on a faster machine; if it fails there too, fix the test's timing at the cause (not by loosening the limit).
 
 ## Session log (newest first)
+### 2026-11-22 — Taeen (with Claude Code), Phase 6 gate on a native Linux laptop
+- Ran `make gate PHASE=6` on Raisa's `phase-6` (`45247ca`). Runs 1–2 stopped at step 9: two rate-limit tests failed under memory pressure, then the step hit its 60-minute limit (the cut-off run finished on its own: 1,850 passed, 0 failed). No test or limit was changed; later runs took 19 minutes.
+- Run 3 failed step 11: schemathesis sent `budget_min=370372298551098867712` to `GET /projects/search`, which overflowed BIGINT and returned a 500 (Phase 5 code). Fixed with `le=10_000_000_000` on `budget_min`/`budget_max` (D102), tests in `tests/security/test_bids.py`, `docs/api/openapi.json` regenerated. The same run flagged `POST /me/external-reviews` for accepting a multipart "wrong type" (a number sent as text, an array sent as a file part, which are indistinguishable from valid input on the wire); it passed alone and in the next two full runs, so it was left as is.
+- Run 4 failed step 13: `e2e/shell.spec.ts` still expected the Phase 2 placeholder "Reputation arrives in Phase 6". It now checks the real page (the exact "Your reputation" heading and the newcomer line), as `phase6.spec.ts` does.
+- Run 5: **PHASE 6 GATE: PASS**. Committed, merged to `main`, tagged `phase-6`, pushed.
+
 ### 2026-11-21 — Raisa (with Claude Code), hand-off and Phase 6 build
 - Set up the laptop (WSL 2, Ubuntu 24.04, Docker 29, Node 22, Python 3.12, uv); stack, migrations, fast tests and the demo stack (`ready (9/9)`, 10 eligible) all fine. Browser checks skipped at Raisa's request; Raisa ran `make create-admin` herself.
 - Phase 6 plan approved. Built: P6-0 Node 22 (D83); Eq. 1–12 as pure functions with the change cap, newcomer values, trust formula, plain-language explanations; market simulator with personas (numpy 2.5.4); migration 0012 (history, per-skill competency, append-only log; `is_system()` writes); engine service and `reputation.recalculate_all` job; stage-2 seed with a golden fixture (10 eligible kept); `GET /developers/{id}/reputation`, `GET /me/reputation/history`; the Reputation page (ReputationPanel, radar and trend charts, "Why did this change?", newcomer card); paper-alignment check and `phase6_checks`; docs and D84–D101.
