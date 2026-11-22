@@ -367,6 +367,7 @@ def test_confirm_forms_the_team_and_explains_to_the_others(
         assert r.status_code == 200, r.text
         body = r.json()
         assert body["reasons"] == ["NOT_SELECTED"]
+        assert body["compare"] is None or body["compare"]["your_price_paisa"] > 0
         text_body = json.dumps(body)
         for other in others:
             assert other not in text_body

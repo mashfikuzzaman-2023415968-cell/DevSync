@@ -2610,6 +2610,7 @@ export interface components {
        * Format: uuid
        */
       bid_id: string;
+      compare: components["schemas"]["SlotComparison"] | null;
       /**
        * Created At
        * Format: date-time
@@ -5226,6 +5227,21 @@ export interface components {
        * Format: uuid
        */
       skill_id: string;
+    };
+    /**
+     * SlotComparison
+     * @description The selected bid in the same slot that this bid was compared with: its days and price
+     *     only (§9.8's concrete hint), never who placed it.
+     */
+    SlotComparison: {
+      /** Selected Days */
+      selected_days: number;
+      /** Selected Price Paisa */
+      selected_price_paisa: number;
+      /** Your Days */
+      your_days: number;
+      /** Your Price Paisa */
+      your_price_paisa: number;
     };
     /** SlotCount */
     SlotCount: {
@@ -12835,6 +12851,12 @@ export interface operations {
           /**
            * @example {
            *       "bid_id": "5f0c2b7e-3d4a-4e8b-9c1d-2a3b4c5d6e7f",
+           *       "compare": {
+           *         "selected_days": 18,
+           *         "selected_price_paisa": 1700000,
+           *         "your_days": 20,
+           *         "your_price_paisa": 2000000
+           *       },
            *       "created_at": "2026-11-22T06:05:00Z",
            *       "gap": 0.0412,
            *       "hint": "A lower price would have helped most.",

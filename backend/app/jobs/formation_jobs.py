@@ -351,6 +351,13 @@ def explanations_for(run: FormationRun, *, out_of_time: Callable[[], bool]) -> l
             row["reasons"]["gap"] = _r(w.gap, 4)
             row["price_counterfactual_paisa"] = w.counterfactual_price_paisa
             row["main_gap"] = w.main_gap
+            if w.compared_with is not None:
+                mine, rival = problem.candidates[i], problem.candidates[w.compared_with]
+                # §9.8's concrete hint: the selected bid's days and price, never who it is.
+                row["reasons"]["compare"] = {
+                    "selected_days": rival.days, "selected_price_paisa": rival.price_paisa,
+                    "your_days": mine.days, "your_price_paisa": mine.price_paisa,
+                }  # fmt: skip
         rows.append(row)
     for bid_id in run.candidate_snapshot.get("not_shortlisted", []):
         rows.append({"bid_id": bid_id, "reasons": {"codes": ["NOT_SHORTLISTED"]},

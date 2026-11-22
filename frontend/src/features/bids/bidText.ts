@@ -47,7 +47,11 @@ export function bidSteps(status: string, evaluated: boolean): BidStep[] {
     ];
   }
   const selection: Record<string, BidStep> = {
-    SELECTED: { label: "Selected", state: "current", note: "Respond to the invitation." },
+    SELECTED: {
+      label: "Selected",
+      state: "current",
+      note: "The client chose you. Your invitation comes next.",
+    },
     ACCEPTED: { label: "Selected", state: "done" },
     DECLINED: { label: "Selected", state: "done" },
     EXPIRED: { label: "Selected", state: "done" },

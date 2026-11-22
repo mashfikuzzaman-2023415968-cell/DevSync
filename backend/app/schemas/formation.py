@@ -208,6 +208,16 @@ class ConfirmOut(BaseModel):
     invitations_sent: bool  # False in Phase 7: invitations go out in Phase 8 (D108)
 
 
+class SlotComparison(BaseModel):
+    """The selected bid in the same slot that this bid was compared with: its days and price
+    only (§9.8's concrete hint), never who placed it."""
+
+    selected_days: int
+    selected_price_paisa: int
+    your_days: int
+    your_price_paisa: int
+
+
 class BidExplanationOut(BaseModel):
     """Why a bid was not selected (§9.8), for its bidder only."""
 
@@ -218,6 +228,7 @@ class BidExplanationOut(BaseModel):
     hint: str | None
     gap: float | None  # how far the best team with this bid was from the recommended one
     price_counterfactual_paisa: int | None  # the highest price at which it would have been chosen
+    compare: SlotComparison | None
     created_at: datetime
 
 
@@ -248,6 +259,12 @@ EX_EXPLANATION = {
     "hint": "A lower price would have helped most.",
     "gap": 0.0412,
     "price_counterfactual_paisa": 1_600_000,
+    "compare": {
+        "selected_days": 18,
+        "selected_price_paisa": 1_700_000,
+        "your_days": 20,
+        "your_price_paisa": 2_000_000,
+    },
     "created_at": "2026-11-22T06:05:00Z",
 }
 _BID_A = "7b2e4d90-5f6c-4a0d-9e3f-4c5d6e7f8091"

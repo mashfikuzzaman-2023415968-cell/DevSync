@@ -265,6 +265,13 @@ export const routes: RouteObject[] = [
               Component: (await import("@/features/bids/ClientBidsPage")).default,
             }),
           },
+          {
+            path: "client/projects/:id/formation",
+            handle: { title: "Team formation" },
+            lazy: async () => ({
+              Component: (await import("@/features/formation/FormationPage")).default,
+            }),
+          },
           ...upcoming("/client/"),
         ],
       },

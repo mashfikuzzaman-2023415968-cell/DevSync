@@ -97,3 +97,16 @@ export type ReputationParameters = Schemas["ReputationParameters"];
 export type ReputationHistoryItem = Schemas["ReputationHistoryItem"];
 export type ReputationChange = Schemas["ReputationChange"];
 export type ReputationHistoryPage = Schemas["Page_ReputationHistoryItem_"];
+
+// Team formation (spec §9.2–§9.8, §10.2 Formation; Phase 7)
+export type FormationRunCreate = Schemas["FormationRunCreate"];
+export type FormationRunAccepted = Schemas["FormationRunAccepted"];
+export type FormationRun = Schemas["FormationRunOut"];
+export type FormationRunSummary = Schemas["FormationRunSummary"];
+export type RunResult = Schemas["RunResult"];
+export type TeamMember = Schemas["TeamMemberOut"];
+export type TeamOption = Schemas["TeamOption"];
+export type ConfirmTeam = Schemas["ConfirmOut"];
+export type BidExplanationOut = Schemas["BidExplanationOut"];
+export type JobOut = Schemas["JobOut"];
+export type Preset = FormationRunCreate["preset"];

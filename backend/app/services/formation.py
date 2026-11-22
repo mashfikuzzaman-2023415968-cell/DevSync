@@ -66,6 +66,7 @@ from app.schemas.formation import (
     FormationRunSummary,
     RunParams,
     RunResult,
+    SlotComparison,
     WeightsOut,
 )
 from app.schemas.platform_settings import PlatformSettingsValues
@@ -91,8 +92,8 @@ ADVANCEMENT = {
     "budget": Advancement.C_COST,
 }
 HINTS = {
-    "comp": "A stronger competency record in this skill would have helped most.",
-    "team": "A stronger teamwork record would have helped most.",
+    "comp": "Completing projects in more domains or passing skill tests raises your competency.",
+    "team": "Ratings from teammates and helping with blockers raise your teamwork score.",
     "time": "A shorter delivery time would have helped most.",
     "cost": "A lower price would have helped most.",
 }
@@ -638,6 +639,7 @@ async def bid_explanation(ctx: Ctx, bid_id: uuid.UUID) -> BidExplanationOut:
         raise NotFoundError("The explanation is still being prepared. Check back in a minute.")
     title = await ctx.db.scalar(select(Project.title).where(Project.id == bid.project_id))
     gap = row.reasons.get("gap")
+    compare = row.reasons.get("compare")
     return BidExplanationOut(
         bid_id=bid.id,
         project_title=title or "",
@@ -646,5 +648,6 @@ async def bid_explanation(ctx: Ctx, bid_id: uuid.UUID) -> BidExplanationOut:
         hint=HINTS.get(row.main_gap or ""),
         gap=gap if isinstance(gap, (int, float)) and math.isfinite(gap) else None,
         price_counterfactual_paisa=row.price_counterfactual_paisa,
+        compare=SlotComparison.model_validate(compare) if isinstance(compare, dict) else None,
         created_at=row.created_at,
     )

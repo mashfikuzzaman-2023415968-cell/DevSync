@@ -228,6 +228,46 @@
     transform: scaleX(0);
   }
 }
+/* PSO swarm indicator (spec §13.2): the only looping animation in the app, shown only while a
+   formation job runs; each particle orbits its own slow ellipse. Still under reduced motion. */
+@utility swarm-particle {
+  animation: ds-swarm 2.4s var(--ease-standard) infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.swarm-particle:nth-child(2) {
+  animation-delay: -0.4s;
+}
+.swarm-particle:nth-child(3) {
+  animation-delay: -0.9s;
+}
+.swarm-particle:nth-child(4) {
+  animation-delay: -1.3s;
+}
+.swarm-particle:nth-child(5) {
+  animation-delay: -1.8s;
+}
+.swarm-particle:nth-child(6) {
+  animation-delay: -2.1s;
+}
+
+@keyframes ds-swarm {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(6px, -4px);
+  }
+  50% {
+    transform: translate(2px, 5px);
+  }
+  75% {
+    transform: translate(-5px, -2px);
+  }
+}
+
 @keyframes ds-pop {
   0% {
     transform: scale(0.6);

@@ -1357,6 +1357,16 @@
             "title": "Bid Id",
             "type": "string"
           },
+          "compare": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SlotComparison"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -1432,6 +1442,7 @@
           "hint",
           "gap",
           "price_counterfactual_paisa",
+          "compare",
           "created_at"
         ],
         "title": "BidExplanationOut",
@@ -7870,6 +7881,35 @@
           "count"
         ],
         "title": "SlotCard",
+        "type": "object"
+      },
+      "SlotComparison": {
+        "description": "The selected bid in the same slot that this bid was compared with: its days and price\nonly (§9.8's concrete hint), never who placed it.",
+        "properties": {
+          "selected_days": {
+            "title": "Selected Days",
+            "type": "integer"
+          },
+          "selected_price_paisa": {
+            "title": "Selected Price Paisa",
+            "type": "integer"
+          },
+          "your_days": {
+            "title": "Your Days",
+            "type": "integer"
+          },
+          "your_price_paisa": {
+            "title": "Your Price Paisa",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "selected_days",
+          "selected_price_paisa",
+          "your_days",
+          "your_price_paisa"
+        ],
+        "title": "SlotComparison",
         "type": "object"
       },
       "SlotCount": {
@@ -16357,6 +16397,12 @@
               "application/json": {
                 "example": {
                   "bid_id": "5f0c2b7e-3d4a-4e8b-9c1d-2a3b4c5d6e7f",
+                  "compare": {
+                    "selected_days": 18,
+                    "selected_price_paisa": 1700000,
+                    "your_days": 20,
+                    "your_price_paisa": 2000000
+                  },
                   "created_at": "2026-11-22T06:05:00Z",
                   "gap": 0.0412,
                   "hint": "A lower price would have helped most.",
