@@ -400,7 +400,7 @@ function EarlierRuns({
                 <span className="block font-medium capitalize text-text">
                   {r.preset}, {r.min_newcomers} {r.min_newcomers === 1 ? "newcomer" : "newcomers"}
                 </span>
-                <span className="block text-caption text-text-muted">
+                <span className="block text-caption text-text-muted" data-volatile>
                   {formatDateTime(r.created_at)}
                 </span>
               </span>
@@ -556,7 +556,8 @@ function Result({
         <WhyThisTeam result={result} />
         <Card>
           <CardHeader title="How the search converged" />
-          <div className="px-5 pb-5 pt-3">
+          {/* The curve depends on the run's server-chosen seed (masked in visual baselines). */}
+          <div className="px-5 pb-5 pt-3" data-volatile>
             <ConvergenceChart values={result.convergence} iterations={result.iterations} />
           </div>
         </Card>

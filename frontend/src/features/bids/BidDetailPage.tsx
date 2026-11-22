@@ -176,7 +176,12 @@ function OfferCard({ bid }: { bid: BidDetail }) {
           {rows.map(([label, value]) => (
             <div key={label} className="min-w-0">
               <dt className="text-text-muted">{label}</dt>
-              <dd className="break-words font-medium tabular text-text">{value}</dd>
+              <dd
+                className="break-words font-medium tabular text-text"
+                data-volatile={label === "Submitted" || label === "Last changed" ? "" : undefined}
+              >
+                {value}
+              </dd>
             </div>
           ))}
         </dl>
@@ -330,7 +335,9 @@ function ProjectCard({ bid }: { bid: BidDetail }) {
               <dt className="text-text-muted">
                 {p.open_for_bids ? "Bidding closes" : "Bidding closed"}
               </dt>
-              <dd className="font-medium text-text">{formatDate(p.bidding_deadline)}</dd>
+              <dd className="font-medium text-text" data-volatile>
+                {formatDate(p.bidding_deadline)}
+              </dd>
             </div>
           ) : null}
         </dl>
