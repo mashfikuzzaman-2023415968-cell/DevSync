@@ -27,7 +27,7 @@ describe("prefetchRoute", () => {
 
   it("ignores paths it doesn't know, including crafted ones", () => {
     for (const path of [
-      "/dev/reputation", // a later phase's placeholder
+      "/dev/earnings", // a later phase's placeholder (Phase 10)
       "/nope",
       "",
       "//evil.example",

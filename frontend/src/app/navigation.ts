@@ -75,7 +75,7 @@ const developer: NavItem[] = [
     icon: UserRound,
     keywords: ["skills", "certificates", "reviews"],
   },
-  { label: "Reputation", to: "/dev/reputation", icon: Medal, phase: 6 },
+  { label: "Reputation", to: "/dev/reputation", icon: Medal },
   { label: "Earnings", to: "/dev/earnings", icon: Wallet, phase: 10 },
   notifications,
   settings,

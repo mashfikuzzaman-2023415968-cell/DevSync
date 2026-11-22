@@ -7,9 +7,11 @@ Phase 6 can replace the stored values with engine-computed ones without touching
 
 A developer with no stored snapshot (a freshly registered account in tests or a live run) gets a
 newcomer snapshot computed on the fly from their verified items and passing skill evidence — not
-persisted here (writes are SYSTEM-only, §14.15; the Phase 6 job and the seed persist). `seeded` is
-true for a stored snapshot without a `settings_version` (the Phase 5 fixtures); the bid table and
-profile show the "seeded" marker only outside production (D48).
+persisted here (writes are SYSTEM-only, §14.15; the Phase 6 engine and the seed persist). `seeded`
+is true for a stored snapshot without a `settings_version` (the Phase 5 fixtures); engine-computed
+snapshots carry the settings version they used, so the D48 "seeded" marker disappears for them.
+The inputs (verified items, evidence domains, the newcomer β) come from
+`services/reputation_inputs.py`, shared with the engine.
 """
 
 from __future__ import annotations
@@ -18,14 +20,13 @@ import uuid
 from dataclasses import dataclass
 from decimal import Decimal
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.algorithms.reputation import NewcomerInputs, NewcomerParams, newcomer_snapshot
-from app.models.identity import User
-from app.models.profiles import DeveloperProfile, EvidenceSource, Skill, SkillEvidence
+from app.algorithms.reputation import NewcomerInputs, newcomer_snapshot
 from app.models.reputation import ReputationSnapshot
 from app.schemas.platform_settings import PlatformSettingsValues
+from app.services import reputation_inputs
 
 
 @dataclass(frozen=True)
@@ -65,65 +66,21 @@ def _view_from_snapshot(snap: ReputationSnapshot, newcomer_threshold: int) -> Re
     )
 
 
-async def _verified_items(db: AsyncSession, developer_id: uuid.UUID) -> int:
-    """Count of {phone, email, complete profile, verified certificate} for Γ⁰ (§9.1.3)."""
-    user = await db.get(User, developer_id)
-    if user is None:
-        return 0
-    items = int(user.phone_verified_at is not None) + int(user.email_verified_at is not None)
-    profile = await db.scalar(
-        select(DeveloperProfile).where(DeveloperProfile.user_id == developer_id)
-    )
-    if profile is not None and (profile.headline or profile.bio):
-        items += 1
-    return items
-
-
-async def _evidence_domains(db: AsyncSession, developer_id: uuid.UUID, pass_mark: Decimal) -> int:
-    """Distinct skill domains with a passing skill-evidence score (for ω⁰). A role assessment
-    counts only while it is a valid pass (passed, not voided, not expired; role assessment spec
-    §8.4); practice tests count as before."""
-    role = SkillEvidence.source == EvidenceSource.ROLE_ASSESSMENT
-    valid_role_pass = and_(
-        SkillEvidence.passed.is_(True),
-        SkillEvidence.voided_at.is_(None),
-        SkillEvidence.valid_until > func.now(),
-    )
-    rows = await db.execute(
-        select(Skill.domain)
-        .join(SkillEvidence, SkillEvidence.skill_id == Skill.id)
-        .where(
-            SkillEvidence.user_id == developer_id,
-            SkillEvidence.score >= pass_mark,
-            or_(~role, valid_role_pass),
-        )
-        .distinct()
-    )
-    return len(rows.all())
-
-
-def newcomer_params(settings: PlatformSettingsValues) -> NewcomerParams:
-    """The active `rep.*` values the newcomer starting values use (never hard-coded, §6.2)."""
-    rep = settings.rep
-    return NewcomerParams(
-        f=rep.f_default,
-        g=rep.g,
-        gamma0_base=rep.gamma0_base,
-        gamma0_per_verification=rep.gamma0_per_verification,
-        gamma0_max=rep.gamma0_max,
-        neutral=rep.neutral,
-    )
+# Re-exported for the existing callers; the implementation lives with the other engine inputs.
+newcomer_params = reputation_inputs.newcomer_params
 
 
 async def _computed_newcomer(
     db: AsyncSession, developer_id: uuid.UUID, settings: PlatformSettingsValues
 ) -> ReputationView:
-    rep = settings.rep
-    beta = rep.newcomer_review if rep.newcomer_review is not None else rep.newcomer_review_fallback
+    beta = await reputation_inputs.newcomer_review(db, settings)
+    domains = await reputation_inputs.evidence_domains(
+        db, developer_id, settings.newcomer.pass_mark
+    )
     snap = newcomer_snapshot(
         NewcomerInputs(
-            verified_items=await _verified_items(db, developer_id),
-            evidence_domains=await _evidence_domains(db, developer_id, settings.newcomer.pass_mark),
+            verified_items=await reputation_inputs.verified_items(db, developer_id),
+            evidence_domains=len(domains),
             newcomer_review_beta=beta,
         ),
         newcomer_params(settings),

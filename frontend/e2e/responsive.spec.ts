@@ -46,10 +46,12 @@ for (const role of ["DEVELOPER", "CLIENT", "ADMIN"] as const) {
   });
 }
 
-test("screens that need state pass the viewport matrix @e2e", async ({ page, baseURL }) => {
-  test.setTimeout(300_000);
-  const results: string[] = [];
-  for (const screen of STATEFUL_SCREENS) {
+// One test per stateful screen (Phase 6, D100): the same checks, but a slow screen fails on its
+// own and by name instead of exhausting one budget shared by every screen.
+for (const screen of STATEFUL_SCREENS) {
+  test(`${screen.name} passes the viewport matrix @e2e`, async ({ page, baseURL }) => {
+    test.setTimeout(120_000);
+    const results: string[] = [];
     const reach = await screen.prepare(page, baseURL ?? "");
     for (const scheme of ["light", "dark"] as const) {
       await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
@@ -61,9 +63,9 @@ test("screens that need state pass the viewport matrix @e2e", async ({ page, bas
           results.push(`${screen.name} ${String(v.width)}×${String(v.height)} ${scheme}: ${p}`);
       }
     }
-  }
-  expect(results).toEqual([]);
-});
+    expect(results).toEqual([]);
+  });
+}
 
 test("mobile menu sheets pass the checks @e2e", async ({ page, baseURL }) => {
   const results: string[] = [];

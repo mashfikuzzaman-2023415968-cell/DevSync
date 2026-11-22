@@ -2,10 +2,11 @@
 
 ## Current state
 - **Current owner:** Raisa Tabassum (frontend developer), Phases 6–7, from 2026-11-21 (hand-off from Taeen: `docs/handoffs/handoff-02-taeen-to-raisa.md`; paste-in prompt `docs/handoffs/handoff-02-start-prompt.md`).
-- **Current phase:** 5 done. The Demo 1 completion work (spec gaps, two logic audits, D55–D70) is finished on branch `wizard-drafts`, 81 commits ahead of `main` (`main` = `origin/main` = `f8d9ee4`, which already includes `gantt-polish`). `make demo-check DEMO=1` passed on 2026-10-27; waiting for Taeen's approval to merge into `main` and push.
-- **Last gate result (2026-11-20/21, branch `main`, Taeen's laptop):** no single end-to-end `PHASE 5 GATE: PASS` on the final code. In the last full run (`gate-full11`) steps 1–12 all passed (backend 1,694 tests at 96.5% coverage, security 546, contract/fuzz 521, frontend 506 at 79.99%); step 13 ended with 231 passed, 1 failed (Firefox "opening the attempt in another window", `role-assessment.spec.ts:181`, a timing failure that passes alone 10 of 10; third time in full runs) and 12 skipped after it; steps 14–19 passed in a partial run on 2026-11-09 on the code before D79–D82 (a11y 6, visual 35 tests / 202 baselines, Lighthouse, phase checks, regression guard). The last full PASS is 2026-10-29. The Phase 6 gate re-runs every earlier check, so the Phase 5 items are checked again there.
-- **In progress (2026-11-09):** nothing; `role-assessment` (role assessment D71–D76, SMS inbox, fuller demo seed D77) is merged into `main` for Demo 1.
-- **Very next step:** Raisa sets up her laptop and runs the quick checks in Step 5 of `docs/handoffs/handoff-02-start-prompt.md` (no Phase 5 gate run), then Phase 6 starts with backlog P6-0 (Node 22 LTS) and the Phase 6 plan in `docs/plans/phase-06.md` for approval.
+- **Current phase:** 6 (reputation engine and market simulator), built on branch `phase-6`, **gate PASS 2026-11-22** on Taeen's laptop (native Linux), merged to `main`, tagged `phase-6`. Plan `docs/plans/phase-06.md` (approved 2026-11-21), decisions D83–D102, security review `docs/security-reviews/phase-06.md` (0 unresolved high).
+- **Last gate result:** Phase 6 PASS, 2026-11-22 06:16 Asia/Dhaka (`runs/gate-p6e.log`): backend 1,857 (96.7%), security 567, contract 531, frontend 527 (80.6%), E2E 74, a11y 6, visual 113 (208 baselines), Lighthouse desktop 100/100/96/100 and mobile 94/100/96/100, regression guard clean. Two fixes were needed (session log 2026-11-22).
+- **Verified on Raisa's laptop (WSL 2, 2026-11-21):** backend suite on the Phase 6 code: everything passes except `tests/security/test_rate_limits.py::test_admin_limit_is_per_user` under full-suite load (see Known issues); algorithms + property 292, API/engine/RLS/job 49, frontend 525, Phase 6 E2E 3/3, stage-1 and stage-2 seeds, `alembic` upgrade/downgrade/check, OpenAPI contract 0 problems.
+- **In progress:** nothing.
+- **Very next step:** Raisa pulls `main` (it has the two gate fixes), branches `phase-7` from it, and starts the Phase 7 plan in Plan Mode. Gates for Phase 7 run on a native Linux laptop with an Intel/AMD GPU (step 16 can't pass on WSL 2).
 - **Open human tasks:** review the 128 drafted test questions (D34); tester's human check of the Phase 3, 4 and 5 security reviews; sanity-check D39 (simulated payment-method verification).
 
 ## Phase table
@@ -17,12 +18,18 @@
 | 3 Profiles & skill tests | Taeen | done | PASS | 2026-10-18 | phase-3 |
 | 4 Projects & CPM | Salwa (review fixes: Taeen) | done | PASS | 2026-10-20 | phase-4 |
 | 5 Marketplace & filtering | Salwa (gate fixes: Taeen) | done | PASS | 2026-10-21 | phase-5 |
-| 6–15 | — | not started | — | — | — |
+| 6 Reputation & simulator | Raisa (gate fixes: Taeen) | done | PASS | 2026-11-22 | phase-6 |
+| 7–15 | — | not started | — | — | — |
 
 ## Gate log (newest first, appended by `make gate`)
 | Finished (UTC) | Phase | Result | Tests |
 |---|---|---|---|
 <!-- gate-log -->
+| 2026-11-22T00:15:26+00:00 | phase 6 | PASS | backend 1857 / frontend 527 tests |
+| 2026-11-21T22:55:00+00:00 | phase 6 | FAIL (step 13) | backend 1857 / frontend 527 tests |
+| 2026-11-21T21:54:13+00:00 | phase 6 | FAIL (step 11) | backend 1850 / frontend - tests |
+| 2026-11-21T21:03:52+00:00 | phase 6 | FAIL (step 9) | backend - / frontend - tests |
+| 2026-11-21T18:50:06+00:00 | phase 6 | FAIL (step 9) | backend - / frontend - tests |
 | 2026-11-20T14:12:10+00:00 | phase 5 | FAIL (step 11) | backend 1694 / frontend - tests |
 | 2026-11-20T13:12:16+00:00 | phase 5 | FAIL (step 11) | backend 1694 / frontend - tests |
 | 2026-11-20T08:15:06+00:00 | phase 5 | FAIL (step 13) | backend 1694 / frontend 506 tests |
@@ -123,7 +130,25 @@
 - Docker's build cache can keep an old `apt-get` layer: on 2026-10-26 a cached layer held a `libbrotli1` with a HIGH CVE that Trivy failed. Build images for a demo or a deployment with `--no-cache` (the demo stack was rebuilt that way on 2026-10-27).
 - The full gate needs about 3 GB of free memory (7 GB laptop): close Chrome first. Under swap pressure WebKit E2E runs time out, and those failures say nothing about the code.
 
+- **Gate step 16 can't pass on WSL 2 (checked 2026-11-21).** `/dev/dri/renderD128` exists under WSLg, but inside the GPU Playwright image Chromium falls back to `llvmpipe` (software), and the `@perf|@gpu` tests correctly refuse it (5 failed). The real GPU is reached through `/dev/dxg` (Direct3D 12); the image has no Vulkan-on-D3D12 driver. Run the gate on a native Linux laptop (D28), or decide (with Taeen) whether to extend the GPU image for WSL.
+- **Load flakes seen on this WSL laptop (2026-11-21), all Phase 1–5 screens, none changed:** `login-totp` responsive (the sign-in CAPTCHA asked to "complete the verification check again"), `app shell light 390` visual (profile page slow to load) and `assessment-required light 768` visual (a 401 while its setup published a project). Each passed 2/2 when re-run alone, matching its baseline. Watch them in the gate.
+- **Visual baselines (2026-11-21):** 6 new — `reputation-experienced-{light,dark}-{390,768,1440}.png`, reviewed by eye (labels 12 px at every width after the chart-sizing fix); no existing baseline changed (the full `@visual` run matched all 202).
+- **`test_admin_limit_is_per_user` is timing-sensitive on slow machines.** It sends 300 admin requests that must all land inside a 60-second window. Alone on this WSL laptop it passes 3/3 but takes 52–54 s; under the full suite it went over and failed. Not a Phase 6 change; not modified. Watch it in the gate on a faster machine; if it fails there too, fix the test's timing at the cause (not by loosening the limit).
+
 ## Session log (newest first)
+### 2026-11-22 — Taeen (with Claude Code), Phase 6 gate on a native Linux laptop
+- Ran `make gate PHASE=6` on Raisa's `phase-6` (`45247ca`). Runs 1–2 stopped at step 9: two rate-limit tests failed under memory pressure, then the step hit its 60-minute limit (the cut-off run finished on its own: 1,850 passed, 0 failed). No test or limit was changed; later runs took 19 minutes.
+- Run 3 failed step 11: schemathesis sent `budget_min=370372298551098867712` to `GET /projects/search`, which overflowed BIGINT and returned a 500 (Phase 5 code). Fixed with `le=10_000_000_000` on `budget_min`/`budget_max` (D102), tests in `tests/security/test_bids.py`, `docs/api/openapi.json` regenerated. The same run flagged `POST /me/external-reviews` for accepting a multipart "wrong type" (a number sent as text, an array sent as a file part, which are indistinguishable from valid input on the wire); it passed alone and in the next two full runs, so it was left as is.
+- Run 4 failed step 13: `e2e/shell.spec.ts` still expected the Phase 2 placeholder "Reputation arrives in Phase 6". It now checks the real page (the exact "Your reputation" heading and the newcomer line), as `phase6.spec.ts` does.
+- Run 5: **PHASE 6 GATE: PASS**. Committed, merged to `main`, tagged `phase-6`, pushed.
+
+### 2026-11-21 — Raisa (with Claude Code), hand-off and Phase 6 build
+- Set up the laptop (WSL 2, Ubuntu 24.04, Docker 29, Node 22, Python 3.12, uv); stack, migrations, fast tests and the demo stack (`ready (9/9)`, 10 eligible) all fine. Browser checks skipped at Raisa's request; Raisa ran `make create-admin` herself.
+- Phase 6 plan approved. Built: P6-0 Node 22 (D83); Eq. 1–12 as pure functions with the change cap, newcomer values, trust formula, plain-language explanations; market simulator with personas (numpy 2.5.4); migration 0012 (history, per-skill competency, append-only log; `is_system()` writes); engine service and `reputation.recalculate_all` job; stage-2 seed with a golden fixture (10 eligible kept); `GET /developers/{id}/reputation`, `GET /me/reputation/history`; the Reputation page (ReputationPanel, radar and trend charts, "Why did this change?", newcomer card); paper-alignment check and `phase6_checks`; docs and D84–D101.
+- Found and fixed: Γ⁰ ignored verified certificates (D94); the 0006 snapshot write policy accepted SYSTEM from any role (D99).
+- E5 measured: Spearman 0.797 (P vs latent quality), 0.759 (C vs latent breadth + communication) (D96).
+- Next: visual baselines, the gate on a native Linux machine, then Phase 7. Blockers: a gate machine with a GPU; push access.
+
 ### 2026-11-19 to 2026-11-21 — Taeen (with Claude Code), gate work after Demo 1
 - Gate re-runs found and fixed: two dependency CVEs (dnspython 2.9.2, opentelemetry-api 1.45.2, D79); a flaky Firefox sign-out test (D80); a NUL character in text giving a 500 (D81); the API coercing `false`/`0` into numbers and dates (D82). Each came from a real gate failure and each fix has tests. A laptop suspend and a reboot also killed two runs (the gate now runs under a sleep inhibitor).
 - Pushed with this entry: the quick sign-in tab (D78), the fixes above and the plain-wording pass on `phase_gate.py`.

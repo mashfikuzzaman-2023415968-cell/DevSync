@@ -11,6 +11,7 @@
  */
 import { expect, type Page } from "@playwright/test";
 import {
+  addReputationHistory,
   addRoleResult,
   addSkillEvidence,
   apiSignIn,
@@ -78,6 +79,16 @@ async function settled(page: Page): Promise<void> {
 }
 
 export const STATEFUL_SCREENS: StatefulScreen[] = [
+  {
+    // Phase 6: an experienced developer's reputation computed from six simulated projects
+    // (fixed simulator seed and dates, so the page is the same on every run).
+    name: "reputation-experienced",
+    prepare: async (page, baseURL) => {
+      const dev = await apiSignIn(page, baseURL, "DEVELOPER", "Arif Hossain");
+      await addReputationHistory(page.request, baseURL, dev.userId, 6);
+      return { path: "/dev/reputation" };
+    },
+  },
   {
     // Where a new account lands: "verify your email and phone" with both codes outstanding.
     name: "verify",

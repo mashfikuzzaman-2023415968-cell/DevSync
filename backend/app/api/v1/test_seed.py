@@ -109,6 +109,19 @@ class ReputationRequest(StrictRequest):
     c: Decimal = Field(ge=0, le=1, decimal_places=3)
 
 
+class ReputationHistoryRequest(StrictRequest):
+    projects: int = Field(ge=1, le=12)
+    seed: int = Field(default=7, ge=0, le=1_000_000)
+
+
+@router.post("/developers/{user_id}/reputation-history", status_code=204)
+async def reputation_history(user_id: uuid.UUID, body: ReputationHistoryRequest) -> Response:
+    """Give a developer simulated completed projects and compute their reputation (Phase 6
+    E2E and API tests). Like every route here, it exists only when DEVSYNC_ENV=test."""
+    await seed.seed_reputation_history(user_id, body.projects, body.seed)
+    return Response(status_code=204)
+
+
 @router.post("/projects/{project_id}/close-bidding", status_code=204)
 async def close_bidding(project_id: uuid.UUID) -> Response:
     """Put a project's bidding deadline in the past (E2E: closed bidding)."""

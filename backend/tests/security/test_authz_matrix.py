@@ -84,6 +84,9 @@ MATRIX: dict[tuple[str, str], tuple[set[str], str, bool]] = {
     ("DELETE", "/api/v1/me/external-reviews/{review_id}"): ({DEV}, "auth", True),
     ("GET", "/api/v1/developers/{developer_id}"): (ACTIVE, "auth", True),
     ("GET", "/api/v1/public/developers/{developer_id}"): (EVERYONE, "", True),
+    # Phase 6: reputation is a public value for active accounts; the history is the developer's.
+    ("GET", "/api/v1/developers/{developer_id}/reputation"): (ACTIVE, "auth", True),
+    ("GET", "/api/v1/me/reputation/history"): ({DEV}, "auth", False),
     ("GET", "/api/v1/files/{file_id}/download"): (EVERYONE, "", True),
     ("GET", "/api/v1/files/blob/{storage_key}"): (EVERYONE, "", True),
     ("GET", "/api/v1/skill-tests"): ({DEV}, "auth", False),

@@ -109,4 +109,18 @@ Marketplace is developer-only and read-only; it never returns any bid data (seal
   eligibility verdict + reasons, slot coverage, relaxations and the too-few flag. (Client, own;
   admin.)
 
+## Phase 6 endpoints — reputation (spec §10.2 Reputation, D101)
+
+- `GET /developers/{id}/reputation` → the six parameters (`omega`, `x`, `xm`, `beta`, `mu`, `t`),
+  `competency`, `performance` (0–1, 3-place decimal strings), `completed_projects`,
+  `distinct_clients`, `is_newcomer`, `seeded`, `simulated`, per-skill competency and — for the
+  developer themself while a newcomer — `newcomer` (verified items, evidence domains, the default
+  quality, the threshold). Follows the profile's visibility: hidden, unknown or non-developer ids
+  are 404. (Any active signed-in user.)
+- `GET /me/reputation/history?cursor=&limit=` → my completed projects, newest first, each with
+  its changes (`parameter`, `old`, `new`, `raw_new`, `capped`, `reason` — one plain sentence).
+  Cursor page (§10.1), `limit` 1–100. (Developer, own.)
+- No endpoint writes reputation: it is computed by the `reputation.recalculate_all` job from the
+  stored histories (`make reputation-recalculate`; the admin endpoint arrives in Phase 12, D92).
+
 Error envelope: `{"error": {"code", "message", "fields"?, "request_id"}}`.

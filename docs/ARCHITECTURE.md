@@ -17,7 +17,7 @@ limits). **Only Nginx publishes ports** (plus Mailpit on `127.0.0.1:8025` in dev
 
 | Service | Image / entry point | Role |
 |---|---|---|
-| `nginx` | `infra/nginx/Dockerfile` (Brotli module build → Vite build of the SPA on Node 20 → `nginx-unprivileged`) | TLS edge (8443 → host 443, 8080 → 301 to HTTPS), static SPA, security headers, coarse rate limits, timeouts, `least_conn` load balancing to `api`, `X-Accel-Redirect` file delivery |
+| `nginx` | `infra/nginx/Dockerfile` (Brotli module build → Vite build of the SPA on Node 22 → `nginx-unprivileged`) | TLS edge (8443 → host 443, 8080 → 301 to HTTPS), static SPA, security headers, coarse rate limits, timeouts, `least_conn` load balancing to `api`, `X-Accel-Redirect` file delivery |
 | `api` | `backend/Dockerfile` → `gunicorn -c gunicorn.conf.py app.main:app_factory()` | FastAPI on Gunicorn with Uvicorn workers (`2×CPU+1`, or `GUNICORN_WORKERS`; worker recycling after ~1,000 requests; 30 s timeout). The dev overlay runs `uvicorn --reload` instead |
 | `worker` | `python -m app.jobs.worker` | RQ worker on queues `high` → `default` → `low`; restarts after 500 jobs; warm shutdown on SIGTERM |
 | `scheduler` | `python -m app.jobs.scheduler` | APScheduler (timezone Asia/Dhaka) that **only enqueues** RQ jobs, so a restart never loses or duplicates work |

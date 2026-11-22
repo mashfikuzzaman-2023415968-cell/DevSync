@@ -1,0 +1,122 @@
+{
+  "arif": {
+    "beta": "0.748",
+    "c": "0.808",
+    "completed_projects": 8,
+    "distinct_clients": 5,
+    "mu": "0.857",
+    "omega": "0.786",
+    "p": "0.726",
+    "t": "0.549",
+    "x": "0.860",
+    "xm": "0.686"
+  },
+  "farhan": {
+    "beta": "0.516",
+    "c": "0.629",
+    "completed_projects": 3,
+    "distinct_clients": 3,
+    "mu": "1.000",
+    "omega": "0.667",
+    "p": "0.604",
+    "t": "0.382",
+    "x": "0.541",
+    "xm": "0.539"
+  },
+  "imran": {
+    "beta": "0.787",
+    "c": "0.761",
+    "completed_projects": 7,
+    "distinct_clients": 1,
+    "mu": "0.000",
+    "omega": "0.714",
+    "p": "0.534",
+    "t": "0.562",
+    "x": "0.871",
+    "xm": "0.496"
+  },
+  "nusrat": {
+    "beta": "0.779",
+    "c": "0.764",
+    "completed_projects": 6,
+    "distinct_clients": 5,
+    "mu": "0.933",
+    "omega": "0.733",
+    "p": "0.763",
+    "t": "0.561",
+    "x": "0.834",
+    "xm": "0.844"
+  },
+  "rafi": {
+    "beta": "0.741",
+    "c": "0.693",
+    "completed_projects": 3,
+    "distinct_clients": 3,
+    "mu": "1.000",
+    "omega": "0.667",
+    "p": "0.753",
+    "t": "0.529",
+    "x": "0.753",
+    "xm": "0.533"
+  },
+  "rafsan": {
+    "beta": "0.766",
+    "c": "0.198",
+    "completed_projects": 1,
+    "distinct_clients": 1,
+    "mu": "0.500",
+    "omega": "0.000",
+    "p": "0.661",
+    "t": "0.611",
+    "x": "0.658",
+    "xm": "0.586"
+  },
+  "sadia": {
+    "beta": "0.676",
+    "c": "0.697",
+    "completed_projects": 3,
+    "distinct_clients": 3,
+    "mu": "1.000",
+    "omega": "0.667",
+    "p": "0.696",
+    "t": "0.431",
+    "x": "0.768",
+    "xm": "0.657"
+  },
+  "shakib": {
+    "beta": "0.478",
+    "c": "0.498",
+    "completed_projects": 4,
+    "distinct_clients": 3,
+    "mu": "0.833",
+    "omega": "0.500",
+    "p": "0.469",
+    "t": "0.089",
+    "x": "0.495",
+    "xm": "0.528"
+  },
+  "tanvir": {
+    "beta": "0.627",
+    "c": "0.821",
+    "completed_projects": 4,
+    "distinct_clients": 3,
+    "mu": "0.833",
+    "omega": "0.833",
+    "p": "0.621",
+    "t": "0.394",
+    "x": "0.792",
+    "xm": "0.551"
+  },
+  "zahid": {
+    "beta": "0.628",
+    "c": "0.698",
+    "completed_projects": 3,
+    "distinct_clients": 2,
+    "mu": "0.667",
+    "omega": "0.667",
+    "p": "0.587",
+    "t": "0.427",
+    "x": "0.771",
+    "xm": "0.529"
+  }
+}

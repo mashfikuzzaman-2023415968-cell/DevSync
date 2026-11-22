@@ -148,3 +148,92 @@ The newcomer rule's evidence for a slot is a **role assessment** (`ROLE_ASSESSME
 Algorithm 1 takes the result as `BidInput.assessment_passed`: a newcomer passes the evidence
 check only with `score ≥ newcomer.pass_mark` **and** a role assessment that wasn't failed.
 Relaxation never relaxes it; `pcs_replication` has no newcomer rule.
+
+## Reputation — [PCS] Eq. 1–12 — Phase 6
+
+Code: `backend/app/algorithms/reputation.py` (one function per equation, `compute_snapshot()`
+for a whole history), explanations in `reputation_explain.py`, review weights in `trust.py`.
+Spec §9.1; mapping to the paper in `docs/PAPER_ALIGNMENT.md`.
+
+**What it is for.** A developer's reputation answers two questions a client has when choosing a
+team: *can this person do the work?* (**competency C**) and *how did their past projects go?*
+(**performance P**). Algorithm 1 filters bids on both (C ≥ C₀, P ≥ P₀), and team formation
+(Phase 7) uses C and teamwork in the fitness function.
+
+**The six parameters, in plain words** (screens show them 0–100):
+
+| Shown as | Symbol | Measures | Computed by |
+|---|---|---|---|
+| Expertise | ω | how varied your completed projects are | Eq. 1, Simpson's diversity over the domains of your projects: 1 − Σ n(n − 1) / (N(N − 1)) |
+| Communication | X | check-ins, replies, accurate updates | Eq. 2, an exponentially weighted average: new = α × this project + (1 − α) × before (α = 0.7) |
+| Teamwork | X_m | peers' ratings and help with blockers | Eq. 3, the same kind of average |
+| Quality | β | clients' ratings, plus verified outside reviews | Eq. 5–6 average the ratings *within* a project (recent milestones weigh 0.7), Eq. 7–8 average *across* projects (older ones weigh 0.7, A6), Eq. 9 mixes internal 0.8 and external 0.2 |
+| Client diversity | μ | whether different clients hire you | Eq. 10, Simpson's diversity over clients |
+| Punctuality | T | time left before deadlines | Eq. 11: 1 − average of (days taken / deadline), each ratio capped at 1 so late work counts 0 (A2) |
+
+Then **C = f·ω + (1 − f)·X** (Eq. 4, f = 0.7) and **P = g₁·β + g₂·μ + g₃·T** (Eq. 12,
+0.5 / 0.25 / 0.25). All weights are platform settings (`rep.*`); the settings refuse κ ≤ 0.5,
+α_x or α_e ≥ 0.5 and weights that don't add up to 1.
+
+**Our extensions** (switched off by `algorithm.mode = pcs_replication`):
+- *Newcomer starting values* (§9.1.3): before any project, X starts at 0.40 + 0.05 per verified
+  item (phone, email, complete profile, verified certificate; max 0.60), ω at 0.2 per domain with
+  a passed skill check (max 0.5), quality at the platform's average β, and teamwork, client
+  diversity and punctuality at a neutral 0.5. The paper sets them to zero.
+- *Change cap*: one project moves communication, teamwork or quality by at most 0.15 (counts and
+  ratios — ω, μ, T — are never capped). Both the raw and the capped value are logged.
+- *Trust-weighted reviews* (§9.14): a review from a new, unverified or flagged account weighs less.
+- *Per-skill competency* C_{i,s}: competency with ω replaced by the share of projects in the
+  slot's domain (D97).
+
+**How it runs.** The history of completed projects (`reputation_history`; simulated in Phase 6,
+real from Phase 11, D84) goes through `compute_snapshot()` project by project, oldest first. After
+each project every parameter gets a log row (old, raw, new, inputs, reason code), which the
+Reputation page turns into a sentence ("Punctuality 50 → 33: finished in 20 of 30 days.").
+Re-running with the same history and settings adds nothing (idempotent).
+
+### Worked example (two projects; the same numbers are asserted in `test_worked_example_two_projects`)
+
+A newcomer with 3 verified items (Γ⁰ = 0.55) and a passed skill check in one domain (ω⁰ = 0.2);
+quality without reviews = 0.6.
+
+**Project A** — front-end, client c1, 20 of 30 days; communication rated 0.8, teamwork 0.7;
+milestone rating 0.75 then final review 1.0.
+- X = 0.7 × 0.8 + 0.3 × 0.55 = 0.725, but the cap allows at most 0.55 + 0.15 → **0.700**.
+- X_m = 0.7 × 0.7 + 0.3 × 0.5 = **0.640**.
+- Within-project quality I = 0.7 × 1.0 + 0.3 × 0.75 = 0.925 = λ; β would be 0.925 → capped at
+  0.6 + 0.15 = **0.750**.
+- One project only: ω stays ω⁰ = **0.2**, μ stays **0.5** (A9); T = 1 − 20/30 = **0.333**.
+
+**Project B** — back-end, client c2, 33 of 30 days (late); communication 0.6, teamwork 0.9;
+rating 0.5; one verified outside review 1.0.
+- X = 0.7 × 0.6 + 0.3 × 0.70 = **0.630** (inside the cap).
+- X_m = 0.7 × 0.9 + 0.3 × 0.64 = 0.822 → capped at **0.790**.
+- λ = 0.3 × 0.5 + 0.7 × 0.925 = 0.7975 (older project weighs more); ε = 1.0;
+  β = 0.8 × 0.7975 + 0.2 × 1.0 = **0.838**.
+- ω = 1 − 0/2 = **1** (two different domains); μ = **1** (two different clients);
+  T = 1 − (0.667 + 1)/2 = **0.167** (33/30 clipped to 1).
+- **C = 0.7 × 1 + 0.3 × 0.63 = 0.889**; **P = 0.5 × 0.838 + 0.25 × 1 + 0.25 × 0.167 = 0.711**.
+
+In `pcs_replication` the same history starts from zeros and has no cap: X = 0.588, X_m = 0.777,
+β = 0.838, C = 0.876, P = 0.711 (`test_replication_full_example`).
+
+### Does reputation track true ability? (E5, measured)
+
+On simulated histories (seed 2026, 200 developers, 141 experienced), Spearman ρ between computed
+P and latent quality is **0.797**, and between computed C and latent breadth + communication
+**0.759** (test threshold 0.5; D96; details and the investigation note in `docs/SIMULATOR.md`).
+Simulated data, not real users.
+
+### Stage-2 demo values (computed, simulated histories; `stage2_reputation_golden.json`)
+
+| Developer | Projects / clients | C | P | Story |
+|---|---|---|---|---|
+| Arif Hossain | 8 / 5 | 81 | 73 | strong, varied |
+| Nusrat Jahan | 6 / 5 | 76 | 76 | strong |
+| Imran Kabir | 7 / 1 | 76 | 53 | one client only: client diversity 0 |
+| Shakib Hasan | 4 / 3 | 50 | 47 | often late: punctuality 9 |
+| Rafsan Haque | 1 / 1 | 20 | 66 | newcomer, 1 of 3 projects |
+
+Every bidder on the "Online ordering system" stays eligible, so the documented 10 eligible bids
+hold in stage 2.

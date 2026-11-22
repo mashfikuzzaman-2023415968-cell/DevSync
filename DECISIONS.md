@@ -1043,3 +1043,142 @@ the fuzzer's null arrives as the string "None", which is a valid source name. Th
 twice when that operation was run on its own, so it is a rare quirk of the fuzzer and not a
 change in behaviour; no test was relaxed. If it comes back in a full run, it will be looked at
 again before any exception is considered.
+
+## 2026-11-21 — Phase 6 (reputation engine and market simulator; Raisa with Claude Code)
+
+**D83 · Node 22 LTS for the frontend toolchain (backlog P6-0; follows D15).** Node 20 reached end
+of life in April 2026. The Nginx build stage now uses `node:22.23.4-bookworm-slim`, pinned by
+digest (`sha256:5ec23b7c…`, last rebuilt 2026-11-05, so it meets the 14-day rule; 22.23.5 was
+10 days old). CI uses `node-version: "22"`, `package.json` requires `>=22`, and
+`frontend/.nvmrc` says 22. The toolchain versions are unchanged (Vite 6.4, Vitest 4.1, D15); the
+move to Vite 8 / Vitest 5 is a separate follow-up, not part of Phase 6. Verified on Node
+22.23.5 (laptop) and 22.23.4 (image): `npx vitest run` 501 passed, `npm run build` passed, the
+rebuilt test stack's `home.spec.ts` on Chromium 10 passed. README, ARCHITECTURE and SECURITY
+no longer mention Node 20.
+
+**D84 · Phase 6 reputation inputs come from a history table, simulated for now.**
+`reputation_history` (migration 0012) holds one row per completed project per developer with
+exactly the §9.1.1 inputs (domain, client, t, T^d, Γ^n, Γ_m^n, internal and external rating
+slots, completion time) and `source` SIMULATED or PLATFORM. The market simulator writes
+SIMULATED rows now; Phase 11's `reputation.update_project` will write PLATFORM rows from real
+reviews and evidence into the same table, so the engine doesn't change. Only SYSTEM writes it.
+Simulated values are labelled "Simulated history" everywhere they show (§0.2 rule 6): the
+snapshot carries a `simulated` flag so other users' views can say so too, although the history
+itself is private. *Alt:* run the engine straight from simulator JSON (no table) — rejected,
+Phase 11 would need a second pipeline.
+
+**D85 · Reputation arithmetic.** Every equation runs in `Decimal` on exact 4-place inputs; only
+stored outputs are rounded, half-up to 3 places (`numeric(4,3)`), as Phase 5's
+`newcomer_snapshot()` did. Explanations show values ×100 as whole numbers.
+
+**D86 · The change cap applies per project, in order.** For X, X_m and β, each project's value
+is clamped to ±`rep.max_change_per_project` around the value after the previous project; the first
+project is clamped around the newcomer starting values (Γ⁰, Γ_m⁰, the newcomer β). ω, μ and T are
+never capped. The log keeps both the raw and the capped value.
+
+**D87 · Projects without external reviews are skipped in Eq. 8.** ε is an EWMA over the projects
+that have verified external reviews, in order; with none at all, β = λ (A8).
+
+**D88 · ω with one project.** For N < 2, ω is the newcomer ω⁰ from skill evidence (§9.1.3 says
+"with exactly one completed project and no evidence, ω = 0", which this gives); from N ≥ 2,
+Eq. 1 over the project domains, and evidence no longer counts.
+
+**D89 · `pcs_replication` in reputation.** Off: the change cap, the §9.1.3 starting values, trust
+weighting and per-skill competency. Replication starts from the paper's "set to zero" (Γ⁰ =
+Γ_m⁰ = 0), and the values the paper leaves undefined — ω and μ below two projects, β with no
+reviews — are 0. Kept: the A2 clip. These replication resolutions are added to the §23 list for
+the supervisor.
+
+**D90 · Reviewer trust, formula only, in Phase 6.** `algorithms/trust.py` implements the §9.14
+trust formula and the trust-weighted mean; the simulator uses them for peer ratings. The rules
+that raise flags, the consistency check, trimming and the `reviewer_trust` table come with
+reviews in Phase 11, as does attack injection in the simulator.
+
+**D91 · The ambiguity tests are written with the code they test.** Phase 6 has `test_A1`, `A2`,
+`A4`, `A5`, `A6`, `A8` and `A9` (reputation). A3, A7, A10 and A13 belong to Phase 7's fitness and
+BPSO, A11 to Phase 10's payment policy and A12 to Phase 15's experiments; `docs/PAPER_ALIGNMENT.md`
+lists all thirteen with their phase. These spec-named tests carry a per-line `noqa: N802`
+(ruff's lowercase rule) citing §9.0; the rule itself is unchanged.
+
+**D92 · Admin recalculation moves to Phase 12.** The `reputation.recalculate_all` job (30 min, no
+retries) and `make reputation-recalculate` exist now (the stage-2 seed uses the engine).
+`POST /admin/reputation/recalculate` and the admin page need `GET /jobs/{id}` (Phase 7) and the
+admin console, so they come with Phase 12; the admin nav marker is now `phase: 12`. The
+"Reputation updated" notification belongs with `reputation.update_project` in Phase 11.
+
+**D93 · Stage-2 personas.** `seed_data/stage2_personas.json` fixes traits and history shape for
+the named developers (simulator seed 2026) so the §18.1 stories hold with computed values. Zahid
+keeps 3 projects (as the stage-1 seed, not §18.1's "2": with 2 he would be a newcomer and the
+documented 10-eligible result would break). Imran's persona works in testing **and** DevOps: under
+the real Eq. 1 a single-domain specialist has ω ≈ 0 and C ≈ 0.3·X < C₀ = 0.40, which would filter
+his bid out; §18.1 only says his projects were for one client. Rafsan gets one project, so the page
+can show "1 of 3 projects done". The seed asserts the computed values against
+`tests/fixtures/stage2_reputation_golden.json` (`--write-golden` after a reviewed change) and the 10
+eligible bids. Stage 1 keeps its fixed values, so Demo 1 is unchanged.
+
+**D94 · Γ⁰ counts a verified certificate (bug fix).** §9.1.3 lists four verified items; Phase 5's
+`_verified_items` counted phone, email and profile only, although its docstring named the
+certificate. `reputation_inputs.verified_items` now counts an admin-verified certificate (a
+pending one doesn't); tested.
+
+**D95 · Phase 6 dependencies.** `numpy==2.5.4` (spec-named, §3; released 2026-10-10, ≥ 14 days;
+2.5.5 was 6 days old), only that package added to the lock. No Recharts: the radar and trend
+charts are custom SVG like `Gantt.tsx` (CSP-proven), each with "View as table".
+
+**D96 · E5 as a test.** On simulator seed 2026 (200 developers; 141 with ≥ 3 projects), Spearman ρ
+between computed P and latent quality (0.6·skill + 0.4·reliability) must be ≥ 0.5, and between
+computed C and latent breadth + communication (0.7·primary domains/3 + 0.3·communication) ≥ 0.5.
+Measured: 0.797 and 0.759; seeds 1, 7, 99, 123 give 0.75–0.83 and 0.68–0.78. A first latent target
+for C (every domain with skill ≥ 0.6, including ones never worked in) gave only 0.38–0.56; ω can
+only observe the domains of completed projects, so the latent counterpart was corrected — no
+reputation setting changed. The simulator's late-finish model was also made to depend more on
+reliability (late share 0.7 % → 3.9 %) before any threshold was set.
+
+**D97 · Per-skill competency (§9.1.7) interpretation.** "ω computed over projects in skill s's
+domain" read literally is Simpson's diversity of a single domain, always 0. DevSync uses the
+developer's expertise in that domain: the share of their projects in it, n_i^l / N_i, with a floor
+of 0.2 (one domain of ω⁰) for a newcomer with passing evidence there. Display and the optional
+`fitness.use_skill_competency` only (off by default). Added to the supervisor list.
+
+**D98 · The newcomer β is the platform mean of computed reputations.** With `rep.newcomer_review`
+unset (D8), β with no reviews is the mean β of developers with ≥ `newcomer.threshold` projects
+over **engine-computed** snapshots only (hand-set stage-1 values are not engine output, so stage 1
+keeps the 0.6 fallback and Demo 1 is unchanged; stage 2 gets 0.664). `recalculate_all` computes it
+from the histories alone (a first pass from the fallback), so the result never depends on what was
+stored before. Phase 5's `tests/integration/test_reputation_settings.py` asserted 0.6 "while no
+platform mean exists"; in the shared test database that now depends on test order, so the test
+computes the expected mean independently and checks the fallback with a threshold no snapshot
+reaches — every assertion stays exact.
+
+**D99 · SYSTEM writes to reputation tables need the worker's login role.** The new tables' SYSTEM
+clauses use `is_system()` (it also checks `current_user = devsync_worker`), and migration 0012
+tightens 0006's `reputation_snapshots` write policy the same way: before, a web connection with
+`app.role = SYSTEM` would have passed it (no code path does that; the database shouldn't rely on
+it). Tested: the web role claiming SYSTEM can write neither a snapshot nor a history row.
+
+**D100 · Test maintenance in Phase 6.** `src/app/prefetch.test.ts` used `/dev/reputation` as its
+example of an unbuilt placeholder; the page now exists, so the example is `/dev/earnings`
+(Phase 10) — the check is unchanged. `test_demo_reset.py` classifies the three new user-scoped
+tables. The responsive matrix and the visual baselines ran every stateful
+screen inside **one** test per theme and width (300 s and 180 s budgets); with the 14th screen
+(the Reputation page) the shared budget ran out on this laptop, so the run stopped on whichever
+screen happened to be last. Each stateful screen now has its own test (120 s responsive, 90 s
+visual) with exactly the same checks and the same screenshot names, so every existing baseline
+is unchanged and a slow screen fails on its own and by name. No check, threshold or baseline was
+relaxed; the test count only grew.
+
+**D101 · Reputation API shape.** `GET /developers/{id}/reputation` is a public value for active
+accounts and follows the profile's visibility (404 when hidden, unknown or not a developer). A
+newcomer without a stored snapshot sees their own starting values with where they come from
+(`newcomer`); everyone else sees nulls for them, as computing them would need that developer's
+private data (D58). `GET /me/reputation/history` is the developer's own, newest project first,
+cursor-paged, each project with its latest log entries and a plain sentence per change; when a
+change was capped the sentence says so. Neither endpoint writes; write methods are 405.
+
+**D102 · Search budget filters are bounded.** The Phase 6 gate's contract fuzzing (step 11, run
+on 2026-11-22) sent `budget_min=370372298551098867712` to `GET /projects/search`; the value
+passed `ge=0`, overflowed PostgreSQL's BIGINT and became a 500. `budget_min` and `budget_max`
+now also have `le=10_000_000_000`, the same cap as a project's budget, so anything larger is a
+422 naming the field. Tests: `test_search_budget_out_of_range_is_a_422_never_a_500` and
+`test_search_budget_at_the_cap_is_accepted` (`tests/security/test_bids.py`). These were the only
+integer query parameters without an upper bound. Nothing was relaxed.

@@ -1,0 +1,17 @@
+{
+  "_comment": "Stage-2 demo personas (spec §18.1, §18.4; DECISIONS D93). The market simulator generates each named developer's completed projects from these latent traits with the fixed seed below; the Phase 6 engine computes their reputation from the histories. Traits are ground truth for the simulation only and are never stored in the app database. Domains: the developer's primary domains (most projects come from them). Bidders on the 'Online ordering system' must stay eligible (P >= 0.45, C >= 0.40): the seed asserts it.",
+  "seed": 2026,
+  "clients": 40,
+  "personas": [
+    {"key": "arif",   "domains": ["FRONTEND", "BACKEND", "DATABASE"], "projects": 8, "clients": 5, "skill": 0.85, "reliability": 0.80, "teamwork": 0.80, "communication": 0.85},
+    {"key": "nusrat", "domains": ["FRONTEND", "DESIGN", "TESTING"],   "projects": 6, "clients": 5, "skill": 0.86, "reliability": 0.82, "teamwork": 0.85, "communication": 0.82},
+    {"key": "tanvir", "domains": ["BACKEND", "DATABASE", "DEVOPS"],   "projects": 4, "clients": 3, "skill": 0.72, "reliability": 0.65, "teamwork": 0.62, "communication": 0.70},
+    {"key": "sadia",  "domains": ["DATABASE", "BACKEND"],             "projects": 3, "clients": 3, "skill": 0.75, "reliability": 0.70, "teamwork": 0.70, "communication": 0.75},
+    {"key": "rafi",   "domains": ["DATABASE", "DEVOPS"],              "projects": 3, "clients": 3, "skill": 0.66, "reliability": 0.62, "teamwork": 0.58, "communication": 0.64},
+    {"key": "imran",  "domains": ["TESTING", "DEVOPS"],               "projects": 7, "clients": 1, "skill": 0.85, "reliability": 0.80, "teamwork": 0.60, "communication": 0.70},
+    {"key": "farhan", "domains": ["BACKEND", "FRONTEND"],             "projects": 3, "clients": 3, "skill": 0.62, "reliability": 0.60, "teamwork": 0.55, "communication": 0.60},
+    {"key": "shakib", "domains": ["TESTING", "BACKEND"],              "projects": 4, "clients": 3, "skill": 0.65, "reliability": 0.30, "teamwork": 0.55, "communication": 0.58},
+    {"key": "zahid",  "domains": ["TESTING", "MOBILE"],               "projects": 3, "clients": 2, "skill": 0.65, "reliability": 0.62, "teamwork": 0.55, "communication": 0.62},
+    {"key": "rafsan", "domains": ["FRONTEND"],                        "projects": 1, "clients": 1, "skill": 0.70, "reliability": 0.70, "teamwork": 0.65, "communication": 0.70}
+  ]
+}

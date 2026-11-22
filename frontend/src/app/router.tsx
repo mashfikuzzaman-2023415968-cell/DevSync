@@ -215,6 +215,13 @@ export const routes: RouteObject[] = [
               Component: (await import("@/features/bids/BidDetailPage")).default,
             }),
           },
+          {
+            path: "dev/reputation",
+            handle: { title: "Reputation" },
+            lazy: async () => ({
+              Component: (await import("@/features/reputation/ReputationPage")).default,
+            }),
+          },
           ...upcoming("/dev/"),
         ],
       },

@@ -282,3 +282,10 @@ def _project_terms(p: Principal, _r: Any) -> None:
 def _reputation_read(p: Principal, _r: Any) -> None:
     """Reputation snapshots are a public value for any active account (spec §14.15)."""
     _require_active(p)
+
+
+@policy("reputation.history")
+def _reputation_history(p: Principal, _r: Any) -> None:
+    """A developer reads how their own reputation changed (`/me/reputation/history`); the
+    service and row-level security scope it to the caller."""
+    _require_role(p, "DEVELOPER")

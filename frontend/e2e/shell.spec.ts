@@ -15,8 +15,11 @@ test("each role sees its own navigation and pages @e2e", async ({ page, baseURL 
   const nav = await mainNav(page);
   await nav.getByRole("link", { name: "Reputation" }).click();
   await expect(page).toHaveURL(/\/dev\/reputation$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Reputation" })).toBeVisible();
-  await expect(page.getByText("Reputation arrives in Phase 6")).toBeVisible();
+  // The real page since Phase 6 (it replaced the placeholder); a new developer is a newcomer.
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Your reputation", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("You’re a newcomer: 0 of 3 projects done.")).toBeVisible();
   await expect(page).toHaveTitle("Reputation · DevSync");
   await page.goto("/client");
   await expect(page).toHaveURL(/\/403$/);

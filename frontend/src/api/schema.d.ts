@@ -879,6 +879,28 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/developers/{developer_id}/reputation": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * A developer's reputation
+     * @description The six parameters, competency and performance, per-skill competency and, for the
+     *     developer themself while a newcomer, where the starting values come from. Hidden profiles
+     *     and unknown ids are 404.
+     */
+    get: operations["developer_reputation_api_v1_developers__developer_id__reputation_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/files/blob/{storage_key}": {
     parameters: {
       query?: never;
@@ -1270,6 +1292,26 @@ export interface paths {
      * @description The remaining images keep their order.
      */
     delete: operations["delete_portfolio_image_api_v1_me_portfolio__item_id__images__image_id__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/me/reputation/history": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * How my reputation changed
+     * @description Newest project first, cursor-paged (§10.1), each with a plain-language reason per change.
+     */
+    get: operations["my_history_api_v1_me_reputation_history_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -3041,7 +3083,7 @@ export interface components {
       skills: components["schemas"]["PublicSkill"][];
       /**
        * Verified Scores
-       * @description Practice-test results (best per skill); not evidence for bidding.
+       * @description Practice-test and admin-verified results (best per skill); role assessments are listed separately.
        */
       verified_scores: components["schemas"]["VerifiedScore"][];
       /**
@@ -3049,6 +3091,45 @@ export interface components {
        * @enum {string}
        */
       visibility: "PUBLIC" | "CLIENTS_ONLY";
+    };
+    /**
+     * DeveloperReputation
+     * @description A developer's reputation as the caller may see it (§13.5 #16; GET
+     *     /developers/{id}/reputation).
+     */
+    DeveloperReputation: {
+      /** Competency */
+      competency: string | null;
+      /** Completed Projects */
+      completed_projects: number;
+      /**
+       * Developer Id
+       * Format: uuid
+       */
+      developer_id: string;
+      /** Distinct Clients */
+      distinct_clients: number;
+      /** Is Newcomer */
+      is_newcomer: boolean;
+      /** @description the developer's own newcomer starting values; null for anyone else */
+      newcomer: components["schemas"]["NewcomerBasis"] | null;
+      parameters: components["schemas"]["ReputationParameters"];
+      /** Performance */
+      performance: string | null;
+      /**
+       * Seeded
+       * @description a fixed demo value (D48); never true in production
+       */
+      seeded: boolean;
+      /**
+       * Simulated
+       * @description computed from simulated project histories (D84)
+       */
+      simulated: boolean;
+      /** Skills */
+      skills: components["schemas"]["SkillCompetency"][];
+      /** Updated At */
+      updated_at: string | null;
     };
     /**
      * DeveloperSkillOut
@@ -3597,6 +3678,33 @@ export interface components {
       milestones: components["schemas"]["MilestoneIn"][];
     };
     /**
+     * NewcomerBasis
+     * @description Where a newcomer's starting values come from (§9.1.3). Only ever shown to the developer
+     *     themself: the verified items describe their own account.
+     */
+    NewcomerBasis: {
+      /**
+       * Evidence Domains
+       * @description domains with a passing skill result
+       */
+      evidence_domains: number;
+      /**
+       * Review Default
+       * @description quality (β) used until the first client rating
+       */
+      review_default: string;
+      /**
+       * Threshold
+       * @description completed projects after which they are not a newcomer
+       */
+      threshold: number;
+      /**
+       * Verified Items
+       * @description phone, email, complete profile, verified certificate
+       */
+      verified_items: number;
+    };
+    /**
      * NewcomerEvidence
      * @description What lets a newcomer through the newcomer rule (§9.2 step 2): a role assessment for the
      *     slot, or a practice test where the slot has no assessment yet (Decision 10).
@@ -3632,6 +3740,13 @@ export interface components {
     Page_ProjectListItem_: {
       /** Items */
       items: components["schemas"]["ProjectListItem"][];
+      /** Next Cursor */
+      next_cursor?: string | null;
+    };
+    /** Page[ReputationHistoryItem] */
+    Page_ReputationHistoryItem_: {
+      /** Items */
+      items: components["schemas"]["ReputationHistoryItem"][];
       /** Next Cursor */
       next_cursor?: string | null;
     };
@@ -4345,6 +4460,73 @@ export interface components {
       step: number;
     };
     /**
+     * ReputationChange
+     * @description One parameter's change after one project, with a plain-language reason.
+     */
+    ReputationChange: {
+      /** Capped */
+      capped: boolean;
+      /** New */
+      new: string;
+      /** Old */
+      old: string;
+      /**
+       * Parameter
+       * @enum {string}
+       */
+      parameter: "omega" | "x" | "xm" | "beta" | "mu" | "t" | "c" | "p";
+      /**
+       * Raw New
+       * @description before the per-project change limit
+       */
+      raw_new: string;
+      /** Reason */
+      reason: string;
+    };
+    /**
+     * ReputationHistoryItem
+     * @description What one completed project changed (`/me/reputation/history`), newest project first.
+     */
+    ReputationHistoryItem: {
+      /** Changes */
+      changes: components["schemas"]["ReputationChange"][];
+      /**
+       * Completed At
+       * Format: date-time
+       */
+      completed_at: string;
+      /** Domain */
+      domain: string;
+      /**
+       * History Id
+       * Format: uuid
+       */
+      history_id: string;
+      /** Project Label */
+      project_label: string;
+      /** Simulated */
+      simulated: boolean;
+    };
+    /**
+     * ReputationParameters
+     * @description The six [PCS] parameters (§9.1): expertise ω, communication X, teamwork X_m, quality β,
+     *     client diversity μ, punctuality T. Null only for another user's newcomer without a record.
+     */
+    ReputationParameters: {
+      /** Beta */
+      beta: string | null;
+      /** Mu */
+      mu: string | null;
+      /** Omega */
+      omega: string | null;
+      /** T */
+      t: string | null;
+      /** X */
+      x: string | null;
+      /** Xm */
+      xm: string | null;
+    };
+    /**
      * ReputationSummary
      * @description Competency C and performance P on 0–1 (3 places) from the stored reputation snapshot.
      *
@@ -4405,6 +4587,21 @@ export interface components {
     SessionList: {
       /** Items */
       items: components["schemas"]["SessionInfo"][];
+    };
+    /**
+     * SkillCompetency
+     * @description Per-skill competency C_{i,s} (§9.1.7), 0–1.
+     */
+    SkillCompetency: {
+      /** Competency */
+      competency: string;
+      /** Name */
+      name: string;
+      /**
+       * Skill Id
+       * Format: uuid
+       */
+      skill_id: string;
     };
     /**
      * SkillLevel
@@ -12229,6 +12426,164 @@ export interface operations {
       };
     };
   };
+  developer_reputation_api_v1_developers__developer_id__reputation_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        developer_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "competency": "0.808",
+           *       "completed_projects": 8,
+           *       "developer_id": "7b0c2a4e-9d61-4b52-8f0a-3a1d5e6c7b80",
+           *       "distinct_clients": 5,
+           *       "is_newcomer": false,
+           *       "parameters": {
+           *         "beta": "0.748",
+           *         "mu": "0.857",
+           *         "omega": "0.786",
+           *         "t": "0.549",
+           *         "x": "0.860",
+           *         "xm": "0.686"
+           *       },
+           *       "performance": "0.726",
+           *       "seeded": false,
+           *       "simulated": true,
+           *       "skills": [
+           *         {
+           *           "competency": "0.433",
+           *           "name": "React",
+           *           "skill_id": "3f6a1c2e-5b7d-4e8f-9a0b-1c2d3e4f5a6b"
+           *         }
+           *       ],
+           *       "updated_at": "2026-11-21T09:00:00Z"
+           *     }
+           */
+          "application/json": components["schemas"]["DeveloperReputation"];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
   blob_api_v1_files_blob__storage_key__get: {
     parameters: {
       query: {
@@ -16352,6 +16707,168 @@ export interface operations {
            *       "error": {
            *         "code": "UNSUPPORTED_MEDIA_TYPE",
            *         "message": "Send the request body as JSON.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  my_history_api_v1_me_reputation_history_get: {
+    parameters: {
+      query?: {
+        cursor?: string | null;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "items": [
+           *         {
+           *           "changes": [
+           *             {
+           *               "capped": false,
+           *               "new": "0.333",
+           *               "old": "0.500",
+           *               "parameter": "t",
+           *               "raw_new": "0.333",
+           *               "reason": "Punctuality 50 → 33: finished in 20 of 30 days."
+           *             },
+           *             {
+           *               "capped": true,
+           *               "new": "0.700",
+           *               "old": "0.550",
+           *               "parameter": "x",
+           *               "raw_new": "0.725",
+           *               "reason": "Communication 55 → 70: communication on this project was rated 80. The change was limited to 15 points per project (it would have been 73)."
+           *             }
+           *           ],
+           *           "completed_at": "2025-02-08T06:00:00Z",
+           *           "domain": "FRONTEND",
+           *           "history_id": "5d2e8f1a-0b3c-4d5e-9f6a-7b8c9d0e1f2a",
+           *           "project_label": "Clinic booking site",
+           *           "simulated": true
+           *         }
+           *       ]
+           *     }
+           */
+          "application/json": components["schemas"]["Page_ReputationHistoryItem_"];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
            *         "request_id": "req_123"
            *       }
            *     }

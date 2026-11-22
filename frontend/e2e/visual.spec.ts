@@ -201,12 +201,11 @@ for (const scheme of ["light", "dark"] as const) {
       });
     });
 
-    test(`screens that need state ${scheme} ${String(width)} @visual`, async ({
-      page,
-      baseURL,
-    }) => {
-      test.setTimeout(180_000);
-      for (const screen of STATEFUL_SCREENS) {
+    // One test per stateful screen (Phase 6, D100): the same screenshots under the same names,
+    // but a slow screen fails on its own and by name instead of exhausting a shared budget.
+    for (const screen of STATEFUL_SCREENS) {
+      test(`${screen.name} ${scheme} ${String(width)} @visual`, async ({ page, baseURL }) => {
+        test.setTimeout(90_000);
         // A preparation step navigates and may sign a different person in, so the clock, the
         // colour scheme and the viewport are set again just before the screenshot.
         const reach = await screen.prepare(page, baseURL ?? "");
@@ -214,10 +213,10 @@ for (const scheme of ["light", "dark"] as const) {
         await openScreen(page, reach);
         // Opening it is the check for a screen whose own content is drawn at random; a pixel
         // baseline would differ on every run (see `randomContent`).
-        if (screen.randomContent) continue;
+        if (screen.randomContent) return;
         // Emails, ids, countdowns and "active 3 minutes ago" differ on every run.
         await snap(page, `${screen.name}-${scheme}-${String(width)}`, ["[data-volatile]"]);
-      }
-    });
+      });
+    }
   }
 }

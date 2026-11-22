@@ -68,7 +68,13 @@ from app.models.projects import (
     ProjectSlot,
     ProjectStatus,
 )
-from app.models.reputation import ReputationSnapshot
+from app.models.reputation import (
+    ReputationHistory,
+    ReputationLog,
+    ReputationSkill,
+    ReputationSnapshot,
+    ReputationSource,
+)
 
 __all__ = [
     "AssessmentBlueprint",
@@ -115,7 +121,11 @@ __all__ = [
     "QuestionSource",
     "QuestionStatus",
     "RecoveryCode",
+    "ReputationHistory",
+    "ReputationLog",
+    "ReputationSkill",
     "ReputationSnapshot",
+    "ReputationSource",
     "ReservationStatus",
     "ReviewLevel",
     "ScanStatus",

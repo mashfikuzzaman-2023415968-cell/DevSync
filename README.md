@@ -13,7 +13,7 @@ Supervisor: Palash Roy. Team: Mashfikuzzaman Taeen (team leader), Salwa Baki (ba
 Raisa Tabassum (frontend), Sara Binte Shafayet (tester).
 
 ## Quick start
-Requirements: Docker with Compose v2, Node 20, make, Python 3 (for the gate script).
+Requirements: Docker with Compose v2, Node 22 LTS, make, Python 3 (for the gate script).
 
 ```bash
 make env      # .env with fresh random secrets (never commit it)

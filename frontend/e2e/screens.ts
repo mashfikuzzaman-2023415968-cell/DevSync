@@ -30,6 +30,8 @@ export const SIGNED_IN_SCREENS: Screen[] = [
   { name: "settings", path: "/settings", role: "DEVELOPER" },
   { name: "developer-profile", path: "/dev/profile", role: "DEVELOPER" },
   { name: "skill-challenges", path: "/dev/challenges", role: "DEVELOPER" },
+  // A fresh developer: a newcomer with no completed projects (starting values, empty history).
+  { name: "reputation-newcomer", path: "/dev/reputation", role: "DEVELOPER" },
   { name: "client-home", path: "/client", role: "CLIENT" },
   { name: "client-projects", path: "/client/projects", role: "CLIENT" },
   { name: "client-create-project", path: "/client/projects/new", role: "CLIENT" },

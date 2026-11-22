@@ -385,3 +385,18 @@ export async function takeRoleAssessment(
   await options.shot?.("assessment-result", "The result: score per competency, never the answers");
   return attempt.id;
 }
+
+/** Phase 6: give a developer simulated completed projects and compute their reputation
+ * (test-only route; DEVSYNC_ENV=test). */
+export async function addReputationHistory(
+  request: APIRequestContext,
+  baseURL: string,
+  userId: string,
+  projects: number,
+): Promise<void> {
+  const r = await request.post(`/api/v1/__test__/developers/${userId}/reputation-history`, {
+    headers: await csrfHeaders(request, baseURL),
+    data: { projects },
+  });
+  if (r.status() !== 204) throw new Error(`reputation-history → ${String(r.status())}`);
+}
