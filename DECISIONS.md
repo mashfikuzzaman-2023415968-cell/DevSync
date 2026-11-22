@@ -1182,3 +1182,22 @@ now also have `le=10_000_000_000`, the same cap as a project's budget, so anythi
 422 naming the field. Tests: `test_search_budget_out_of_range_is_a_422_never_a_500` and
 `test_search_budget_at_the_cap_is_accepted` (`tests/security/test_bids.py`). These were the only
 integer query parameters without an upper bound. Nothing was relaxed.
+
+## Phase 7 (team formation; Raisa with Claude Code)
+
+**D103 · Audit chain: a row is numbered after it takes the chain lock (bug fix, found by the
+Phase 6 gate).** The first Phase 6 gate run (WSL laptop, heavy load) failed Phase 1's check that
+`audit_verify_chain()` finds no break: rows 5703 and 5705 both pointed back to 5704. `seq` is an
+identity column, so a row was numbered when its INSERT started, **before** `audit_log_chain()`
+took the chain's advisory lock; a writer descheduled between the two could chain after a row with
+a higher number, forking the chain, and verification reported tampering that never happened (in
+production `/admin/audit/verify` would raise a false alarm). Migration `0013_audit_chain_order`
+redefines the trigger to draw `seq` from the column's sequence **after** the lock, so numbering
+order and chain order are the same by construction (the identity default still draws first, which
+leaves gaps; verification needs order, not contiguity). Rows already written keep their hashes
+(append-only). Test: `tests/integration/test_audit_chain_concurrency.py` holds the lock from
+another connection while an insert waits and checks the waiting row is numbered after a value
+drawn meanwhile — it fails on the old trigger (`6648 > 6649`) and passes on the new one — plus a
+30-writer stress check of the chain. Phase 0 code; written on the Phase 6 branch after it went
+to the gate (as D102 there, on Raisa's local branch only) and carried into Phase 7 as its first
+change, as approved with the Phase 7 plan.
