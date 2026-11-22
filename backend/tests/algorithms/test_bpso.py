@@ -341,9 +341,8 @@ def test_presets_are_never_worse_than_balanced_on_their_own_term() -> None:
             _total(cands, teams["quality"], "competency")
             >= _total(cands, teams["balanced"], "competency") - 1e-12
         ), seed
-        assert _total(cands, teams["fast"], "days") <= _total(cands, teams["balanced"], "days"), (
-            seed
-        )
+        fast_days = _total(cands, teams["fast"], "days")
+        assert fast_days <= _total(cands, teams["balanced"], "days"), seed
 
 
 def test_budget_versus_quality_on_random_instances() -> None:
