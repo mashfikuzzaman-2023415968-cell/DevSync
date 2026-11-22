@@ -33,14 +33,15 @@ TASKS: dict[str, TaskSpec] = {
 
 
 @lru_cache(maxsize=1)
-def _redis() -> Redis:
+def sync_redis() -> Redis:
+    """The synchronous Redis client (RQ and the formation progress events)."""
     return Redis.from_url(get_settings().REDIS_URL, socket_connect_timeout=1, socket_timeout=5)
 
 
 def enqueue(name: str, *args: str) -> str:
     """Queue task `name` with string arguments; returns the RQ job id."""
     spec = TASKS[name]
-    job = Queue(spec.queue, connection=_redis()).enqueue(
+    job = Queue(spec.queue, connection=sync_redis()).enqueue(
         spec.path,
         *args,
         job_timeout=spec.timeout,

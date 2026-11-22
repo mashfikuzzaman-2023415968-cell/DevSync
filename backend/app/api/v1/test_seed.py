@@ -130,6 +130,26 @@ async def close_bidding(project_id: uuid.UUID) -> Response:
     return Response(status_code=204)
 
 
+@router.post("/projects/{project_id}/start-forming", status_code=204)
+async def start_forming(project_id: uuid.UUID) -> Response:
+    """Close bidding now and move the project to FORMING, as the deadline job would (E2E)."""
+    if not await seed.start_forming(project_id):
+        raise HTTPException(status_code=409)
+    return Response(status_code=204)
+
+
+@router.post("/formation-runs/{run_id}/execute")
+async def execute_formation_run(run_id: uuid.UUID) -> dict[str, str]:
+    """Execute a queued team formation run now (E2E: the test stack runs no worker)."""
+    return {"status": await seed.execute_formation_run(run_id)}
+
+
+@router.post("/formation-runs/{run_id}/explanations")
+async def formation_explanations(run_id: uuid.UUID) -> dict[str, int]:
+    """Write a confirmed run's "why not selected" explanations now (E2E)."""
+    return {"explanations": await seed.write_formation_explanations(run_id)}
+
+
 @router.post("/developers/{user_id}/skill-evidence", status_code=204)
 async def skill_evidence(user_id: uuid.UUID, body: EvidenceRequest) -> Response:
     """List a skill for a developer with a TEST evidence score (E2E: newcomer rule)."""

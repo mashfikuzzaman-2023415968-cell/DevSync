@@ -11,6 +11,8 @@ import { cn } from "@/lib/cn";
 import { heroFallbackReason, whenIdle } from "./heroSupport";
 import { PosterCanvas } from "./PosterCanvas";
 
+import { fairnessCost } from "@/content/homepageExample";
+
 const TalentConstellation = lazy(() => import("@/components/three/TalentConstellation"));
 
 export const HERO_DESCRIPTION =
@@ -73,6 +75,7 @@ export function HeroVisual({ active, start = true }: { active: boolean; start?: 
               theme={resolvedTheme}
               active={active}
               compact={compact}
+              chipText={`Fair team, ${fairnessCost("1")} cost of fairness`}
               onReady={() => {
                 setReady(true);
               }}

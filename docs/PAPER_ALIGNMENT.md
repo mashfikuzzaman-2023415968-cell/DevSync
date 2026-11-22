@@ -50,14 +50,44 @@ per-skill competency. Kept: A2 (the clip). Tests: `test_replication_*` in
 |---|---|---|---|---|
 | A1 | Timeliness direction | Eq. 11 as written (faster = higher) | 6 | `test_A1_timeliness_direction` |
 | A2 | Late work in Eq. 11 | ratio clipped to 1 | 6 | `test_A2_late_work_is_clipped` |
-| A3 | Wrong team size in Eq. 17 | −∞ (paper prints −1, D9) | 7 | with `fitness.py` |
+| A3 | Wrong team size in Eq. 17 | −∞ (paper prints −1, D9, D111) | 7 | `test_A3_infeasible_fitness` |
 | A4 | Initial communication | Γ⁰ from verification | 6 | `test_A4_initial_communication_from_verification` |
 | A5 | "ω + X = 1" | weights f, 1 − f sum to 1 | 6 | `test_A5_competency_weights_sum_to_one` |
 | A6 | Older projects weigh more | α_x, α_e = 0.3 (< 0.5) | 6 | `test_A6_older_projects_weigh_more` |
-| A7 | P in Eq. 17 | off (`fitness.include_performance`) | 7 | with `fitness.py` |
+| A7 | P in Eq. 17 | off (`fitness.include_performance`; C5 = C1, D114) | 7 | `test_A7_performance_term_only_behind_its_setting` |
 | A8 | External reviews | admin-verified only; none → β = λ | 6 | `test_A8_beta_uses_internal_reviews_only_without_verified_externals` |
 | A9 | ω, μ for < 2 projects | ω⁰ from evidence; μ = 0.5 | 6 | `test_A9_omega_and_mu_below_two_projects` |
-| A10 | Eq. 18 normaliser C | budget after fee | 7 | with `fitness.py` |
+| A10 | Eq. 18 normaliser C | budget after fee | 7 | `test_A10_cost_normaliser_is_the_budget_after_fee` |
 | A11 | Sign in Eq. 23 | ε = e^{−(q − q_max)θ2} | 10 | with the payment policy |
 | A12 | Utility Eq. 24 | as written and U′ | 15 | with the experiments |
-| A13 | Inertia in Eq. 14 | 1.0 with v_max clamp | 7 | with `bpso.py` |
+| A13 | Inertia in Eq. 14 | 1.0 with v_max clamp | 7 | `test_A13_inertia` |
+
+## Phase 7 — team formation (Eq. 13–19, Algorithm 2, [PCS] §4.3)
+
+Binary PSO in `backend/app/algorithms/bpso.py`, fitness in `backend/app/algorithms/fitness.py`
+(float64 with integer-paisa prices, D105). The same alignment script checks these rows (function
+named in backticks exists in one of the two modules; a test name contains `eqNN`).
+
+| Paper element | Status | Function | Tests |
+|---|---|---|---|
+| Eq. 13 Σ x_i = N (team size) | exact; in `devsync` mode also slot counts, distinct developers, budget after fee, skill coverage and the newcomer minimum (DevSync extensions, D114) | `infeasibility`, `run_bpso` | `test_eq13_result_has_exactly_n_members`, `test_replication_checks_only_eq13`, one test per feasibility rule in `tests/algorithms/test_fitness.py` |
+| Eq. 14 velocity v ← w·v + z1·r1·(pbest − x) + z2·r2·(gbest − x) | exact with documented resolution (A13: inertia 1.0; the v_max clamp is a DevSync extension, off in `pcs_replication`) | `velocity_update` | `test_eq14_velocity_update_by_hand`, `test_eq14_clamp_is_ours_and_off_in_replication`, `test_A13_inertia` |
+| Eq. 15 sigmoid s(v) = 1 / (1 + e^{−v}) | exact | `position_update` | `test_eq15_eq16_sigmoid_position_update` |
+| Eq. 16 x = 1 if rand < s(v) else 0 | exact | `position_update` | `test_eq15_eq16_sigmoid_position_update` |
+| Initialisation (Algorithm 2 line 1) | exact with documented resolution (positions Bernoulli(N/k), velocities U(b_l, b_u); paper: positions U(b_l, b_u), D111) | `initialise` | `test_initialisation_resolution` |
+| Eq. 17 F = Σ (C1·C + C2·X_m − C3·t̄ − C4·c̄) | exact with documented resolution (A3: infeasible = −∞; A7: optional C5·P, off) | `fitness`, `member_terms` | `test_eq17_two_member_team_by_hand`, `test_eq17_three_member_team_and_breakdown`, `test_A3_infeasible_fitness`, `test_A7_performance_term_only_behind_its_setting` |
+| Eq. 18 c̄ = c / C | exact with documented resolution (A10: C = budget after the platform fee) | `member_terms` | `test_eq18_cost_is_normalised_by_the_budget_after_fee`, `test_A10_cost_normaliser_is_the_budget_after_fee` |
+| Eq. 19 t̄ = t / T^d | exact | `member_terms` | `test_eq19_time_is_normalised_by_the_deadline` |
+| Repair operator (§9.3 steps 1–5) | DevSync extension (off in `pcs_replication`) | `repair` | repair tests and the Hypothesis invariants in `tests/algorithms/test_bpso.py` |
+| Exact solver (§9.4) | DevSync extension | `app/algorithms/exact_solver.py::solve_exact` | `tests/algorithms/test_bpso.py` (brute force, top 3, limits), `tests/perf/test_formation_perf.py` |
+| Fairness dial and cost of fairness (§9.5) | DevSync extension (dial forced to 0 in `pcs_replication`) | `app/algorithms/fairness.py::apply_fairness` | fairness tests in `tests/algorithms/test_bpso.py` |
+| Why this team, risks, comparison, why not selected (§9.6–§9.8) | DevSync extension | `app/algorithms/explain.py` | `tests/algorithms/test_explain.py` (risk boundaries, counterfactual property) |
+| Presets (§9.2 advancement choice) | DevSync extension (weights D115) | `preset_weights` | `test_presets_are_never_worse_than_balanced_on_their_own_term`, `test_budget_versus_quality_on_random_instances` |
+| A run end to end | composition | `app/algorithms/formation.py::run_formation` | `tests/security/test_formation_api.py`, `backend/scripts/formation_check.py` (gate) |
+
+### `pcs_replication` in formation (D114)
+
+Off: repair, the v_max clamp, the newcomer minimum and fairness dial, slot/budget/coverage
+feasibility (only Eq. 13 and distinct developers remain); presets only choose the weights C1–C4.
+Kept: A3 (−∞), A13 (inertia 1.0), the D111 initialisation.
+Tests: `test_replication_checks_only_eq13`, `test_replication_switches_off_repair_and_clamp`.

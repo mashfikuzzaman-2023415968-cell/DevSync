@@ -175,7 +175,7 @@ def _settings_params(settings: PlatformSettingsValues) -> dict[str, Any]:
 # --------------------------------------------------------------------------------- start
 
 
-async def _snapshot(
+async def build_snapshot(
     db: AsyncSession,
     today: date,
     project: Project,
@@ -290,7 +290,7 @@ async def start_run(
         raise InvalidStateTransition(project.status.value, [], message)
     settings_version, settings = await platform_settings.get_active(ctx.db)
     async with open_session(DbContext.system(), job=True) as sysdb:
-        snapshot, params = await _snapshot(sysdb, ctx.now.date(), project, settings, body)
+        snapshot, params = await build_snapshot(sysdb, ctx.now.date(), project, settings, body)
     if not snapshot["candidates"]:
         raise DomainError("There are no eligible bids to form a team from.",
                           code=ErrorCode.INVALID_STATE)  # fmt: skip

@@ -237,3 +237,73 @@ Simulated data, not real users.
 
 Every bidder on the "Online ordering system" stays eligible, so the documented 10 eligible bids
 hold in stage 2.
+
+## Team formation — [PCS] Eq. 13–19, Algorithm 2 — Phase 7
+
+Code: `backend/app/algorithms/fitness.py` (Eq. 17–19, feasibility, presets), `bpso.py`
+(Algorithm 2 with repair, locks, archive, early stop, timeout), `exact_solver.py`, `fairness.py`,
+`explain.py`, `formation.py` (one run end to end) and `baselines.py` (the greedy baseline). All
+pure: no clock, I/O or database; randomness from a seeded `numpy.random.Generator`. Equation-level
+mapping and the A3/A7/A10/A13 resolutions are in `PAPER_ALIGNMENT.md`.
+
+### Fitness (Eq. 17–19)
+
+For a team S: F(S) = Σ_{i∈S} (C1·C_i + C2·X_{m,i} − C3·t_i/T^d − C4·c_i/C), with the weights
+normalised to sum 1, T^d the deadline in days and C the budget after the platform fee (A10). An
+infeasible team scores −∞ (A3, D111). In `devsync` mode a team is feasible when it has exactly N
+members, each slot exactly its count, no developer twice, Σ price ≤ C, every required skill held
+and at least the dial's number of newcomers; in `pcs_replication` only Eq. 13 and distinct
+developers apply (D114).
+
+**Worked example** (`test_eq17_*`): weights 0.4/0.3/0.2/0.1, T^d = 30 days, C = ৳10,000.
+A (C 0.8, X_m 0.6, 15 days, ৳3,000): 0.32 + 0.18 − 0.10 − 0.03 = 0.37. B (0.5, 0.9, 30 days,
+৳5,000): 0.20 + 0.27 − 0.20 − 0.05 = 0.22. D (0.7, 0.4, 6 days, ৳1,000): 0.28 + 0.12 − 0.04 −
+0.01 = 0.35. So F({A, B}) = 0.59 and F({A, B, D}) = 0.94.
+
+### Binary PSO (Algorithm 2) and the repair operator
+
+P = 30 particles, I = 200 iterations, z1 = z2 = 1.5, inertia 1.0 (A13), v_max = 4 (ours), bounds
+[−1, 1], early stop after 40 iterations without improvement, a timeout (10 s by default, checked
+once per iteration). Positions start Bernoulli(N/k), velocities U(b_l, b_u) (D111). Each new
+position is repaired (ours; §9.3): fix slot counts by score, add newcomers to meet the dial,
+drop the worst score per paisa until the budget fits, fill uncovered skills; locked members
+(forced inclusion) are never removed. The archive keeps the best distinct feasible teams.
+
+### Exact verification, fairness, explanations
+
+When the problem has at most 18 candidates and 2,000,000 combinations, the exact solver
+enumerates every team (per-slot combinations) and returns the best three; the result shows
+"Optimal" or the gap. The fairness dial runs k = 0 and the requested k with the same seed; the
+cost of fairness is (F0 − Fk)/|F0| (0 when the minimum isn't binding or F0 ≤ 0), falling back to
+the largest feasible k. "Why this team?" lists coverage, budget and schedule shares, newcomers,
+each member's contribution and the term that most separates it from the runner-up; the risk
+chips are BUDGET_TIGHT (> 95 % of C), SCHEDULE_TIGHT (> 90 % of T^d), LOW_TEAMWORK (mean X_m <
+0.5), SINGLE_POINT_SKILL and NEWCOMER_ON_CRITICAL_PATH. "Why not selected" gives the best team
+with the bid forced in and its gap, the highest price (৳100 steps, 10-step binary search on
+φ ∈ [0.5, 1]) at which the bid would be chosen — property-tested: applied and re-run, it is
+chosen — and the main gap against the selected bid in its slot, with that bid's days and price
+(never its owner).
+
+### Measured (simulated data, 2026-11-22)
+
+- **Optimality (E1, D112):** 298 solvable instances (8–18 candidates, teams of 3–6, three
+  presets, both modes): PSO optimal in 98.3 %, mean gap 0.042 % (`scripts/e1_bpso_vs_exact.py`,
+  `runs/experiments/e1.csv`). The unit test on 200 instances requires ≥ 95 % and ≤ 2 %.
+- **Speed (`tests/perf/test_formation_perf.py`):** |S| = 200 candidates, N = 10: about 2.5 s per
+  run on the development laptop (budget 5 s); the exact solver on 18 candidates: 0.04 s (budget
+  3 s).
+- **Greedy baseline (E3's, `baselines.greedy_team`: top C + P per slot within the budget):** on
+  99 simulated jobs DevSync's best team scores higher than greedy's in 87 and ties in 12 (never
+  lower), on average 12.7 % higher; it is also cheaper on average (৳2,646 less per team). With the
+  dial at 1 DevSync's teams included 158 newcomers against greedy's 154.
+- **Presets (D115):** each preset's team is never worse than Balanced's on its own term (tested on
+  every instance); Budget is no dearer than Quality in 189 of 200 random instances and Quality at
+  least as competent in 195.
+
+### The seeded project (gate check, D116)
+
+`backend/scripts/formation_check.py` builds the snapshot of the stage-2 "Online ordering system"
+exactly as a client's run (Balanced, dial 1, seed 20261207) and checks the team against
+`tests/fixtures/formation_expected_team.json`: it includes a newcomer, the exact solver confirms
+it optimal, and the same inputs give the same team twice. The homepage's fairness figures
+(`frontend/src/content/homepage-example.json`) come from the same run at dial 0, 1 and 2.

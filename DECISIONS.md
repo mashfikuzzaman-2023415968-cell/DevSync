@@ -1310,3 +1310,25 @@ job, which records `admin_verification.reproduced` on the run).
 (admin with step-up, queues `formation.verify`, 202) and `GET /admin/formation-runs` (cursor
 page). The admin page moves to Phase 12 (admin nav "Team formation runs" → 12) and the client's
 "Teams" page to Phase 8 (nav marker → 8), where a confirmed team becomes something to manage.
+
+**D113 · Homepage fairness figures from a real run.** `backend/scripts/formation_check.py` (the
+Phase 7 gate check) runs the stage-2 "Online ordering system" (Balanced, seed 20261207) with the
+dial at 0, 1 and 2 and writes `frontend/src/content/homepage-example.json` (`--homepage PATH`):
+newcomers in the team and the cost of fairness per setting, no names. The hero chip reads "Fair
+team, X cost of fairness" (dial 1) and the fairness spotlight shows each setting's figure; the
+gate compares the committed file with a fresh run, so it can't go stale. One script instead of
+the planned `build_homepage_example.py`: the same run feeds both the gate fixture and the page.
+Measured on the seed: dial 0 → no newcomer, 0 %; dial 1 → 1 newcomer, 16.2 %; dial 2 → 2
+newcomers, 38.7 % (the team scores are small sums of positive and negative terms, so relative
+costs read large; they are shown as computed). The stills are unaffected (they render no chip).
+
+**D116 · The stage-2 seed leaves the ordering project FORMING.** Spec §18.4 says stage 2 holds
+"everything in stage 1", where the ordering project is BIDDING, but Demo 2 runs team formation on
+it. After asserting the 10 eligible bids, stage 2 closes that project's bidding through the real
+deadline job (verdicts on the bids, notices, BIDDING → FORMING). Expected result with the dial at
+1 (`tests/fixtures/formation_expected_team.json`): Mehjabin Chowdhury (newcomer), Nusrat Jahan,
+Sadia Islam, Tanvir Ahmed — fitness 0.8287, exact-verified optimal. E2E tests, which build their
+own projects, reach FORMING through the test-only `start-forming` route (the test stack runs no
+scheduler) and execute queued runs through `formation-runs/{id}/execute` (no worker); both exist
+only when `DEVSYNC_ENV=test`. The run code lives in `services/formation_runner.py` so that route
+and the RQ entry points in `jobs/formation_jobs.py` share it.
