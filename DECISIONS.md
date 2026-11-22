@@ -1210,3 +1210,45 @@ screen now has its own test with exactly the same checks (CSP violations, consol
 off-origin requests; serious/critical axe rules in both colour schemes). The gate selects by tag,
 not by count, so only the test count grows. Written on the Phase 6 branch and carried into
 Phase 7 with the plan.
+
+**D105 · Formation arithmetic.** PSO and fitness run in NumPy/Python floats (float64), as the spec
+allows for the algorithms; money is always integer paisa (prices, budgets, counterfactual prices
+rounded down to ৳100). Every score that is stored or shown is rounded half-up to 3 places
+(fitness to 4 when stored, 2 on screen per §13.8). Ties between equal-fitness teams break by the
+candidate index, so a run is reproducible from its snapshot, parameters and seed.
+
+**D111 · Two paper findings resolved (D9 items 1 and 3).** (1) A3: an infeasible team scores −∞;
+[PCS] prints −1, but a feasible team can score below −1 (with all weight on time and t̄ = 1 for
+two members, F = −2), so −1 would rank an invalid team above a real one
+(`test_A3_infeasible_fitness`). (2) Initialisation: positions Bernoulli(N/k), velocities
+U(b_l, b_u); the paper draws positions from U(b_l, b_u) — not a 0/1 vector — and velocities from
+U(−|b|, |b|) (`test_initialisation_resolution`: over 3,000 particles the share of ones is
+N/k ± 0.01 and every velocity lies in [b_l, b_u)).
+
+**D112 · PSO optimality and E1.** §17's bar — PSO optimal in ≥ 95 % of 200 small instances with a
+mean gap ≤ 2 % — is a unit test (`test_pso_is_optimal_on_small_instances`) on the seeded generator
+`app/algorithms/formation_bench.py`. `scripts/e1_bpso_vs_exact.py` runs §19's E1 (300 instances,
+8–18 candidates, teams of 3–6, three presets, both modes) and writes one CSV row per instance;
+it exits 1 below the bar, so the gate runs it with `--instances 20`. Measured on 2026-11-22
+(simulated data): 298 solvable instances, PSO optimal in 98.3 %, mean gap 0.042 %.
+
+**D114 · Feasibility in each mode.** `devsync`: exactly N members, each slot exactly its count,
+distinct developers, Σ price ≤ the budget after fee (A10), every skill the plan needs held by a
+member, and at least `min_newcomers` newcomers. `pcs_replication`: only the paper's Eq. 13
+(Σ x = N) and distinct developers — [PCS] has no slots, team budget, coverage or newcomer minimum;
+they are DevSync extensions. With `fitness.include_performance` (A7, off by default) the extra
+weight C5 equals C1 before the five weights are normalised.
+
+**D115 · Presets are Balanced plus emphasis on one term.** The spec names the presets (Quality→P,
+Balanced→C, Fast→t, Budget→c for Algorithm 1) but not their weights. A first choice (Budget =
+0.2/0.15/0.15/0.5) sometimes picked a *dearer* team than Quality: Eq. 18 divides each price by the
+whole budget after fee, which compresses price differences to about 0.1 a member while time
+differences span about 0.8. Weights alone can't make "Budget never costs more than Quality" a
+guarantee (even 0.12/0.08/0.07/0.73 left 1 counter-example in 200), and Eq. 18 is not changed.
+So each preset is Balanced (0.35/0.25/0.20/0.20) plus 1.0 on its own term, normalised: Quality
+0.675/0.125/0.1/0.1, Fast 0.175/0.125/0.6/0.1, Budget 0.175/0.125/0.1/0.6. By an exchange argument
+each preset's best team is then never worse than Balanced's on its own term — Budget never dearer,
+Quality never less competent, Fast never slower — tested on every instance without exception. The
+spec's Budget-vs-Quality comparison is a strong tendency (measured: Budget no dearer in 189 of 200
+random instances, Quality at least as competent in 195; asserted as lower bounds) and is checked
+exactly on the seeded project in the service tests.
