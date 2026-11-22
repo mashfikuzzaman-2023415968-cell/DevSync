@@ -1252,3 +1252,20 @@ Quality never less competent, Fast never slower — tested on every instance wit
 spec's Budget-vs-Quality comparison is a strong tendency (measured: Budget no dearer in 189 of 200
 random instances, Quality at least as competent in 195; asserted as lower bounds) and is checked
 exactly on the seeded project in the service tests.
+
+**D107 · Generic jobs API and live progress over SSE.** `GET /jobs/{id}` and
+`GET /jobs/{id}/events` serve any job with a requester: its requester or an admin; anyone else,
+system jobs and unknown ids get 404 (service check and the `jobs_select` RLS policy). Workers append
+small events to a capped Redis list `job:{id}:events` (500 events, 1 h TTL; only the keys `type`,
+`status`, `progress`, `iteration`, `best_fitness` and `run_id` are accepted, so no candidate data
+can be streamed). The stream sends the current state, then each event with its index as `id`
+(`Last-Event-ID` resumes), a heartbeat comment every 20 s, and ends on a final status or after
+30 min; at each heartbeat the job row is re-read so a worker that died without a final event still
+ends the stream. It holds no database connection while open. Cross-site use is refused (403
+`CSRF_FAILED`) when `Origin` is present and not the public origin, or when `Sec-Fetch-Site` is
+present and not `same-origin`/`none`: browsers omit `Origin` on same-origin EventSource GETs, so
+requiring it would break the feature, while the session cookie is SameSite. A user's fourth
+concurrent stream is 429 (`sse:concurrent:{user}`, a slot expires after 31 min if a web worker
+dies). The route timeout spares exactly the SSE paths (`SSE_PATHS`), and Nginx has a dedicated
+location for them (`proxy-sse.conf`: `proxy_buffering off`, no compression, `X-Accel-Buffering:
+no`, read timeout 60 s).

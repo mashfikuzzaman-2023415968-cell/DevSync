@@ -982,6 +982,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/jobs/{job_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * A background job's status
+     * @description Status and progress of a job you started (admins: any job). Others' jobs are 404.
+     */
+    get: operations["get_job_api_v1_jobs__job_id__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/jobs/{job_id}/events": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Live progress of a background job (Server-Sent Events)
+     * @description Stream a job you started. Same-origin only; at most 3 open streams per user.
+     */
+    get: operations["job_events_api_v1_jobs__job_id__events_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/me": {
     parameters: {
       query?: never;
@@ -3531,6 +3571,39 @@ export interface components {
       /** Valid Until */
       valid_until: string | null;
     };
+    /**
+     * JobOut
+     * @description A job as its requester (or an admin) sees it. No payload, no internal references.
+     */
+    JobOut: {
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Error Code */
+      error_code: string | null;
+      /** Finished At */
+      finished_at: string | null;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Progress */
+      progress: number;
+      /** Started At */
+      started_at: string | null;
+      status: components["schemas"]["JobStatus"];
+      /** Type */
+      type: string;
+    };
+    /**
+     * JobStatus
+     * @description Lifecycle of a background job (mirrors RQ for authorization and UI).
+     * @enum {string}
+     */
+    JobStatus: "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED" | "CANCELLED";
     /**
      * LoginRequest
      * @description Email + password (+ CAPTCHA after repeated failures, and always for admins).
@@ -12841,6 +12914,283 @@ export interface operations {
            *       "error": {
            *         "code": "DEPENDENCY_UNAVAILABLE",
            *         "message": "A service we depend on is unavailable.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_job_api_v1_jobs__job_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        job_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "created_at": "2026-11-22T06:00:00Z",
+           *       "id": "0b7c1a52-8d1e-4f55-9a3e-2f1c6f2d9b10",
+           *       "progress": 42,
+           *       "started_at": "2026-11-22T06:00:01Z",
+           *       "status": "RUNNING",
+           *       "type": "formation.run"
+           *     }
+           */
+          "application/json": components["schemas"]["JobOut"];
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  job_events_api_v1_jobs__job_id__events_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        "last-event-id"?: string | null;
+        "sec-fetch-site"?: string | null;
+      };
+      path: {
+        job_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description An event stream: `status` first, then `progress` events. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example event: progress
+           *     data: {"progress":40}
+           */
+          "text/event-stream": unknown;
+        };
+      };
+      /** @description Please sign in to continue. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "UNAUTHENTICATED",
+           *         "message": "Please sign in to continue.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Your account can't do this. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "ROLE_NOT_ALLOWED",
+           *         "message": "Your account can't do this.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description We couldn't find that. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NOT_FOUND",
+           *         "message": "We couldn't find that.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description The request is too large. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "PAYLOAD_TOO_LARGE",
+           *         "message": "The request is too large.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Some fields need attention. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "VALIDATION_ERROR",
+           *         "message": "Some fields need attention.",
+           *         "request_id": "req_123"
+           *       }
+           *     }
+           */
+          "application/json": components["schemas"]["ValidationErrorResponse"];
+        };
+      };
+      /** @description Too many requests. Please wait and try again. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "RATE_LIMITED",
+           *         "message": "Too many requests. Please wait and try again.",
            *         "request_id": "req_123"
            *       }
            *     }

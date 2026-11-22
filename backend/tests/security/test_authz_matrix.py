@@ -87,6 +87,9 @@ MATRIX: dict[tuple[str, str], tuple[set[str], str, bool]] = {
     # Phase 6: reputation is a public value for active accounts; the history is the developer's.
     ("GET", "/api/v1/developers/{developer_id}/reputation"): (ACTIVE, "auth", True),
     ("GET", "/api/v1/me/reputation/history"): ({DEV}, "auth", False),
+    # Phase 7: generic job status and live events (D107); others' jobs are 404 in the service.
+    ("GET", "/api/v1/jobs/{job_id}"): (ACTIVE, "auth", True),
+    ("GET", "/api/v1/jobs/{job_id}/events"): (ACTIVE, "auth", True),
     ("GET", "/api/v1/files/{file_id}/download"): (EVERYONE, "", True),
     ("GET", "/api/v1/files/blob/{storage_key}"): (EVERYONE, "", True),
     ("GET", "/api/v1/skill-tests"): ({DEV}, "auth", False),

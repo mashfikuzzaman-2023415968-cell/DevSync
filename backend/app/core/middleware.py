@@ -29,6 +29,9 @@ _SAFE_REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{8,64}$")
 
 MAX_JSON_BODY_BYTES = 256 * 1024
 DEFAULT_ROUTE_TIMEOUT_SECONDS = 10.0
+# Server-Sent Events streams stay open for up to 30 minutes (§10.3), so the route timeout must
+# not cancel them: exactly these paths, nothing that merely ends the same way.
+SSE_PATHS = re.compile(r"^/api/v1/(?:notifications/stream|jobs/[0-9a-fA-F-]{36}/events)$")
 
 # Exact headers for API responses (Nginx adds the same set for static files, §14.3).
 API_SECURITY_HEADERS: list[tuple[bytes, bytes]] = [
@@ -230,7 +233,7 @@ class TimeoutMiddleware:
         self.seconds = seconds
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or scope.get("path", "").endswith("/stream"):
+        if scope["type"] != "http" or SSE_PATHS.match(scope.get("path", "")):
             await self.app(scope, receive, send)
             return
         started: MutableMapping[str, Any] = {"value": False}

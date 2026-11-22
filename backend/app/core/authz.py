@@ -289,3 +289,10 @@ def _reputation_history(p: Principal, _r: Any) -> None:
     """A developer reads how their own reputation changed (`/me/reputation/history`); the
     service and row-level security scope it to the caller."""
     _require_role(p, "DEVELOPER")
+
+
+@policy("job.read")
+def _job_read(p: Principal, _r: Any) -> None:
+    """A job's status and live events: its requester, or an admin; the service and row-level
+    security answer 404 for anyone else's job (D107)."""
+    _require_active(p)
