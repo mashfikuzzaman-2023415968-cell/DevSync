@@ -38,7 +38,8 @@ export function ReasonDialog({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const length = textLength(reason.trim());
-  const ok = (optional && length === 0) || (length >= min && length <= max);
+  // An optional reason has only a maximum; a required one has both bounds (like the server).
+  const ok = optional ? length <= max : length >= min && length <= max;
   const hint = optional
     ? `Optional, up to ${String(max)} characters.`
     : `Between ${String(min)} and ${String(max)} characters.`;
