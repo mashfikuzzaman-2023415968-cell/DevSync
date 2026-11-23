@@ -143,7 +143,7 @@ async def _skill_names(
     return out
 
 
-def _card(project: Project, skills: list[str], now: datetime) -> ProjectCard:
+def _card(project: Project, skills: list[str], now: datetime, open_places: int = 0) -> ProjectCard:
     return ProjectCard(
         id=project.id,
         title=project.title,
@@ -155,15 +155,40 @@ def _card(project: Project, skills: list[str], now: datetime) -> ProjectCard:
         bidding_deadline=project.bidding_deadline,
         skills=skills,
         created_at=project.created_at,
-        open_for_bids=project.status == ProjectStatus.BIDDING
-        and (project.bidding_deadline is None or project.bidding_deadline > now),
+        open_for_bids=(
+            project.status == ProjectStatus.BIDDING
+            and (project.bidding_deadline is None or project.bidding_deadline > now)
+        )
+        or open_places > 0,
+        open_places=open_places,
     )
+
+
+async def _open_places(
+    db: AsyncSession, ids: list[uuid.UUID], now: datetime
+) -> dict[uuid.UUID, int]:
+    """Reopened slots per project (D126): their places take bids for 48 h, no bid data shown."""
+    if not ids:
+        return {}
+    rows = await db.execute(
+        select(ProjectSlot.project_id, func.sum(ProjectSlot.count))
+        .where(ProjectSlot.project_id.in_(ids), ProjectSlot.reopened_until > now)
+        .group_by(ProjectSlot.project_id)
+    )
+    return {pid: int(n or 0) for pid, n in rows.tuples().all()}
 
 
 def _taking_bids(now: datetime) -> Any:
-    return (Project.status == ProjectStatus.BIDDING) & (
+    reopened = (
+        select(ProjectSlot.id)
+        .where(ProjectSlot.project_id == Project.id, ProjectSlot.reopened_until > now)
+        .exists()
+    )
+    bidding = (Project.status == ProjectStatus.BIDDING) & (
         Project.bidding_deadline.is_(None) | (Project.bidding_deadline > now)
     )
+    live = Project.status.in_([ProjectStatus.TEAM_PENDING, ProjectStatus.IN_PROGRESS])
+    return bidding | (live & reopened)
 
 
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
@@ -266,7 +291,8 @@ async def search(
 
     page, next_cursor = await _scan(db, stmt, sort=sort, cursor=cursor, limit=limit, keep=keep)
     skill_map = await _skill_names(db, [p.id for p in page])
-    items = [_card(p, skill_map.get(p.id, []), now) for p in page]
+    places = await _open_places(db, [p.id for p in page], now)
+    items = [_card(p, skill_map.get(p.id, []), now, places.get(p.id, 0)) for p in page]
     return Page[ProjectCard](items=items, next_cursor=next_cursor)
 
 
@@ -448,6 +474,7 @@ async def _recommend(
     picked = picked[:RECOMMENDED_LIMIT]
 
     skill_map = await _skill_names(db, [p.id for _, p, _ in picked])
+    places = await _open_places(db, [p.id for _, p, _ in picked], now)
     names = dict(
         (await db.execute(select(Skill.id, Skill.name).where(Skill.id.in_(skill_ids))))
         .tuples()
@@ -455,7 +482,7 @@ async def _recommend(
     )
     return [
         RecommendedProject(
-            project=_card(p, skill_map.get(p.id, []), now),
+            project=_card(p, skill_map.get(p.id, []), now, places.get(p.id, 0)),
             skill_match_count=n,
             matched_skills=sorted(names.get(s, "") for s in fitting),
             typical_days=min((typical[s] for s in fitting if s in typical), default=None),
@@ -556,7 +583,9 @@ async def get_public(
     if project.current_baseline_id is not None:  # published: the plan is fixed (§8)
         milestones = list(await projrepo.load_milestones(db, project_id))
         deps = list(await projrepo.load_dependencies(db, project_id))
-    card = _card(project, [sc.skill for sc in slots], now or get_clock().now())
+    at = now or get_clock().now()
+    card = _card(project, [sc.skill for sc in slots], at,
+                 (await _open_places(db, [project.id], at)).get(project.id, 0))  # fmt: skip
     return ProjectDetail(
         **card.model_dump(),
         description=project.description,

@@ -246,6 +246,8 @@ class LeadChangeRequest(UUIDPrimaryKey, Timestamps, Base):
     requested_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     reason: Mapped[str] = mapped_column(Text, nullable=False)
     suggested_member_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("team_members.id"))
+    # The lead when the request was approved: excluded from the next recommendation (D132).
+    outgoing_member_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("team_members.id"))
     status: Mapped[LeadChangeStatus] = mapped_column(
         _pg_enum(LeadChangeStatus, "lead_change_status"),
         nullable=False,

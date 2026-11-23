@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Literal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -417,8 +417,39 @@ def _bid_out(bid: Bid, context: dict[uuid.UUID, tuple[str, str]]) -> BidOut:
     )
 
 
+async def _reopened_project(ctx: Ctx, project_id: uuid.UUID, slot_id: uuid.UUID) -> Project | None:
+    """A project whose `slot_id` is reopened for bids (D126), or None. Bids are then accepted for
+    that slot only, and only from developers with no other non-withdrawn bid on it (D137)."""
+    project = await projrepo.get_project(ctx.db, project_id)
+    if project is None or project.status not in (
+        ProjectStatus.TEAM_PENDING,
+        ProjectStatus.IN_PROGRESS,
+    ):
+        return None
+    slot = next((s for s in await projrepo.load_slots(ctx.db, project_id) if s.id == slot_id), None)
+    if slot is None or slot.reopened_until is None or slot.reopened_until <= ctx.now:
+        raise DomainError(
+            "Only the reopened place of this project takes bids now.",
+            code=ErrorCode.INVALID_STATE,
+        )
+    earlier = await ctx.db.scalar(
+        select(func.count())
+        .select_from(Bid)
+        .where(Bid.project_id == project_id, Bid.developer_id == ctx.uid,
+               Bid.status != BidStatus.WITHDRAWN)
+    )  # fmt: skip
+    if earlier:
+        raise DomainError(
+            "You already bid on this project, so you can't bid on its reopened place.",
+            code=ErrorCode.INVALID_STATE,
+        )
+    return project
+
+
 async def create_bid(ctx: Ctx, project_id: uuid.UUID, body: BidCreate) -> BidOut:
-    project = await _bidding_project(ctx, project_id)
+    project = await _reopened_project(ctx, project_id, body.slot_id) or await _bidding_project(
+        ctx, project_id
+    )
     slots = {s.id: s for s in await projrepo.load_slots(ctx.db, project_id)}
     if body.slot_id not in slots:
         raise DomainError(
@@ -860,11 +891,19 @@ async def evaluate(
     terms: Terms | None = None,
     *,
     advancement: Advancement = _ADVANCEMENT,
+    bids: Sequence[Bid] | None = None,
 ) -> Evaluation:
     """Run Algorithm 1 over a project's standing (ACTIVE or INELIGIBLE) bids, optionally under
     changed `terms` (a what-if for the too-few-bids actions) and with the advancement choice of a
-    formation preset. Ctx-free so the deadline job and the formation service can reuse it."""
-    bids = list(await repo.list_standing_for_project(db, project.id))
+    formation preset. Ctx-free so the deadline job and the formation and repair services can reuse
+    it."""
+    # `bids`: judge these instead of the standing ones — team repair judges NOT_SELECTED bids
+    # under current reputation and availability (D128).
+    bids = (
+        list(bids)
+        if bids is not None
+        else list(await repo.list_standing_for_project(db, project.id))
+    )
     slots = list(await projrepo.load_slots(db, project.id))
     terms = terms or project_terms(project, slots, settings)
     dev_ids = [b.developer_id for b in bids]

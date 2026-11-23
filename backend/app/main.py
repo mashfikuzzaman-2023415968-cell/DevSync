@@ -35,12 +35,14 @@ from app.api.v1 import (
     jobs,
     marketplace,
     me,
+    notifications,
     profiles,
     projects,
     public,
     reputation,
     role_assessments,
     skill_tests,
+    team,
 )
 from app.core.auth_middleware import CsrfMiddleware, GlobalRateLimitMiddleware, SessionMiddleware
 from app.core.config import (
@@ -200,6 +202,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         bids,
         reputation,
         formation,
+        team,
+        notifications,
         jobs,
     ):
         app.include_router(module.router, prefix=API_PREFIX)

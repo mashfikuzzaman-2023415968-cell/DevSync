@@ -27,6 +27,8 @@ from app.integrations.email import build_message, send_via_smtp
 from app.jobs.runs import prune_runs, run_recorded
 from app.models.foundation import IdempotencyKey
 from app.models.identity import EmailOutbox, EmailToken, OtpCode, OutboxStatus, Session
+from app.services import repair as repair_svc
+from app.services import team as team_svc
 
 log = get_logger(__name__)
 BATCH_SIZE = 20
@@ -126,8 +128,12 @@ def _scrubbed(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 async def expire_records() -> dict[str, int]:
-    """Delete old sessions (30 days after expiry), expired tokens, OTPs and idempotency keys."""
+    """Delete old sessions (30 days after expiry), expired tokens, OTPs and idempotency keys;
+    send unsent invitations and expire overdue ones (D123, §11: invitations first); close
+    reopened slots whose 48 h ended (D126)."""
     now = get_clock().now()
+    team_counts = await team_svc.expire_due(now)
+    team_counts["slots_closed"] = await repair_svc.close_reopened(now)
     async with open_session(DbContext.system(), job=True) as db:
         sessions = await db.execute(
             delete(Session).where(Session.expires_at < now - SESSION_RETENTION)
@@ -149,6 +155,7 @@ async def expire_records() -> dict[str, int]:
     }
     # Old job run records go with the rest of the expired rows (§11 maintenance).
     counts.update(await prune_runs(now))
+    counts.update(team_counts)
     return counts
 
 

@@ -39,8 +39,10 @@ from app.algorithms.filtering import Advancement
 from app.core import idempotency, task_queue
 from app.core.audit import write_audit
 from app.core.authz import authorize
+from app.core.clock import get_clock
 from app.core.errors import DomainError, ErrorCode, InvalidStateTransition, NotFoundError
 from app.core.logging import get_logger
+from app.core.settings_cache import active_settings
 from app.db.context import DbContext
 from app.db.session import open_session
 from app.models.bidding import AvailabilityReservation, Bid, BidStatus, ReservationStatus
@@ -72,6 +74,7 @@ from app.schemas.formation import (
 from app.schemas.platform_settings import PlatformSettingsValues
 from app.services import bids as bids_svc
 from app.services import platform_settings
+from app.services import team as team_svc
 from app.services.context import Ctx
 from app.services.notifications import notify
 
@@ -204,6 +207,13 @@ async def build_snapshot(
     by_id = {str(b.id): b for b in ev.bids}
     inputs = {i.bid_id: i for i in ev.inputs}
     shortlisted = [bid_id for ids in ev.result.shortlisted.values() for bid_id in ids]
+    # D125: developers with 10 invitations waiting for an answer aren't considered.
+    pending = await team_svc.pending_invitations(
+        db, [by_id[b].developer_id for b in shortlisted], get_clock().now()
+    )
+    cap = team_svc.MAX_PENDING_INVITATIONS
+    busy = [b for b in shortlisted if pending.get(by_id[b].developer_id, 0) >= cap]
+    shortlisted = [b for b in shortlisted if b not in set(busy)]
     names = dict(
         (await db.execute(
             select(User.id, User.display_name).where(
@@ -247,7 +257,8 @@ async def build_snapshot(
         "deadline_days": project.deadline_days,
         "budget_after_fee_paisa": ev.proj.budget_after_fee_paisa,
         "not_shortlisted": list(ev.result.not_shortlisted),
-        "rejected": [[bid_id, reason.value] for bid_id, reason in ev.result.rejected],
+        "rejected": [[bid_id, reason.value] for bid_id, reason in ev.result.rejected]
+        + [[bid_id, "TOO_MANY_PENDING_INVITATIONS"] for bid_id in busy],
         "relaxations": [{"step": r.step, "p0": r.p0, "c0": r.c0} for r in ev.result.relaxations],
         "eligible": len(ev.result.eligible),
         "too_few": ev.result.too_few,
@@ -563,10 +574,22 @@ async def confirm(ctx: Ctx, run_id: uuid.UUID) -> ConfirmOut:
                 "A developer in this team withdrew their bid. Run team formation again.",
                 code=ErrorCode.INVALID_STATE,
             )
+        # D125: a developer who meanwhile reached 10 pending invitations can't be invited.
+        busy = await team_svc.pending_invitations(
+            db, [by_id[b].developer_id for b in team_bids], ctx.now
+        )
+        if any(n >= team_svc.MAX_PENDING_INVITATIONS for n in busy.values()):
+            raise DomainError(
+                "A developer in this team now has 10 invitations waiting for an answer. "
+                "Run team formation again.",
+                code=ErrorCode.LIMIT_REACHED,
+            )
         team, not_selected = await _create_team(db, project, run.id, set(team_bids),
                                                 standing=standing, now=ctx.now)  # fmt: skip
         locked.status = ProjectStatus.TEAM_PENDING
         locked.version += 1
+        # Phase 8 (D123): invitations go out now and the 48 h clock starts.
+        await team_svc.send_invitations(db, locked, team, ctx.now, await active_settings(db))
         for bid in not_selected:
             notify(db, bid.developer_id, "BID_NOT_SELECTED", title="Your bid was not selected",
                    body=f"The client formed a team for “{project.title}” without your bid. "

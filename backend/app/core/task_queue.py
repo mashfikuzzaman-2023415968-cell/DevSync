@@ -29,6 +29,8 @@ TASKS: dict[str, TaskSpec] = {
         "app.jobs.formation_jobs.formation_explanations", "default", 120, 1
     ),
     "formation.verify": TaskSpec("app.jobs.formation_jobs.formation_verify", "default", 120, 0),
+    # §11: decline/expiry/leave; 60 s, one retry (D128).
+    "formation.repair": TaskSpec("app.jobs.formation_jobs.formation_repair", "default", 60, 1),
 }
 
 

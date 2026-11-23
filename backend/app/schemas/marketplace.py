@@ -28,7 +28,8 @@ class ProjectCard(BaseModel):
     bidding_deadline: datetime | None
     skills: list[str]
     created_at: datetime
-    open_for_bids: bool  # BIDDING and before the bidding deadline (server time)
+    open_for_bids: bool  # BIDDING and before the bidding deadline, or a reopened place (D126)
+    open_places: int = 0  # places reopened for 48 h after team repair found nobody (D126)
 
 
 class RecommendedProject(BaseModel):
