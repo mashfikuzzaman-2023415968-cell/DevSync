@@ -337,6 +337,13 @@ function ProjectResult({ project, mine }: { project: Card_; mine: Set<string> })
           <p className="font-semibold tabular text-text">{formatMoney(project.budget_paisa)}</p>
           <p className="text-body-sm text-text-muted">{formatDays(project.deadline_days)}</p>
           <p className="text-caption text-text-subtle">{project.team_size} people</p>
+          {project.open_places > 0 ? (
+            <Badge tone="warning" className="mt-2">
+              {project.open_places === 1
+                ? "1 open place"
+                : `${String(project.open_places)} open places`}
+            </Badge>
+          ) : null}
         </div>
       </div>
     </Card>

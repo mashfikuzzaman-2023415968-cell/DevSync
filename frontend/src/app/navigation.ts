@@ -44,7 +44,6 @@ const notifications: NavItem = {
   label: "Notifications",
   to: "/notifications",
   icon: Bell,
-  phase: 8,
 };
 const settings: NavItem = {
   label: "Settings",
@@ -90,7 +89,7 @@ const client: NavItem[] = [
     keywords: ["new", "plan"],
   },
   { label: "My projects", to: "/client/projects", icon: FolderKanban },
-  { label: "Teams", to: "/client/teams", icon: Users, phase: 8 },
+  { label: "Teams", to: "/client/teams", icon: Users },
   { label: "Payments", to: "/client/payments", icon: CreditCard, phase: 10, keywords: ["escrow"] },
   { label: "Disputes", to: "/client/disputes", icon: BriefcaseBusiness, phase: 12 },
   { label: "Analytics", to: "/client/analytics", icon: ChartColumn, phase: 11 },

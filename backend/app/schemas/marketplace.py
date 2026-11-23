@@ -49,6 +49,7 @@ class SlotCard(BaseModel):
     skill: str
     skill_id: uuid.UUID
     count: int
+    reopened: bool = False  # open for bids for 48 h after team repair found nobody (D126)
 
 
 class ProjectClient(BaseModel):

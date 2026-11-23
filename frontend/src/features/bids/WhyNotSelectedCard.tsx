@@ -19,6 +19,8 @@ const GAP_TITLE: Record<string, string> = {
   cost: "Price made the biggest difference",
 };
 const REASON_TEXT: Record<string, string> = {
+  TOO_MANY_PENDING_INVITATIONS:
+    "You had 10 invitations waiting for an answer, the most allowed at once; answer them to be considered.",
   NOT_SELECTED: "Your bid was eligible, and another combination of developers scored higher.",
   NOT_SHORTLISTED:
     "Your bid was eligible but didn’t make the shortlist for this role, so it wasn’t in the search.",

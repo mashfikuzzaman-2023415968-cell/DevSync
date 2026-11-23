@@ -32,6 +32,7 @@ import { DropdownMenu, Sheet, Tooltip } from "@/components/ui/Overlay";
 import { useMediaQuery, usePreferences } from "@/design/preferences";
 import { useMotion } from "@/design/useMotion";
 import { useLogout, useMe } from "@/features/auth/api";
+import { useUnreadCount } from "@/features/notifications/api";
 import { cn } from "@/lib/cn";
 import { readPref, writePref } from "@/lib/storage";
 import { CommandPalette, useCommandShortcut } from "./CommandPalette";
@@ -176,6 +177,8 @@ function AccountMenu({ profilePath }: { profilePath: string }) {
 
 export function AppShell({ nav, children }: { nav: ShellNav; children?: ReactNode }) {
   const me = useMe();
+  // The bell's count (D122): re-read on focus and every 60 s while the page is visible.
+  const unread = useUnreadCount(Boolean(me.data)).data?.unread ?? 0;
   const location = useLocation();
   const navigate = useNavigate();
   const logout = useLogout();
@@ -229,12 +232,22 @@ export function AppShell({ nav, children }: { nav: ShellNav; children?: ReactNod
               <Search aria-hidden="true" />
             </IconButton>
             <IconButton
-              aria-label="Notifications"
+              aria-label={unread > 0 ? `Notifications, ${String(unread)} unread` : "Notifications"}
+              className="relative"
               onClick={() => {
                 void navigate("/notifications");
               }}
             >
               <Bell aria-hidden="true" />
+              {unread > 0 ? (
+                <span
+                  aria-hidden="true"
+                  className="absolute right-1 top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-4 text-on-primary tabular"
+                  data-volatile
+                >
+                  {unread > 9 ? "9+" : unread}
+                </span>
+              ) : null}
             </IconButton>
             <AccountMenu profilePath={profilePath} />
           </div>

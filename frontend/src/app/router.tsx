@@ -5,7 +5,7 @@
  * Development-only tools (`/dev/ui-kit`, `/__stills`) are compiled out of production builds.
  */
 import { lazy, Suspense } from "react";
-import { createBrowserRouter, type RouteObject } from "react-router";
+import { createBrowserRouter, Navigate, type RouteObject } from "react-router";
 import { PageSkeleton } from "@/components/shell/PageSkeleton";
 import {
   ComingSoonPage,
@@ -266,6 +266,20 @@ export const routes: RouteObject[] = [
             }),
           },
           {
+            path: "client/projects/:id/team",
+            handle: { title: "Team" },
+            lazy: async () => ({
+              Component: (await import("@/features/team/ClientTeamPage")).default,
+            }),
+          },
+          {
+            path: "client/teams",
+            handle: { title: "Teams" },
+            lazy: async () => ({
+              Component: (await import("@/features/team/TeamsPage")).default,
+            }),
+          },
+          {
             path: "client/projects/:id/formation",
             handle: { title: "Team formation" },
             lazy: async () => ({
@@ -289,7 +303,22 @@ export const routes: RouteObject[] = [
               Component: (await import("@/features/account/SettingsPage")).default,
             }),
           },
-          ...upcoming("/notifications"),
+          {
+            path: "notifications",
+            handle: { title: "Notifications" },
+            lazy: async () => ({
+              Component: (await import("@/features/notifications/NotificationsPage")).default,
+            }),
+          },
+          // The project workspace (D120): the Team tab now, the rest in Phase 9.
+          { path: "w/:projectId", element: <Navigate to="team" replace /> },
+          {
+            path: "w/:projectId/team",
+            handle: { title: "Team" },
+            lazy: async () => ({
+              Component: (await import("@/features/workspace/WorkspaceTeamPage")).default,
+            }),
+          },
         ],
       },
       {

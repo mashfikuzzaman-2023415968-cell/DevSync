@@ -132,9 +132,10 @@ describe("ClientHome", () => {
       "href",
       "/client/projects/form/bids",
     );
-    expect(within(card).getByRole("link", { name: "View plan: Project run" })).toHaveAttribute(
+    // Phase 8: a project in progress opens its workspace (D120).
+    expect(within(card).getByRole("link", { name: "Open workspace: Project run" })).toHaveAttribute(
       "href",
-      "/client/projects/run/plan",
+      "/w/run/team",
     );
     expect(within(card).getByText(/bids close 2 Nov 2026/)).toBeInTheDocument();
     expect(within(card).getByRole("link", { name: "My projects" })).toHaveAttribute(

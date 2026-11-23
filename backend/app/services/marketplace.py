@@ -578,8 +578,16 @@ async def get_public(
         .where(ProjectSlot.project_id == project_id)
         .order_by(Skill.name)
     )
+    at = now or get_clock().now()
     slots = [
-        SlotCard(id=s.id, label=s.label, skill=name, skill_id=s.skill_id, count=s.count)
+        SlotCard(
+            id=s.id,
+            label=s.label,
+            skill=name,
+            skill_id=s.skill_id,
+            count=s.count,
+            reopened=s.reopened_until is not None and s.reopened_until > at,
+        )
         for s, name in rows
     ]
     milestones: list[Milestone] = []
@@ -587,7 +595,6 @@ async def get_public(
     if project.current_baseline_id is not None:  # published: the plan is fixed (§8)
         milestones = list(await projrepo.load_milestones(db, project_id))
         deps = list(await projrepo.load_dependencies(db, project_id))
-    at = now or get_clock().now()
     card = _card(project, [sc.skill for sc in slots], at,
                  (await _open_places(db, [project.id], at)).get(project.id, 0))  # fmt: skip
     return ProjectDetail(

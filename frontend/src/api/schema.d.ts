@@ -6135,6 +6135,11 @@ export interface components {
       id: string;
       /** Label */
       label: string;
+      /**
+       * Reopened
+       * @default false
+       */
+      reopened: boolean;
       /** Skill */
       skill: string;
       /**

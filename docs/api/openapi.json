@@ -8958,6 +8958,11 @@
             "title": "Label",
             "type": "string"
           },
+          "reopened": {
+            "default": false,
+            "title": "Reopened",
+            "type": "boolean"
+          },
           "skill": {
             "title": "Skill",
             "type": "string"

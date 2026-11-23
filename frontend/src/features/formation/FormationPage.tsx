@@ -202,7 +202,10 @@ function Formation({
       />
       {confirmed ? (
         <Alert tone="success" title="Team confirmed" className="mb-6">
-          The developers’ invitations go out next. Bids that weren’t chosen were told why.
+          The developers have 48 hours to accept. Bids that weren’t chosen were told why.{" "}
+          <Link to={`/client/projects/${project.id}/team`} className="font-medium text-primary underline">
+            Manage your team
+          </Link>
         </Alert>
       ) : null}
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
@@ -606,7 +609,7 @@ function Result({
           <ConfirmDialog
             destructive={false}
             title="Confirm this team?"
-            description={`${String(result.team.length)} developers will be invited (invitations go out next). The other bids are told they weren’t selected, and no more runs can be made.`}
+            description={`${String(result.team.length)} developers are invited and have 48 hours to accept. The other bids are told they weren’t selected, and no more runs can be made.`}
             confirmLabel="Confirm team"
             onConfirm={async () => {
               await confirm.mutateAsync(run.id);

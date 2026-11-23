@@ -19,6 +19,8 @@ const CHUNKS: Record<string, () => Promise<unknown>> = Object.assign(Object.crea
   "/client": () => import("@/features/home/ClientHome"),
   "/client/projects": () => import("@/features/projects/MyProjectsPage"),
   "/client/projects/new": () => import("@/features/projects/CreateProjectPage"),
+  "/client/teams": () => import("@/features/team/TeamsPage"),
+  "/notifications": () => import("@/features/notifications/NotificationsPage"),
   "/settings": () => import("@/features/account/SettingsPage"),
   // A null prototype, so "constructor" or "__proto__" from a crafted link is not a chunk.
 }) as Record<string, () => Promise<unknown>>;
