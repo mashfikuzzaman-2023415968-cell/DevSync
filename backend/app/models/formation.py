@@ -163,6 +163,8 @@ class TeamMember(UUIDPrimaryKey, Timestamps, Base):
     joined_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     left_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     left_reason: Mapped[str | None] = mapped_column(Text)
+    # Declined the lead role on this project (D131): skipped by the recommendation from then on.
+    lead_declined_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         UniqueConstraint("team_id", "developer_id", name="uq_team_members_team_developer"),
@@ -202,5 +204,147 @@ class Invitation(UUIDPrimaryKey, Timestamps, Base):
         CheckConstraint("(sent_at IS NULL) = (expires_at IS NULL)", name="expiry_iff_sent"),
         CheckConstraint(
             "(responded_at IS NULL) = (response IS NULL)", name="response_iff_answered"
+        ),
+    )
+
+
+class LeadChangeStatus(enum.StrEnum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    WITHDRAWN = "WITHDRAWN"
+
+
+class RepairStatus(enum.StrEnum):
+    """Team repair proposal lifecycle (D128)."""
+
+    COMPUTING = "COMPUTING"
+    READY = "READY"
+    NO_CANDIDATES = "NO_CANDIDATES"
+    CHOSEN = "CHOSEN"
+    SUPERSEDED = "SUPERSEDED"
+    CANCELLED = "CANCELLED"
+
+
+class RemovalBasis(enum.StrEnum):
+    INACTIVITY = "INACTIVITY"  # ≥ 10 days without activity (signal from Phase 9, D121)
+    DISPUTE = "DISPUTE"  # a linked dispute (Phase 12)
+
+
+class RemovalStatus(enum.StrEnum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+
+class LeadChangeRequest(UUIDPrimaryKey, Timestamps, Base):
+    """A member asks the client to change the lead (§1.6 rule 4, D132)."""
+
+    __tablename__ = "lead_change_requests"
+
+    team_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("teams.id"), nullable=False)
+    requested_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    suggested_member_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("team_members.id"))
+    status: Mapped[LeadChangeStatus] = mapped_column(
+        _pg_enum(LeadChangeStatus, "lead_change_status"),
+        nullable=False,
+        server_default=LeadChangeStatus.PENDING.value,
+    )
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    decision_reason: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (
+        CheckConstraint("char_length(reason) BETWEEN 20 AND 500", name="reason_length"),
+        CheckConstraint(
+            "decision_reason IS NULL OR char_length(decision_reason) BETWEEN 20 AND 500",
+            name="decision_reason_length",
+        ),
+        Index("ix_lead_change_requests_team", "team_id", "created_at"),
+        Index(
+            "one_pending_lead_change_per_member",
+            "team_id",
+            "requested_by",
+            unique=True,
+            postgresql_where=text(  # forbidden-ok: constant DDL predicate
+                "status = 'PENDING'"
+            ),
+        ),
+    )
+
+
+class RepairProposal(UUIDPrimaryKey, Timestamps, Base):
+    """Team repair for one departed member (§9.9, D128): frozen inputs, ranked candidates."""
+
+    __tablename__ = "repair_proposals"
+
+    team_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("teams.id"), nullable=False)
+    departed_member_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("team_members.id"), nullable=False
+    )
+    status: Mapped[RepairStatus] = mapped_column(
+        _pg_enum(RepairStatus, "repair_status"),
+        nullable=False,
+        server_default=RepairStatus.COMPUTING.value,
+    )
+    settings_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    seed: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    params: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    candidate_snapshot: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    impact: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    candidates: Mapped[list[Any] | None] = mapped_column(JSONB)
+    reasons: Mapped[list[Any] | None] = mapped_column(JSONB)
+    chosen_bid_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("bids.id"))
+    job_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("jobs.id", ondelete="SET NULL"))
+
+    __table_args__ = (
+        CheckConstraint("seed >= 0", name="seed_non_negative"),
+        Index("ix_repair_proposals_team", "team_id", "created_at"),
+        Index(
+            "one_open_repair_per_departure",
+            "departed_member_id",
+            unique=True,
+            postgresql_where=text(  # forbidden-ok: constant DDL predicate
+                "status IN ('COMPUTING', 'READY', 'NO_CANDIDATES')"
+            ),
+        ),
+    )
+
+
+class MemberRemovalRequest(UUIDPrimaryKey, Timestamps, Base):
+    """The client asks an admin to remove a member (§8, D121)."""
+
+    __tablename__ = "member_removal_requests"
+
+    team_member_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("team_members.id"), nullable=False)
+    requested_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    basis: Mapped[RemovalBasis] = mapped_column(
+        _pg_enum(RemovalBasis, "removal_basis"), nullable=False
+    )
+    status: Mapped[RemovalStatus] = mapped_column(
+        _pg_enum(RemovalStatus, "removal_status"),
+        nullable=False,
+        server_default=RemovalStatus.PENDING.value,
+    )
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    decision_reason: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (
+        CheckConstraint("char_length(reason) BETWEEN 20 AND 500", name="reason_length"),
+        CheckConstraint(
+            "decision_reason IS NULL OR char_length(decision_reason) BETWEEN 20 AND 500",
+            name="decision_reason_length",
+        ),
+        Index("ix_member_removal_requests_member", "team_member_id"),
+        Index(
+            "one_pending_removal_per_member",
+            "team_member_id",
+            unique=True,
+            postgresql_where=text(  # forbidden-ok: constant DDL predicate
+                "status = 'PENDING'"
+            ),
         ),
     )

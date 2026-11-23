@@ -161,9 +161,13 @@ class ProjectSlot(UUIDPrimaryKey, Timestamps, Base):
     )
     label: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     count: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default="1")
+    # A slot reopened for 48 h after a repair found no candidate (D126): bids for this slot only.
+    reopened_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reopen_count: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default="0")
 
     __table_args__ = (
         CheckConstraint("count >= 1", name="count_positive"),
+        CheckConstraint("reopen_count BETWEEN 0 AND 2", name="reopen_count_range"),
         Index("ix_project_slots_project_id", "project_id"),
         Index("ix_project_slots_skill_id", "skill_id"),
     )
