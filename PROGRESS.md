@@ -2,12 +2,12 @@
 
 ## Current state
 - **Current owner:** Raisa Tabassum (frontend developer), Phases 6–7, from 2026-11-21 (hand-off from Taeen: `docs/handoffs/handoff-02-taeen-to-raisa.md`; paste-in prompt `docs/handoffs/handoff-02-start-prompt.md`).
-- **Current phase:** 6 (reputation engine and market simulator), built on branch `phase-6`, **gate PASS 2026-11-22** on Taeen's laptop (native Linux), merged to `main`, tagged `phase-6`. Plan `docs/plans/phase-06.md` (approved 2026-11-21), decisions D83–D102, security review `docs/security-reviews/phase-06.md` (0 unresolved high).
-- **Last gate result:** Phase 6 PASS, 2026-11-22 06:16 Asia/Dhaka (`runs/gate-p6e.log`): backend 1,857 (96.7%), security 567, contract 531, frontend 527 (80.6%), E2E 74, a11y 6, visual 113 (208 baselines), Lighthouse desktop 100/100/96/100 and mobile 94/100/96/100, regression guard clean. Two fixes were needed (session log 2026-11-22).
-- **Verified on Raisa's laptop (WSL 2, 2026-11-21):** backend suite on the Phase 6 code: everything passes except `tests/security/test_rate_limits.py::test_admin_limit_is_per_user` under full-suite load (see Known issues); algorithms + property 292, API/engine/RLS/job 49, frontend 525, Phase 6 E2E 3/3, stage-1 and stage-2 seeds, `alembic` upgrade/downgrade/check, OpenAPI contract 0 problems.
+- **Current phase:** 7 (team formation) is **done**: built by Raisa on `phase-7`, **gate PASS 2026-11-23 21:10 Asia/Dhaka** on Taeen's laptop (native Linux), merged to `main`, tagged `phase-7`. Plan `docs/plans/phase-07.md`, decisions D103–D117, security review `docs/security-reviews/phase-07.md` (0 unresolved high). Next: Phase 8 (invitations, lead selection, team repair).
+- **Last gate result:** Phase 7 PASS, 2026-11-23 21:10 Asia/Dhaka (`runs/gate-p7i.log`): backend 2,044 (96.1%), security 585, contract 576, frontend 545 (81.0%), E2E 87, a11y 31, visual 125 (220 baselines), Lighthouse desktop 100/100/96/100 and mobile 94/100/96/100, GPU 5/5, algorithm budgets met, regression guard clean. Seven fixes were needed (D117, session log 2026-11-23).
+- **Verified on Raisa's laptop (WSL 2, 2026-11-22/23):** backend security + api + integration + jobs 1,533 passed after one fix (the `formation_run` rate-limit test was missing); algorithms/property/unit all pass (explain, bpso, fitness, baselines, E1 script, SSE paths, job events); perf budgets (PSO |S| = 200, N = 10 ≈ 2.5 s < 5 s; exact 18 candidates 0.04 s < 3 s); E1 298 instances 98.3 % optimal, mean gap 0.042 %; edge 24/24 (SSE location through Nginx); frontend 545 Vitest; Phase 7 E2E 1/1; axe and viewport matrix on the two new screens; 12 new visual baselines (`team-formation`, `bid-not-selected`) and the 6 `homepage-fairness` baselines updated for the real cost-of-fairness line; the rest of the visual suite matches except two Phase 4–5 assessment screens in dark mode with sub-pixel differences on WSL (untouched code, left for the native-Linux gate); stage-2 seed → FORMING and `formation_check.py` reproduces the fixture team; paper alignment Eq. 1–19; OpenAPI contract 0 problems; `alembic` upgrade/downgrade/check; `check_rls` 0 unprotected.
 - **In progress:** nothing.
-- **Very next step:** Raisa pulls `main` (it has the two gate fixes), branches `phase-7` from it, and starts the Phase 7 plan in Plan Mode. Gates for Phase 7 run on a native Linux laptop with an Intel/AMD GPU (step 16 can't pass on WSL 2).
-- **Open human tasks:** review the 128 drafted test questions (D34); tester's human check of the Phase 3, 4 and 5 security reviews; sanity-check D39 (simulated payment-method verification).
+- **Very next step:** Raisa pulls `main` (it has the seven gate fixes, D117), branches `phase-8` from it and plans Phase 8 in Plan Mode (invitations are already recorded unsent, D108). Gates run on Taeen's native Linux laptop, plugged into the original Dell charger.
+- **Open human tasks:** review the 128 drafted test questions (D34); tester's human check of the Phase 3–7 security reviews; sanity-check D39 (simulated payment-method verification); decide whether the homepage should show the real cost of fairness at dial 1 (16.2 % on the seed, D113) as is.
 
 ## Phase table
 | Phase | Owner | Status | Gate | Date | Tag |
@@ -19,12 +19,22 @@
 | 4 Projects & CPM | Salwa (review fixes: Taeen) | done | PASS | 2026-10-20 | phase-4 |
 | 5 Marketplace & filtering | Salwa (gate fixes: Taeen) | done | PASS | 2026-10-21 | phase-5 |
 | 6 Reputation & simulator | Raisa (gate fixes: Taeen) | done | PASS | 2026-11-22 | phase-6 |
-| 7–15 | — | not started | — | — | — |
+| 7 Team formation | Raisa (gate fixes: Taeen) | done | PASS | 2026-11-23 | phase-7 |
+| 8–15 | — | not started | — | — | — |
 
 ## Gate log (newest first, appended by `make gate`)
 | Finished (UTC) | Phase | Result | Tests |
 |---|---|---|---|
 <!-- gate-log -->
+| 2026-11-23T15:09:43+00:00 | phase 7 | PASS | backend 2044 / frontend 545 tests |
+| 2026-11-23T13:45:54+00:00 | phase 7 | FAIL (step 16) | backend 2044 / frontend 545 tests |
+| 2026-11-23T12:19:52+00:00 | phase 7 | FAIL (step 13) | backend 2044 / frontend 545 tests |
+| 2026-11-23T11:07:15+00:00 | phase 7 | FAIL (step 9) | backend - / frontend - tests |
+| 2026-11-23T09:58:24+00:00 | phase 7 | FAIL (step 7) | backend - / frontend - tests |
+| 2026-11-23T09:54:12+00:00 | phase 7 | FAIL (step 9) | backend - / frontend - tests |
+| 2026-11-23T06:26:30+00:00 | phase 7 | FAIL (step 9) | backend - / frontend - tests |
+| 2026-11-23T04:45:46+00:00 | phase 7 | FAIL (step 7) | backend - / frontend - tests |
+| 2026-11-23T04:02:46+00:00 | phase 7 | FAIL (step 6) | backend - / frontend - tests |
 | 2026-11-22T00:15:26+00:00 | phase 6 | PASS | backend 1857 / frontend 527 tests |
 | 2026-11-21T22:55:00+00:00 | phase 6 | FAIL (step 13) | backend 1857 / frontend 527 tests |
 | 2026-11-21T21:54:13+00:00 | phase 6 | FAIL (step 11) | backend 1850 / frontend - tests |
@@ -128,7 +138,8 @@
 - Existing dev databases: run `make migrate` (migration 0002); create an admin with `make create-admin`.
 - Phase 5 known limitations (D54): TOO_SLOW compares with the whole-project deadline, not the slot's milestones (the paper's simplification); availability must be re-checked when invitations are accepted (Phase 8); bid prices stay visible to the client during bidding (spec), sealed from other developers.
 - Docker's build cache can keep an old `apt-get` layer: on 2026-10-26 a cached layer held a `libbrotli1` with a HIGH CVE that Trivy failed. Build images for a demo or a deployment with `--no-cache` (the demo stack was rebuilt that way on 2026-10-27).
-- The full gate needs about 3 GB of free memory (7 GB laptop): close Chrome first. Under swap pressure WebKit E2E runs time out, and those failures say nothing about the code.
+- The full gate needs about 3 GB of free memory (7 GB laptop): close Chrome first.
+- **Gate laptop power (2026-11-23):** on a weak or loose charger the Dell G15 reports "Not charging" and holds the CPU at ~400 MHz; step 9 then can't finish in 60 minutes. Use the original Dell barrel charger and check `cat /sys/class/power_supply/BAT*/status` before a gate. Start long runs with `systemd-inhibit --what=sleep:idle:handle-lid-switch` so closing the lid doesn't suspend them. Under swap pressure WebKit E2E runs time out, and those failures say nothing about the code.
 
 - **Gate step 16 can't pass on WSL 2 (checked 2026-11-21).** `/dev/dri/renderD128` exists under WSLg, but inside the GPU Playwright image Chromium falls back to `llvmpipe` (software), and the `@perf|@gpu` tests correctly refuse it (5 failed). The real GPU is reached through `/dev/dxg` (Direct3D 12); the image has no Vulkan-on-D3D12 driver. Run the gate on a native Linux laptop (D28), or decide (with Taeen) whether to extend the GPU image for WSL.
 - **Load flakes seen on this WSL laptop (2026-11-21), all Phase 1–5 screens, none changed:** `login-totp` responsive (the sign-in CAPTCHA asked to "complete the verification check again"), `app shell light 390` visual (profile page slow to load) and `assessment-required light 768` visual (a 401 while its setup published a project). Each passed 2/2 when re-run alone, matching its baseline. Watch them in the gate.
@@ -136,6 +147,18 @@
 - **`test_admin_limit_is_per_user` is timing-sensitive on slow machines.** It sends 300 admin requests that must all land inside a 60-second window. Alone on this WSL laptop it passes 3/3 but takes 52–54 s; under the full suite it went over and failed. Not a Phase 6 change; not modified. Watch it in the gate on a faster machine; if it fails there too, fix the test's timing at the cause (not by loosening the limit).
 
 ## Session log (newest first)
+### 2026-11-23 — Taeen (with Claude Code), Phase 7 gate on the native Linux laptop
+- Ran `make gate PHASE=7` on Raisa's `phase-7` (`c37fb9e`); nine full runs. Fixes (D117, none in the formation logic, nothing relaxed): `# forbidden-ok` on the `one_active_lead_per_team` predicate; 46 unit tests for `app/core/task_queue.py` and `app/services/formation_runner.py`; Nginx image rebuilt `--no-cache --pull` (krb5 CVEs); `test_concurrent_writers_keep_one_unbroken_chain` opens its 30 connections five at a time and releases the writers at a barrier (asyncpg's Python SCRAM made 30 simultaneous connects exceed the 3 s connect timeout); `check_paper_alignment` test fixture extended to Eq. 13–19 and a missing formation module reported, not raised; E2E auth helpers wait out Nginx's `auth` zone (HTML 429 only) and `csrfHeaders` fails clearly; the GPU homepage test expects the real cost-of-fairness chip (D113).
+- Not code: one run stopped at step 7 on a network drop; one was paused two hours by a closed lid (runs now also block `handle-lid-switch`); two timed out at step 9 because the laptop was on a charger that didn't deliver enough power (battery "Not charging", CPU held at 400 MHz) — fixed by the original Dell charger and a reboot.
+- Run 9: **PHASE 7 GATE: PASS**. Committed, merged to `main`, tagged `phase-7`.
+
+### 2026-11-22 to 2026-11-23 — Raisa (with Claude Code), Phase 7 build
+- Carried over the audit-chain fix (0013, D103) and the per-screen CSP/axe checks (D104).
+- Pure algorithms: fitness Eq. 17–19, binary PSO (Algorithm 2) with repair, exact solver, fairness dial, explanations (risks, comparison, why this team, why not selected with a property-tested price counterfactual), greedy baseline, `run_formation`; presets D115; E1 script.
+- Migration 0014 (runs with immutable inputs, explanations sealed to the bidder, teams, members, unsent invitations; SYSTEM-only writes). Generic jobs API + SSE with an unbuffered Nginx location (D107). Formation service, runner, jobs and endpoints (D106, D108–D110), admin verify with step-up.
+- Frontend: team formation screen (presets, priority sliders, standards, fairness dial, live swarm and convergence, team cards, why this team, comparison, runs, confirm), "why it wasn't selected" card; slider thumbs and breadcrumb links got 44 px touch targets.
+- Stage-2 seed leaves the ordering project FORMING (D116); `formation_check.py` gate check + homepage fairness figures from the real run (D113).
+- Bugs found and fixed while testing: evaluation must run in a SYSTEM session (D50); a sync Redis dependency shared one client across event loops (`loop_redis`); a non-selected bidder couldn't read their explanation (joined to a team RLS hides); touch targets; contribution bars were rose for every cost.
 ### 2026-11-22 — Taeen (with Claude Code), Phase 6 gate on a native Linux laptop
 - Ran `make gate PHASE=6` on Raisa's `phase-6` (`45247ca`). Runs 1–2 stopped at step 9: two rate-limit tests failed under memory pressure, then the step hit its 60-minute limit (the cut-off run finished on its own: 1,850 passed, 0 failed). No test or limit was changed; later runs took 19 minutes.
 - Run 3 failed step 11: schemathesis sent `budget_min=370372298551098867712` to `GET /projects/search`, which overflowed BIGINT and returned a 500 (Phase 5 code). Fixed with `le=10_000_000_000` on `budget_min`/`budget_max` (D102), tests in `tests/security/test_bids.py`, `docs/api/openapi.json` regenerated. The same run flagged `POST /me/external-reviews` for accepting a multipart "wrong type" (a number sent as text, an array sent as a file part, which are indistinguishable from valid input on the wire); it passed alone and in the next two full runs, so it was left as is.

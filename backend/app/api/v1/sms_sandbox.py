@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import JSONResponse
 from redis.asyncio import Redis
 
-from app.api.deps import DbSession, app_settings, now, redis_client
+from app.api.deps import DbSession, app_settings, loop_redis, now, redis_client
 from app.core import csrf
 from app.core.auth_middleware import client_ip, csrf_cookie, session_cookie
 from app.core.config import Settings
@@ -39,7 +39,7 @@ router = APIRouter(prefix=SANDBOX_PREFIX, tags=["dev-sandbox"], include_in_schem
 
 @router.get("/sms", response_model=SandboxSmsList)
 async def list_sms(
-    redis: Annotated[Redis, Depends(redis_client)],
+    redis: Annotated[Redis, Depends(loop_redis)],
     phone: Annotated[str | None, Query(max_length=20, pattern=r"^\+?[0-9 ]*$")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> SandboxSmsList:
@@ -48,7 +48,7 @@ async def list_sms(
 
 
 @router.delete("/sms", status_code=204)
-async def clear_sms(redis: Annotated[Redis, Depends(redis_client)]) -> Response:
+async def clear_sms(redis: Annotated[Redis, Depends(loop_redis)]) -> Response:
     """Empty the inbox."""
     await sms_sandbox.clear_messages(redis)
     return Response(status_code=204)

@@ -31,39 +31,37 @@ test("public screens have no serious accessibility violations @a11y", async ({ p
   expect(found).toEqual([]);
 });
 
-for (const role of ["DEVELOPER", "CLIENT", "ADMIN"] as const) {
-  test(`${role.toLowerCase()} screens have no serious accessibility violations @a11y`, async ({
-    page,
-    baseURL,
-  }) => {
-    await apiSignIn(page, baseURL ?? "", role, "Nadia Rahman");
+// One test per signed-in screen (Phase 6, D100): both colour schemes, the same axe rules, so a
+// slow screen fails on its own and by name instead of exhausting a budget shared by the role.
+for (const s of SIGNED_IN_SCREENS) {
+  test(`${s.name} has no serious accessibility violations @a11y`, async ({ page, baseURL }) => {
+    await apiSignIn(page, baseURL ?? "", s.role ?? "DEVELOPER", "Nadia Rahman");
     const found: string[] = [];
     for (const scheme of ["light", "dark"] as const) {
       await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
-      for (const s of SIGNED_IN_SCREENS.filter((x) => x.role === role)) {
-        await resetLimits(page.request);
-        await page.goto(s.path);
-        await page.waitForLoadState("networkidle");
-        found.push(...(await serious(page)).map((v) => `${s.name} ${scheme}: ${v}`));
-      }
+      await resetLimits(page.request);
+      await page.goto(s.path);
+      await page.waitForLoadState("networkidle");
+      found.push(...(await serious(page)).map((v) => `${s.name} ${scheme}: ${v}`));
     }
     expect(found).toEqual([]);
   });
 }
 
-test("screens that need state have no serious accessibility violations @a11y", async ({
-  page,
-  baseURL,
-}) => {
-  test.setTimeout(240_000);
-  const found: string[] = [];
-  for (const screen of STATEFUL_SCREENS) {
+// One test per stateful screen (Phase 6, D100), same rules and both colour schemes.
+for (const screen of STATEFUL_SCREENS) {
+  test(`${screen.name} has no serious accessibility violations @a11y`, async ({
+    page,
+    baseURL,
+  }) => {
+    test.setTimeout(90_000);
+    const found: string[] = [];
     const reach = await screen.prepare(page, baseURL ?? "");
     for (const scheme of ["light", "dark"] as const) {
       await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
       await openScreen(page, reach);
       found.push(...(await serious(page)).map((v) => `${screen.name} ${scheme}: ${v}`));
     }
-  }
-  expect(found).toEqual([]);
-});
+    expect(found).toEqual([]);
+  });
+}

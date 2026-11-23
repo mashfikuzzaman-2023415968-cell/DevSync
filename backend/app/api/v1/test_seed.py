@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, EmailStr, Field
 from redis.asyncio import Redis
 
-from app.api.deps import app_settings, redis_client
+from app.api.deps import app_settings, loop_redis, redis_client
 from app.core.config import Settings
 from app.schemas.common import StrictRequest
 from app.services.testing import role_attempts, seed
@@ -88,7 +88,7 @@ async def totp_now(secret: Annotated[str, Query(max_length=64)]) -> dict[str, st
 
 
 @router.get("/ratelimits/reset", status_code=204)
-async def reset_rate_limits(redis: Annotated[Redis, Depends(redis_client)]) -> Response:
+async def reset_rate_limits(redis: Annotated[Redis, Depends(loop_redis)]) -> Response:
     """Clear rate-limit and failed-sign-in counters so independent E2E tests from one IP don't
     throttle each other (every browser shares the test runner's address).
 
@@ -128,6 +128,26 @@ async def close_bidding(project_id: uuid.UUID) -> Response:
     if not await seed.close_bidding(project_id):
         raise HTTPException(status_code=404)
     return Response(status_code=204)
+
+
+@router.post("/projects/{project_id}/start-forming", status_code=204)
+async def start_forming(project_id: uuid.UUID) -> Response:
+    """Close bidding now and move the project to FORMING, as the deadline job would (E2E)."""
+    if not await seed.start_forming(project_id):
+        raise HTTPException(status_code=409)
+    return Response(status_code=204)
+
+
+@router.post("/formation-runs/{run_id}/execute")
+async def execute_formation_run(run_id: uuid.UUID) -> dict[str, str]:
+    """Execute a queued team formation run now (E2E: the test stack runs no worker)."""
+    return {"status": await seed.execute_formation_run(run_id)}
+
+
+@router.post("/formation-runs/{run_id}/explanations")
+async def formation_explanations(run_id: uuid.UUID) -> dict[str, int]:
+    """Write a confirmed run's "why not selected" explanations now (E2E)."""
+    return {"explanations": await seed.write_formation_explanations(run_id)}
 
 
 @router.post("/developers/{user_id}/skill-evidence", status_code=204)

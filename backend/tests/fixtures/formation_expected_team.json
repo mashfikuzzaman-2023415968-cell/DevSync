@@ -1,0 +1,18 @@
+{
+  "seed": 20261207,
+  "preset": "balanced",
+  "min_newcomers": 1,
+  "candidates": 10,
+  "team": [
+    "Mehjabin Chowdhury",
+    "Nusrat Jahan",
+    "Sadia Islam",
+    "Tanvir Ahmed"
+  ],
+  "newcomers": [
+    "Mehjabin Chowdhury"
+  ],
+  "fitness": 0.8287,
+  "optimal": true,
+  "cost_of_fairness": 0.1618
+}

@@ -23,7 +23,7 @@ const sidebar: NavItem[] = [
   { label: "Dashboard", to: "/admin", icon: House },
   { label: "Users", to: "/admin/users", icon: Users, phase: 12 },
   { label: "Projects", to: "/admin/projects", icon: FolderKanban, phase: 12 },
-  { label: "Team formation runs", to: "/admin/formation-runs", icon: Workflow, phase: 7 },
+  { label: "Team formation runs", to: "/admin/formation-runs", icon: Workflow, phase: 12 },
   { label: "Role assessments", to: "/admin/assessments", icon: ClipboardCheck },
   { label: "Integrity flags", to: "/admin/flags", icon: Flag, phase: 11 },
   { label: "Platform alerts", to: "/admin/alerts", icon: Siren, phase: 12 },

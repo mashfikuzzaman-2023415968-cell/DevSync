@@ -193,7 +193,11 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
           return (
             <li key={`${c.label}-${String(i)}`} className="flex items-center gap-1">
               {c.to && !last ? (
-                <Link to={c.to} className="rounded-sm hover:text-text hover:underline">
+                // -my-3/py-3: a 44 px tap target on touch screens without changing the line.
+                <Link
+                  to={c.to}
+                  className="-my-3 inline-block rounded-sm py-3 hover:text-text hover:underline"
+                >
                   {c.label}
                 </Link>
               ) : (

@@ -1,20 +1,20 @@
 /**
  * Fairness spotlight (spec §13.11 #7): the newcomer problem and an interactive dial. Moving it
- * from 0 to 2 changes how many places in the example team are kept for newcomers. Until team
- * formation exists (Phase 7) it shows the rule only, no "cost of fairness" figure: homepage
- * numbers must come from a real run (rule 0.2.6, DECISIONS D21).
+ * from 0 to 2 shows how many newcomers the sample project's team includes and what that costs in
+ * team score: figures from a real DevSync run on the seeded project (rule 0.2.6, D21, D113).
  */
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { NewcomerBadge } from "@/components/ui/Display";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { fairnessCost, homepageExample, type DialSetting } from "@/content/homepageExample";
 import { orderingSystem } from "@/content/sample";
 import { instant, spring } from "@/design/motion";
 import { useReducedMotion } from "@/design/preferences";
 import { cn } from "@/lib/cn";
 import { Reveal, RevealItem } from "./Reveal";
 
-type Dial = "0" | "1" | "2";
+type Dial = DialSetting;
 
 const POS = [
   [70, 60],
@@ -68,7 +68,8 @@ function TeamPreview({ newcomers }: { newcomers: number }) {
 
 export function FairnessSpotlight() {
   const [dial, setDial] = useState<Dial>("1");
-  const n = Number(dial);
+  const result = homepageExample.dial[dial];
+  const n = result.newcomers;
   return (
     <section id="fairness" aria-labelledby="fairness-title" className="bg-surface py-24">
       <div className="mx-auto grid max-w-content items-center gap-14 px-4 sm:px-6 lg:grid-cols-2">
@@ -115,11 +116,16 @@ export function FairnessSpotlight() {
               <p className="text-body-sm text-text">
                 {n === 0
                   ? "All four places go to whoever fits best."
-                  : `${String(n)} of 4 places ${n === 1 ? "is" : "are"} kept for a newcomer.`}
+                  : `${String(n)} of 4 places ${n === 1 ? "goes" : "go"} to a newcomer.`}
               </p>
             </div>
+            <p className="mt-3 text-body-sm text-text-muted">
+              {result.cost_of_fairness === 0
+                ? "Cost of fairness: none. The best team already fits."
+                : `Cost of fairness: ${fairnessCost(dial)} of the team score.`}
+            </p>
             <p className="mt-4 text-caption text-text-muted">
-              Example team for the sample “{orderingSystem.title}” project.
+              From a real team formation run on the sample “{homepageExample.project}” project.
             </p>
           </RevealItem>
         </Reveal>

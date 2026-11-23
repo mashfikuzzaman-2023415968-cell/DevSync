@@ -22,7 +22,9 @@ each persona's completed projects (`seed_data/stage2_personas.json`, fixed seed)
 are stored as SIMULATED `reputation_history` rows, and `reputation.recalculate_all` scores them.
 The script asserts the computed values against `tests/fixtures/stage2_reputation_golden.json`
 (so a change can't drift silently; `--write-golden` rewrites it after a deliberate change) and
-that the ordering project still gives the documented 10 eligible bids. The rest of the Demo 2 seed
+that the ordering project still gives the documented 10 eligible bids; then it closes that
+project's bidding through the deadline job, so it is FORMING and ready for team formation
+(Phase 7, D116). The rest of the Demo 2 seed
 (in-progress, completed and disputed projects) arrives with Phases 8–12.
 
 Passwords are random per account and printed once (§18.1); `make demo-reset` saves the output to
@@ -54,6 +56,7 @@ from app.core.config import Settings, get_settings
 from app.core.settings_cache import active_settings
 from app.db.context import DbContext
 from app.db.session import open_session
+from app.jobs import bidding_jobs
 from app.models.bidding import Bid, BidStatus
 from app.models.identity import User
 from app.models.profiles import (
@@ -698,6 +701,23 @@ async def _assert_filter(pid: uuid.UUID, stage: int = 1) -> None:
         )
 
 
+async def _close_ordering_bidding(pid: uuid.UUID) -> None:
+    """Demo 2 forms the team (D116): close the ordering project's bidding the way the deadline
+    job does — verdicts recorded on the bids, the bidders and the client told, BIDDING → FORMING."""
+    async with open_session(DbContext.system(), job=True) as db:
+        project = await db.get(Project, pid)
+        if project is None:
+            raise SystemExit("seeded project missing")
+        project.bidding_deadline = datetime.now(UTC) - timedelta(hours=1)
+        await db.commit()
+    await bidding_jobs.close_due_bidding()
+    async with open_session(DbContext.system(), job=True) as db:
+        status = await db.scalar(select(Project.status).where(Project.id == pid))
+    if status != ProjectStatus.FORMING:
+        raise SystemExit(f"seed assertion failed: ordering project is {status}, want FORMING")
+    print("seed-demo STAGE=2: bidding closed on the ordering project (FORMING)")
+
+
 async def _seed_too_few(ids: dict[str, uuid.UUID], skills: dict[str, uuid.UUID]) -> None:
     """A second BIDDING project with far too few bids, for the too-few-bids banner (§9.19)."""
     rahim = ids["rahim"]
@@ -954,6 +974,7 @@ async def seed_stage(stage: int, *, write_golden: bool = False) -> None:
     await _assert_filter(pid, stage)
     if stage == 2:  # the stage number
         await _assert_golden(ids, write_golden)
+        await _close_ordering_bidding(pid)
     _print_accounts(admin, pw, settings.PUBLIC_ORIGIN.rstrip("/"), cycle_id)
 
 

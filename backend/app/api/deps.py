@@ -65,7 +65,14 @@ def now() -> datetime:
 
 
 def redis_client() -> Redis:
-    """Shared Redis client."""
+    """This event loop's Redis client, for code already running on the loop."""
+    return get_redis()
+
+
+async def loop_redis() -> Redis:
+    """The same as a dependency. Async so FastAPI calls it on the loop: a sync dependency runs in
+    a worker thread with no loop and would get the loop-less client, which belongs to whichever
+    loop first used it (two test clients in one process have two loops)."""
     return get_redis()
 
 

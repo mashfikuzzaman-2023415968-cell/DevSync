@@ -289,3 +289,38 @@ def _reputation_history(p: Principal, _r: Any) -> None:
     """A developer reads how their own reputation changed (`/me/reputation/history`); the
     service and row-level security scope it to the caller."""
     _require_role(p, "DEVELOPER")
+
+
+@policy("job.read")
+def _job_read(p: Principal, _r: Any) -> None:
+    """A job's status and live events: its requester, or an admin; the service and row-level
+    security answer 404 for anyone else's job (D107)."""
+    _require_active(p)
+
+
+@policy("formation.run")
+def _formation_run(p: Principal, _r: Any) -> None:
+    """The owning client starts team formation; ownership is checked in the service (→ 404)."""
+    _require_role(p, "CLIENT")
+
+
+@policy("formation.confirm")
+def _formation_confirm(p: Principal, _r: Any) -> None:
+    """Only the owning client confirms a team (admins can read and verify, not confirm)."""
+    _require_role(p, "CLIENT")
+
+
+@policy("formation.read")
+def _formation_read(p: Principal, _r: Any) -> None:
+    """A project's own client, or an admin; others' runs are 404 in the service and RLS."""
+    _require_active(p)
+    if p.role != "CLIENT" and not p.is_admin:
+        raise ForbiddenError
+
+
+@policy("bid.explanation")
+def _bid_explanation(p: Principal, _r: Any) -> None:
+    """A bidder reads why their own bid was not selected (admins too); sealed by RLS."""
+    _require_active(p)
+    if p.role != "DEVELOPER" and not p.is_admin:
+        raise ForbiddenError

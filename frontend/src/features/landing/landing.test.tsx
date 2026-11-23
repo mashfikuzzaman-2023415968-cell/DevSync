@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { fairnessCost, homepageExample } from "@/content/homepageExample";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { PreferencesProvider } from "@/design/preferences";
@@ -89,19 +90,30 @@ describe("interactive sections", () => {
     );
   });
 
-  it("fairness dial changes the kept places and shows no invented numbers (D21)", async () => {
+  it("fairness dial shows the real run's newcomers and cost of fairness (D21, D113)", async () => {
     const user = userEvent.setup();
     render(
       <PreferencesProvider>
         <FairnessSpotlight />
       </PreferencesProvider>,
     );
-    expect(screen.getByText("1 of 4 places is kept for a newcomer.")).toBeInTheDocument();
+    const { dial } = homepageExample;
+    expect(
+      screen.getByText(`${String(dial["1"].newcomers)} of 4 places goes to a newcomer.`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(`Cost of fairness: ${fairnessCost("1")} of the team score.`),
+    ).toBeInTheDocument();
     await user.click(screen.getByRole("radio", { name: "2" }));
-    expect(screen.getByText("2 of 4 places are kept for a newcomer.")).toBeInTheDocument();
+    expect(
+      screen.getByText(`${String(dial["2"].newcomers)} of 4 places go to a newcomer.`),
+    ).toBeInTheDocument();
     await user.click(screen.getByRole("radio", { name: "0" }));
     expect(screen.getByText("All four places go to whoever fits best.")).toBeInTheDocument();
-    expect(screen.queryByText(/%/)).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Cost of fairness: none. The best team already fits."),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/From a real team formation run/)).toBeInTheDocument();
   });
 
   it("FAQ says plainly that payments are simulated", async () => {

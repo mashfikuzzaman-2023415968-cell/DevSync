@@ -17,10 +17,13 @@ import {
   apiSignIn,
   createOrderingProject,
   csrfHeaders,
+  throughAuthZone,
   lastLink,
   PASSWORD,
   roleAnswerKey,
   seedUser,
+  setReputation,
+  slotFor,
 } from "./fixtures";
 import { resetLimits } from "./test";
 
@@ -275,4 +278,105 @@ export const STATEFUL_SCREENS: StatefulScreen[] = [
       return { path: `/p/${id}` };
     },
   },
+  {
+    // Team formation with a finished run (§13.5 #24): three bidders for a two-place React and
+    // Testing team, one a qualified newcomer, the dial at 1, executed through the test-only
+    // router (no worker). The team is exact-verified, so it is the same every run; the
+    // convergence curve and the run's time are masked.
+    name: "team-formation",
+    prepare: async (page, baseURL) => {
+      const { projectId } = await formedProject(page, baseURL);
+      return { path: `/client/projects/${projectId}/formation` };
+    },
+  },
+  {
+    // "Why it wasn't selected" on a developer's own bid (§13.5 #12, §9.8).
+    name: "bid-not-selected",
+    prepare: async (page, baseURL) => {
+      const { arif } = await formedProject(page, baseURL, true);
+      await apiSignInAs(page, baseURL, arif);
+      return { path: `/dev/bids/${arif.bidId}` };
+    },
+  },
 ];
+
+interface Bidder {
+  email: string;
+  password: string;
+  bidId: string;
+}
+
+async function post(page: Page, baseURL: string, path: string, data?: unknown): Promise<unknown> {
+  const r = await page.request.post(path, {
+    headers: await csrfHeaders(page.request, baseURL),
+    data,
+  });
+  if (!r.ok()) throw new Error(`${path} → ${String(r.status())} ${await r.text()}`);
+  return r.status() === 204 ? null : ((await r.json()) as unknown);
+}
+
+/** Sign a known account back in (the page's cookies are replaced). */
+async function apiSignInAs(page: Page, baseURL: string, who: Bidder): Promise<void> {
+  await page.context().clearCookies();
+  const headers = await csrfHeaders(page.request, baseURL);
+  const r = await throughAuthZone(() =>
+    page.request.post("/api/v1/auth/login", {
+      headers,
+      data: { email: who.email, password: who.password, captcha: "test-bypass" },
+    }),
+  );
+  if (!r.ok()) throw new Error(`login failed: ${String(r.status())} ${await r.text()}`);
+}
+
+/** A FORMING ordering project with bids from Nadia (newcomer, React), Arif (React) and Imran
+ * (Testing), and FastAPI/PostgreSQL bids; a run at dial 1 executed, and (optionally) the team
+ * confirmed with explanations written. Leaves the client signed in. */
+async function formedProject(
+  page: Page,
+  baseURL: string,
+  confirm = false,
+): Promise<{ projectId: string; arif: Bidder }> {
+  await apiSignIn(page, baseURL, "CLIENT", "Rahim Uddin");
+  const projectId = await createOrderingProject(page, baseURL, { publish: true });
+  const client = page.context();
+  const clientCookies = await client.cookies();
+  const bids: [string, string, number, number, boolean][] = [
+    ["Nadia Rahman", "React", 18_000, 20, true],
+    ["Arif Hossain", "React", 26_000, 18, false],
+    ["Tanvir Ahmed", "FastAPI", 25_000, 20, false],
+    ["Sadia Islam", "PostgreSQL", 23_000, 21, false],
+    ["Imran Kabir", "Testing", 20_000, 19, false],
+  ];
+  let arif: Bidder | null = null;
+  for (const [name, skill, price, days, newcomer] of bids) {
+    await client.clearCookies();
+    const dev = await apiSignIn(page, baseURL, "DEVELOPER", name);
+    if (newcomer) {
+      await addSkillEvidence(page.request, baseURL, dev.userId, skill, 0.9);
+      await addRoleResult(page.request, baseURL, dev.userId, projectId, skill, "pass");
+    } else {
+      await addSkillEvidence(page.request, baseURL, dev.userId, skill, 0.8);
+      await setReputation(page.request, baseURL, dev.userId, 0.8, 0.78);
+    }
+    const bid = (await post(page, baseURL, `/api/v1/projects/${projectId}/bids`, {
+      slot_id: await slotFor(page.request, projectId, skill),
+      price_paisa: price * 100,
+      days_needed: days,
+    })) as { id: string };
+    if (name === "Arif Hossain") arif = { email: dev.email, password: dev.password, bidId: bid.id };
+  }
+  await client.clearCookies();
+  await client.addCookies(clientCookies);
+  await post(page, baseURL, `/api/v1/__test__/projects/${projectId}/start-forming`);
+  const run = (await post(page, baseURL, `/api/v1/projects/${projectId}/formation-runs`, {
+    preset: "balanced",
+    min_newcomers: 1,
+  })) as { run_id: string };
+  await post(page, baseURL, `/api/v1/__test__/formation-runs/${run.run_id}/execute`);
+  if (confirm) {
+    await post(page, baseURL, `/api/v1/formation-runs/${run.run_id}/confirm`);
+    await post(page, baseURL, `/api/v1/__test__/formation-runs/${run.run_id}/explanations`);
+  }
+  if (!arif) throw new Error("no bid from Arif");
+  return { projectId, arif };
+}

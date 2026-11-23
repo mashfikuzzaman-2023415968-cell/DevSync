@@ -13,7 +13,8 @@ pytestmark = pytest.mark.integration
 USER_SCOPED = {
     "audit_log", "availability_reservations", "bids", "certificates", "client_profiles",
     "developer_profiles", "developer_skills", "devices_seen", "email_tokens", "external_reviews",
-    "files", "idempotency_keys", "jobs", "notifications", "otp_codes", "plan_baselines",
+    "files", "formation_runs", "idempotency_keys", "jobs", "notifications", "otp_codes",
+    "plan_baselines", "team_members",
     "plan_change_requests", "portfolio_items", "projects", "recovery_codes",
     "reputation_history", "reputation_log", "reputation_skill", "reputation_snapshots", "sessions",
     "skill_evidence", "test_attempts", "totp_credentials",

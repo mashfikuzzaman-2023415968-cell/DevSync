@@ -5,7 +5,8 @@
  * While bidding is open the page shows how the bid stands against the project's own requirements
  * (never against other bids) and offers Edit (the bid sheet) and Withdraw (with the bid's version,
  * so a change made in another tab is not overwritten). Someone else's bid is a 404 from the
- * server, shown as "not found". The "why not selected" card arrives with team formation (Phase 7).
+ * server, shown as "not found". Once a team was formed without the bid, "Why it wasn’t selected"
+ * explains the main gap and the price at which it would have been chosen (§9.8).
  */
 import { CheckCircle2, Circle, CircleDot, XCircle } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router";
@@ -18,6 +19,7 @@ import { ConfirmDialog } from "@/components/ui/Overlay";
 import { toast } from "@/components/ui/toast-store";
 import { formatDate, formatDateTime, formatDays, formatMoney } from "@/lib/format";
 import { useBid, useWithdrawBid } from "./api";
+import { WhyNotSelectedCard } from "./WhyNotSelectedCard";
 import { BID_STATUS_TONE, CHECK_LABEL, bidStatusLabel, bidSteps, type BidStep } from "./bidText";
 
 export default function BidDetailPage() {
@@ -89,6 +91,7 @@ export default function BidDetailPage() {
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]">
         <div className="flex min-w-0 flex-col gap-6">
           {b.status === "INELIGIBLE" ? <WhyFiltered bid={b} /> : null}
+          {b.status === "NOT_SELECTED" ? <WhyNotSelectedCard bidId={b.id} /> : null}
           {b.eligibility ? <Standing bid={b} /> : null}
           <OfferCard bid={b} />
         </div>
@@ -173,7 +176,12 @@ function OfferCard({ bid }: { bid: BidDetail }) {
           {rows.map(([label, value]) => (
             <div key={label} className="min-w-0">
               <dt className="text-text-muted">{label}</dt>
-              <dd className="break-words font-medium tabular text-text">{value}</dd>
+              <dd
+                className="break-words font-medium tabular text-text"
+                data-volatile={label === "Submitted" || label === "Last changed" ? "" : undefined}
+              >
+                {value}
+              </dd>
             </div>
           ))}
         </dl>
@@ -327,7 +335,9 @@ function ProjectCard({ bid }: { bid: BidDetail }) {
               <dt className="text-text-muted">
                 {p.open_for_bids ? "Bidding closes" : "Bidding closed"}
               </dt>
-              <dd className="font-medium text-text">{formatDate(p.bidding_deadline)}</dd>
+              <dd className="font-medium text-text" data-volatile>
+                {formatDate(p.bidding_deadline)}
+              </dd>
             </div>
           ) : null}
         </dl>

@@ -70,6 +70,144 @@
         "title": "AccommodationOut",
         "type": "object"
       },
+      "AdminRunOut": {
+        "properties": {
+          "confirmed": {
+            "title": "Confirmed",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "fitness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fitness"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "min_newcomers": {
+            "title": "Min Newcomers",
+            "type": "integer"
+          },
+          "optimal": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optimal"
+          },
+          "preset": {
+            "enum": [
+              "balanced",
+              "quality",
+              "fast",
+              "budget"
+            ],
+            "title": "Preset",
+            "type": "string"
+          },
+          "price_paisa": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Paisa"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "project_title": {
+            "title": "Project Title",
+            "type": "string"
+          },
+          "runtime_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime Ms"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "SUCCEEDED",
+              "INFEASIBLE",
+              "FAILED",
+              "TIMED_OUT"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "status",
+          "preset",
+          "min_newcomers",
+          "fitness",
+          "optimal",
+          "price_paisa",
+          "created_at",
+          "finished_at",
+          "confirmed",
+          "project_title",
+          "runtime_ms",
+          "verified"
+        ],
+        "title": "AdminRunOut",
+        "type": "object"
+      },
       "AdminSessionResponse": {
         "description": "Admin's own security status (also proves the admin area is hidden from others).",
         "properties": {
@@ -1209,6 +1347,105 @@
           "can_withdraw"
         ],
         "title": "BidDetailOut",
+        "type": "object"
+      },
+      "BidExplanationOut": {
+        "description": "Why a bid was not selected (§9.8), for its bidder only.",
+        "properties": {
+          "bid_id": {
+            "format": "uuid",
+            "title": "Bid Id",
+            "type": "string"
+          },
+          "compare": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SlotComparison"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "gap": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gap"
+          },
+          "hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hint"
+          },
+          "main_gap": {
+            "anyOf": [
+              {
+                "enum": [
+                  "comp",
+                  "team",
+                  "time",
+                  "cost"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Main Gap"
+          },
+          "price_counterfactual_paisa": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Counterfactual Paisa"
+          },
+          "project_title": {
+            "title": "Project Title",
+            "type": "string"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          }
+        },
+        "required": [
+          "bid_id",
+          "project_title",
+          "reasons",
+          "main_gap",
+          "hint",
+          "gap",
+          "price_counterfactual_paisa",
+          "compare",
+          "created_at"
+        ],
+        "title": "BidExplanationOut",
         "type": "object"
       },
       "BidOut": {
@@ -2380,6 +2617,35 @@
         "title": "CompetencyScoreOut",
         "type": "object"
       },
+      "ConfirmOut": {
+        "properties": {
+          "invitations_sent": {
+            "title": "Invitations Sent",
+            "type": "boolean"
+          },
+          "members": {
+            "title": "Members",
+            "type": "integer"
+          },
+          "project_status": {
+            "title": "Project Status",
+            "type": "string"
+          },
+          "team_id": {
+            "format": "uuid",
+            "title": "Team Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "team_id",
+          "project_status",
+          "members",
+          "invitations_sent"
+        ],
+        "title": "ConfirmOut",
+        "type": "object"
+      },
       "ConstraintCheck": {
         "description": "One Algorithm 1 check and whether the bid meets it (§9.2), with the values compared.\n\n`required`/`actual` are on the check's own scale: scores 0–1 (shown ×100), days, or paisa;\nnull for yes/no gates. `detail` is ready-to-show text.",
         "properties": {
@@ -2424,6 +2690,44 @@
           "detail"
         ],
         "title": "ConstraintCheck",
+        "type": "object"
+      },
+      "Contribution": {
+        "properties": {
+          "comp": {
+            "title": "Comp",
+            "type": "number"
+          },
+          "cost": {
+            "title": "Cost",
+            "type": "number"
+          },
+          "perf": {
+            "title": "Perf",
+            "type": "number"
+          },
+          "team": {
+            "title": "Team",
+            "type": "number"
+          },
+          "time": {
+            "title": "Time",
+            "type": "number"
+          },
+          "total": {
+            "title": "Total",
+            "type": "number"
+          }
+        },
+        "required": [
+          "comp",
+          "team",
+          "time",
+          "cost",
+          "perf",
+          "total"
+        ],
+        "title": "Contribution",
         "type": "object"
       },
       "CpmNodeOut": {
@@ -3438,6 +3742,63 @@
         "title": "ExternalReviewUpdate",
         "type": "object"
       },
+      "Fairness": {
+        "properties": {
+          "applied_k": {
+            "title": "Applied K",
+            "type": "integer"
+          },
+          "baseline_fitness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Fitness"
+          },
+          "binding": {
+            "title": "Binding",
+            "type": "boolean"
+          },
+          "cost": {
+            "title": "Cost",
+            "type": "number"
+          },
+          "price_difference_paisa": {
+            "title": "Price Difference Paisa",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "requested_k": {
+            "title": "Requested K",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "requested_k",
+          "applied_k",
+          "cost",
+          "binding",
+          "price_difference_paisa",
+          "baseline_fitness",
+          "reason"
+        ],
+        "title": "Fairness",
+        "type": "object"
+      },
       "FallbackOut": {
         "description": "The slot's newcomer evidence while no role assessment is available (Decision 10).",
         "properties": {
@@ -3791,6 +4152,369 @@
         "title": "ForgotPasswordRequest",
         "type": "object"
       },
+      "FormationRunAccepted": {
+        "description": "202: the run is queued; follow it at `/jobs/{job_id}/events`.",
+        "properties": {
+          "job_id": {
+            "format": "uuid",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "progress": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Progress",
+            "type": "integer"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "SUCCEEDED",
+              "INFEASIBLE",
+              "FAILED",
+              "TIMED_OUT"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "job_id",
+          "status",
+          "progress"
+        ],
+        "title": "FormationRunAccepted",
+        "type": "object"
+      },
+      "FormationRunCreate": {
+        "additionalProperties": false,
+        "description": "Start a run. The seed is chosen by the server (sending one is refused).",
+        "properties": {
+          "min_competency": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,1}|(?=[\\d.]{1,5}0*$)\\d{0,1}\\.\\d{0,3}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Competency"
+          },
+          "min_newcomers": {
+            "anyOf": [
+              {
+                "maximum": 2.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Newcomers"
+          },
+          "min_performance": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,1}|(?=[\\d.]{1,5}0*$)\\d{0,1}\\.\\d{0,3}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Performance"
+          },
+          "preset": {
+            "default": "balanced",
+            "enum": [
+              "balanced",
+              "quality",
+              "fast",
+              "budget"
+            ],
+            "title": "Preset",
+            "type": "string"
+          },
+          "weights": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WeightsIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "FormationRunCreate",
+        "type": "object"
+      },
+      "FormationRunOut": {
+        "properties": {
+          "can_confirm": {
+            "title": "Can Confirm",
+            "type": "boolean"
+          },
+          "confirmed": {
+            "title": "Confirmed",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "params": {
+            "$ref": "#/components/schemas/RunParams"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "runtime_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime Ms"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          },
+          "settings_version": {
+            "title": "Settings Version",
+            "type": "integer"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "SUCCEEDED",
+              "INFEASIBLE",
+              "FAILED",
+              "TIMED_OUT"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "status",
+          "job_id",
+          "seed",
+          "settings_version",
+          "params",
+          "result",
+          "error_code",
+          "runtime_ms",
+          "created_at",
+          "started_at",
+          "finished_at",
+          "confirmed",
+          "can_confirm"
+        ],
+        "title": "FormationRunOut",
+        "type": "object"
+      },
+      "FormationRunSummary": {
+        "properties": {
+          "confirmed": {
+            "title": "Confirmed",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "fitness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fitness"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "min_newcomers": {
+            "title": "Min Newcomers",
+            "type": "integer"
+          },
+          "optimal": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optimal"
+          },
+          "preset": {
+            "enum": [
+              "balanced",
+              "quality",
+              "fast",
+              "budget"
+            ],
+            "title": "Preset",
+            "type": "string"
+          },
+          "price_paisa": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Paisa"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "SUCCEEDED",
+              "INFEASIBLE",
+              "FAILED",
+              "TIMED_OUT"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "status",
+          "preset",
+          "min_newcomers",
+          "fitness",
+          "optimal",
+          "price_paisa",
+          "created_at",
+          "finished_at",
+          "confirmed"
+        ],
+        "title": "FormationRunSummary",
+        "type": "object"
+      },
       "HealthResponse": {
         "description": "Liveness result.",
         "properties": {
@@ -3908,6 +4632,89 @@
           "valid_until"
         ],
         "title": "HistoryItemOut",
+        "type": "object"
+      },
+      "JobOut": {
+        "description": "A job as its requester (or an admin) sees it. No payload, no internal references.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "progress": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Progress",
+            "type": "integer"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "SUCCEEDED",
+              "FAILED",
+              "CANCELLED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "progress",
+          "error_code",
+          "created_at",
+          "started_at",
+          "finished_at"
+        ],
+        "title": "JobOut",
         "type": "object"
       },
       "LoginRequest": {
@@ -4333,6 +5140,33 @@
           "score"
         ],
         "title": "NewcomerEvidence",
+        "type": "object"
+      },
+      "Page_AdminRunOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminRunOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "Page[AdminRunOut]",
         "type": "object"
       },
       "Page_BidOut_": {
@@ -6533,6 +7367,214 @@
         "title": "ResetPasswordRequest",
         "type": "object"
       },
+      "RunParams": {
+        "properties": {
+          "min_competency": {
+            "title": "Min Competency",
+            "type": "number"
+          },
+          "min_newcomers": {
+            "title": "Min Newcomers",
+            "type": "integer"
+          },
+          "min_performance": {
+            "title": "Min Performance",
+            "type": "number"
+          },
+          "mode": {
+            "enum": [
+              "devsync",
+              "pcs_replication"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "preset": {
+            "enum": [
+              "balanced",
+              "quality",
+              "fast",
+              "budget"
+            ],
+            "title": "Preset",
+            "type": "string"
+          },
+          "weights": {
+            "$ref": "#/components/schemas/WeightsOut"
+          }
+        },
+        "required": [
+          "preset",
+          "weights",
+          "min_newcomers",
+          "min_performance",
+          "min_competency",
+          "mode"
+        ],
+        "title": "RunParams",
+        "type": "object"
+      },
+      "RunResult": {
+        "properties": {
+          "budget_after_fee_paisa": {
+            "title": "Budget After Fee Paisa",
+            "type": "integer"
+          },
+          "budget_share": {
+            "title": "Budget Share",
+            "type": "number"
+          },
+          "candidates": {
+            "title": "Candidates",
+            "type": "integer"
+          },
+          "convergence": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Convergence",
+            "type": "array"
+          },
+          "deadline_days": {
+            "title": "Deadline Days",
+            "type": "integer"
+          },
+          "deciding_term": {
+            "anyOf": [
+              {
+                "enum": [
+                  "comp",
+                  "team",
+                  "time",
+                  "cost"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deciding Term"
+          },
+          "early_stopped": {
+            "title": "Early Stopped",
+            "type": "boolean"
+          },
+          "fairness": {
+            "$ref": "#/components/schemas/Fairness"
+          },
+          "feasible": {
+            "title": "Feasible",
+            "type": "boolean"
+          },
+          "fitness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fitness"
+          },
+          "iterations": {
+            "title": "Iterations",
+            "type": "integer"
+          },
+          "max_days": {
+            "title": "Max Days",
+            "type": "integer"
+          },
+          "newcomers": {
+            "title": "Newcomers",
+            "type": "integer"
+          },
+          "price_paisa": {
+            "title": "Price Paisa",
+            "type": "integer"
+          },
+          "relaxations": {
+            "items": {
+              "$ref": "#/components/schemas/RelaxationOut"
+            },
+            "title": "Relaxations",
+            "type": "array"
+          },
+          "risks": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Risks",
+            "type": "array"
+          },
+          "runner_up_difference": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Runner Up Difference",
+            "type": "object"
+          },
+          "schedule_share": {
+            "title": "Schedule Share",
+            "type": "number"
+          },
+          "team": {
+            "items": {
+              "$ref": "#/components/schemas/TeamMemberOut"
+            },
+            "title": "Team",
+            "type": "array"
+          },
+          "timed_out": {
+            "title": "Timed Out",
+            "type": "boolean"
+          },
+          "top": {
+            "items": {
+              "$ref": "#/components/schemas/TeamOption"
+            },
+            "title": "Top",
+            "type": "array"
+          },
+          "verification": {
+            "$ref": "#/components/schemas/Verification"
+          }
+        },
+        "required": [
+          "feasible",
+          "team",
+          "fitness",
+          "price_paisa",
+          "budget_after_fee_paisa",
+          "budget_share",
+          "max_days",
+          "deadline_days",
+          "schedule_share",
+          "newcomers",
+          "risks",
+          "deciding_term",
+          "runner_up_difference",
+          "verification",
+          "fairness",
+          "top",
+          "convergence",
+          "iterations",
+          "early_stopped",
+          "timed_out",
+          "candidates",
+          "relaxations"
+        ],
+        "title": "RunResult",
+        "type": "object"
+      },
       "SessionInfo": {
         "description": "One device/session in the security list.",
         "properties": {
@@ -6841,6 +7883,35 @@
         "title": "SlotCard",
         "type": "object"
       },
+      "SlotComparison": {
+        "description": "The selected bid in the same slot that this bid was compared with: its days and price\nonly (§9.8's concrete hint), never who placed it.",
+        "properties": {
+          "selected_days": {
+            "title": "Selected Days",
+            "type": "integer"
+          },
+          "selected_price_paisa": {
+            "title": "Selected Price Paisa",
+            "type": "integer"
+          },
+          "your_days": {
+            "title": "Your Days",
+            "type": "integer"
+          },
+          "your_price_paisa": {
+            "title": "Your Price Paisa",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "selected_days",
+          "selected_price_paisa",
+          "your_days",
+          "your_price_paisa"
+        ],
+        "title": "SlotComparison",
+        "type": "object"
+      },
       "SlotCount": {
         "additionalProperties": false,
         "properties": {
@@ -7106,6 +8177,123 @@
           "complete"
         ],
         "title": "TeamCostOut",
+        "type": "object"
+      },
+      "TeamMemberOut": {
+        "properties": {
+          "bid_id": {
+            "format": "uuid",
+            "title": "Bid Id",
+            "type": "string"
+          },
+          "competency": {
+            "title": "Competency",
+            "type": "number"
+          },
+          "contribution": {
+            "$ref": "#/components/schemas/Contribution"
+          },
+          "days_needed": {
+            "title": "Days Needed",
+            "type": "integer"
+          },
+          "developer_id": {
+            "format": "uuid",
+            "title": "Developer Id",
+            "type": "string"
+          },
+          "developer_name": {
+            "title": "Developer Name",
+            "type": "string"
+          },
+          "is_newcomer": {
+            "title": "Is Newcomer",
+            "type": "boolean"
+          },
+          "price_paisa": {
+            "title": "Price Paisa",
+            "type": "integer"
+          },
+          "slot_id": {
+            "format": "uuid",
+            "title": "Slot Id",
+            "type": "string"
+          },
+          "slot_label": {
+            "title": "Slot Label",
+            "type": "string"
+          },
+          "teamwork": {
+            "title": "Teamwork",
+            "type": "number"
+          }
+        },
+        "required": [
+          "bid_id",
+          "developer_id",
+          "developer_name",
+          "slot_id",
+          "slot_label",
+          "price_paisa",
+          "days_needed",
+          "is_newcomer",
+          "competency",
+          "teamwork",
+          "contribution"
+        ],
+        "title": "TeamMemberOut",
+        "type": "object"
+      },
+      "TeamOption": {
+        "properties": {
+          "bid_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Bid Ids",
+            "type": "array"
+          },
+          "fitness": {
+            "title": "Fitness",
+            "type": "number"
+          },
+          "max_days": {
+            "title": "Max Days",
+            "type": "integer"
+          },
+          "mean_competency": {
+            "title": "Mean Competency",
+            "type": "number"
+          },
+          "mean_teamwork": {
+            "title": "Mean Teamwork",
+            "type": "number"
+          },
+          "newcomers": {
+            "title": "Newcomers",
+            "type": "integer"
+          },
+          "price_paisa": {
+            "title": "Price Paisa",
+            "type": "integer"
+          },
+          "recommended": {
+            "title": "Recommended",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "bid_ids",
+          "fitness",
+          "price_paisa",
+          "newcomers",
+          "mean_competency",
+          "mean_teamwork",
+          "max_days",
+          "recommended"
+        ],
+        "title": "TeamOption",
         "type": "object"
       },
       "TermsChange": {
@@ -7407,6 +8595,79 @@
         "title": "ValidationErrorResponse",
         "type": "object"
       },
+      "Verification": {
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "exact_fitness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exact Fitness"
+          },
+          "feasible_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feasible Count"
+          },
+          "gap": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gap"
+          },
+          "optimal": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optimal"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "available",
+          "reason",
+          "optimal",
+          "gap",
+          "exact_fitness",
+          "feasible_count"
+        ],
+        "title": "Verification",
+        "type": "object"
+      },
       "VerifiedScore": {
         "description": "The latest verified test score per skill.",
         "properties": {
@@ -7478,6 +8739,104 @@
           "bids_affected"
         ],
         "title": "VoidOut",
+        "type": "object"
+      },
+      "WeightsIn": {
+        "additionalProperties": false,
+        "description": "Priority weights C1–C4 (0–1 each); normalised to sum 1 by the server.",
+        "properties": {
+          "competency": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,1}|(?=[\\d.]{1,5}0*$)\\d{0,1}\\.\\d{0,3}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Competency"
+          },
+          "cost": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,1}|(?=[\\d.]{1,5}0*$)\\d{0,1}\\.\\d{0,3}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Cost"
+          },
+          "teamwork": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,1}|(?=[\\d.]{1,5}0*$)\\d{0,1}\\.\\d{0,3}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Teamwork"
+          },
+          "time": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,1}|(?=[\\d.]{1,5}0*$)\\d{0,1}\\.\\d{0,3}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Time"
+          }
+        },
+        "required": [
+          "competency",
+          "teamwork",
+          "time",
+          "cost"
+        ],
+        "title": "WeightsIn",
+        "type": "object"
+      },
+      "WeightsOut": {
+        "properties": {
+          "competency": {
+            "title": "Competency",
+            "type": "number"
+          },
+          "cost": {
+            "title": "Cost",
+            "type": "number"
+          },
+          "teamwork": {
+            "title": "Teamwork",
+            "type": "number"
+          },
+          "time": {
+            "title": "Time",
+            "type": "number"
+          }
+        },
+        "required": [
+          "competency",
+          "teamwork",
+          "time",
+          "cost"
+        ],
+        "title": "WeightsOut",
         "type": "object"
       },
       "app__schemas__role_assessments__AnswerIn": {
@@ -8314,6 +9673,182 @@
         "summary": "Void a role assessment",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/formation-runs": {
+      "get": {
+        "description": "Newest first, cursor-paged.",
+        "operationId": "admin_runs_api_v1_admin_formation_runs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [
+                    {
+                      "confirmed": false,
+                      "created_at": "2026-11-22T06:00:00Z",
+                      "finished_at": "2026-11-22T06:00:02Z",
+                      "fitness": 0.6844,
+                      "id": "5f0c2b7e-3d4a-4e8b-9c1d-2a3b4c5d6e7f",
+                      "min_newcomers": 1,
+                      "optimal": true,
+                      "preset": "balanced",
+                      "price_paisa": 4250000,
+                      "project_id": "6a1d3c8f-4e5b-4f9c-8d2e-3b4c5d6e7f80",
+                      "project_title": "Online ordering system",
+                      "runtime_ms": 412,
+                      "status": "SUCCEEDED",
+                      "verified": true
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Page_AdminRunOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Every formation run (admin)",
+        "tags": [
+          "formation"
         ]
       }
     },
@@ -14840,6 +16375,160 @@
         ]
       }
     },
+    "/api/v1/bids/{bid_id}/explanation": {
+      "get": {
+        "description": "For your own bid once a team was confirmed without it: the main gap, a hint, and the\nhighest price at which it would have been chosen. Nothing about the other bids is shown.",
+        "operationId": "bid_explanation_api_v1_bids__bid_id__explanation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bid_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Bid Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "bid_id": "5f0c2b7e-3d4a-4e8b-9c1d-2a3b4c5d6e7f",
+                  "compare": {
+                    "selected_days": 18,
+                    "selected_price_paisa": 1700000,
+                    "your_days": 20,
+                    "your_price_paisa": 2000000
+                  },
+                  "created_at": "2026-11-22T06:05:00Z",
+                  "gap": 0.0412,
+                  "hint": "A lower price would have helped most.",
+                  "main_gap": "cost",
+                  "price_counterfactual_paisa": 1600000,
+                  "project_title": "Online ordering system",
+                  "reasons": [
+                    "NOT_SELECTED"
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/BidExplanationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Why my bid was not selected",
+        "tags": [
+          "formation"
+        ]
+      }
+    },
     "/api/v1/captcha/challenge": {
       "get": {
         "description": "Signed, expires in 5 minutes, each solution usable once. Difficulty from the platform\nsettings (`captcha.max_number`).",
@@ -15618,6 +17307,639 @@
         ]
       }
     },
+    "/api/v1/formation-runs/{run_id}": {
+      "get": {
+        "description": "The recommended team with each member's contribution, why it was chosen, its risks, the\ncomparison with the next best teams, the cost of fairness, the convergence and whether the\nexact solver confirmed it optimal.",
+        "operationId": "get_run_api_v1_formation_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "can_confirm": true,
+                  "confirmed": false,
+                  "created_at": "2026-11-22T06:00:00Z",
+                  "finished_at": "2026-11-22T06:00:01Z",
+                  "id": "5f0c2b7e-3d4a-4e8b-9c1d-2a3b4c5d6e7f",
+                  "job_id": "0b7c1a52-8d1e-4f55-9a3e-2f1c6f2d9b10",
+                  "params": {
+                    "min_competency": 0.4,
+                    "min_newcomers": 1,
+                    "min_performance": 0.45,
+                    "mode": "devsync",
+                    "preset": "balanced",
+                    "weights": {
+                      "competency": 0.35,
+                      "cost": 0.2,
+                      "teamwork": 0.25,
+                      "time": 0.2
+                    }
+                  },
+                  "project_id": "6a1d3c8f-4e5b-4f9c-8d2e-3b4c5d6e7f80",
+                  "result": {
+                    "budget_after_fee_paisa": 10800000,
+                    "budget_share": 0.398,
+                    "candidates": 5,
+                    "convergence": [
+                      0.91,
+                      0.93,
+                      0.9412
+                    ],
+                    "deadline_days": 30,
+                    "deciding_term": "cost",
+                    "early_stopped": true,
+                    "fairness": {
+                      "applied_k": 1,
+                      "baseline_fitness": 0.9617,
+                      "binding": true,
+                      "cost": 0.0213,
+                      "price_difference_paisa": -500000,
+                      "requested_k": 1
+                    },
+                    "feasible": true,
+                    "fitness": 0.9412,
+                    "iterations": 41,
+                    "max_days": 22,
+                    "newcomers": 1,
+                    "price_paisa": 4300000,
+                    "relaxations": [],
+                    "risks": [],
+                    "runner_up_difference": {
+                      "comp": -0.02,
+                      "cost": 0.04,
+                      "team": 0.0,
+                      "time": 0.01
+                    },
+                    "schedule_share": 0.733,
+                    "team": [
+                      {
+                        "bid_id": "7b2e4d90-5f6c-4a0d-9e3f-4c5d6e7f8091",
+                        "competency": 0.65,
+                        "contribution": {
+                          "comp": 0.228,
+                          "cost": 0.04,
+                          "perf": 0.0,
+                          "team": 0.165,
+                          "time": 0.08,
+                          "total": 0.513
+                        },
+                        "days_needed": 18,
+                        "developer_id": "a0e1b7c3-8c9f-4d30-8b62-7f8091a2b3c4",
+                        "developer_name": "Nusrat Jahan",
+                        "is_newcomer": false,
+                        "price_paisa": 2400000,
+                        "slot_id": "9d40a6b2-7b8e-4c2f-9a51-6e7f8091a2b3",
+                        "slot_label": "React",
+                        "teamwork": 0.66
+                      },
+                      {
+                        "bid_id": "8c3f5ea1-6a7d-4b1e-8f40-5d6e7f8091a2",
+                        "competency": 0.65,
+                        "contribution": {
+                          "comp": 0.228,
+                          "cost": 0.04,
+                          "perf": 0.0,
+                          "team": 0.165,
+                          "time": 0.08,
+                          "total": 0.513
+                        },
+                        "days_needed": 18,
+                        "developer_id": "a0e1b7c3-8c9f-4d30-8b62-7f8091a2b3c4",
+                        "developer_name": "Arif Hasan",
+                        "is_newcomer": true,
+                        "price_paisa": 2400000,
+                        "slot_id": "9d40a6b2-7b8e-4c2f-9a51-6e7f8091a2b3",
+                        "slot_label": "React",
+                        "teamwork": 0.66
+                      }
+                    ],
+                    "timed_out": false,
+                    "top": [
+                      {
+                        "bid_ids": [
+                          "7b2e4d90-5f6c-4a0d-9e3f-4c5d6e7f8091",
+                          "8c3f5ea1-6a7d-4b1e-8f40-5d6e7f8091a2"
+                        ],
+                        "fitness": 0.9412,
+                        "max_days": 22,
+                        "mean_competency": 0.47,
+                        "mean_teamwork": 0.58,
+                        "newcomers": 1,
+                        "price_paisa": 4300000,
+                        "recommended": true
+                      }
+                    ],
+                    "verification": {
+                      "available": true,
+                      "exact_fitness": 0.9412,
+                      "feasible_count": 6,
+                      "gap": 0.0,
+                      "optimal": true
+                    }
+                  },
+                  "runtime_ms": 412,
+                  "seed": 1204771935,
+                  "settings_version": 5,
+                  "started_at": "2026-11-22T06:00:01Z",
+                  "status": "SUCCEEDED"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FormationRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "A formation run and its result",
+        "tags": [
+          "formation"
+        ]
+      }
+    },
+    "/api/v1/formation-runs/{run_id}/confirm": {
+      "post": {
+        "description": "Creates the team (the project becomes TEAM_PENDING); the chosen bids are SELECTED and\nthe others NOT_SELECTED. Invitations are recorded now and sent in Phase 8.",
+        "operationId": "confirm_api_v1_formation_runs__run_id__confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "invitations_sent": false,
+                  "members": 3,
+                  "project_status": "TEAM_PENDING",
+                  "team_id": "5f0c2b7e-3d4a-4e8b-9c1d-2a3b4c5d6e7f"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Send the request body as JSON.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Send the request body as JSON."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Confirm the recommended team",
+        "tags": [
+          "formation"
+        ]
+      }
+    },
+    "/api/v1/formation-runs/{run_id}/verify": {
+      "post": {
+        "description": "Re-runs the run from its frozen inputs and records whether it reproduced the same team\nand fitness. Needs a recent authenticator confirmation (step-up).",
+        "operationId": "verify_api_v1_formation_runs__run_id__verify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "job_id": "0b7c1a52-8d1e-4f55-9a3e-2f1c6f2d9b10",
+                  "progress": 0,
+                  "run_id": "5f0c2b7e-3d4a-4e8b-9c1d-2a3b4c5d6e7f",
+                  "status": "QUEUED"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FormationRunAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Send the request body as JSON.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Send the request body as JSON."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "DEPENDENCY_UNAVAILABLE",
+                    "message": "A service we depend on is unavailable.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "A service we depend on is unavailable."
+          }
+        },
+        "summary": "Re-run a formation run to verify it (admin)",
+        "tags": [
+          "formation"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "description": "Return ok while the process is serving requests.",
@@ -15687,6 +18009,318 @@
         "summary": "Readiness check (internal network only)",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}": {
+      "get": {
+        "description": "Status and progress of a job you started (admins: any job). Others' jobs are 404.",
+        "operationId": "get_job_api_v1_jobs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "created_at": "2026-11-22T06:00:00Z",
+                  "id": "0b7c1a52-8d1e-4f55-9a3e-2f1c6f2d9b10",
+                  "progress": 42,
+                  "started_at": "2026-11-22T06:00:01Z",
+                  "status": "RUNNING",
+                  "type": "formation.run"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/JobOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "A background job's status",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}/events": {
+      "get": {
+        "description": "Stream a job you started. Same-origin only; at most 3 open streams per user.",
+        "operationId": "job_events_api_v1_jobs__job_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "last-event-id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 12,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "sec-fetch-site",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sec-Fetch-Site"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "example": "event: progress\ndata: {\"progress\":40}"
+              }
+            },
+            "description": "An event stream: `status` first, then `progress` events."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Live progress of a background job (Server-Sent Events)",
+        "tags": [
+          "jobs"
         ]
       }
     },
@@ -23518,6 +26152,397 @@
         "summary": "Extend the bidding deadline",
         "tags": [
           "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/formation-runs": {
+      "get": {
+        "description": "Saved runs, newest first (up to 50).",
+        "operationId": "list_runs_api_v1_projects__project_id__formation_runs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "confirmed": false,
+                    "created_at": "2026-11-22T06:00:00Z",
+                    "finished_at": "2026-11-22T06:00:02Z",
+                    "fitness": 0.6844,
+                    "id": "5f0c2b7e-3d4a-4e8b-9c1d-2a3b4c5d6e7f",
+                    "min_newcomers": 1,
+                    "optimal": true,
+                    "preset": "balanced",
+                    "price_paisa": 4250000,
+                    "project_id": "6a1d3c8f-4e5b-4f9c-8d2e-3b4c5d6e7f80",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FormationRunSummary"
+                  },
+                  "title": "Response List Runs Api V1 Projects  Project Id  Formation Runs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "A project's formation runs",
+        "tags": [
+          "formation"
+        ]
+      },
+      "post": {
+        "description": "Queues a run on your FORMING project with a preset (or your own weights), the fairness\ndial (0–2 newcomers) and, optionally, different minimum standards. The seed is chosen by the\nserver. One run at a time per project.",
+        "operationId": "start_run_api_v1_projects__project_id__formation_runs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "UUID; a repeat returns the same run",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "UUID; a repeat returns the same run",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FormationRunCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "job_id": "0b7c1a52-8d1e-4f55-9a3e-2f1c6f2d9b10",
+                  "progress": 0,
+                  "run_id": "5f0c2b7e-3d4a-4e8b-9c1d-2a3b4c5d6e7f",
+                  "status": "QUEUED"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FormationRunAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "The request could not be understood.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request could not be understood."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Send the request body as JSON.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Send the request body as JSON."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "DEPENDENCY_UNAVAILABLE",
+                    "message": "A service we depend on is unavailable.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "A service we depend on is unavailable."
+          }
+        },
+        "summary": "Start team formation",
+        "tags": [
+          "formation"
         ]
       }
     },

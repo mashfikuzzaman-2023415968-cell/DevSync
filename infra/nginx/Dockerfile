@@ -44,7 +44,7 @@ RUN apt-get update \
 COPY --from=brotli /src/nginx-${NGINX_VERSION}/objs/ngx_http_brotli_filter_module.so /etc/nginx/modules/
 COPY --from=brotli /src/nginx-${NGINX_VERSION}/objs/ngx_http_brotli_static_module.so /etc/nginx/modules/
 COPY infra/nginx/nginx.conf /etc/nginx/nginx.conf
-COPY infra/nginx/security-headers.conf infra/nginx/proxy-api.conf /etc/nginx/
+COPY infra/nginx/security-headers.conf infra/nginx/proxy-api.conf infra/nginx/proxy-sse.conf /etc/nginx/
 # Renders ADMIN_ALLOWED_CIDRS into /tmp/nginx-generated before Nginx starts (spec §14.17).
 COPY --chmod=0755 infra/nginx/05-devsync-admin-allow.sh /docker-entrypoint.d/
 COPY --from=frontend /web/dist/ /usr/share/nginx/html/

@@ -30,7 +30,9 @@ from app.api.v1 import (
     bids,
     captcha,
     files,
+    formation,
     health,
+    jobs,
     marketplace,
     me,
     profiles,
@@ -197,6 +199,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         projects,
         bids,
         reputation,
+        formation,
+        jobs,
     ):
         app.include_router(module.router, prefix=API_PREFIX)
     if settings.DEVSYNC_ENV is Environment.TEST:

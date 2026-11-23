@@ -8,7 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Request, Response
 from redis.asyncio import Redis
 
-from app.api.deps import DbSession, principal_of, rate_limit, redis_client
+from app.api.deps import DbSession, loop_redis, principal_of, rate_limit
 from app.core.errors import DomainError, ErrorCode
 from app.schemas.common import Page, error_responses
 from app.schemas.marketplace import ProjectCard, ProjectDetail
@@ -34,7 +34,7 @@ MAX_REPORT_BYTES = 8 * 1024
     },
 )
 async def public_stats(
-    db: DbSession, redis: Annotated[Redis, Depends(redis_client)], response: Response
+    db: DbSession, redis: Annotated[Redis, Depends(loop_redis)], response: Response
 ) -> PublicStats:
     """Aggregate counts only, cached for 5 minutes; absent numbers are omitted."""
     response.headers["Cache-Control"] = "public, max-age=300"

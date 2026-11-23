@@ -1182,3 +1182,188 @@ now also have `le=10_000_000_000`, the same cap as a project's budget, so anythi
 422 naming the field. Tests: `test_search_budget_out_of_range_is_a_422_never_a_500` and
 `test_search_budget_at_the_cap_is_accepted` (`tests/security/test_bids.py`). These were the only
 integer query parameters without an upper bound. Nothing was relaxed.
+
+## Phase 7 (team formation; Raisa with Claude Code)
+
+**D103 · Audit chain: a row is numbered after it takes the chain lock (bug fix, found by the
+Phase 6 gate).** The first Phase 6 gate run (WSL laptop, heavy load) failed Phase 1's check that
+`audit_verify_chain()` finds no break: rows 5703 and 5705 both pointed back to 5704. `seq` is an
+identity column, so a row was numbered when its INSERT started, **before** `audit_log_chain()`
+took the chain's advisory lock; a writer descheduled between the two could chain after a row with
+a higher number, forking the chain, and verification reported tampering that never happened (in
+production `/admin/audit/verify` would raise a false alarm). Migration `0013_audit_chain_order`
+redefines the trigger to draw `seq` from the column's sequence **after** the lock, so numbering
+order and chain order are the same by construction (the identity default still draws first, which
+leaves gaps; verification needs order, not contiguity). Rows already written keep their hashes
+(append-only). Test: `tests/integration/test_audit_chain_concurrency.py` holds the lock from
+another connection while an insert waits and checks the waiting row is numbered after a value
+drawn meanwhile — it fails on the old trigger (`6648 > 6649`) and passes on the new one — plus a
+30-writer stress check of the chain. Phase 0 code; written on the Phase 6 branch after it went
+to the gate (as D102 there, on Raisa's local branch only) and carried into Phase 7 as its first
+change, as approved with the Phase 7 plan.
+
+**D104 · CSP and axe checks run one test per screen (extends D100).** `csp.spec.ts` and
+`a11y.spec.ts` checked all of a role's signed-in screens inside one test (Playwright's default
+60 s), and the stateful axe check all 14 stateful screens inside 240 s; with the Phase 6 screens a
+slow machine ran out of budget and the failure named whichever screen happened to be last. Each
+screen now has its own test with exactly the same checks (CSP violations, console errors,
+off-origin requests; serious/critical axe rules in both colour schemes). The gate selects by tag,
+not by count, so only the test count grows. Written on the Phase 6 branch and carried into
+Phase 7 with the plan.
+
+**D105 · Formation arithmetic.** PSO and fitness run in NumPy/Python floats (float64), as the spec
+allows for the algorithms; money is always integer paisa (prices, budgets, counterfactual prices
+rounded down to ৳100). Every score that is stored or shown is rounded half-up to 3 places
+(fitness to 4 when stored, 2 on screen per §13.8). Ties between equal-fitness teams break by the
+candidate index, so a run is reproducible from its snapshot, parameters and seed.
+
+**D111 · Two paper findings resolved (D9 items 1 and 3).** (1) A3: an infeasible team scores −∞;
+[PCS] prints −1, but a feasible team can score below −1 (with all weight on time and t̄ = 1 for
+two members, F = −2), so −1 would rank an invalid team above a real one
+(`test_A3_infeasible_fitness`). (2) Initialisation: positions Bernoulli(N/k), velocities
+U(b_l, b_u); the paper draws positions from U(b_l, b_u) — not a 0/1 vector — and velocities from
+U(−|b|, |b|) (`test_initialisation_resolution`: over 3,000 particles the share of ones is
+N/k ± 0.01 and every velocity lies in [b_l, b_u)).
+
+**D112 · PSO optimality and E1.** §17's bar — PSO optimal in ≥ 95 % of 200 small instances with a
+mean gap ≤ 2 % — is a unit test (`test_pso_is_optimal_on_small_instances`) on the seeded generator
+`app/algorithms/formation_bench.py`. `scripts/e1_bpso_vs_exact.py` runs §19's E1 (300 instances,
+8–18 candidates, teams of 3–6, three presets, both modes) and writes one CSV row per instance;
+it exits 1 below the bar, so the gate runs it with `--instances 20`. Measured on 2026-11-22
+(simulated data): 298 solvable instances, PSO optimal in 98.3 %, mean gap 0.042 %.
+
+**D114 · Feasibility in each mode.** `devsync`: exactly N members, each slot exactly its count,
+distinct developers, Σ price ≤ the budget after fee (A10), every skill the plan needs held by a
+member, and at least `min_newcomers` newcomers. `pcs_replication`: only the paper's Eq. 13
+(Σ x = N) and distinct developers — [PCS] has no slots, team budget, coverage or newcomer minimum;
+they are DevSync extensions. With `fitness.include_performance` (A7, off by default) the extra
+weight C5 equals C1 before the five weights are normalised.
+
+**D115 · Presets are Balanced plus emphasis on one term.** The spec names the presets (Quality→P,
+Balanced→C, Fast→t, Budget→c for Algorithm 1) but not their weights. A first choice (Budget =
+0.2/0.15/0.15/0.5) sometimes picked a *dearer* team than Quality: Eq. 18 divides each price by the
+whole budget after fee, which compresses price differences to about 0.1 a member while time
+differences span about 0.8. Weights alone can't make "Budget never costs more than Quality" a
+guarantee (even 0.12/0.08/0.07/0.73 left 1 counter-example in 200), and Eq. 18 is not changed.
+So each preset is Balanced (0.35/0.25/0.20/0.20) plus 1.0 on its own term, normalised: Quality
+0.675/0.125/0.1/0.1, Fast 0.175/0.125/0.6/0.1, Budget 0.175/0.125/0.1/0.6. By an exchange argument
+each preset's best team is then never worse than Balanced's on its own term — Budget never dearer,
+Quality never less competent, Fast never slower — tested on every instance without exception. The
+spec's Budget-vs-Quality comparison is a strong tendency (measured: Budget no dearer in 189 of 200
+random instances, Quality at least as competent in 195; asserted as lower bounds) and is checked
+exactly on the seeded project in the service tests.
+
+**D107 · Generic jobs API and live progress over SSE.** `GET /jobs/{id}` and
+`GET /jobs/{id}/events` serve any job with a requester: its requester or an admin; anyone else,
+system jobs and unknown ids get 404 (service check and the `jobs_select` RLS policy). Workers append
+small events to a capped Redis list `job:{id}:events` (500 events, 1 h TTL; only the keys `type`,
+`status`, `progress`, `iteration`, `best_fitness` and `run_id` are accepted, so no candidate data
+can be streamed). The stream sends the current state, then each event with its index as `id`
+(`Last-Event-ID` resumes), a heartbeat comment every 20 s, and ends on a final status or after
+30 min; at each heartbeat the job row is re-read so a worker that died without a final event still
+ends the stream. It holds no database connection while open. Cross-site use is refused (403
+`CSRF_FAILED`) when `Origin` is present and not the public origin, or when `Sec-Fetch-Site` is
+present and not `same-origin`/`none`: browsers omit `Origin` on same-origin EventSource GETs, so
+requiring it would break the feature, while the session cookie is SameSite. A user's fourth
+concurrent stream is 429 (`sse:concurrent:{user}`, a slot expires after 31 min if a web worker
+dies). The route timeout spares exactly the SSE paths (`SSE_PATHS`), and Nginx has a dedicated
+location for them (`proxy-sse.conf`: `proxy_buffering off`, no compression, `X-Accel-Buffering:
+no`, read timeout 60 s).
+
+**D106 · How a formation run starts.** Only the project's client starts a run, and only while the
+project is FORMING (the bidding-deadline job moves it there; a BIDDING project whose deadline has
+just passed gets 409 "try again shortly" rather than a second copy of the close logic). The body
+takes a preset (Quality→P, Balanced→C, Fast→t, Budget→c for Algorithm 1's advancement; D115
+weights), optional weights C1–C4 (0–1, normalised server-side, all-zero refused), the fairness dial
+`min_newcomers` 0–2 (default 1 when a newcomer is shortlisted, else 0) and optional minimum
+standards within the D54 floor. Any other field — `seed`, `status`, `result`,
+`candidate_snapshot`, … — is 422. Algorithm 1 is re-run through `bids.evaluate` in a SYSTEM
+session (D50: the client can't read bidders' skills) and its per-slot shortlist, with the slot
+counts, budget after fee, deadline, required and critical-path skills, is frozen as the run's
+candidate snapshot next to the parameters (weights, dial, PSO/exact settings, mode) and a
+server-generated 31-bit seed. One run at a time per project (a QUEUED/RUNNING run older than 5 min
+belongs to a dead worker and no longer blocks), 10 starts an hour per client
+(`ratelimit.formation_run`, refused requests count, like bids), and an Idempotency-Key replays the
+first 202. Services queue jobs by name through `core/task_queue.py` (an allow-list with each
+job's §11 timeout and retries), because the layering forbids services importing `app.jobs`.
+
+**D108 · Invitations are recorded, not sent, in Phase 7.** Confirm (FORMING → TEAM_PENDING) marks
+the team's bids SELECTED and every other ACTIVE bid NOT_SELECTED (INELIGIBLE ones stay), creates
+the team, its members (INVITED), one invitation row each with `sent_at`/`expires_at` NULL (a check
+constraint keeps them NULL together) and TENTATIVE availability reservations over the project
+period (§9.17). Phase 8 sends the invitations and starts their 48 h clock, so nobody is invited to
+something they can't answer yet. Phase 7 tells the client "Team formation finished" and each
+non-selected bidder "Your bid was not selected" (link to the bid, where the explanation is shown);
+"You were selected" arrives with Phase 8's invitation. A confirmed run's "why not selected" rows
+are written by `formation.explanations` (idempotent per bid and run): a full analysis (gap,
+counterfactual price, main gap) for up to 50 bids within a 90 s budget, a reason code for the rest
+(NOT_SELECTED, NOT_SHORTLISTED or the Algorithm 1 reason under the run's standards).
+
+**D109 · Saved runs and reproduction.** Every run is kept (deleting is refused by a trigger and the
+grants) and listed for the client at `GET /projects/{id}/formation-runs`, newest first, up to 50
+(not in the §10 table; it backs "earlier runs" and Recalculate). A run's inputs can't change after
+insert, even for SYSTEM (trigger). Re-running the frozen snapshot, parameters and seed gives the
+same team and fitness (`run_formation` is pure; tested in the API test through the admin verify
+job, which records `admin_verification.reproduced` on the run).
+
+**D110 · Admin pieces and nav markers.** Built now as API only: `POST /formation-runs/{id}/verify`
+(admin with step-up, queues `formation.verify`, 202) and `GET /admin/formation-runs` (cursor
+page). The admin page moves to Phase 12 (admin nav "Team formation runs" → 12) and the client's
+"Teams" page to Phase 8 (nav marker → 8), where a confirmed team becomes something to manage.
+
+**D113 · Homepage fairness figures from a real run.** `backend/scripts/formation_check.py` (the
+Phase 7 gate check) runs the stage-2 "Online ordering system" (Balanced, seed 20261207) with the
+dial at 0, 1 and 2 and writes `frontend/src/content/homepage-example.json` (`--homepage PATH`):
+newcomers in the team and the cost of fairness per setting, no names. The hero chip reads "Fair
+team, X cost of fairness" (dial 1) and the fairness spotlight shows each setting's figure; the
+gate compares the committed file with a fresh run, so it can't go stale. One script instead of
+the planned `build_homepage_example.py`: the same run feeds both the gate fixture and the page.
+Measured on the seed: dial 0 → no newcomer, 0 %; dial 1 → 1 newcomer, 16.2 %; dial 2 → 2
+newcomers, 38.7 % (the team scores are small sums of positive and negative terms, so relative
+costs read large; they are shown as computed). The stills are unaffected (they render no chip).
+
+**D116 · The stage-2 seed leaves the ordering project FORMING.** Spec §18.4 says stage 2 holds
+"everything in stage 1", where the ordering project is BIDDING, but Demo 2 runs team formation on
+it. After asserting the 10 eligible bids, stage 2 closes that project's bidding through the real
+deadline job (verdicts on the bids, notices, BIDDING → FORMING). Expected result with the dial at
+1 (`tests/fixtures/formation_expected_team.json`): Mehjabin Chowdhury (newcomer), Nusrat Jahan,
+Sadia Islam, Tanvir Ahmed — fitness 0.8287, exact-verified optimal. E2E tests, which build their
+own projects, reach FORMING through the test-only `start-forming` route (the test stack runs no
+scheduler) and execute queued runs through `formation-runs/{id}/execute` (no worker); both exist
+only when `DEVSYNC_ENV=test`. The run code lives in `services/formation_runner.py` so that route
+and the RQ entry points in `jobs/formation_jobs.py` share it.
+
+**D117 · Phase 7 gate fixes on the native Linux laptop (2026-11-23).** Four problems the WSL
+laptop could not show, none of them in the formation logic: (1) the partial unique index
+`one_active_lead_per_team` uses `text()` for a constant DDL predicate and now carries the
+`# forbidden-ok:` reason, like `one_standing_bid_per_developer`; (2) `app/core/task_queue.py`
+and `app/services/formation_runner.py` had no test of their own, so they got
+`tests/unit/test_task_queue.py` and `tests/unit/test_formation_runner.py` (46 tests: listed tasks
+only, real job functions, queues the worker listens on, the problem rebuilt from the frozen
+snapshot, refused bad snapshots and params, rounding of NaN/inf/−0, downsampling, a real small
+run, same seed → same result, newcomer minimum, infeasible budget, early stop) rather than
+allowlist entries; (3) the Nginx image was rebuilt with `--no-cache --pull` for the
+`krb5 1.21.3-5+deb13u2` fixes Trivy reported; (4) `test_concurrent_writers_keep_one_unbroken_chain`
+failed every time here: asyncpg's client-side SCRAM is a Python loop (~180 ms CPU per connect on
+this laptop), so 30 connects started together ran past the 3 s connect timeout. The test now opens
+its connections five at a time, holds all 30 writers at a barrier on bare connections (no
+transaction, so the idle-in-transaction limit doesn't apply) and releases them together, which
+guarantees the overlap; it also checks that all 30 rows were written. The writer count, the
+chain assertions and the app's connect timeout are unchanged. Production pools its connections,
+so it doesn't open 30 at once. (5) `check_paper_alignment.py` was extended to Eq. 13–19 but its
+unit test still built an Eq. 1–12 repository, so it crashed on the missing `bpso.py`; the fixture
+now covers all 19 equations, three tests cover the formation rules (a function in `bpso.py` or
+`fitness.py`, not elsewhere), and a missing formation module is reported as a problem instead of
+an exception. (6) Once the laptop ran at full speed, the new Phase 7 E2E flows
+(seven users signed in one after another) ran faster than Nginx's `auth` zone allows (5 r/s,
+burst 10; the test reset can't clear the edge) and failed with a 429 at sign-in, or with a
+misleading 403 `CSRF_FAILED` because `csrfHeaders` ignored a 429 on `/auth/csrf`. The E2E helpers
+now send auth requests through `throughAuthZone`, which waits and retries only the edge's HTML
+429 (at most 10 tries, 1 s apart) and returns the app's own JSON 429s unchanged, and
+`csrfHeaders` fails with a clear error when it gets no token. Nginx's limits are unchanged. (7) The GPU-only homepage test
+`scrolling snaps the constellation into a team with the chip` still expected "✓ Balanced team";
+since D113 the chip shows the real run's cost of fairness at dial 1. It now expects
+"✓ Fair team, <cost> cost of fairness", with the cost read from the same generated
+`src/content/homepage-example.json` the page uses and formatted as `fairnessCost` formats it
+(16.2 % today), so it can't drift from the figures. (The Playwright runner loads plain Node ESM,
+which won't import that JSON without an import attribute, so the test reads the file.)

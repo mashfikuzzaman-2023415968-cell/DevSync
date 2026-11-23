@@ -742,6 +742,7 @@ def step_phase_checks(g: Gate) -> str:
         4: phase4_checks,
         5: phase5_checks,
         6: phase6_checks,
+        7: phase7_checks,
     }
     if g.phase not in checks:
         raise StepFailed(f"no PHASE_CHECKS defined for phase {g.phase}")
@@ -937,6 +938,44 @@ def phase6_checks(g: Gate) -> str:
         f"{p5}; Eq. 1–12 aligned with functions and tests; stage-2 seed matches the golden "
         "reputations and keeps 10 eligible; E5, replication, append-only log and SYSTEM-only "
         "writes verified"
+    )
+
+
+def phase7_checks(g: Gate) -> str:
+    """Phase 7 checks (spec §17): Eq. 13–19 aligned; on the stage-2 seed (FORMING, D116) the
+    ordering project forms the documented team with a newcomer, exact-verified and reproducible
+    (tests/fixtures/formation_expected_team.json); the homepage's fairness figures are that real
+    run's (D21, D113); E1 smoke: PSO optimal on ≥ 95 % of 20 small instances with mean gap ≤ 2 %
+    (D112); and the named Phase 7 security checks hold."""
+    p6 = phase6_checks(g)  # leaves the stage-2 seed loaded
+    proc = in_tests(["python", "scripts/formation_check.py"])
+    line = next((x for x in proc.stdout.splitlines() if x.startswith("homepage-example: ")), "")
+    if not line:
+        raise StepFailed("formation_check printed no homepage example")
+    homepage = ROOT / "frontend" / "src" / "content" / "homepage-example.json"
+    if not homepage.exists() or json.loads(homepage.read_text(encoding="utf-8")) != json.loads(
+        line.removeprefix("homepage-example: ")
+    ):
+        raise StepFailed(
+            "frontend/src/content/homepage-example.json is stale: rebuild it with "
+            "formation_check.py --homepage (D113)"
+        )
+    in_tests(["python", "scripts/e1_bpso_vs_exact.py", "--instances", "20"])
+    in_tests(
+        [
+            "pytest", "-q", "-p", "no:cacheprovider",
+            "tests/algorithms/test_fitness.py", "tests/algorithms/test_bpso.py",
+            "tests/algorithms/test_explain.py",
+            "tests/integration/test_rls_formation.py",
+            "tests/security/test_formation_api.py", "tests/security/test_jobs_api.py",
+        ]
+    )  # fmt: skip
+    for doc in ("docs/plans/phase-07.md", "docs/ALGORITHMS.md", "docs/PAPER_ALIGNMENT.md"):
+        if not (ROOT / doc).exists():
+            raise StepFailed(f"{doc} is missing")
+    return (
+        f"{p6}; seeded project forms the documented team (newcomer, optimal, reproducible); "
+        "homepage figures from that run; E1 smoke ≥ 95 % optimal; formation RLS and API checks"
     )
 
 

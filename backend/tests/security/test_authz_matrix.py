@@ -87,6 +87,17 @@ MATRIX: dict[tuple[str, str], tuple[set[str], str, bool]] = {
     # Phase 6: reputation is a public value for active accounts; the history is the developer's.
     ("GET", "/api/v1/developers/{developer_id}/reputation"): (ACTIVE, "auth", True),
     ("GET", "/api/v1/me/reputation/history"): ({DEV}, "auth", False),
+    # Phase 7: generic job status and live events (D107); others' jobs are 404 in the service.
+    ("GET", "/api/v1/jobs/{job_id}"): (ACTIVE, "auth", True),
+    ("GET", "/api/v1/jobs/{job_id}/events"): (ACTIVE, "auth", True),
+    # Phase 7: team formation (D106–D110).
+    ("POST", "/api/v1/projects/{project_id}/formation-runs"): ({CLIENT}, "auth", True),
+    ("GET", "/api/v1/projects/{project_id}/formation-runs"): ({CLIENT, ADMIN}, "auth", True),
+    ("GET", "/api/v1/formation-runs/{run_id}"): ({CLIENT, ADMIN}, "auth", True),
+    ("POST", "/api/v1/formation-runs/{run_id}/confirm"): ({CLIENT}, "auth", True),
+    ("POST", "/api/v1/formation-runs/{run_id}/verify"): ({ADMIN}, HIDDEN, True),
+    ("GET", "/api/v1/admin/formation-runs"): ({ADMIN}, HIDDEN, False),
+    ("GET", "/api/v1/bids/{bid_id}/explanation"): ({DEV, ADMIN}, "auth", True),
     ("GET", "/api/v1/files/{file_id}/download"): (EVERYONE, "", True),
     ("GET", "/api/v1/files/blob/{storage_key}"): (EVERYONE, "", True),
     ("GET", "/api/v1/skill-tests"): ({DEV}, "auth", False),

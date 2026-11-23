@@ -92,6 +92,20 @@ def test_api_health_through_nginx(edge: httpx.Client) -> None:
     assert r.headers["cache-control"] == "no-store"
 
 
+def test_job_event_stream_location_proxies_to_the_api(edge: httpx.Client) -> None:
+    """The SSE location (unbuffered, D107) reaches the API: anonymous is the API's own 401 JSON,
+    with the API headers and the no-buffering marker; a malformed id falls to `/api/` (422)."""
+    r = edge.get("/api/v1/jobs/0b7c1a52-8d1e-4f55-9a3e-2f1c6f2d9b10/events")
+    assert r.status_code == 401
+    assert r.json()["error"]["code"] == "UNAUTHENTICATED"
+    assert r.headers["x-accel-buffering"] == "no"
+    assert r.headers["x-request-id"]
+    assert r.headers["strict-transport-security"].startswith("max-age=31536000")
+    assert r.headers["x-robots-tag"] == "noindex, nofollow"
+    other = edge.get("/api/v1/jobs/not-a-uuid/events")
+    assert "x-accel-buffering" not in other.headers
+
+
 @pytest.mark.parametrize("path", ["/metrics", "/api/v1/health/ready"])
 def test_internal_endpoints_are_not_reachable(edge: httpx.Client, path: str) -> None:
     assert edge.get(path).status_code == 404

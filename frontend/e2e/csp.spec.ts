@@ -27,23 +27,24 @@ test("public screens: strict CSP holds, no console errors, nothing off-origin @e
   expect(w.foreign).toEqual([]);
 });
 
-for (const role of ["DEVELOPER", "CLIENT", "ADMIN"] as const) {
-  test(`${role.toLowerCase()} screens: strict CSP holds with dialogs and menus open @e2e`, async ({
+// One test per signed-in screen (Phase 6, D100): the same checks for each, so a slow screen
+// fails on its own and by name instead of exhausting a budget shared by the role's screens.
+for (const s of SIGNED_IN_SCREENS) {
+  const role = s.role ?? "DEVELOPER";
+  test(`${s.name}: strict CSP holds with dialogs and menus open @e2e`, async ({
     page,
     baseURL,
   }) => {
     const origin = new URL(baseURL ?? "https://localhost").origin;
     const w = await watchPage(page, origin);
     await apiSignIn(page, baseURL ?? "", role, "Nadia Rahman");
-    for (const s of SIGNED_IN_SCREENS.filter((x) => x.role === role)) {
-      await page.goto(s.path);
-      await page.waitForLoadState("networkidle");
-      await page.getByRole("button", { name: "Account menu" }).click();
-      await page.keyboard.press("Escape");
-      await page.keyboard.press("Control+k");
-      await page.keyboard.press("Escape");
-      expect(await w.violations(), s.name).toEqual([]);
-    }
+    await page.goto(s.path);
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: "Account menu" }).click();
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Control+k");
+    await page.keyboard.press("Escape");
+    expect(await w.violations(), s.name).toEqual([]);
     expect(w.consoleErrors).toEqual([]);
     expect(w.foreign).toEqual([]);
   });

@@ -8,7 +8,7 @@
  * Phase 5 fixture values outside production.
  */
 import { useMemo, useState } from "react";
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 import { ApiError } from "@/api/client";
 import type { ClientBid, ClientBids } from "@/api/types";
 import { Button } from "@/components/ui/Button";
@@ -114,6 +114,12 @@ function BidsView({
               }}
             >
               Fix the shortfall
+            </Button>
+          ) : project && ["FORMING", "TEAM_PENDING"].includes(project.status) ? (
+            <Button asChild>
+              <Link to={`/client/projects/${project.id}/formation`}>
+                {project.status === "FORMING" ? "Form team" : "See your team"}
+              </Link>
             </Button>
           ) : null
         }

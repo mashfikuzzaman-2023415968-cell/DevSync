@@ -26,6 +26,7 @@ from app.core.security import (
     hash_password_async,
     hash_passwords_async,
 )
+from app.core.settings_cache import active_settings
 from app.db.context import DbContext
 from app.db.session import open_session
 from app.models.identity import (
@@ -45,9 +46,10 @@ from app.models.profiles import (
     SkillEvidence,
     TestAttempt,
 )
-from app.models.projects import Project
+from app.models.projects import Project, ProjectStatus
 from app.models.reputation import ReputationHistory, ReputationSnapshot, ReputationSource
-from app.services import platform_settings, reputation_engine
+from app.services import bids as bids_svc
+from app.services import formation_runner, platform_settings, reputation_engine
 from app.services.auth.common import totp_key
 
 
@@ -250,3 +252,35 @@ async def seed_reputation_history(user_id: uuid.UUID, projects: int, seed: int) 
         version, settings = await platform_settings.get_active(db)
         await reputation_engine.recalculate(db, user_id, settings, version)
         await db.commit()
+
+
+async def execute_formation_run(run_id: uuid.UUID) -> str:
+    """Run a queued formation run in this process (E2E: the test stack has no worker). Returns
+    the run's final status; a run that already started is left alone."""
+    return (await formation_runner.execute_run(run_id)).value
+
+
+async def write_formation_explanations(run_id: uuid.UUID) -> int:
+    """Write a confirmed run's "why not selected" rows now (E2E)."""
+    return (await formation_runner.write_explanations(run_id))["explanations"]
+
+
+async def start_forming(project_id: uuid.UUID) -> bool:
+    """Close bidding the way the deadline job does — the verdicts recorded on the bids and
+    BIDDING → FORMING — without waiting for the scheduler (E2E: the test stack runs none).
+    False when the project is unknown, not BIDDING or still short of eligible bids."""
+    now = get_clock().now()
+    async with open_session(DbContext.system(), job=True) as db:
+        project = await db.get(Project, project_id, with_for_update=True)
+        if project is None or project.status != ProjectStatus.BIDDING:
+            return False
+        project.bidding_deadline = now - timedelta(minutes=1)
+        settings = await active_settings(db)
+        ev = await bids_svc.evaluate(db, project, settings, now.date())
+        if ev.result.too_few:
+            return False
+        bids_svc.record_evaluation(ev, now)
+        project.status = ProjectStatus.FORMING
+        project.version += 1
+        await db.commit()
+    return True
