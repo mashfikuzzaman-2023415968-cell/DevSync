@@ -20,7 +20,7 @@ projects, but the experienced developers' reputations are **computed** by the Ph
 simulated project histories instead of the fixed stage-1 table: the market simulator generates
 each persona's completed projects (`seed_data/stage2_personas.json`, fixed seed), the histories
 are stored as SIMULATED `reputation_history` rows, and `reputation.recalculate_all` scores them.
-The script asserts the computed values against `tests/fixtures/stage2_reputation_golden.json`
+The script asserts the computed values against `scripts/seed_data/stage2_reputation_golden.json`
 (so a change can't drift silently; `--write-golden` rewrites it after a deliberate change) and
 that the ordering project still gives the documented 10 eligible bids; then it closes that
 project's bidding through the deadline job, so it is FORMING and ready for team formation
@@ -80,9 +80,8 @@ MIN_FIXED_PASSWORD = 12
 
 SEED_DIR = Path(__file__).resolve().parent / "seed_data"
 STAGE2_FILE = SEED_DIR / "stage2_personas.json"
-GOLDEN_FILE = (
-    Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "stage2_reputation_golden.json"
-)
+# With the other seed data (D139): the production image used by `make demo-up` has no `tests/`.
+GOLDEN_FILE = SEED_DIR / "stage2_reputation_golden.json"
 # Simulated projects finish one every 40 days from this date (fixed, so the seed is reproducible).
 HISTORY_START = datetime(2024, 7, 1, 12, tzinfo=UTC)
 HISTORY_SPACING = timedelta(days=40)
@@ -983,7 +982,7 @@ def main() -> int:
     parser.add_argument("--stage", type=int, default=1)
     parser.add_argument(
         "--write-golden", action="store_true",
-        help="stage 2: rewrite tests/fixtures/stage2_reputation_golden.json (a reviewed change)",
+        help="stage 2: rewrite scripts/seed_data/stage2_reputation_golden.json (a reviewed change)",
     )  # fmt: skip
     args = parser.parse_args()
     if args.stage not in (1, 2):
