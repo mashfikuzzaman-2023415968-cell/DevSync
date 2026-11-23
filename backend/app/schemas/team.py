@@ -293,3 +293,24 @@ EX_CLIENT_TEAMS = [
         "needs_attention": ["REPAIR_OPEN"],
     }
 ]
+EX_LEAD_CHANGE = {
+    "id": "c2a3d9e5-0e1b-4f52-ad84-91a2b3c4d5e6",
+    "requested_by": "a0e1b7c3-8c9f-4d30-8b62-7f8091a2b3c4",
+    "requester_name": "Nusrat Jahan",
+    "reason": "The lead hasn't answered questions for a week.",
+    "suggested_member_id": None,
+    "status": "PENDING",
+    "decision_reason": None,
+    "created_at": "2026-11-28T06:00:00Z",
+    "decided_at": None,
+}
+EX_REMOVAL = {
+    "id": "d3b4eaf6-1f2c-4a63-be95-a2b3c4d5e6f7",
+    "team_member_id": _M1,
+    "member_name": "Nusrat Jahan",
+    "reason": "No updates or check-ins for twelve days.",
+    "basis": "INACTIVITY",
+    "status": "PENDING",
+    "decision_reason": None,
+    "created_at": "2026-12-10T06:00:00Z",
+}

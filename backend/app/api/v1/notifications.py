@@ -26,7 +26,7 @@ Owner = Annotated[Ctx, Depends(acting("notifications.read"))]
         200: {"content": {"application/json": {
             "example": {"items": [EX_NOTIFICATION], "next_cursor": None}
         }}},
-        **error_responses(401, 422, 429),
+        **error_responses(401, 403, 404, 422, 429),
     },
 )  # fmt: skip
 async def list_notifications(
@@ -44,7 +44,7 @@ async def list_notifications(
     summary="How many are unread",
     response_model=UnreadCount,
     responses={200: {"content": {"application/json": {"example": {"unread": 3}}}},
-               **error_responses(401, 429)},
+               **error_responses(401, 403, 404, 429)},
 )  # fmt: skip
 async def unread_count(ctx: Owner) -> UnreadCount:
     """For the bell's badge."""
@@ -67,7 +67,7 @@ async def mark_read(notification_id: uuid.UUID, ctx: Owner) -> NotificationOut:
     summary="Mark all read",
     response_model=ReadAll,
     responses={200: {"content": {"application/json": {"example": {"marked": 5}}}},
-               **error_responses(401, 429)},
+               **error_responses(401, 404, 429)},
 )  # fmt: skip
 async def read_all(ctx: Owner) -> ReadAll:
     return await svc.read_all(ctx)

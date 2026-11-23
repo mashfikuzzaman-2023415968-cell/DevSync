@@ -19,7 +19,9 @@ from app.schemas.repair import EX_REPAIR, ChooseIn, RaiseBudgetIn, RepairOut
 from app.schemas.team import (
     EX_ACTION,
     EX_CLIENT_TEAMS,
+    EX_LEAD_CHANGE,
     EX_MY_INVITATIONS,
+    EX_REMOVAL,
     EX_TEAM_CLIENT,
     ActionOut,
     ChooseLeadIn,
@@ -135,7 +137,10 @@ async def decline_lead(project_id: uuid.UUID, ctx: Lead) -> ActionOut:
     summary="Ask for a lead change",
     status_code=201,
     response_model=LeadChangeRequestOut,
-    responses=error_responses(401, 403, 404, 409, 422, 429),
+    responses={
+        201: {"content": {"application/json": {"example": EX_LEAD_CHANGE}}},
+        **error_responses(401, 403, 404, 409, 422, 429),
+    },
 )
 async def request_lead_change(
     project_id: uuid.UUID, body: LeadChangeRequestIn, ctx: Requester
@@ -251,7 +256,10 @@ async def leave(member_id: uuid.UUID, body: LeaveIn, ctx: Leaver) -> ActionOut:
     summary="Ask an admin to remove a member",
     status_code=201,
     response_model=RemovalRequestOut,
-    responses=error_responses(401, 403, 404, 409, 422, 429),
+    responses={
+        201: {"content": {"application/json": {"example": EX_REMOVAL}}},
+        **error_responses(401, 403, 404, 409, 422, 429),
+    },
 )
 async def request_removal(
     member_id: uuid.UUID, body: RemovalRequestIn, ctx: Remover
@@ -264,7 +272,7 @@ async def request_removal(
     "/me/invitations",
     summary="My invitations and teams",
     response_model=MyInvitationsOut,
-    responses=_ok(EX_MY_INVITATIONS, 401, 403, 422, 429),
+    responses=_ok(EX_MY_INVITATIONS, 401, 403, 404, 422, 429),
 )
 async def my_invitations(ctx: Invitee) -> MyInvitationsOut:
     return await svc.my_invitations(ctx)
@@ -274,7 +282,7 @@ async def my_invitations(ctx: Invitee) -> MyInvitationsOut:
     "/me/teams",
     summary="My projects' teams",
     response_model=list[ClientTeamCard],
-    responses=_ok(EX_CLIENT_TEAMS, 401, 403, 422, 429),
+    responses=_ok(EX_CLIENT_TEAMS, 401, 403, 404, 422, 429),
 )
 async def my_teams(ctx: Lister) -> list[ClientTeamCard]:
     return await svc.client_teams(ctx)
@@ -284,7 +292,7 @@ async def my_teams(ctx: Lister) -> list[ClientTeamCard]:
     "/admin/removal-requests",
     summary="Member removal requests (admin)",
     response_model=list[RemovalRequestOut],
-    responses=error_responses(401, 403, 404, 422, 429),
+    responses=_ok([EX_REMOVAL], 401, 403, 404, 422, 429),
 )
 async def admin_removals(ctx: Admin) -> list[RemovalRequestOut]:
     return await svc.admin_removals(ctx)
