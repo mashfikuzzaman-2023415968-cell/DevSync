@@ -43,6 +43,7 @@ import structlog
 from redis.exceptions import RedisError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.algorithms import availability as avail
 from app.algorithms.cpm import CpmError, MilestoneInput, compute_cpm
@@ -179,9 +180,12 @@ async def _open_places(
 
 
 def _taking_bids(now: datetime) -> Any:
+    # An alias, correlated to the outer project only: callers may already join project_slots.
+    slot = aliased(ProjectSlot)
     reopened = (
-        select(ProjectSlot.id)
-        .where(ProjectSlot.project_id == Project.id, ProjectSlot.reopened_until > now)
+        select(slot.id)
+        .where(slot.project_id == Project.id, slot.reopened_until > now)
+        .correlate(Project)
         .exists()
     )
     bidding = (Project.status == ProjectStatus.BIDDING) & (

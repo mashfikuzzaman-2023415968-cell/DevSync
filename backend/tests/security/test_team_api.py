@@ -596,3 +596,138 @@ def test_notifications_are_your_own(api: Api, api2: Api, world: dict[str, Any]) 
     assert api.get(f"{BASE}/notifications/unread-count").json()["unread"] == client_before
     assert api2.get(f"{BASE}/notifications?cursor=bad").status_code == 422
     assert all(n["link_path"] is None or n["link_path"].startswith("/") for n in items)
+
+
+# ------------------------------------------------------------------- reopen and raise budget
+
+
+def _decline_one_with_no_candidates(
+    api: Api, api2: Api, world: dict[str, Any], migration_url: str, *, price: int | None = None
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Confirm, then make the other bidders unusable — withdrawn, or priced so each passes
+    Algorithm 1 alone (≤ the budget after fee) but no longer fits next to the remaining member —
+    and let one member decline: the repair finds nobody."""
+    run = confirmed(api, world)
+    others = [b for _u, b in world["bidders"] if b not in run["team_bids"]]
+    if price is None:
+        _sql(
+            migration_url,
+            "UPDATE bids SET status = 'WITHDRAWN' WHERE id = ANY(:ids)",
+            ids=[uuid.UUID(b) for b in others],
+        )
+    else:
+        _sql(
+            migration_url,
+            "UPDATE bids SET price_paisa = :p WHERE id = ANY(:ids)",
+            p=price,
+            ids=[uuid.UUID(b) for b in others],
+        )
+    leaver = run["team_bids"][1]
+    as_dev(api2, bidder_of(world, leaver))
+    inv = my_invitation(api2, world["pid"])
+    assert api2.post(f"{BASE}/invitations/{inv['id']}/decline", json={}).status_code == 200
+    rep = api.get(f"{BASE}/projects/{world['pid']}/repair").json()
+    assert _job_status(api, rep["id"]) == "NO_CANDIDATES"
+    return run, api.get(f"{BASE}/projects/{world['pid']}/repair").json()
+
+
+def test_reopened_place_takes_bids_for_that_place_only(
+    api: Api, api2: Api, world: dict[str, Any], migration_url: str
+) -> None:
+    run, rep = _decline_one_with_no_candidates(api, api2, world, migration_url)
+    codes = [r["code"] for r in rep["reasons"]]
+    assert "NO_BIDS_FOR_SLOT" in codes
+    assert set(codes) <= {"NO_BIDS_FOR_SLOT", "NEWCOMER_MINIMUM_RELAXED"}
+    slot = world["slot"]
+    r = api.post(f"{BASE}/projects/{world['pid']}/slots/{slot}/reopen")
+    assert r.status_code == 200, r.text
+    again = api.post(f"{BASE}/projects/{world['pid']}/slots/{slot}/reopen")
+    assert again.status_code == 409  # already open
+    # The project shows one open place in search, without any bid data.
+    found = api2.get(f"{BASE}/projects/search?q=ordering").json()["items"]
+    card = next(c for c in found if c["id"] == world["pid"])
+    assert card["open_places"] >= 1
+    assert card["open_for_bids"] is True
+    assert "price_paisa" not in json.dumps(card)
+    # A developer who already bid on the project can't bid again (D137).
+    decliner = bidder_of(world, run["team_bids"][1])
+    as_dev(api2, decliner)
+    r = api2.post(
+        f"{BASE}/projects/{world['pid']}/bids",
+        json={"slot_id": slot, "price_paisa": 1_000_000, "days_needed": 10},
+    )
+    assert (r.status_code, _code(r)) == (409, "INVALID_STATE")
+    # A new developer can, for that place.
+    fresh = api2.sign_in_as("DEVELOPER")
+    skill = api2.get(f"{BASE}/skills").json()[0]
+    api2.put(
+        f"{BASE}/me/skills",
+        json={"skills": [{"skill_id": skill.get("skill_id") or skill["id"], "self_level": 4}]},
+    )
+    _sql(
+        migration_url,
+        "INSERT INTO reputation_snapshots (id, developer_id, omega, x, xm, beta, "
+        "mu, t, c, p, completed_projects, distinct_clients) VALUES (gen_random_uuid(), :d, 0.6, "
+        "0.7, 0.66, 0.8, 0.7, 0.8, 0.7, 0.75, 6, 4)",
+        d=fresh.user_id,
+    )
+    r = api2.post(
+        f"{BASE}/projects/{world['pid']}/bids",
+        json={"slot_id": slot, "price_paisa": 1_500_000, "days_needed": 15},
+    )
+    assert r.status_code == 201, r.text
+    # Closing the window queues a new repair that sees the new bid.
+    _sql(
+        migration_url,
+        "UPDATE project_slots SET reopened_until = now() - interval '1 minute' WHERE id = :s",
+        s=slot,
+    )
+    assert api.post(f"{BASE}/__test__/lifecycle/expire").json()["slots_closed"] == 1
+    rep = api.get(f"{BASE}/projects/{world['pid']}/repair").json()
+    assert rep["status"] == "COMPUTING"
+    assert _job_status(api, rep["id"]) == "READY"
+    # A third reopen is refused (at most two per place).
+    _sql(migration_url, "UPDATE project_slots SET reopen_count = 2 WHERE id = :s", s=slot)
+    r = api.post(f"{BASE}/projects/{world['pid']}/slots/{slot}/reopen")
+    assert r.status_code == 409
+
+
+def test_raising_the_budget_covers_the_shortfall(
+    api: Api, api2: Api, world: dict[str, Any], migration_url: str
+) -> None:
+    _, rep = _decline_one_with_no_candidates(api, api2, world, migration_url, price=9_500_000)
+    reason = next(r for r in rep["reasons"] if r["code"] == "REMAINING_BUDGET_TOO_LOW")
+    assert reason["shortfall_paisa"] > 0
+    project = api.get(f"{BASE}/projects/{world['pid']}").json()
+    budget, version = project["budget_paisa"], project["version"]
+    low = api.post(
+        f"{BASE}/projects/{world['pid']}/budget",
+        json={"budget_paisa": budget + 1},
+        headers={"If-Match": str(version)},
+    )
+    assert (low.status_code, _code(low)) == (422, "VALIDATION_ERROR")
+    new = budget + reason["shortfall_paisa"] * 2
+    stale = api.post(
+        f"{BASE}/projects/{world['pid']}/budget",
+        json={"budget_paisa": new},
+        headers={"If-Match": str(version - 1)},
+    )
+    assert (stale.status_code, _code(stale)) == (409, "VERSION_CONFLICT")
+    ok = api.post(
+        f"{BASE}/projects/{world['pid']}/budget",
+        json={"budget_paisa": new},
+        headers={"If-Match": str(version)},
+    )
+    assert ok.status_code == 200, ok.text
+    assert ok.json()["status"] == "COMPUTING"
+    assert api.get(f"{BASE}/projects/{world['pid']}").json()["budget_paisa"] == new
+    audit = _sql(
+        migration_url,
+        "SELECT before, after FROM audit_log WHERE action = "
+        "'project.budget_raised' AND entity_id = :p",
+        p=world["pid"],
+    )
+    assert audit[0][0]["budget_paisa"] == budget
+    assert audit[0][1]["budget_paisa"] == new
+    # Only from a "budget too low" repair: with a READY one it's refused.
+    assert _job_status(api, ok.json()["id"]) in ("READY", "NO_CANDIDATES")

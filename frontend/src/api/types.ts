@@ -110,3 +110,20 @@ export type ConfirmTeam = Schemas["ConfirmOut"];
 export type BidExplanationOut = Schemas["BidExplanationOut"];
 export type JobOut = Schemas["JobOut"];
 export type Preset = FormationRunCreate["preset"];
+
+// Team lifecycle and notifications (spec §10.2 Team, Notifications; Phase 8)
+export type TeamForClient = Schemas["TeamForClient"];
+export type TeamForMember = Schemas["TeamForMember"];
+export type TeamView = TeamForClient | TeamForMember;
+export type TeamMemberForClient = Schemas["TeamMemberForClient"];
+export type TeamMemberForMember = Schemas["TeamMemberForMember"];
+export type MyInvitations = Schemas["MyInvitationsOut"];
+export type MyInvitation = Schemas["MyInvitationOut"];
+export type MyMembership = Schemas["MyMembershipOut"];
+export type ClientTeamCard = Schemas["ClientTeamCard"];
+export type RepairOut = Schemas["RepairOut"];
+export type RepairCandidate = Schemas["RepairCandidate"];
+export type LeadChangeRequest = Schemas["LeadChangeRequestOut"];
+export type NotificationItem = Schemas["NotificationOut"];
+export type NotificationPage = Schemas["Page_NotificationOut_"];
+export type ActionResult = Schemas["ActionOut"];
