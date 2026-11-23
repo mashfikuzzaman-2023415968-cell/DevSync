@@ -17,6 +17,7 @@ import {
   apiSignIn,
   createOrderingProject,
   csrfHeaders,
+  throughAuthZone,
   lastLink,
   PASSWORD,
   roleAnswerKey,
@@ -317,11 +318,14 @@ async function post(page: Page, baseURL: string, path: string, data?: unknown): 
 /** Sign a known account back in (the page's cookies are replaced). */
 async function apiSignInAs(page: Page, baseURL: string, who: Bidder): Promise<void> {
   await page.context().clearCookies();
-  await post(page, baseURL, "/api/v1/auth/login", {
-    email: who.email,
-    password: who.password,
-    captcha: "test-bypass",
-  });
+  const headers = await csrfHeaders(page.request, baseURL);
+  const r = await throughAuthZone(() =>
+    page.request.post("/api/v1/auth/login", {
+      headers,
+      data: { email: who.email, password: who.password, captcha: "test-bypass" },
+    }),
+  );
+  if (!r.ok()) throw new Error(`login failed: ${String(r.status())} ${await r.text()}`);
 }
 
 /** A FORMING ordering project with bids from Nadia (newcomer, React), Arif (React) and Imran

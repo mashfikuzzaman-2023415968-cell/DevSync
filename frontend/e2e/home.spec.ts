@@ -4,6 +4,20 @@
 import { chromium, type Page } from "@playwright/test";
 import { expect, test } from "./test";
 import { apiSignIn } from "./fixtures";
+import { readFileSync } from "node:fs";
+
+/** The real run's cost of fairness at dial 1, formatted as `fairnessCost("1")` in
+ * src/content/homepageExample.ts formats it (D113). Read from the same generated JSON: the
+ * Playwright runner loads modules as plain Node ESM, which needs an import attribute for JSON
+ * that Vite's sources don't carry. */
+function fairnessCostAtDial1(): string {
+  const file = new URL("../src/content/homepage-example.json", import.meta.url);
+  const example = JSON.parse(readFileSync(file, "utf-8")) as {
+    dial: Record<"0" | "1" | "2", { cost_of_fairness: number }>;
+  };
+  const cost = example.dial["1"].cost_of_fairness;
+  return `${(cost * 100).toFixed(1).replace(/\.0$/, "")}%`;
+}
 
 const HEADLINE = "Plan the project. Hire a fair team. Watch the work. Learn from it.";
 const SCENE_CHUNK = /TalentConstellation-[\w-]+\.js$/;
@@ -220,7 +234,9 @@ test("scrolling snaps the constellation into a team with the chip @e2e @gpu", as
   await expect(chip).toHaveCSS("opacity", "0");
   await scrollBy(page, 650, isMobile);
   await expect.poll(opacity, { timeout: 10_000 }).toBeGreaterThan(0.9);
-  await expect(chip).toHaveText("✓ Balanced team");
+  // The chip carries the real run's cost of fairness at dial 1 since Phase 7 (D113), from the
+  // same generated figures the page uses.
+  await expect(chip).toHaveText(`✓ Fair team, ${fairnessCostAtDial1()} cost of fairness`);
   // Scrolling back up releases the team.
   await scrollBy(page, -650, isMobile);
   await expect.poll(opacity, { timeout: 10_000 }).toBeLessThan(0.1);

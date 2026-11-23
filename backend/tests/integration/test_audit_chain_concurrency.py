@@ -8,6 +8,13 @@ The race needs a writer to be descheduled between drawing its number and asking 
 which happened under heavy load but can't be timed in a test. So the first test checks the
 mechanism deterministically: while another connection holds the chain lock, a waiting insert
 must not have drawn its number yet. The second is a stress check of the chain invariant.
+
+The stress check opens its connections first, a few at a time, and only then releases all the
+writers together. Opening 30 at once made the test measure the laptop instead of the chain:
+asyncpg's SCRAM handshake hashes the password in a Python loop on the event loop (~180 ms of
+CPU each on the gate laptop), so the last of 30 simultaneous connects ran past the 3-second
+connect timeout before reaching the database (Phase 7 gate, D117). Waiting at the barrier on a
+bare connection, before any transaction, keeps clear of `idle_in_transaction_session_timeout`.
 """
 
 from __future__ import annotations
@@ -21,13 +28,14 @@ import pytest
 from sqlalchemy import create_engine, text
 
 from app.core.audit import write_audit
-from app.db.context import DbContext
-from app.db.session import open_session
+from app.db.context import CONTEXT_KEY, DbContext
+from app.db.session import get_job_engine, get_job_sessionmaker, open_session
 from tests.helpers import stack_available
 
 pytestmark = pytest.mark.integration
 
 WRITERS = 30
+CONNECTING_AT_ONCE = 5
 
 
 @pytest.fixture(autouse=True)
@@ -50,13 +58,22 @@ def _last_seq() -> int:
         engine.dispose()
 
 
-async def _writer(i: int, rnd: random.Random) -> None:
-    async with open_session(DbContext.system(), job=True) as db:
-        await write_audit(db, action="test.chain", entity_type="test", entity_id=str(i),
-                          actor_role="SYSTEM")  # fmt: skip
-        # Hold the chain lock a moment so the other writers queue with their numbers drawn.
-        await asyncio.sleep(rnd.uniform(0, 0.02))
-        await db.commit()
+async def _writer(
+    i: int, rnd: random.Random, connecting: asyncio.Semaphore, go: asyncio.Barrier
+) -> None:
+    async with connecting:
+        conn = await get_job_engine().connect()  # a bare connection: no transaction yet
+    try:
+        await go.wait()  # every writer is connected; all of them write at once
+        async with get_job_sessionmaker()(bind=conn) as db:
+            db.info[CONTEXT_KEY] = DbContext.system()
+            await write_audit(db, action="test.chain", entity_type="test", entity_id=str(i),
+                              actor_role="SYSTEM")  # fmt: skip
+            # Hold the chain lock a moment so the other writers queue with their numbers drawn.
+            await asyncio.sleep(rnd.uniform(0, 0.02))
+            await db.commit()
+    finally:
+        await conn.close()
 
 
 def _chain_breaks(after_seq: int) -> list[str]:
@@ -131,6 +148,8 @@ async def _writer_with_entity(entity: str) -> None:
 async def test_concurrent_writers_keep_one_unbroken_chain() -> None:
     start = _last_seq()
     rnd = random.Random(7)  # timing jitter for a test, not security
-    await asyncio.gather(*(_writer(i, rnd) for i in range(WRITERS)))
-    assert _last_seq() > start
+    connecting, go = asyncio.Semaphore(CONNECTING_AT_ONCE), asyncio.Barrier(WRITERS)
+    writers = asyncio.gather(*(_writer(i, rnd, connecting, go) for i in range(WRITERS)))
+    await asyncio.wait_for(writers, timeout=120)  # a writer that can't connect fails, not hangs
+    assert _last_seq() >= start + WRITERS  # every writer added its row
     assert _chain_breaks(start) == []

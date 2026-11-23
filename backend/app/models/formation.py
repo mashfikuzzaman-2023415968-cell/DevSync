@@ -176,7 +176,9 @@ class TeamMember(UUIDPrimaryKey, Timestamps, Base):
             "one_active_lead_per_team",
             "team_id",
             unique=True,
-            postgresql_where=text("is_lead AND status = 'ACTIVE'"),
+            postgresql_where=text(  # forbidden-ok: constant DDL predicate
+                "is_lead AND status = 'ACTIVE'"
+            ),
         ),
     )
 

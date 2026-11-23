@@ -1332,3 +1332,38 @@ own projects, reach FORMING through the test-only `start-forming` route (the tes
 scheduler) and execute queued runs through `formation-runs/{id}/execute` (no worker); both exist
 only when `DEVSYNC_ENV=test`. The run code lives in `services/formation_runner.py` so that route
 and the RQ entry points in `jobs/formation_jobs.py` share it.
+
+**D117 · Phase 7 gate fixes on the native Linux laptop (2026-11-23).** Four problems the WSL
+laptop could not show, none of them in the formation logic: (1) the partial unique index
+`one_active_lead_per_team` uses `text()` for a constant DDL predicate and now carries the
+`# forbidden-ok:` reason, like `one_standing_bid_per_developer`; (2) `app/core/task_queue.py`
+and `app/services/formation_runner.py` had no test of their own, so they got
+`tests/unit/test_task_queue.py` and `tests/unit/test_formation_runner.py` (46 tests: listed tasks
+only, real job functions, queues the worker listens on, the problem rebuilt from the frozen
+snapshot, refused bad snapshots and params, rounding of NaN/inf/−0, downsampling, a real small
+run, same seed → same result, newcomer minimum, infeasible budget, early stop) rather than
+allowlist entries; (3) the Nginx image was rebuilt with `--no-cache --pull` for the
+`krb5 1.21.3-5+deb13u2` fixes Trivy reported; (4) `test_concurrent_writers_keep_one_unbroken_chain`
+failed every time here: asyncpg's client-side SCRAM is a Python loop (~180 ms CPU per connect on
+this laptop), so 30 connects started together ran past the 3 s connect timeout. The test now opens
+its connections five at a time, holds all 30 writers at a barrier on bare connections (no
+transaction, so the idle-in-transaction limit doesn't apply) and releases them together, which
+guarantees the overlap; it also checks that all 30 rows were written. The writer count, the
+chain assertions and the app's connect timeout are unchanged. Production pools its connections,
+so it doesn't open 30 at once. (5) `check_paper_alignment.py` was extended to Eq. 13–19 but its
+unit test still built an Eq. 1–12 repository, so it crashed on the missing `bpso.py`; the fixture
+now covers all 19 equations, three tests cover the formation rules (a function in `bpso.py` or
+`fitness.py`, not elsewhere), and a missing formation module is reported as a problem instead of
+an exception. (6) Once the laptop ran at full speed, the new Phase 7 E2E flows
+(seven users signed in one after another) ran faster than Nginx's `auth` zone allows (5 r/s,
+burst 10; the test reset can't clear the edge) and failed with a 429 at sign-in, or with a
+misleading 403 `CSRF_FAILED` because `csrfHeaders` ignored a 429 on `/auth/csrf`. The E2E helpers
+now send auth requests through `throughAuthZone`, which waits and retries only the edge's HTML
+429 (at most 10 tries, 1 s apart) and returns the app's own JSON 429s unchanged, and
+`csrfHeaders` fails with a clear error when it gets no token. Nginx's limits are unchanged. (7) The GPU-only homepage test
+`scrolling snaps the constellation into a team with the chip` still expected "✓ Balanced team";
+since D113 the chip shows the real run's cost of fairness at dial 1. It now expects
+"✓ Fair team, <cost> cost of fairness", with the cost read from the same generated
+`src/content/homepage-example.json` the page uses and formatted as `fairnessCost` formats it
+(16.2 % today), so it can't drift from the figures. (The Playwright runner loads plain Node ESM,
+which won't import that JSON without an import attribute, so the test reads the file.)

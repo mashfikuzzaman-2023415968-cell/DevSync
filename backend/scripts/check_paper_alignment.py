@@ -54,7 +54,12 @@ def check(root: Path) -> list[str]:
     if not doc.exists():
         return [f"{doc.relative_to(root)} is missing"]
     functions = _functions(module)
-    formation = set().union(*(_functions(algorithms / m) for m in FORMATION_MODULES))
+    formation: set[str] = set()
+    for name in FORMATION_MODULES:
+        if (algorithms / name).exists():
+            formation |= _functions(algorithms / name)
+        else:  # reported, not a crash: the rows that need it then fail below
+            problems.append(f"app/algorithms/{name} is missing")
     tests = _test_names(root / "backend" / "tests")
     rows: dict[int, list[str]] = {}
     for line in doc.read_text(encoding="utf-8").splitlines():

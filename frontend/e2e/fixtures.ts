@@ -1,5 +1,5 @@
 /** Helpers for Phase 1 E2E tests: talk to the test-only API routes (DEVSYNC_ENV=test). */
-import { expect, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, type APIRequestContext, type APIResponse, type Page } from "@playwright/test";
 
 export const PASSWORD = "correct horse battery staple 42!";
 
@@ -11,11 +11,29 @@ export function uniquePhone(): string {
   return `+88017${String(Math.floor(10_000_000 + Math.random() * 89_999_999))}`;
 }
 
+/**
+ * Send a request under `/api/v1/auth/`, waiting out Nginx's `auth` zone (5 r/s, burst 10).
+ * A test that seeds several users signs in faster than that on a quick machine, and the test
+ * reset can't clear the edge's counter. Only the edge's refusal (an HTML 429, before the app)
+ * is retried; the app's own JSON 429s (lockouts, per-user limits) are returned as they are,
+ * so tests of those still see them. Rate limits are tested on their own (D117).
+ */
+export async function throughAuthZone(send: () => Promise<APIResponse>): Promise<APIResponse> {
+  for (let attempt = 1; ; attempt += 1) {
+    const r = await send();
+    const edge = r.status() === 429 && !(r.headers()["content-type"] ?? "").includes("json");
+    if (!edge || attempt === 10) return r;
+    await new Promise((resolve) => setTimeout(resolve, 1000)); // the zone refills 5 a second
+  }
+}
+
 export async function csrfHeaders(
   request: APIRequestContext,
   baseURL: string,
 ): Promise<Record<string, string>> {
-  await request.get("/api/v1/auth/csrf");
+  const r = await throughAuthZone(() => request.get("/api/v1/auth/csrf"));
+  // Fail here, not later with a misleading "CSRF_FAILED" on the request that needed the token.
+  if (!r.ok()) throw new Error(`csrf token failed: ${String(r.status())}`);
   const state = await request.storageState();
   const token = state.cookies.find((c) => c.name === "__Host-ds_csrf")?.value ?? "";
   return { "X-CSRF-Token": token, Origin: new URL(baseURL).origin };
@@ -101,18 +119,23 @@ export async function apiSignIn(
 ): Promise<Seeded> {
   const user = await seedUser(page.request, baseURL, role, displayName, options);
   const headers = await csrfHeaders(page.request, baseURL);
-  let r = await page.request.post("/api/v1/auth/login", {
-    headers,
-    data: { email: user.email, password: user.password, captcha: "test-bypass" },
-  });
+  let r = await throughAuthZone(() =>
+    page.request.post("/api/v1/auth/login", {
+      headers,
+      data: { email: user.email, password: user.password, captcha: "test-bypass" },
+    }),
+  );
   if (!r.ok()) throw new Error(`login failed: ${String(r.status())} ${await r.text()}`);
   const body = (await r.json()) as { status: string; pre_auth?: string };
   if (body.status === "TOTP_REQUIRED") {
     const code = await totpNow(page.request, user.totpSecret ?? "");
-    r = await page.request.post("/api/v1/auth/login/totp", {
-      headers: await csrfHeaders(page.request, baseURL),
-      data: { pre_auth: body.pre_auth, code },
-    });
+    const totpHeaders = await csrfHeaders(page.request, baseURL);
+    r = await throughAuthZone(() =>
+      page.request.post("/api/v1/auth/login/totp", {
+        headers: totpHeaders,
+        data: { pre_auth: body.pre_auth, code },
+      }),
+    );
     if (!r.ok()) throw new Error(`totp failed: ${String(r.status())}`);
   }
   return user;
