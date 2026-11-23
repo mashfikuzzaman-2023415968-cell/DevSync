@@ -605,7 +605,7 @@ async def confirm(ctx: Ctx, run_id: uuid.UUID) -> ConfirmOut:
     except Exception:  # explanations can be rebuilt; the confirmation stands
         log.exception("formation_explanations_enqueue_failed", run_id=str(run.id))
     return ConfirmOut(team_id=team_id, project_status=ProjectStatus.TEAM_PENDING.value,
-                      members=len(team_bids), invitations_sent=False)  # fmt: skip
+                      members=len(team_bids), invitations_sent=True)  # fmt: skip
 
 
 # -------------------------------------------------------------------------------- verify

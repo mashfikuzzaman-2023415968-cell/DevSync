@@ -1791,20 +1791,20 @@ async def my_invitations(ctx: Ctx) -> MyInvitationsOut:
             .tuples()
             .all()
         )
-    return MyInvitationsOut(
-        invitations=invitations,
-        memberships=[
-            MyMembershipOut(
-                member_id=m.id,
-                project_id=p.id,
-                project_title=p.title,
-                project_status=p.status.value,
-                status=m.status.value,
-                is_lead=m.is_lead and m.status == MemberStatus.ACTIVE,
-            )
-            for m, p in memberships
-        ],
-    )
+        return MyInvitationsOut(
+            invitations=invitations,
+            memberships=[
+                MyMembershipOut(
+                    member_id=m.id,
+                    project_id=p.id,
+                    project_title=p.title,
+                    project_status=p.status.value,
+                    status=m.status.value,
+                    is_lead=m.is_lead and m.status == MemberStatus.ACTIVE,
+                )
+                for m, p in memberships
+            ],
+        )
 
 
 async def client_teams(ctx: Ctx) -> list[ClientTeamCard]:
