@@ -107,7 +107,7 @@ async def get_run(run_id: uuid.UUID, ctx: Reader) -> FormationRunOut:
 )
 async def confirm(run_id: uuid.UUID, ctx: Confirmer) -> ConfirmOut:
     """Creates the team (the project becomes TEAM_PENDING); the chosen bids are SELECTED and
-    the others NOT_SELECTED. Invitations are recorded now and sent in Phase 8."""
+    the others NOT_SELECTED. The invitations are sent at once, open for 48 hours (D123)."""
     return await svc.confirm(ctx, run_id)
 
 

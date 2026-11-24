@@ -107,7 +107,7 @@ export default function NotificationsPage() {
                             {!n.read_at ? <span className="sr-only"> (unread)</span> : null}
                           </span>
                           <span className="block text-body-sm text-text-muted">{n.body}</span>
-                          <span className="block text-caption text-text-subtle" data-volatile>
+                          <span className="block text-caption text-text-muted" data-volatile>
                             {formatRelative(n.created_at)}
                           </span>
                         </span>

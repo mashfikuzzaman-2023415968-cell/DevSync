@@ -36,5 +36,7 @@ export const SIGNED_IN_SCREENS: Screen[] = [
   { name: "client-projects", path: "/client/projects", role: "CLIENT" },
   { name: "client-create-project", path: "/client/projects/new", role: "CLIENT" },
   { name: "client-settings", path: "/settings", role: "CLIENT" },
+  { name: "client-teams-empty", path: "/client/teams", role: "CLIENT" },
+  { name: "notifications-empty", path: "/notifications", role: "DEVELOPER" },
   { name: "admin-home", path: "/admin", role: "ADMIN" },
 ];

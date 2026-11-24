@@ -98,7 +98,9 @@ function Workspace({ team }: { team: TeamView }) {
           ) : null
         }
       />
-      <nav aria-label="Workspace" className="-mx-4 mb-6 overflow-x-auto px-4">
+      {/* `relative`: the sr-only notes are absolutely positioned; without a positioned ancestor
+          inside the scroller they escape its clipping and widen the page on phones. */}
+      <nav aria-label="Workspace" className="relative -mx-4 mb-6 overflow-x-auto px-4">
         <ul className="flex min-w-max gap-1 border-b border-border">
           {TABS.map((tab) => (
             <li key={tab}>
@@ -111,7 +113,7 @@ function Workspace({ team }: { team: TeamView }) {
                 </span>
               ) : (
                 <span
-                  className="inline-flex min-h-11 items-center px-3 text-body-sm text-text-subtle"
+                  className="inline-flex min-h-11 items-center px-3 text-body-sm text-text-muted"
                   title={`${tab} arrives in Phase 9`}
                 >
                   {tab}
