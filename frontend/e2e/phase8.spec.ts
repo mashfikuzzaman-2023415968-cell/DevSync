@@ -113,7 +113,7 @@ async function problems(page: Page): Promise<string[]> {
   return found;
 }
 
-test("a declined invitation is repaired, a lead chosen and the project started @e2e", async ({
+test("FR-INV-1..5: a declined invitation is repaired, a lead chosen and the project started @e2e", async ({
   page,
   baseURL,
 }) => {

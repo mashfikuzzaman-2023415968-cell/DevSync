@@ -139,7 +139,7 @@ Marketplace is developer-only and read-only; it never returns any bid data (seal
   and runner-up difference, exact verification, fairness with the cost of fairness, top three
   teams, convergence, relaxations), `can_confirm`, `confirmed`.
 - `POST /formation-runs/{id}/confirm` (client own) → `{team_id, project_status: TEAM_PENDING,
-  members, invitations_sent: false}`; 409 when the project isn't FORMING, the run has no team, or
+  members, invitations_sent}` (`true` from Phase 8: the invitations go out at once, D123); 409 when the project isn't FORMING, the run has no team, or
   a chosen bidder withdrew.
 - `POST /formation-runs/{id}/verify` (admin, step-up; others 404) → 202; re-runs the frozen
   inputs and records `admin_verification.reproduced` on the run.
@@ -154,5 +154,65 @@ Marketplace is developer-only and read-only; it never returns any bid data (seal
   `progress` events with `id` (resume with `Last-Event-ID`), a heartbeat comment every 20 s, the
   end on a final status or after 30 min. 403 `CSRF_FAILED` for a foreign `Origin` or a
   cross-site `Sec-Fetch-Site`, 429 for a fourth open stream.
+
+## Phase 8 endpoints — invitations, team lead, team repair (spec §10.2 Teams; D118–D138)
+
+Every body is a `StrictRequest`: unknown fields (`is_lead`, `status`, `price_paisa`,
+`expires_at`, `is_replacement`, `team_id`, …) are 422. Reasons are 20–500 characters (a decline's
+reason is optional, up to 500). Ids that aren't yours are 404, never 403.
+
+- `GET /projects/{id}/team` (the client, the team's INVITED/ACTIVE/COMPLETED members, admin;
+  others 404) → role-shaped (D130): the client's view (`view: "client"`) has each member's price,
+  days, invitation with `expires_at`, `fully_booked`, the lead `recommendation` with its reason,
+  `can_choose_lead`, `can_start`, `start_blockers` (plain sentences), lead-change and removal
+  requests and the open `repair`; a member's view (`view: "member"`) has names, slots, the lead,
+  reputation 0–1 and weekly hours — nobody's price or days — and only their own requests.
+- `POST /invitations/{id}/accept` · `/decline` (the invitee; others 404) — body for decline
+  `{reason?}`. 409 `INVALID_STATE` when unsent, answered or expired; 409 `UNAVAILABLE` when
+  accepting would put the developer over their weekly hours (CONFIRMED reservations on other
+  projects overlapping the period, D124), with the sentence naming the free hours. A decline
+  opens a repair (below).
+- `POST /projects/{id}/team/lead` (client; `If-Match`) — `{member_id, reason?}`: an ACTIVE member
+  who hasn't declined the role; after the start a reason is required (a lead change).
+- `POST /projects/{id}/team/lead/decline` (the lead) — before or after the start; the client
+  sees the next recommendation.
+- `POST /projects/{id}/lead-change-requests` (an ACTIVE non-lead member) — `{reason,
+  suggested_member_id?}`; one PENDING per member, at most 3 a week per team (D132) → 201.
+  `POST /lead-change-requests/{id}/approve` · `/reject` (client; reject needs `{reason}`),
+  `/withdraw` (the requester).
+- `POST /projects/{id}/start` (client; `If-Match`) — TEAM_PENDING → IN_PROGRESS when every place
+  is accepted and a lead chosen: start date = max(planned, today in Dhaka), reservations shifted
+  and re-checked (409 `UNAVAILABLE` naming the member, nothing changed), root milestones ACTIVE,
+  baseline `approved_by_lead`, the team notified (D118, D119). Otherwise 409 with
+  `allowed_actions`.
+- `GET /projects/{id}/repair` (client, admin; developers 404) → the latest proposal:
+  `status` (`COMPUTING`, `READY`, `NO_CANDIDATES`, `CHOSEN`, `SUPERSEDED`, `CANCELLED`), the open
+  slot, up to three `candidates` (name, newcomer, competency, teamwork, price, days, fitness, team
+  price, `impact` {affected milestones, baseline/new days, delay, budget delta}), `reasons`
+  (`NO_BIDS_FOR_SLOT`, `REMAINING_BUDGET_TOO_LOW` with `shortfall_paisa`, `NONE_AVAILABLE`, the
+  note `NEWCOMER_MINIMUM_RELAXED`), `job_id` (follow it at `/jobs/{id}/events`).
+- `POST /repair-proposals/{id}/choose` (client) — `{bid_id}` from the proposal's candidates: the
+  bid becomes SELECTED, a replacement member is invited for 48 h with a TENTATIVE reservation.
+- `POST /projects/{id}/slots/{slot_id}/reopen` (client) — from a `NO_CANDIDATES` proposal: the
+  place takes bids for 48 h (at most twice, D126); a developer with a standing bid on the project
+  can't bid again (D137). When the window closes the repair runs again.
+- `POST /projects/{id}/budget` (client; `If-Match`) — `{budget_paisa}` ≥ the current budget plus
+  the shortfall; audited old/new; the repair runs again (D127).
+- `POST /team-members/{id}/leave` (that member) — `{reason}`; a lead leaving brings a new
+  recommendation; the place opens for repair.
+- `POST /team-members/{id}/removal-requests` (client) — `{reason, basis: INACTIVITY|DISPUTE}`;
+  409 until Phase 9 supplies the inactivity signal (D121). `GET /admin/removal-requests`,
+  `POST /admin/removal-requests/{id}/approve|reject` (admin, step-up; others 404).
+- `GET /me/invitations` (developer) → `{invitations, memberships}`; `GET /me/teams` (client) →
+  one row per team with accepted/places, the lead and `needs_attention` (`REPAIR_OPEN`,
+  `INVITATION_EXPIRING`, `FULLY_BOOKED`, `CHOOSE_LEAD`).
+- `GET /notifications?cursor=&limit=` → your notifications, newest first (cursor page);
+  `GET /notifications/unread-count` → `{unread}`; `POST /notifications/{id}/read` (own only,
+  else 404); `POST /notifications/read-all` → `{marked}` (D122). `link_path` is a validated
+  in-app path or null.
+- Marketplace: a project with a reopened place is listed while the window is open, with
+  `open_places`; its detail marks the slot `reopened` (D126).
+- Test-only (`DEVSYNC_ENV=test`, not in the schema, D133): run a repair now, run
+  `lifecycle.expire` now, set an invitation's `expires_at`.
 
 Error envelope: `{"error": {"code", "message", "fields"?, "request_id"}}`.

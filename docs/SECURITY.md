@@ -246,6 +246,19 @@ E = Elevation of privilege.
 | SSE: requester/admin only, same-origin, 3 streams, safe event keys, route-timeout exemption limited to exact paths, unbuffered Nginx location | `app/api/v1/jobs.py`, `core/job_events.py`, `core/middleware.py` (`SSE_PATHS`), `infra/nginx/proxy-sse.conf` | `tests/security/test_jobs_api.py`, `tests/unit/test_sse_paths.py`, `tests/unit/test_job_events.py`, `tests/edge/test_edge.py` |
 | Audit-chain ordering under concurrency (carried over) | migration 0013 | `tests/integration/test_audit_chain_concurrency.py` |
 
+## Controls implemented (Phase 8)
+| Control | Where | Tests |
+|---|---|---|
+| One policy per action, lead powers scoped to the project, admin removal routes behind step-up, someone else's ids 404 | `app/core/authz.py` (Phase 8 policies), `app/api/v1/team.py` | `tests/security/test_authz_matrix.py`, `tests/security/test_team_api.py` |
+| Role-shaped team views: members never see each other's prices or days (D130) | `app/schemas/team.py` (`TeamForClient` / `TeamForMember`), `services/team.py::get_team` | `test_team_api.py` (response scan for prices), `tests/unit/test_team_service.py` |
+| Mass assignment refused; reasons bounded (20–500; optional decline ≤ 500); NUL and wrong types 422 | `StrictRequest` schemas in `schemas/team.py`, `schemas/repair.py` | `test_team_api.py` (19/20/500/501 boundaries, injection corpus) |
+| SYSTEM-only writes on the new tables; `is_team_member()` counts only INVITED/ACTIVE/COMPLETED; repair inputs immutable, never deleted | migration 0015 (RLS ENABLE+FORCE, `repair_proposal_guard`, revoked DELETE) | `tests/integration/test_rls_team_lifecycle.py` |
+| Races: accept vs expiry vs choose resolved under row locks in one order (project → team → member → invitation → bid → reservation); availability re-checked inside the transaction (D124) | `services/team.py`, `services/repair.py` | `test_team_service.py`, `test_team_api.py` |
+| ≤ 10 pending invitations per developer (D125), ≤ 3 lead-change requests a week, reopen ≤ 2 | `services/formation.py::build_snapshot`, `services/team.py`, migration 0015 check | `test_team_api.py`, `test_rls_team_lifecycle.py` |
+| Notifications: own rows only (RLS), `link_path` validated as an in-app path | `services/notifications.py`, `core/redirects` | `tests/unit/test_notifications_read.py` |
+| Email templates autoescaped; no other users' private data | `integrations/email.py` (`invitation_selected`, `invitation_replacement`, `project_started`, `team_lead`, `lead_changed`) | `tests/jobs/test_email_jobs.py` |
+| Test-only routes absent outside `DEVSYNC_ENV=test` (D133) | `app/api/v1/test_seed.py` | existing test-router checks |
+
 ## Dependency update policy (§14.21)
 Dependabot weekly (pip, npm, Docker, GitHub Actions). Critical vulnerabilities fixed within
 48 hours, high within 7 days. `make lock` re-resolves Python locks; the gate fails on unfixed

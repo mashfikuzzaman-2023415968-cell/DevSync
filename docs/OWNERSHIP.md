@@ -6,7 +6,7 @@ Sequential ownership (spec §0.5). Updated at each hand-off.
 |---|---|---|---|---|---|
 | Mashfikuzzaman Taeen | Team leader | 0–3 | 2026-10-17 | 2026-10-18 | mashfikuzzaman-2023415968@cs.du.ac.bd |
 | Salwa Baki | Backend developer | 4–5 | 2026-10-18 | 2026-10-21 | (add) |
-| Raisa Tabassum | Frontend developer | 6–7 | 2026-11-21 | — | (add) |
+| Raisa Tabassum | Frontend developer | 6–8 | 2026-11-21 | — | (add) |
 | Sara Binte Shafayet | Tester | — | — | — | (add) |
 
 ## Hand-offs

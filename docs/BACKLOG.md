@@ -44,11 +44,19 @@ authority; proposal IDs are mapped in `FR_MAPPING.md`.
 | D1-2 | Tester's human check of security reviews 00–05 | 5 | Core | todo | Sara |
 | D1-3 | Release tag `v0.1.0` at Demo 1 (§17.1) | 5 | Core | todo | Taeen |
 | P6-0 | Move laptops and the Nginx build stage to Node 22 LTS (D15, D83) | 6 | Core | done | Raisa |
-| P7-H | Homepage example figures from a real PSO run (`build_homepage_example.py`, % chip, gate freshness check; D21) | 7 | Core | todo | — |
+| P7-H | Homepage example figures from a real PSO run (`formation_check.py --homepage`, gate freshness check; D21, D113) | 7 | Core | done | Raisa |
+| P8-1 | Migration 0015: lead-change requests, repair proposals (immutable inputs), removal requests, reopened slots; team visibility (D130) | 8 | Core | done | Raisa |
+| P8-2 | Pure lead recommendation (§1.6) and team repair ranking + impact (§9.9, D138) | 8 | Core | done | Raisa |
+| P8-3 | Invitations (send, 48 h, accept with availability re-check, decline, expire), lead flows, start, leave, removal, cancel | 8 | Core | done | Raisa |
+| P8-4 | Repair job, choose replacement, reopen place, raise budget; notifications read API | 8 | Core | done | Raisa |
+| P8-5 | Screens: client Team (#25), Teams list, dashboard invitations, workspace Team tab (#33), notifications (#18) + bell | 8 | Core | done | Raisa |
+| P8-6 | Stage-2 repair demo seed, `repair_check.py`, Phase 8 E2E | 8 | Core | done | Raisa |
+| P8-7 | Removal for inactivity needs Phase 9's activity signal (D121) | 9 | Expected | todo | — |
+| P8-8 | Self-deletion / suspension during a team (D136) | 12 | Expected | todo | — |
 
 ## Functional requirements (proposal FR-IDs, see `FR_MAPPING.md`)
 
-Status as of 24 Oct 2026 (end of Phase 5). *done* = built, tested and behind a passing gate;
+Status as of 24 Nov 2026 (Phase 8 built, waiting for its gate). *done* = built, tested and behind a passing gate;
 *partial* = part built, the rest named in the notes; *planned* = not started.
 
 | FR | Requirement (short) | Phase | Priority | Status | Notes |
@@ -82,18 +90,18 @@ Status as of 24 Oct 2026 (end of Phase 5). *done* = built, tested and behind a p
 | FR-BID-1 | One sealed bid per project with slot, price, days, proposal, portfolio, contribution | 5 | Core | done | Edit and withdraw included |
 | FR-BID-2 | Algorithm 1 filtering with reasons | 5 | Core | done | "How the filter decided" |
 | FR-BID-3 | Newcomer rule | 5 | Core | done | |
-| FR-TEAM-1 | Formation dashboard | 7 | Core | planned | |
-| FR-TEAM-2 | Priority sliders / presets | 7 | Core | planned | |
-| FR-TEAM-3 | BPSO team selection | 7 | Core | planned | |
-| FR-TEAM-4 | "Why this team?" and team risks | 7 | Core | planned | |
-| FR-TEAM-5 | "Why not selected" | 7 | Expected | planned | |
-| FR-TEAM-6 | Saved runs + exact solver (≤ 18) | 7 | Core | planned | |
-| FR-TEAM-7 | Confirming sends invitations | 7, 8 | Core | planned | |
-| FR-INV-1 | 48-hour invitations | 8 | Core | planned | Re-check availability on acceptance (D54) |
-| FR-INV-2 | Team lead recommendation, client decides | 8 | Core | planned | |
-| FR-INV-3 | Lead change / decline | 8 | Expected | planned | |
-| FR-INV-4 | Team repair with ranked candidates | 8 | Core | planned | |
-| FR-INV-5 | Replacement inherits work; payments recalculated | 8, 10 | Expected | planned | |
+| FR-TEAM-1 | Formation dashboard | 7 | Core | done | |
+| FR-TEAM-2 | Priority sliders / presets | 7 | Core | done | |
+| FR-TEAM-3 | BPSO team selection | 7 | Core | done | |
+| FR-TEAM-4 | "Why this team?" and team risks | 7 | Core | done | |
+| FR-TEAM-5 | "Why not selected" | 7 | Expected | done | |
+| FR-TEAM-6 | Saved runs + exact solver (≤ 18) | 7 | Core | done | |
+| FR-TEAM-7 | Confirming sends invitations | 7, 8 | Core | done | Invitations sent on confirm (D123) |
+| FR-INV-1 | 48-hour invitations | 8 | Core | done | Availability re-checked on accept (D124) |
+| FR-INV-2 | Team lead recommendation, client decides | 8 | Core | done | |
+| FR-INV-3 | Lead change / decline | 8 | Expected | done | |
+| FR-INV-4 | Team repair with ranked candidates | 8 | Core | done | Reopen place and raise budget when nobody fits (D126, D127) |
+| FR-INV-5 | Replacement inherits work; payments recalculated | 8, 10 | Expected | partial | Replacement joins and inherits the place; payment recalculation in Phase 10 |
 | FR-MON-1 | Workspace tabs | 9 | Core | planned | |
 | FR-MON-2 | Kanban board | 9 | Core | planned | |
 | FR-MON-3 | Task fields | 9 | Core | planned | |
