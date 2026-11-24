@@ -786,7 +786,8 @@ async def get_team(ctx: Ctx, project_id: uuid.UUID) -> TeamForClient | TeamForMe
         )
         if v.role == "MEMBER":
             me = v.me
-            assert me is not None  # noqa: S101 - _view returns a member for MEMBER
+            if me is None:  # found or locked above; fail closed
+                raise NotFoundError
             own = [r for r in requests if r.requested_by == ctx.uid]
             return TeamForMember(
                 **base,
@@ -1188,7 +1189,8 @@ async def _own_request(
     req = await db.scalar(
         select(LeadChangeRequest).where(LeadChangeRequest.id == request_id).with_for_update()
     )
-    assert req is not None  # noqa: S101 - found above, and requests are never deleted
+    if req is None:  # found or locked above; fail closed
+        raise NotFoundError
     return req, team, project
 
 
@@ -1457,14 +1459,17 @@ async def leave(ctx: Ctx, member_id: uuid.UUID, body: LeaveIn) -> ActionOut:
         if found is None or found.developer_id != ctx.uid:
             raise NotFoundError
         team = await db.get(Team, found.team_id)
-        assert team is not None  # noqa: S101 - FK
+        if team is None:  # found or locked above; fail closed
+            raise NotFoundError
         project = await _lock_project(db, team.project_id)
         team = await _team_of(db, project.id, lock=True)
         member = await db.scalar(
             select(TeamMember).where(TeamMember.id == member_id).with_for_update()
         )
-        assert team is not None  # noqa: S101 - locked rows found above
-        assert member is not None  # noqa: S101
+        if team is None:  # found or locked above; fail closed
+            raise NotFoundError
+        if member is None:  # found or locked above; fail closed
+            raise NotFoundError
         if member.status != MemberStatus.ACTIVE or project.status not in LIVE_PROJECT:
             raise InvalidStateTransition(
                 member.status.value, [], "Only an active member can leave a live project."
@@ -1632,9 +1637,12 @@ async def decide_removal(
             .where(MemberRemovalRequest.id == request_id)
             .with_for_update()
         )
-        assert team is not None  # noqa: S101 - locked rows found above
-        assert member is not None  # noqa: S101
-        assert req is not None  # noqa: S101
+        if team is None:  # found or locked above; fail closed
+            raise NotFoundError
+        if member is None:  # found or locked above; fail closed
+            raise NotFoundError
+        if req is None:  # found or locked above; fail closed
+            raise NotFoundError
         if req.status != RemovalStatus.PENDING:
             raise InvalidStateTransition(req.status.value, [], "This request was already decided.")
         req.status = RemovalStatus.APPROVED if approve else RemovalStatus.REJECTED

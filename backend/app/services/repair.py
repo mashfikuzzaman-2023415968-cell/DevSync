@@ -402,7 +402,8 @@ async def choose(ctx: Ctx, proposal_id: uuid.UUID, body: ChooseIn) -> RepairOut:
         p = await db.scalar(
             select(RepairProposal).where(RepairProposal.id == proposal_id).with_for_update()
         )
-        assert p is not None  # noqa: S101 - found above
+        if p is None:  # found or locked above; fail closed
+            raise NotFoundError
         if p.status != RepairStatus.READY or project.status not in LIVE:
             raise InvalidStateTransition(p.status.value, [], "This proposal can't be used now.")
         offered = {c["bid_id"]: c for c in (p.candidates or [])}
@@ -591,7 +592,8 @@ async def raise_budget(
         project.budget_paisa = body.budget_paisa
         project.version += 1
         departed = await db.get(TeamMember, p.departed_member_id)
-        assert departed is not None  # noqa: S101 - FK
+        if departed is None:  # found or locked above; fail closed
+            raise NotFoundError
         new = await open_repair(db, project, team, departed, now=ctx.now, settings=settings)
         await write_audit(
             db,
