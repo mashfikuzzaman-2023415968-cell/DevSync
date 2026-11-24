@@ -1597,19 +1597,20 @@ async def admin_removals(ctx: Ctx) -> list[RemovalRequestOut]:
             .tuples()
             .all()
         )
-    return [
-        RemovalRequestOut(
-            id=r.id,
-            team_member_id=r.team_member_id,
-            member_name=name,
-            reason=r.reason,
-            basis=r.basis.value,
-            status=r.status.value,
-            decision_reason=r.decision_reason,
-            created_at=r.created_at,
-        )
-        for r, name in rows
-    ]
+        # Built inside the session: the rows expire when it closes.
+        return [
+            RemovalRequestOut(
+                id=r.id,
+                team_member_id=r.team_member_id,
+                member_name=name,
+                reason=r.reason,
+                basis=r.basis.value,
+                status=r.status.value,
+                decision_reason=r.decision_reason,
+                created_at=r.created_at,
+            )
+            for r, name in rows
+        ]
 
 
 async def decide_removal(

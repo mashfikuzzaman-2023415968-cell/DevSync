@@ -494,6 +494,15 @@ def test_leave_removal_and_cancel(
     as_dev(api2, bidder_of(world, _member_bid(migration_url, other["id"])))
     assert api2.get(f"{BASE}/admin/removal-requests").status_code == 404  # non-admin
     admin = api3.sign_in_as("ADMIN")
+    # The admin's list with a request in it (it once failed on rows read after the session).
+    listed = api3.get(f"{BASE}/admin/removal-requests")
+    assert listed.status_code == 200, listed.text
+    row = next(x for x in listed.json() if x["id"] == removal["id"])
+    assert (row["status"], row["basis"], row["member_name"]) == (
+        "PENDING",
+        "INACTIVITY",
+        other["developer_name"],
+    )
     path = f"{BASE}/admin/removal-requests/{removal['id']}/approve"
     body = {"reason": "Confirmed: no activity for twelve days."}
     first = api3.post(path, json=body)
