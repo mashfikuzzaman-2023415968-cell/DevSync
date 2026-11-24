@@ -28,7 +28,8 @@ export function InvitationBanners() {
   if (!q.data) return null;
   const pending = q.data.invitations.filter((i) => i.state === "PENDING");
   const answered = q.data.invitations.filter((i) => i.state !== "PENDING").slice(0, 3);
-  const teams = q.data.memberships;
+  // An invited member answers on the banner above; the team card appears once they accept.
+  const teams = q.data.memberships.filter((m) => m.status !== "INVITED");
   if (pending.length + answered.length + teams.length === 0) return null;
   return (
     <section aria-label="Your invitations and teams" className="mb-6 flex flex-col gap-4">

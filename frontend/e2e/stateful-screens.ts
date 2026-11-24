@@ -38,8 +38,9 @@ export interface StatefulScreen {
    * The screen's own content differs on every run, so it gets no pixel baseline: the timed test
    * draws ten questions at random per attempt (`test_questions_are_random_per_attempt` holds the
    * server to that), and questions of different lengths change every card's height, which masking
-   * cannot hide. The visual run still opens the screen; the axe scan and the responsive matrix
-   * cover it in full.
+   * cannot hide. The same holds for a developer dashboard whose "Recommended for you" lists the
+   * test database's open projects. The visual run still opens the screen; the axe scan and the
+   * responsive matrix cover it in full.
    */
   randomContent?: boolean;
 }
@@ -302,6 +303,9 @@ export const STATEFUL_SCREENS: StatefulScreen[] = [
     // A selected developer's dashboard (§13.5 #9): the invitation banner with Accept and
     // Decline; the countdown is masked.
     name: "developer-invitation",
+    // "Recommended for you" lists whatever open projects the test database holds (titles carry
+    // timestamps), so this dashboard gets no pixel baseline; axe and the viewport matrix cover it.
+    randomContent: true,
     prepare: async (page, baseURL) => {
       const { bidders } = await formedProject(page, baseURL, true);
       await apiSignInAs(page, baseURL, must(bidders, "Imran Kabir"));

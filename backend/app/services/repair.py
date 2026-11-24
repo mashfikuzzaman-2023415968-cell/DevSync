@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import secrets
 import uuid
+from collections.abc import Sequence
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -46,6 +47,7 @@ from app.models.formation import (
 )
 from app.models.foundation import Job, JobStatus
 from app.models.identity import User
+from app.models.profiles import Skill
 from app.models.projects import (
     MilestoneStatus,
     PlanBaseline,
@@ -106,6 +108,15 @@ async def _pending_counts(
         .group_by(TeamMember.developer_id)
     )
     return {d: int(n) for d, n in rows.tuples().all()}
+
+
+async def _slot_labels(db: AsyncSession, slots: Sequence[ProjectSlot]) -> dict[uuid.UUID, str]:
+    """The same words as the team view: the slot's own label, else its skill's name."""
+    rows = await db.execute(
+        select(Skill.id, Skill.name).where(Skill.id.in_([s.skill_id for s in slots]))
+    )
+    names = dict(rows.tuples().all())
+    return {s.id: s.label or names.get(s.skill_id, "Role") for s in slots}
 
 
 async def build_repair_snapshot(
@@ -186,7 +197,7 @@ async def build_repair_snapshot(
         .tuples()
         .all()
     )
-    labels = {s.id: s.label or "Role" for s in slots}
+    labels = await _slot_labels(db, slots)
     inputs = {i.bid_id: i for i in ev.inputs}
 
     def row(

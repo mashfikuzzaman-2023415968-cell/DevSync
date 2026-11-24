@@ -238,6 +238,8 @@ def test_FR_INV_4_decline_opens_a_repair_the_client_can_follow(  # noqa: N802
     assert _job_status(api, rep["id"]) == "READY"
     rep = api.get(f"{BASE}/projects/{world['pid']}/repair").json()
     assert rep["status"] == "READY"
+    # Named like the team view: the slot has no label of its own, so its skill's name.
+    assert rep["slot_label"] == api.get(f"{BASE}/skills").json()[0]["name"]
     cands = rep["candidates"]
     assert 1 <= len(cands) <= 3
     assert [c["fitness"] for c in cands] == sorted((c["fitness"] for c in cands), reverse=True)

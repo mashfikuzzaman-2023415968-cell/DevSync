@@ -368,7 +368,7 @@ function Repair({ team, repair }: { team: TeamForClient; repair: RepairOut }) {
   return (
     <Card className="border-warning/40">
       <CardHeader
-        title={`Replace the ${repair.slot_label}`}
+        title={`Find a replacement for ${repair.slot_label}`}
         description={
           affected.length
             ? `Affects ${affected.join(", ")}.`

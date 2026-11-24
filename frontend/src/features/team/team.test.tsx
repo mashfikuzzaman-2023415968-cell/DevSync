@@ -143,7 +143,7 @@ describe("ClientTeamPage", () => {
       }),
     );
     page();
-    expect(await screen.findByText("Replace the Testing developer")).toBeInTheDocument();
+    expect(await screen.findByText("Find a replacement for Testing developer")).toBeInTheDocument();
     expect(screen.getByText(/Finishes 1 day later/)).toBeInTheDocument();
     expect(screen.getByText(/৳17,000 left in the budget/)).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole("button", { name: "Invite" }));
