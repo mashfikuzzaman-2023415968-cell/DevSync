@@ -744,6 +744,15 @@ async def get_team(ctx: Ctx, project_id: uuid.UUID) -> TeamForClient | TeamForMe
         slots = list(await projrepo.load_slots(db, project_id))
         skill_names = await _skill_names(db, [s.skill_id for s in slots])
         label = {s.id: s.label or skill_names.get(s.skill_id, "Role") for s in slots}
+        # A stable order for people to read (role, then name): members are created together, so
+        # creation time ties and the random ids would shuffle the list between loads.
+        members.sort(
+            key=lambda m: (
+                label.get(m.slot_id, "Role").casefold(),
+                names.get(m.developer_id, "Developer").casefold(),
+                str(m.id),
+            )
+        )
         lead = next((m.id for m in members if m.is_lead and m.status == MemberStatus.ACTIVE), None)
         base: dict[str, Any] = {
             "project_id": v.project.id,
@@ -817,7 +826,7 @@ async def get_team(ctx: Ctx, project_id: uuid.UUID) -> TeamForClient | TeamForMe
             rec = await _recommendation(db, v.team, members, names=names, reps=reps, invs=invs)
         blockers: list[str] = []
         if v.project.status == ProjectStatus.TEAM_PENDING:
-            for s in open_slots:
+            for s in sorted(open_slots, key=lambda s: (label.get(s.id, "").casefold(), str(s.id))):
                 blockers.append(f"{label.get(s.id, 'A role')} needs a developer who accepted.")
             if lead is None:
                 blockers.append("Choose a team lead.")

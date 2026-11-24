@@ -69,6 +69,25 @@ def team(api: Api, pid: str) -> dict[str, Any]:
 # ------------------------------------------------------------------------------ invitations
 
 
+def _order(members: list[dict[str, Any]]) -> list[tuple[str, str]]:
+    return [(m["slot_label"].casefold(), m["developer_name"].casefold()) for m in members]
+
+
+def test_the_team_reads_in_a_stable_order_role_then_name(
+    api: Api, api2: Api, world: dict[str, Any]
+) -> None:
+    """Members are created together, so their creation times tie; the view sorts by role, then
+    name, so the list doesn't reshuffle between loads (found by the Phase 8 visual gate, D140)."""
+    run = confirmed(api, world)
+    views = [team(api, world["pid"])["members"] for _ in range(3)]
+    assert len(views[0]) == 2
+    assert _order(views[0]) == sorted(_order(views[0]))
+    assert all([m["id"] for m in v] == [m["id"] for m in views[0]] for v in views)
+    accept_all(api2, world, run)  # a member sees the same order
+    mine = team(api2, world["pid"])["members"]
+    assert [m["id"] for m in mine] == [m["id"] for m in team(api, world["pid"])["members"]]
+
+
 def test_FR_INV_1_confirm_sends_invitations_with_a_48h_clock(  # noqa: N802
     api: Api, api2: Api, world: dict[str, Any]
 ) -> None:

@@ -1533,3 +1533,15 @@ that image ships `app/`, `alembic/` and `scripts/` but not `tests/`. Broken sinc
 because the gate seeds in the tests container. The file moved to
 `backend/scripts/seed_data/stage2_reputation_golden.json`, next to `stage2_personas.json`; content
 unchanged.
+
+**D140 · The team view reads in a stable order: role, then name (Phase 8 gate, step 15).** The
+new `client-team-repair` and `workspace-team` baselines failed on the gate laptop: same content,
+rows in another order. Confirm creates every member in one transaction, so `created_at` ties and
+`_members` fell back to the random member id; open slots were listed by random slot id, so the
+"Start the project" blockers shuffled too. The test setup accepts invitations in the listed order,
+and the lead recommendation breaks equal scores by the earlier acceptance (D131), so even the
+recommended lead changed between runs. `get_team` now sorts members by slot label, then developer
+name (case-folded), then id, and the blockers by slot label (the Phase 7 formation cards use the
+same order). `_members` keeps creation order for the locking paths. Test:
+`test_the_team_reads_in_a_stable_order_role_then_name`; the 12 baselines were re-created and pass
+twice in a row on fresh data.
