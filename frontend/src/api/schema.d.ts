@@ -1068,7 +1068,7 @@ export interface paths {
     /**
      * Confirm the recommended team
      * @description Creates the team (the project becomes TEAM_PENDING); the chosen bids are SELECTED and
-     *     the others NOT_SELECTED. Invitations are recorded now and sent in Phase 8.
+     *     the others NOT_SELECTED. The invitations are sent at once, open for 48 hours (D123).
      */
     post: operations["confirm_api_v1_formation_runs__run_id__confirm_post"];
     delete?: never;

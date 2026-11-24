@@ -203,7 +203,10 @@ function Formation({
       {confirmed ? (
         <Alert tone="success" title="Team confirmed" className="mb-6">
           The developers have 48 hours to accept. Bids that weren’t chosen were told why.{" "}
-          <Link to={`/client/projects/${project.id}/team`} className="font-medium text-primary underline">
+          <Link
+            to={`/client/projects/${project.id}/team`}
+            className="font-medium text-primary underline"
+          >
             Manage your team
           </Link>
         </Alert>
