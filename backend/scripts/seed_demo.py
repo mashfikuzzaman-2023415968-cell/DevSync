@@ -45,12 +45,14 @@ from contextlib import AbstractAsyncContextManager
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.algorithms.filtering import ReasonCode
 from app.algorithms.simulator import Market, Persona, SimParams, simulate_market
+from app.core.authz import Principal
 from app.core.clock import get_clock
 from app.core.config import Settings, get_settings
 from app.core.settings_cache import active_settings
@@ -58,6 +60,14 @@ from app.db.context import DbContext
 from app.db.session import open_session
 from app.jobs import bidding_jobs
 from app.models.bidding import Bid, BidStatus
+from app.models.formation import (
+    FormationRun,
+    Invitation,
+    MemberStatus,
+    RepairProposal,
+    Team,
+    TeamMember,
+)
 from app.models.identity import User
 from app.models.profiles import (
     ClientProfile,
@@ -69,10 +79,22 @@ from app.models.profiles import (
     SkillDomain,
     SkillEvidence,
 )
-from app.models.projects import Milestone, MilestoneDependency, Project, ProjectSlot, ProjectStatus
+from app.models.projects import (
+    Milestone,
+    MilestoneDependency,
+    MilestoneSkill,
+    Project,
+    ProjectSlot,
+    ProjectStatus,
+)
 from app.models.reputation import ReputationHistory, ReputationSnapshot, ReputationSource
+from app.schemas.formation import FormationRunCreate
+from app.schemas.team import DeclineIn
 from app.services import bids as bids_svc
-from app.services import platform_settings, reputation_engine, role_assessments
+from app.services import formation as formation_svc
+from app.services import formation_runner, platform_settings, reputation_engine, role_assessments
+from app.services import team as team_svc
+from app.services.context import Ctx
 from app.services.testing import role_attempts
 from app.services.testing.seed import create_user
 
@@ -717,6 +739,206 @@ async def _close_ordering_bidding(pid: uuid.UUID) -> None:
     print("seed-demo STAGE=2: bidding closed on the ordering project (FORMING)")
 
 
+# §18.4 stage 2: a TEAM_PENDING project with a declined invitation, for the repair demo (D116,
+# Phase 8). Built through the real services, dated four months out so no reservation overlaps the
+# ordering project's period (its eligible bids, D116 team and the golden values stay the same).
+REPAIR_DEMO = "Clinic appointment booking"
+REPAIR_START_DAYS = 120
+REPAIR_SLOTS = ["React", "FastAPI", "PostgreSQL", "Testing"]
+# (slug, slot skill, days, price_paisa). Whoever gets the Testing place declines; the other
+# Testing bidder is the replacement candidate.
+REPAIR_BIDS = [
+    ("arif", "React", 18, 2_600_000),
+    ("tanvir", "FastAPI", 20, 2_800_000),
+    ("sadia", "PostgreSQL", 21, 2_300_000),
+    ("imran", "Testing", 19, 2_000_000),
+    ("zahid", "Testing", 22, 1_900_000),
+]
+REPAIR_DECLINES_SLOT = "Testing"
+REPAIR_SEED = 20261207
+# Milestones with the skills they need, so the repair shows which ones a departure affects.
+REPAIR_PLAN = [
+    ("Requirements & booking flow", 4, 1500, [], ["React"]),
+    ("Database", 5, 1500, [0], ["PostgreSQL"]),
+    ("Booking API", 7, 3000, [1], ["FastAPI"]),
+    ("Patient screens", 8, 2000, [0], ["React"]),
+    ("Testing & launch", 4, 2000, [2, 3], ["Testing"]),
+]
+
+
+def _principal(user_id: uuid.UUID, role: str) -> Principal:
+    """The seed acts as each person through the services, as a signed-in session would."""
+    return Principal(
+        user_id=user_id,
+        role=role,
+        status="ACTIVE",
+        session_id=uuid.uuid4(),
+        totp_verified=False,
+        step_up_until=None,
+    )
+
+
+async def _as_ctx(user_id: uuid.UUID, role: str, fn: Any) -> Any:
+    async with _as(user_id, role) as db:
+        ctx = Ctx(
+            db=db,
+            settings=get_settings(),
+            principal=_principal(user_id, role),
+            now=get_clock().now(),
+        )
+        return await fn(ctx)
+
+
+async def _seed_repair_demo(ids: dict[str, uuid.UUID], skills: dict[str, uuid.UUID]) -> uuid.UUID:
+    """Publish → bids → a formation run → confirm (invitations sent) → three accept → one
+    declines → the repair job ranks the replacement. Asserts the end state (§18.4)."""
+    rahim = ids["rahim"]
+    slot_ids: dict[str, uuid.UUID] = {}
+    start = get_clock().now().date() + timedelta(days=REPAIR_START_DAYS)
+    async with _as(rahim, "CLIENT") as db:
+        project = Project(
+            client_id=rahim,
+            title=REPAIR_DEMO,
+            summary="Patients book clinic appointments online; reception confirms them.",
+            requirements="Booking calendar, reminders and a reception view.",
+            budget_paisa=12_000_000,
+            deadline_days=30,
+            team_size=len(REPAIR_SLOTS),
+            status=ProjectStatus.BIDDING,
+            start_date=start,
+            bidding_deadline=datetime.now(UTC) + timedelta(days=7),
+        )
+        db.add(project)
+        await db.flush()
+        for name in REPAIR_SLOTS:
+            slot = ProjectSlot(
+                project_id=project.id, skill_id=skills[name], label=f"{name} developer", count=1
+            )
+            db.add(slot)
+            await db.flush()
+            slot_ids[name] = slot.id
+        await _add_plan(db, project.id, [(n, d, s, pre) for n, d, s, pre, _sk in REPAIR_PLAN])
+        await db.flush()
+        milestones = (
+            await db.scalars(
+                select(Milestone)
+                .where(Milestone.project_id == project.id)
+                .order_by(Milestone.position)
+            )
+        ).all()
+        for m, (_n, _d, _s, _p, needs) in zip(milestones, REPAIR_PLAN, strict=True):
+            for name in needs:
+                db.add(MilestoneSkill(milestone_id=m.id, skill_id=skills[name]))
+        pid = project.id
+        await db.commit()
+    for slug, slot_name, days, price in REPAIR_BIDS:
+        async with _as(ids[slug], "DEVELOPER") as db:
+            db.add(
+                Bid(
+                    project_id=pid,
+                    developer_id=ids[slug],
+                    slot_id=slot_ids[slot_name],
+                    price_paisa=price,
+                    days_needed=days,
+                    hours_per_week_committed=20,
+                    status=BidStatus.ACTIVE,
+                )
+            )
+            await db.commit()
+    # Bidding closes the way the deadline job does it; then a run with the dial at 0 (no newcomer
+    # bid), executed here.
+    async with open_session(DbContext.system(), job=True) as db:
+        row = await db.get(Project, pid)
+        assert row is not None  # noqa: S101 - written above
+        row.bidding_deadline = datetime.now(UTC) - timedelta(hours=1)
+        await db.commit()
+    await bidding_jobs.close_due_bidding()
+    async with open_session(DbContext.system(), job=True) as db:
+        closed = await db.get(Project, pid)
+        assert closed is not None  # noqa: S101 - written above
+        version, settings = await platform_settings.get_active(db)
+        snapshot, params = await formation_svc.build_snapshot(
+            db,
+            get_clock().now().date(),
+            closed,
+            settings,
+            FormationRunCreate(preset="balanced", min_newcomers=0),
+        )
+        run = FormationRun(
+            project_id=pid,
+            requested_by=rahim,
+            settings_version=version,
+            seed=REPAIR_SEED,
+            params=params,
+            candidate_snapshot=snapshot,
+        )
+        db.add(run)
+        await db.flush()
+        run_id = run.id
+        await db.commit()
+    await formation_runner.execute_run(run_id)
+    await _as_ctx(rahim, "CLIENT", lambda ctx: formation_svc.confirm(ctx, run_id))
+    # Everyone accepts except whoever holds the place in REPAIR_DECLINES_SLOT.
+    async with open_session(DbContext.system(), job=True) as db:
+        invitations = (
+            await db.execute(
+                select(Invitation.id, TeamMember.developer_id, TeamMember.slot_id)
+                .join(TeamMember, TeamMember.id == Invitation.team_member_id)
+                .join(Team, Team.id == TeamMember.team_id)
+                .where(Team.project_id == pid)
+            )
+        ).all()
+    by_id = {v: k for k, v in ids.items()}
+    for inv_id, dev_id, slot_id in invitations:
+        if slot_id == slot_ids[REPAIR_DECLINES_SLOT]:
+            await _as_ctx(
+                dev_id,
+                "DEVELOPER",
+                lambda ctx, i=inv_id: team_svc.decline(
+                    ctx, i, DeclineIn(reason="Booked on another project those weeks.")
+                ),
+            )
+            print(
+                f"seed-demo STAGE=2: {by_id.get(dev_id)} declined the {REPAIR_DECLINES_SLOT} place"
+            )
+        else:
+            await _as_ctx(dev_id, "DEVELOPER", lambda ctx, i=inv_id: team_svc.accept(ctx, i))
+    async with open_session(DbContext.system(), job=True) as db:
+        proposal_id = await db.scalar(
+            select(RepairProposal.id)
+            .join(Team, Team.id == RepairProposal.team_id)
+            .where(Team.project_id == pid)
+            .order_by(RepairProposal.created_at.desc())
+            .limit(1)
+        )
+    if proposal_id is None:
+        raise SystemExit("seed assertion failed: the decline opened no repair")
+    await formation_runner.execute_repair(proposal_id)  # a worker may have done it already
+    async with open_session(DbContext.system(), job=True) as db:
+        status = await db.scalar(select(Project.status).where(Project.id == pid))
+        declined = await db.scalar(
+            select(func.count())
+            .select_from(TeamMember)
+            .join(Team, Team.id == TeamMember.team_id)
+            .where(Team.project_id == pid, TeamMember.status == MemberStatus.DECLINED)
+        )
+        proposal = await db.get(RepairProposal, proposal_id)
+        if proposal is None:
+            raise SystemExit("seed assertion failed: the repair proposal vanished")
+        state, found = proposal.status.value, len(proposal.candidates or [])
+    ready = state == "READY" and found > 0
+    if status != ProjectStatus.TEAM_PENDING or declined != 1 or not ready:
+        raise SystemExit(
+            f"seed assertion failed: repair demo is {status}, {declined} declined, proposal "
+            f"{state} with {found} candidates"
+        )
+    print(
+        f"seed-demo STAGE=2: “{REPAIR_DEMO}” is TEAM_PENDING with one declined invitation and "
+        f"{found} ranked replacement(s)"
+    )
+    return pid
+
+
 async def _seed_too_few(ids: dict[str, uuid.UUID], skills: dict[str, uuid.UUID]) -> None:
     """A second BIDDING project with far too few bids, for the too-few-bids banner (§9.19)."""
     rahim = ids["rahim"]
@@ -974,6 +1196,7 @@ async def seed_stage(stage: int, *, write_golden: bool = False) -> None:
     if stage == 2:  # the stage number
         await _assert_golden(ids, write_golden)
         await _close_ordering_bidding(pid)
+        await _seed_repair_demo(ids, skills)
     _print_accounts(admin, pw, settings.PUBLIC_ORIGIN.rstrip("/"), cycle_id)
 
 
