@@ -46,3 +46,30 @@ def test_golden_fixture_keeps_bidders_eligible_and_stories_true() -> None:
     assert golden["zahid"]["completed_projects"] == 3  # not a newcomer (D93)
     assert golden["rafsan"]["completed_projects"] == 1
     assert min(golden, key=lambda k: golden[k]["t"]) == "shakib"
+
+
+def test_repair_demo_bids_cover_every_slot_and_leave_a_replacement() -> None:
+    """Every place has a bidder, the declining place has a second bidder to replace them, and
+    every bidder is an experienced, seeded developer (no newcomer evidence needed)."""
+    slots = {slot for _slug, slot, _d, _p in seed_demo.REPAIR_BIDS}
+    assert slots == set(seed_demo.REPAIR_SLOTS)
+    testing = [b for b in seed_demo.REPAIR_BIDS if b[1] == seed_demo.REPAIR_DECLINES_SLOT]
+    assert len(testing) >= 2
+    for slug, _slot, days, price in seed_demo.REPAIR_BIDS:
+        assert slug in seed_demo.EXPERIENCED
+        assert slug not in seed_demo.NEWCOMERS
+        assert 0 < days <= 30
+        assert price > 0
+
+
+def test_repair_demo_fits_its_budget_and_avoids_the_ordering_period() -> None:
+    """The cheapest full team is within the budget, and the project starts long after the
+    ordering project's 30 days, so no reservation overlaps it (D116 stays unchanged)."""
+    cheapest: dict[str, int] = {}
+    for _slug, slot, _days, price in seed_demo.REPAIR_BIDS:
+        cheapest[slot] = min(price, cheapest.get(slot, price))
+    assert sum(cheapest.values()) < 12_000_000
+    assert seed_demo.REPAIR_START_DAYS > 3 + 30 + 30
+    skills = {s for *_rest, needs in seed_demo.REPAIR_PLAN for s in needs}
+    assert skills == set(seed_demo.REPAIR_SLOTS)
+    assert sum(share for _n, _d, share, _p, _s in seed_demo.REPAIR_PLAN) == 10_000

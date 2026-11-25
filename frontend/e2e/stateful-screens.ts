@@ -38,8 +38,9 @@ export interface StatefulScreen {
    * The screen's own content differs on every run, so it gets no pixel baseline: the timed test
    * draws ten questions at random per attempt (`test_questions_are_random_per_attempt` holds the
    * server to that), and questions of different lengths change every card's height, which masking
-   * cannot hide. The visual run still opens the screen; the axe scan and the responsive matrix
-   * cover it in full.
+   * cannot hide. The same holds for a developer dashboard whose "Recommended for you" lists the
+   * test database's open projects. The visual run still opens the screen; the axe scan and the
+   * responsive matrix cover it in full.
    */
   randomContent?: boolean;
 }
@@ -298,7 +299,107 @@ export const STATEFUL_SCREENS: StatefulScreen[] = [
       return { path: `/dev/bids/${arif.bidId}` };
     },
   },
+  {
+    // A selected developer's dashboard (§13.5 #9): the invitation banner with Accept and
+    // Decline; the countdown is masked.
+    name: "developer-invitation",
+    // "Recommended for you" lists whatever open projects the test database holds (titles carry
+    // timestamps), so this dashboard gets no pixel baseline; axe and the viewport matrix cover it.
+    randomContent: true,
+    prepare: async (page, baseURL) => {
+      const { bidders } = await formedProject(page, baseURL, true);
+      await apiSignInAs(page, baseURL, must(bidders, "Imran Kabir"));
+      return { path: "/dev" };
+    },
+  },
+  {
+    // The client's Team screen (§13.5 #25) after the only Testing bidder declined: the
+    // members with their states, and a repair with nobody to offer (the reasons, "Reopen place"
+    // and nothing to rank). Countdowns are masked.
+    name: "client-team-repair",
+    prepare: async (page, baseURL) => {
+      const { projectId, bidders } = await formedProject(page, baseURL, true);
+      const client = await page.context().cookies();
+      await apiSignInAs(page, baseURL, must(bidders, "Imran Kabir"));
+      await post(
+        page,
+        baseURL,
+        `/api/v1/invitations/${await invitationOf(page, projectId)}/decline`,
+        {
+          reason: "Booked on another project those weeks.",
+        },
+      );
+      await page.context().clearCookies();
+      await page.context().addCookies(client);
+      const repair = (await (
+        await page.request.get(`/api/v1/projects/${projectId}/repair`)
+      ).json()) as { id: string };
+      await post(page, baseURL, `/api/v1/__test__/repair-proposals/${repair.id}/execute`);
+      return { path: `/client/projects/${projectId}/team` };
+    },
+  },
+  {
+    // The workspace's Team tab (§13.5 #33) of a started project, as a member sees it: no
+    // prices, the lead badge, the other tabs marked for Phase 9.
+    name: "workspace-team",
+    prepare: async (page, baseURL) => {
+      const { projectId, bidders } = await formedProject(page, baseURL, true);
+      const client = await page.context().cookies();
+      const team = (await (
+        await page.request.get(`/api/v1/projects/${projectId}/team`)
+      ).json()) as { members: { developer_name: string }[] };
+      for (const m of team.members) {
+        await apiSignInAs(page, baseURL, must(bidders, m.developer_name));
+        await post(
+          page,
+          baseURL,
+          `/api/v1/invitations/${await invitationOf(page, projectId)}/accept`,
+        );
+      }
+      await page.context().clearCookies();
+      await page.context().addCookies(client);
+      const view = (await (
+        await page.request.get(`/api/v1/projects/${projectId}/team`)
+      ).json()) as { project_version: number; recommendation: { member_id: string } | null };
+      const lead = await page.request.post(`/api/v1/projects/${projectId}/team/lead`, {
+        headers: {
+          ...(await csrfHeaders(page.request, baseURL)),
+          "If-Match": String(view.project_version),
+        },
+        data: { member_id: view.recommendation?.member_id },
+      });
+      if (!lead.ok()) throw new Error(`lead → ${String(lead.status())} ${await lead.text()}`);
+      const now = (await (await page.request.get(`/api/v1/projects/${projectId}/team`)).json()) as {
+        project_version: number;
+      };
+      const start = await page.request.post(`/api/v1/projects/${projectId}/start`, {
+        headers: {
+          ...(await csrfHeaders(page.request, baseURL)),
+          "If-Match": String(now.project_version),
+        },
+      });
+      if (!start.ok()) throw new Error(`start → ${String(start.status())} ${await start.text()}`);
+      await apiSignInAs(page, baseURL, must(bidders, "Sadia Islam"));
+      return { path: `/w/${projectId}/team` };
+    },
+  },
 ];
+
+function must(bidders: Map<string, Bidder>, name: string): Bidder {
+  const b = bidders.get(name);
+  if (!b) throw new Error(`no bid from ${name}`);
+  return b;
+}
+
+/** The signed-in developer's pending invitation id for the project. */
+async function invitationOf(page: Page, projectId: string): Promise<string> {
+  const mine = (await (await page.request.get("/api/v1/me/invitations")).json()) as {
+    invitations: { id: string; project_id: string; state: string }[];
+  };
+  const inv = mine.invitations.find((i) => i.project_id === projectId && i.state === "PENDING");
+  if (!inv) throw new Error("no pending invitation");
+  return inv.id;
+}
 
 interface Bidder {
   email: string;
@@ -335,7 +436,7 @@ async function formedProject(
   page: Page,
   baseURL: string,
   confirm = false,
-): Promise<{ projectId: string; arif: Bidder }> {
+): Promise<{ projectId: string; arif: Bidder; bidders: Map<string, Bidder> }> {
   await apiSignIn(page, baseURL, "CLIENT", "Rahim Uddin");
   const projectId = await createOrderingProject(page, baseURL, { publish: true });
   const client = page.context();
@@ -348,6 +449,7 @@ async function formedProject(
     ["Imran Kabir", "Testing", 20_000, 19, false],
   ];
   let arif: Bidder | null = null;
+  const bidders = new Map<string, Bidder>();
   for (const [name, skill, price, days, newcomer] of bids) {
     await client.clearCookies();
     const dev = await apiSignIn(page, baseURL, "DEVELOPER", name);
@@ -363,7 +465,9 @@ async function formedProject(
       price_paisa: price * 100,
       days_needed: days,
     })) as { id: string };
-    if (name === "Arif Hossain") arif = { email: dev.email, password: dev.password, bidId: bid.id };
+    const who = { email: dev.email, password: dev.password, bidId: bid.id };
+    bidders.set(name, who);
+    if (name === "Arif Hossain") arif = who;
   }
   await client.clearCookies();
   await client.addCookies(clientCookies);
@@ -378,5 +482,5 @@ async function formedProject(
     await post(page, baseURL, `/api/v1/__test__/formation-runs/${run.run_id}/explanations`);
   }
   if (!arif) throw new Error("no bid from Arif");
-  return { projectId, arif };
+  return { projectId, arif, bidders };
 }

@@ -284,3 +284,32 @@ async def start_forming(project_id: uuid.UUID) -> bool:
         project.version += 1
         await db.commit()
     return True
+
+
+async def execute_repair(proposal_id: uuid.UUID) -> str:
+    """Rank a queued repair proposal now (E2E: no worker, D133)."""
+    return await formation_runner.execute_repair(proposal_id)
+
+
+async def run_lifecycle_expire() -> dict[str, int]:
+    """The invitation and reopened-slot part of `lifecycle.expire`, now (E2E: no scheduler)."""
+    from app.services import repair as repair_svc  # noqa: PLC0415
+    from app.services import team as team_svc  # noqa: PLC0415
+
+    now = get_clock().now()
+    counts = await team_svc.expire_due(now)
+    counts["slots_closed"] = await repair_svc.close_reopened(now)
+    return counts
+
+
+async def set_invitation_expiry(invitation_id: uuid.UUID, expires_at: datetime) -> bool:
+    """Move a sent invitation's expiry (E2E: countdown and expiry states, D133)."""
+    from app.models.formation import Invitation  # noqa: PLC0415
+
+    async with open_session(DbContext.system(), job=True) as db:
+        inv = await db.get(Invitation, invitation_id)
+        if inv is None or inv.sent_at is None:
+            return False
+        inv.expires_at = expires_at
+        await db.commit()
+    return True

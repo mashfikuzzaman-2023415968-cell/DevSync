@@ -9,6 +9,7 @@ SMS or email.
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from decimal import Decimal
 from typing import Annotated, Literal
 
@@ -135,6 +136,30 @@ async def start_forming(project_id: uuid.UUID) -> Response:
     """Close bidding now and move the project to FORMING, as the deadline job would (E2E)."""
     if not await seed.start_forming(project_id):
         raise HTTPException(status_code=409)
+    return Response(status_code=204)
+
+
+class ExpiryRequest(StrictRequest):
+    expires_at: datetime
+
+
+@router.post("/repair-proposals/{proposal_id}/execute")
+async def execute_repair(proposal_id: uuid.UUID) -> dict[str, str]:
+    """Rank a queued team repair now (E2E: the test stack runs no worker, D133)."""
+    return {"status": await seed.execute_repair(proposal_id)}
+
+
+@router.post("/lifecycle/expire")
+async def lifecycle_expire() -> dict[str, int]:
+    """Send unsent and expire overdue invitations, close reopened places, now (D133)."""
+    return await seed.run_lifecycle_expire()
+
+
+@router.post("/invitations/{invitation_id}/expiry", status_code=204)
+async def invitation_expiry(invitation_id: uuid.UUID, body: ExpiryRequest) -> Response:
+    """Move a sent invitation's expiry (E2E countdown and expiry states, D133)."""
+    if not await seed.set_invitation_expiry(invitation_id, body.expires_at):
+        raise HTTPException(status_code=404)
     return Response(status_code=204)
 
 

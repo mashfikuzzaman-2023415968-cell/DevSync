@@ -101,6 +101,44 @@ TEMPLATES: dict[str, EmailTemplate] = {
         html="<p>Hi $name,</p><p>New sealed bids on $date: $summary.</p>"
         '<p><a href="$link">Review them</a></p>',
     ),
+    # Phase 8 (§12): the invitee, the team. Only the recipient's own project facts; never other
+    # members' prices or anyone's private data.
+    "invitation_selected": EmailTemplate(
+        subject="You were selected for “$project”",
+        text="Hi $name,\n\nThe client chose you for the $role role on “$project”. Accept or "
+        "decline by $expires (Asia/Dhaka); after that the invitation expires.\n\n$link",
+        html="<p>Hi $name,</p><p>The client chose you for the $role role on “$project”.</p>"
+        "<p>Accept or decline by $expires (Asia/Dhaka); after that the invitation expires.</p>"
+        '<p><a href="$link">Answer the invitation</a></p>',
+    ),
+    "invitation_replacement": EmailTemplate(
+        subject="You were selected as a replacement for “$project”",
+        text="Hi $name,\n\nA place opened in the team for “$project” and the client chose you "
+        "for the $role role. Accept or decline by $expires (Asia/Dhaka).\n\n$link",
+        html="<p>Hi $name,</p><p>A place opened in the team for “$project” and the client chose "
+        "you for the $role role.</p><p>Accept or decline by $expires (Asia/Dhaka).</p>"
+        '<p><a href="$link">Answer the invitation</a></p>',
+    ),
+    "project_started": EmailTemplate(
+        subject="“$project” has started",
+        text="Hi $name,\n\n“$project” has started. The team workspace is open: $link",
+        html="<p>Hi $name,</p><p>“$project” has started. The team workspace is open.</p>"
+        '<p><a href="$link">Open the workspace</a></p>',
+    ),
+    "team_lead": EmailTemplate(
+        subject="You are the team lead for “$project”",
+        text="Hi $name,\n\nThe client chose you as the team lead for “$project”. You can "
+        "decline the lead role (not the team) from the project: $link",
+        html="<p>Hi $name,</p><p>The client chose you as the team lead for “$project”. You can "
+        'decline the lead role (not the team) from the project.</p><p><a href="$link">Open '
+        "the project</a></p>",
+    ),
+    "lead_changed": EmailTemplate(
+        subject="New team lead for “$project”",
+        text="Hi $name,\n\n$lead is now the team lead for “$project”.\n\n$link",
+        html="<p>Hi $name,</p><p>$lead is now the team lead for “$project”.</p>"
+        '<p><a href="$link">Open the project</a></p>',
+    ),
 }
 
 

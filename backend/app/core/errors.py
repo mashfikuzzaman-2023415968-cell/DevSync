@@ -70,6 +70,8 @@ class ErrorCode(StrEnum):
     ATTEMPT_TOKEN_INVALID = "ATTEMPT_TOKEN_INVALID"
     DEADLINE_PASSED = "DEADLINE_PASSED"
     ROLE_ASSESSMENT_REQUIRED = "ROLE_ASSESSMENT_REQUIRED"
+    # Team lifecycle (Phase 8).
+    UNAVAILABLE = "UNAVAILABLE"
 
 
 STATUS_BY_CODE: dict[ErrorCode, int] = {
@@ -114,6 +116,7 @@ STATUS_BY_CODE: dict[ErrorCode, int] = {
     ErrorCode.ATTEMPT_TOKEN_INVALID: 403,
     ErrorCode.DEADLINE_PASSED: 409,
     ErrorCode.ROLE_ASSESSMENT_REQUIRED: 409,
+    ErrorCode.UNAVAILABLE: 409,
     ErrorCode.RATE_LIMITED: 429,
     ErrorCode.INTERNAL_ERROR: 500,
     ErrorCode.DEPENDENCY_UNAVAILABLE: 503,
@@ -160,6 +163,7 @@ SAFE_MESSAGES: dict[ErrorCode, str] = {
     ErrorCode.ATTEMPT_TOKEN_INVALID: "Open the assessment again to continue.",
     ErrorCode.DEADLINE_PASSED: "Time is up for this assessment.",
     ErrorCode.ROLE_ASSESSMENT_REQUIRED: "Newcomers need a passing role assessment for this role.",
+    ErrorCode.UNAVAILABLE: "You don't have enough free hours a week for this project.",
 }
 
 

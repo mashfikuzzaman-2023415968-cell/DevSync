@@ -70,6 +70,7 @@ from app.schemas.projects import (
 )
 from app.services import bids as bids_svc
 from app.services import role_assessments
+from app.services import team as team_svc
 from app.services.context import Ctx
 from app.services.notifications import notify_users
 
@@ -748,8 +749,18 @@ async def cancel(ctx: Ctx, project_id: uuid.UUID, reason: str) -> ProjectOut:
     project = await repo.get_project(ctx.db, project_id, for_update=True)
     if project is None or (project.client_id != ctx.uid and not ctx.principal.is_admin):
         raise NotFoundError
+    if project.status == ProjectStatus.IN_PROGRESS:
+        # §8's in-progress rules (refund un-started escrow, freeze the active one, open a
+        # dispute) need Phases 10 and 12 (D135).
+        raise InvalidStateTransition(
+            current_state=project.status.value,
+            allowed_actions=[],
+            message="A project in progress can't be cancelled yet: refunds and disputes arrive "
+            "in later phases.",
+        )
     _require_status(project, CANCELLABLE, "cancel")
     was_bidding = project.status in {ProjectStatus.BIDDING, ProjectStatus.FORMING}
+    had_team = project.status == ProjectStatus.TEAM_PENDING
     project.status = ProjectStatus.CANCELLED
     project.cancel_reason = reason
     project.cancelled_at = ctx.now
@@ -757,6 +768,21 @@ async def cancel(ctx: Ctx, project_id: uuid.UUID, reason: str) -> ProjectOut:
     await _audit(ctx, "project.cancelled", project_id, {"by": ctx.principal.role})
     await ctx.db.commit()
     await ctx.db.refresh(project)
+    if had_team:
+        # Free before start (§8, D135): the team, its invitations and every reservation go,
+        # written as SYSTEM after the client's own change (D50).
+        async with open_session(DbContext.system(), job=True) as sysdb:
+            locked = await sysdb.get(Project, project_id)
+            told = await team_svc.cancel_team(sysdb, locked, ctx.now) if locked else []
+            await sysdb.commit()
+        await notify_users(
+            told,
+            "PROJECT_CANCELLED",
+            title="A project you were invited to was cancelled",
+            body=f"“{project.title}” was cancelled by its client before it started.",
+            link="/dev",
+            once=False,
+        )
     if was_bidding:
         await notify_users(
             await active_bidder_ids(ctx.db, project_id),

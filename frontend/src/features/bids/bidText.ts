@@ -50,7 +50,7 @@ export function bidSteps(status: string, evaluated: boolean): BidStep[] {
     SELECTED: {
       label: "Selected",
       state: "current",
-      note: "The client chose you. Your invitation comes next.",
+      note: "The client chose you. Accept or decline on your dashboard within 48 hours.",
     },
     ACCEPTED: { label: "Selected", state: "done" },
     DECLINED: { label: "Selected", state: "done" },
@@ -88,6 +88,7 @@ export const REASON_TEXT: Record<string, string> = {
   OVER_BUDGET: "Over budget",
   NO_SKILL_EVIDENCE: "No passing role assessment",
   SKILL_MISMATCH: "Missing the slot’s skill",
+  TOO_MANY_PENDING_INVITATIONS: "Ten invitations waiting for your answer",
   UNAVAILABLE: "Not enough free hours",
   SUSPENDED: "Account not active",
   SELF_DEALING: "Conflict of interest",

@@ -743,6 +743,7 @@ def step_phase_checks(g: Gate) -> str:
         5: phase5_checks,
         6: phase6_checks,
         7: phase7_checks,
+        8: phase8_checks,
     }
     if g.phase not in checks:
         raise StepFailed(f"no PHASE_CHECKS defined for phase {g.phase}")
@@ -977,6 +978,34 @@ def phase7_checks(g: Gate) -> str:
         f"{p6}; seeded project forms the documented team (newcomer, optimal, reproducible); "
         "homepage figures from that run; E1 smoke ≥ 95 % optimal; formation RLS and API checks"
     )
+
+
+def phase8_checks(g: Gate) -> str:
+    """Phase 8 checks (spec §17): everything of Phase 7 (which leaves the stage-2 seed loaded);
+    the seeded repair demo is TEAM_PENDING with one decline and a READY repair, and a scripted
+    run → confirm → decline on the ordering project ranks at least one replacement on the same
+    slot (scripts/repair_check.py, D128); the named Phase 8 security and RLS tests hold."""
+    p7 = phase7_checks(g)
+    proc = in_tests(["python", "scripts/repair_check.py"])
+    line = next((x for x in proc.stdout.splitlines() if x.startswith("repair-check: ")), "")
+    if not line:
+        raise StepFailed("repair_check printed no result")
+    in_tests(
+        [
+            "pytest", "-q", "-p", "no:cacheprovider",
+            "tests/algorithms/test_lead.py", "tests/algorithms/test_repair.py",
+            "tests/integration/test_rls_team_lifecycle.py",
+            "tests/security/test_team_api.py",
+        ]
+    )  # fmt: skip
+    for doc in (
+        "docs/plans/phase-08.md",
+        "docs/ALGORITHMS.md",
+        "docs/security-reviews/phase-08.md",
+    ):
+        if not (ROOT / doc).exists():
+            raise StepFailed(f"{doc} is missing")
+    return f"{p7}; {line.removeprefix('repair-check: ')}; lead, repair, team RLS and API checks"
 
 
 def role_assessment_checks() -> str:

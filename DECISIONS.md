@@ -1367,3 +1367,181 @@ since D113 the chip shows the real run's cost of fairness at dial 1. It now expe
 `src/content/homepage-example.json` the page uses and formatted as `fairnessCost` formats it
 (16.2 % today), so it can't drift from the figures. (The Playwright runner loads plain Node ESM,
 which won't import that JSON without an import attribute, so the test reads the file.)
+
+## Phase 8 (invitations, team lead, team repair; Raisa with Claude Code)
+
+Decisions D118–D136 were made by Raisa with Taeen (team leader) before the plan
+(`phase-08-start-prompt.md` Step 5, decisions 1–19, in that order); D137–D139 resolve points the
+prompt left open.
+
+**D118 · Milestones at project start.** §8 says first milestones activate at project start but
+also `FUNDED → ACTIVE`; escrow (`FUNDED`) arrives in Phase 10. At start, every milestone with no
+predecessors moves `PLANNED → ACTIVE` with `actual_start` = the start date. The rule lives in one
+guard, `milestone_may_activate()` in the project state table, whose docstring says Phase 10
+tightens it to require `FUNDED`. Later milestones stay `PLANNED`; activating them on predecessor
+completion is Phase 9/10 work.
+
+**D119 · What "Start project" does (one transaction).** Guard: every slot count is filled by
+`ACTIVE` members and a client-confirmed lead exists (409 `INVALID_STATE` with `allowed_actions`
+otherwise). Start date := max(planned `start_date`, today in Asia/Dhaka); CPM dates derive from it
+and the active members' reservations move to the same window. Because moving the window can create
+an overlap, §9.17 availability is re-checked for every `ACTIVE` member over the new period; if
+anyone would be overbooked the start is refused (409), the member is named, and the client is told
+what to do (wait for that member to free hours, or use leave/repair) — nothing is half-applied.
+Then: project `IN_PROGRESS`; team `ACTIVE`; D118 for milestones; the current baseline (v1, written
+at publish) gets `approved_by_lead = true` (§7.3 needs both approvals once a team exists); audit;
+"Project started" to the team and the client; "You are team lead" to the lead (in-app + email).
+Workspace content (tasks, threads, check-ins) is Phase 9, so §17's "create workspace defaults"
+creates no placeholder rows. The client starts it explicitly ("Start project", enabled only when
+the guard holds): the client makes the final choice (§1.6).
+
+**D120 · A minimal workspace shell (screen 33 before the workspace).** `/w/:projectId/team`: the
+workspace header and §13.4 tab bar, the Team tab real, the others "arrives in Phase 9"
+(`ComingSoonPage`). Only the project's client and its members (404 for anyone else); admins don't
+use this route (admin UI is its own bundle, §14.17; the admin project view is Phase 12) but can read
+the team API. Phase 9 fills the shell. Developers reach it from the dashboard card of a started
+project; `/dev/projects` stays Phase 9.
+
+**D121 · Removal after inactivity.** Phase 8 builds the client's removal request (reason 20–500)
+and the admin approve/reject API under `/admin/…` (step-up TOTP, 404 for non-admins, audited);
+approval makes the member `REMOVED` with the same follow-ups as leaving. A request needs a basis:
+a linked dispute (Phase 12) or the member inactive ≥ 10 days, checked by one function,
+`member_inactive_days(member)`, which in Phase 8 returns "no signal yet" — so inactivity requests
+are refused (409, "the activity signal arrives in Phase 9"). Tests swap that function for a stub
+(dependency override or monkeypatch); there is no production bypass. Phase 9 replaces its body.
+
+**D122 · Notifications page now, live stream later.** Phases 6–7 write in-app notifications that
+no screen shows. Phase 8 builds `GET /notifications` (cursor page), `POST /notifications/{id}/read`,
+`POST /notifications/read-all`, `GET /notifications/unread-count`, the Notifications page (screen
+18: grouped by day, unread dot, mark all read) and the bell's unread badge (refreshed on focus and
+every 60 s while visible). Phase 9 adds the SSE stream and preferences. The nav marker drops.
+`link_path` stays validated by `core/redirects.py` (§14.6).
+
+**D123 · Invitations confirmed under Phase 7 are still unsent.** Confirm now sends invitations
+immediately. `lifecycle.expire` also sends any unsent invitation of a `TEAM_PENDING` team
+(idempotent: only `sent_at IS NULL`), starting the 48 h clock when it sends. No data migration.
+
+**D124 · Availability re-check on accept (D54).** If Σ CONFIRMED reservations on other projects
+overlapping the period + this commitment > the profile's `hours_per_week`, accept is refused with
+409 `UNAVAILABLE`, saying how many hours are free and suggesting raising the weekly hours or leaving
+another project. The invitation stays open until it expires; the client sees "can't accept: fully
+booked". TENTATIVE reservations (including the member's own for this project) never count (§9.17).
+
+**D125 · At most 10 pending invitations per developer (§14.8).** Enforced where candidates are
+chosen: a developer with 10 sent, unanswered invitations is excluded from new formation runs' and
+repairs' candidate sets, with `TOO_MANY_PENDING_INVITATIONS` in the explanation ("You had 10
+invitations waiting for an answer, the most allowed at once; answer them to be considered"). A race
+that still hits the limit at confirm or choose is refused with 409 and the client is told to
+recalculate; the client is never left half-confirmed.
+
+**D126 · Reopen a slot for 48 h.** `project_slots.reopened_until timestamptz NULL` and
+`reopen_count smallint` (≤ 2 per slot, mirroring the two bidding extensions, §9.19). Allowed only
+from a repair proposal with no candidates, while `TEAM_PENDING` or `IN_PROGRESS`. While open,
+developers bid for that slot only through the normal endpoint and Algorithm 1 eligibility under the
+confirmed run's standards; the project appears in search with "1 open place" (no bid data).
+`lifecycle.expire` closes the window, queues `formation.repair` and notifies the client.
+
+**D127 · Raise the budget.** Only from a repair proposal whose reason is `REMAINING_BUDGET_TOO_LOW`,
+while `TEAM_PENDING` or `IN_PROGRESS`. New budget ≥ current + shortfall, ≤ 10,000,000,000 paisa;
+`budget_paisa` changes, C (budget after fee, A10) is recomputed, `version` bumps (`If-Match`), audit
+with old and new values, the repair is recomputed. Dependency: Phase 10 computes escrow from the
+then-current budget.
+
+**D128 · Repair uses current data, frozen per proposal.** Candidates are evaluated with current
+reputation, eligibility (Algorithm 1 under the confirmed run's standards) and availability, read in
+a SYSTEM session (D50). `repair_proposals` stores its own `candidate_snapshot`, `params`, `seed`
+and `settings_version` (immutable once written, trigger, the D109 principle). One open proposal per
+departed member: a recomputation supersedes the old one (`SUPERSEDED`). Statuses `COMPUTING`,
+`READY`, `NO_CANDIDATES`, `CHOSEN`, `SUPERSEDED`, `CANCELLED`. The repair job's `jobs.requested_by`
+is the project's client whoever triggered it, so the client's Team screen can follow it (D107
+answers 404 to anyone else). Choosing a replacement moves its bid `NOT_SELECTED → SELECTED`: added to
+the §8 bid transitions here. The developer, earlier told "not selected", gets "You were selected as
+a replacement"; the bid detail shows the sequence and marks the old "why not selected" superseded.
+
+**D129 · Which milestones a departure affects.** Before start: every milestone whose skills include
+the departed member's slot skill. After start: the same, limited to milestones not yet done. If no
+milestone lists that skill, the impact is budget-only, and the screen says so.
+
+**D130 · Who sees a team.** `is_team_member()` (0015) counts only `INVITED`, `ACTIVE`, `COMPLETED`
+members. A developer who declined, expired, left or was removed sees only their own `team_members`
+row and invitation. Prices and days are sealed among members: developers never see other members'
+`price_paisa` or `days_needed`, only the client and admins do — enforced by role-specific response
+models (`TeamMemberForClient` vs `TeamMemberForMember`, the §14.5 pattern). RLS tests for both.
+
+**D131 · Lead recommendation inputs (§1.6 rule 1), a pure function in `algorithms/`.** Values come
+through `services/reputation_read.py` (stored snapshot, or the §9.1.3 newcomer values computed on
+the fly), so newcomers rank on the same footing. `ACTIVE` members by X_m, then `completed_projects`,
+then C, then the earlier `invitations.responded_at`, then `developer_id`. Members who declined the
+lead role on this project (`team_members.lead_declined_at`) are skipped. The reason reads "Highest
+teamwork capacity: 86; led 2 past teams" (completed teams where they were the active lead; the clause
+is omitted at 0, i.e. everyone until Phase 11). Values shown 0–100 (§13.8).
+
+**D132 · The lead role, once chosen.** The client can choose a lead once every slot has an `ACTIVE`
+member; it takes effect immediately. If a non-lead member leaves before start, the lead stays and the
+start waits for the repair. The chosen developer may decline the role before or after start; the
+project then has no lead until the client confirms the next recommendation (an `IN_PROGRESS`
+project may briefly have none; it can't start without one). Lead-change requests: one open per
+member per project, at most 3 per member per project per week, reasons 20–500. Approving one makes
+the current lead a normal member and shows the client the next recommendation (excluding the
+outgoing lead; a named `ACTIVE` `suggested_member_id` is pre-selected); the client confirms.
+Rejecting needs a reason the requester sees. Leave and removal reasons: 20–500. Caps with no §6.2
+setting are named constants (`MAX_PENDING_INVITATIONS = 10`, `MAX_LEAD_CHANGE_REQUESTS_PER_WEEK =
+3`), like `MAX_OPEN_BIDS`.
+
+**D133 · `formation.repair` in tests.** The test stack has no worker or scheduler (D116), so
+test-only routes run a queued repair now, run `lifecycle.expire` now, and set an invitation's
+`expires_at`. They exist only when `DEVSYNC_ENV=test` (`assert_no_test_routes`).
+
+**D134 · Endpoints §10.2 doesn't list** (contract in `docs/API.md` and OpenAPI): `POST
+/projects/{id}/start`, `POST /projects/{id}/budget`, `GET /me/invitations`, `GET /me/teams`, `POST
+/lead-change-requests/{id}/withdraw`, `POST /team-members/{id}/removal-requests`, `GET
+/notifications/unread-count`, `GET /admin/removal-requests`, `POST
+/admin/removal-requests/{id}/approve|reject`. §10.2's names are kept for the routes it lists. `GET
+/projects/{id}/team` is role-shaped and carries everything the Team screen needs: members,
+invitations, the lead recommendation and reason, lead-change requests (all for the client, own for a
+member), removal requests (client only), the latest repair proposal's status (details from `GET
+/projects/{id}/repair`, client only).
+
+**D135 · Cancellation.** `TEAM_PENDING` stays free to cancel (§8): team `CANCELLED`, open
+invitations closed, every reservation `RELEASED`, members and the client notified, audit.
+`IN_PROGRESS` is not cancellable in Phase 8 (outside `CANCELLABLE`): §8's refund/freeze/dispute
+rules need Phases 10 and 12; the 409 says so and a test pins it.
+
+**D136 · Account changes during a team.** Admin suspension and self-deletion are not built yet
+(admin users and data export/deletion are Phase 12, `docs/BACKLOG.md`); today only sign-in checks
+the `SUSPENDED`/`DELETED` statuses. A suspended developer can't sign in, so their invitations
+expire and repair follows. The rule for Phase 12's deletion, recorded now and built then: refuse
+deletion while `ACTIVE` in an `IN_PROGRESS` project; a pending invitation is treated as declined
+(repair follows); an `ACTIVE` member of a `TEAM_PENDING` team is treated as having left.
+
+**D137 · One bid per developer per project on a reopened slot.** Decision 9 assumes a
+`UNIQUE(project, developer)`, but `one_standing_bid_per_developer` covers only `ACTIVE` and
+`INELIGIBLE` bids, so a developer whose bid is `NOT_SELECTED`, `DECLINED` or `EXPIRED` could bid
+again. The bid service refuses a reopened-slot bid from anyone with a non-`WITHDRAWN` bid on the
+project (a withdrawn bid may still be replaced, D49). No schema change.
+
+**D138 · Repair impact arithmetic (§9.9).** "The candidate's days applied to the departed member's
+unfinished milestones": each affected milestone's (D129) duration is scaled by candidate days ÷
+departed member's days, rounded up, at least 1. Before start CPM is recomputed (`cpm.compute_cpm`);
+after start the §9.10 forecast (`forecast.forecast`). Delay = new finish − the baseline duration;
+budget delta = the team's price with the candidate − C (A10). Worked example in `docs/ALGORITHMS.md`
+and a hand-computed test.
+
+**D139 · The stage-2 golden file lives with the seed data.** `make demo-up STAGE=2` failed in the
+production-style image (`FileNotFoundError: /app/tests/fixtures/stage2_reputation_golden.json`):
+that image ships `app/`, `alembic/` and `scripts/` but not `tests/`. Broken since Phase 6, unseen
+because the gate seeds in the tests container. The file moved to
+`backend/scripts/seed_data/stage2_reputation_golden.json`, next to `stage2_personas.json`; content
+unchanged.
+
+**D140 · The team view reads in a stable order: role, then name (Phase 8 gate, step 15).** The
+new `client-team-repair` and `workspace-team` baselines failed on the gate laptop: same content,
+rows in another order. Confirm creates every member in one transaction, so `created_at` ties and
+`_members` fell back to the random member id; open slots were listed by random slot id, so the
+"Start the project" blockers shuffled too. The test setup accepts invitations in the listed order,
+and the lead recommendation breaks equal scores by the earlier acceptance (D131), so even the
+recommended lead changed between runs. `get_team` now sorts members by slot label, then developer
+name (case-folded), then id, and the blockers by slot label (the Phase 7 formation cards use the
+same order). `_members` keeps creation order for the locking paths. Test:
+`test_the_team_reads_in_a_stable_order_role_then_name`; the 12 baselines were re-created and pass
+twice in a row on fresh data.

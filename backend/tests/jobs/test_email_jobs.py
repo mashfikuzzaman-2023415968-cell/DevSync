@@ -138,4 +138,8 @@ async def test_expire_records_runs() -> None:
         # Old job run records are pruned here too (spec §11).
         "jobs_abandoned",
         "jobs_pruned",
+        # Invitations and reopened places (D123, D126), "invitations" first (§11).
+        "invitations_sent",
+        "invitations_expired",
+        "slots_closed",
     }

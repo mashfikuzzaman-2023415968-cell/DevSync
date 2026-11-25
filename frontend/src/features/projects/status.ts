@@ -55,5 +55,11 @@ export function projectNextAction(p: { id: string; status: string }): {
   if (p.status === "BIDDING" || p.status === "FORMING") {
     return { label: "See bids", to: `/client/projects/${p.id}/bids` };
   }
+  if (p.status === "TEAM_PENDING") {
+    return { label: "Manage team", to: `/client/projects/${p.id}/team` };
+  }
+  if (p.status === "IN_PROGRESS") {
+    return { label: "Open workspace", to: `/w/${p.id}/team` };
+  }
   return { label: "View plan", to: `/client/projects/${p.id}/plan` };
 }

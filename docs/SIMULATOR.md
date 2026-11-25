@@ -33,7 +33,7 @@ developers of §18.1, so their stories hold with computed reputations: Arif (8 p
 clients, strong), Nusrat (strong), Imran (7 projects for one client, so client diversity 0),
 Shakib (often late), Zahid (3 projects, D93), and Rafsan (one project, still a newcomer). The
 seed stores their histories as SIMULATED `reputation_history` rows and runs the engine; the
-result is pinned in `backend/tests/fixtures/stage2_reputation_golden.json`. Every bidder on the
+result is pinned in `backend/scripts/seed_data/stage2_reputation_golden.json` (D139: the production image has no `tests/`). Every bidder on the
 "Online ordering system" stays eligible (P ≥ 0.45, C ≥ 0.40), so the documented 10 eligible
 bids hold in stage 2 as in stage 1.
 

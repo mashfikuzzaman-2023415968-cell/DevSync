@@ -324,3 +324,87 @@ def _bid_explanation(p: Principal, _r: Any) -> None:
     _require_active(p)
     if p.role != "DEVELOPER" and not p.is_admin:
         raise ForbiddenError
+
+
+# --------------------------------------------------------------------------- Phase 8 policies
+# Object checks (whose invitation, which project, the lead of *this* project) live in
+# `services/team.py` and `services/repair.py` and answer 404; RLS is the second gate (§14.13 row 8).
+
+
+@policy("invitation.respond")
+def _invitation_respond(p: Principal, _r: Any) -> None:
+    """Developers answer their own invitations and see their own dashboard invitations."""
+    _require_role(p, "DEVELOPER")
+
+
+@policy("team.read")
+def _team_read(p: Principal, _r: Any) -> None:
+    """The project's client, its current members, or an admin (decided per project → 404)."""
+    _require_active(p)
+
+
+@policy("team.list")
+def _team_list(p: Principal, _r: Any) -> None:
+    """A client's own teams (`/client/teams`)."""
+    _require_role(p, "CLIENT")
+
+
+@policy("team.lead.choose")
+def _team_lead_choose(p: Principal, _r: Any) -> None:
+    """Only the project's client chooses the lead (§1.6 rule 2)."""
+    _require_role(p, "CLIENT")
+
+
+@policy("team.lead.decide")
+def _team_lead_decide(p: Principal, _r: Any) -> None:
+    """The client approves or rejects a lead-change request (§1.6 rule 4)."""
+    _require_role(p, "CLIENT")
+
+
+@policy("team.lead.decline")
+def _team_lead_decline(p: Principal, _r: Any) -> None:
+    """The lead of this project declines the role (§1.6 rule 3)."""
+    _require_role(p, "DEVELOPER")
+
+
+@policy("team.lead.request")
+def _team_lead_request(p: Principal, _r: Any) -> None:
+    """An active member asks for (or withdraws) a lead change (§1.6 rule 4)."""
+    _require_role(p, "DEVELOPER")
+
+
+@policy("team.leave")
+def _team_leave(p: Principal, _r: Any) -> None:
+    _require_role(p, "DEVELOPER")
+
+
+@policy("team.removal.request")
+def _team_removal_request(p: Principal, _r: Any) -> None:
+    _require_role(p, "CLIENT")
+
+
+@policy("team.repair")
+def _team_repair(p: Principal, _r: Any) -> None:
+    """Repair proposals: the client and admins only — developers never see candidates."""
+    _require_active(p)
+    if p.role != "CLIENT" and not p.is_admin:
+        raise ForbiddenError
+
+
+@policy("team.repair.choose")
+def _team_repair_choose(p: Principal, _r: Any) -> None:
+    """Invite a replacement, reopen a place, raise the budget: the client."""
+    _require_role(p, "CLIENT")
+
+
+@policy("project.start")
+def _project_start(p: Principal, _r: Any) -> None:
+    """The client starts their project once the team and lead are confirmed (D119)."""
+    _require_role(p, "CLIENT")
+
+
+@policy("notifications.read")
+def _notifications_read(p: Principal, _r: Any) -> None:
+    """Any signed-in account (PENDING included) reads and marks its own notifications."""
+    if p.status not in ("PENDING", "ACTIVE"):
+        raise AuthError

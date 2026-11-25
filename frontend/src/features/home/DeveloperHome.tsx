@@ -12,15 +12,16 @@ import { BID_STATUS_TONE, bidStatusLabel } from "@/features/bids/bidText";
 import { useRecommended } from "@/features/marketplace/api";
 import { useDeveloper, usePortfolio, useSkillTests } from "@/features/profile/api";
 import { formatDays, formatMoney, formatScore } from "@/lib/format";
+import { InvitationBanners } from "@/features/team/InvitationBanners";
 import { Checklist } from "./Checklist";
 import { firstName, greeting } from "./greeting";
 
 const RECOMMENDED_LIMIT = 6;
 const RECENT_BIDS = 5;
 
-/** Developer dashboard (spec §13.5 #9): open bids, competency and performance (or "Building
- * your record"), recommended projects, recent bids and the newcomer checklist. Invitations,
- * active projects and earnings join in later phases. */
+/** Developer dashboard (spec §13.5 #9): invitations with a countdown and your teams (Phase 8),
+ * open bids, competency and performance (or "Building your record"), recommended projects,
+ * recent bids and the newcomer checklist. Earnings join in Phase 10. */
 export default function DeveloperHome() {
   const me = useMe();
   const user = me.data;
@@ -48,6 +49,7 @@ export default function DeveloperHome() {
           </Button>
         }
       />
+      <InvitationBanners />
       <section aria-label="Your numbers" className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
         <div className="col-span-2 lg:col-span-1">
           {bids.isPending ? (

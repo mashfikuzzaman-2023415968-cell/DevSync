@@ -205,7 +205,7 @@ class ConfirmOut(BaseModel):
     team_id: uuid.UUID
     project_status: str
     members: int
-    invitations_sent: bool  # False in Phase 7: invitations go out in Phase 8 (D108)
+    invitations_sent: bool  # True since Phase 8: confirm sends them (D123)
 
 
 class SlotComparison(BaseModel):
@@ -250,7 +250,7 @@ EX_SUMMARY = {
     "confirmed": False,
 }
 EX_CONFIRM = {"team_id": _RUN_ID, "project_status": "TEAM_PENDING", "members": 3,
-              "invitations_sent": False}  # fmt: skip
+              "invitations_sent": True}  # fmt: skip
 EX_EXPLANATION = {
     "bid_id": _RUN_ID,
     "project_title": "Online ordering system",

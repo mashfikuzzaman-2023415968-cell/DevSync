@@ -307,3 +307,69 @@ exactly as a client's run (Balanced, dial 1, seed 20261207) and checks the team 
 `tests/fixtures/formation_expected_team.json`: it includes a newcomer, the exact solver confirms
 it optimal, and the same inputs give the same team twice. The homepage's fairness figures
 (`frontend/src/content/homepage-example.json`) come from the same run at dial 0, 1 and 2.
+
+## Team lead and team repair — spec §1.6, §9.9 — Phase 8
+
+Code: `backend/app/algorithms/lead.py` and `repair.py` (pure, typed; the services freeze their
+inputs per proposal, D128). The repair job is `formation.repair` (`services/formation_runner.py
+::execute_repair`); its result is stored on the proposal and never recomputed.
+
+### Lead recommendation (§1.6 rule 1, D131)
+
+Among the team's ACTIVE members, skipping anyone who declined the role and an outgoing lead of an
+approved change request: highest teamwork capacity X_m, then more completed projects, then higher
+competency C, then the earlier acceptance, then the developer id (so the pick is total and
+reproducible). A newcomer without a reputation snapshot ranks on the starting values. The reason
+is one sentence: "Highest teamwork capacity: 86; led 2 past teams" (the clause is left out at 0;
+"of the members available" is added when someone was skipped). The client always decides
+(`test_lead.py`, including a property test that the pick has maximal X_m).
+
+### Ranking replacements
+
+The remaining members are locked; the pool is the open slot's eligible bids that weren't
+declined, aren't in the team, are available over the period and whose developer has fewer than
+10 pending invitations (D125), checked with Algorithm 1 under the confirmed run's standards. The
+pool is cut to the 10 with the best marginal score, each is completed into a full team with the
+same solver as formation (exact for small inputs, PSO otherwise), and the three best teams by
+fitness (Eq. 17–19, budget after fee A10) are returned. The newcomer minimum is kept when a
+newcomer candidate exists and relaxed with the note `NEWCOMER_MINIMUM_RELAXED` otherwise. With
+nobody: `NO_BIDS_FOR_SLOT`, `NONE_AVAILABLE` or `REMAINING_BUDGET_TOO_LOW` with the shortfall,
+which the client can answer with "Reopen place" (48 h, at most twice) or "Raise budget".
+Measured: 10 candidates for a 4-member team in about 1.4 s with PSO and 0.05 s exact
+(`tests/perf/test_repair_perf.py`, budget 5 s).
+
+### Impact (D138) — worked example
+
+Every milestone that needs the departed member's skill (and, after the start, isn't done) has its
+duration scaled by candidate days ÷ departed days, rounded up, at least 1; CPM is recomputed (the
+forecast after the start); delay = new finish − baseline; budget delta = the team's price with
+the candidate − the budget after fee C.
+
+The plan of `test_impact_against_a_hand_computed_cpm`: Requirements 4 → Database 5 → Backend
+API 8 → Integration 3 → Testing 4, with Frontend 9 after Requirements and before Integration.
+Baseline: the critical path Requirements → Database → API → Integration → Testing = 4 + 5 + 8 +
+3 + 4 = **24 days** (the Frontend path is 4 + 9 + 3 + 4 = 20).
+
+The React developer (20 days) leaves; the candidate needs 30 days, a factor of 1.5. Frontend and
+Integration need React: Frontend 9 × 1.5 = 13.5 → **14**, Integration 3 × 1.5 = 4.5 → **5**.
+
+| Path | Before | After |
+|---|---|---|
+| Requirements → Database → API → Integration → Testing | 24 | 4 + 5 + 8 + 5 + 4 = 26 |
+| Requirements → Frontend → Integration → Testing | 20 | 4 + 14 + 5 + 4 = **27** |
+
+New finish 27 days, so the delay is **+3 days** and the Frontend path becomes critical. With the
+candidate the team costs ৳99,000 against a budget after fee of ৳1,08,000: budget delta
+**−৳9,000** (under budget). A faster candidate can shorten the plan only where the scaled
+milestones are critical: a FastAPI replacement needing 10 days instead of 20 halves the API
+(8 → 4) and Integration (3 → 2 after rounding 1.5 up): both paths now take 4 + 5 + 4 + 2 + 4 =
+4 + 9 + 2 + 4 = 19 days, a finish 5 days sooner, and the Frontend path is critical too
+(`test_a_faster_candidate_can_shorten_the_plan_only_off_the_critical_path`).
+
+### The seeded repair (gate check)
+
+`backend/scripts/repair_check.py` checks, on the stage-2 seed, that "Clinic appointment booking"
+is TEAM_PENDING with one declined invitation and a READY repair, and runs a scripted run →
+confirm → decline on the ordering project: the repair ranks at least one replacement, every one
+on the open slot and none already in the team.
+

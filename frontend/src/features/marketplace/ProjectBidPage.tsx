@@ -89,7 +89,10 @@ export default function ProjectBidPage() {
   const canChange = existing?.status === "ACTIVE";
   const mySkills = new Set((profile.data?.skills ?? []).map((s) => s.skill_id));
   // Slots needing my skills first (stable otherwise), so the right role is the obvious choice.
-  const slots = [...(project.data?.slots ?? [])].sort(
+  // After the team formed, only a place reopened by team repair takes bids (D126).
+  const all = project.data?.slots ?? [];
+  const reopened = project.data?.status !== "BIDDING" && all.some((s) => s.reopened);
+  const slots = [...(reopened ? all.filter((s) => s.reopened) : all)].sort(
     (a, b) => Number(mySkills.has(b.skill_id)) - Number(mySkills.has(a.skill_id)),
   );
   const knowsSkills = profile.isSuccess;

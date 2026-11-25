@@ -74,20 +74,20 @@ of each package are listed.
 
 | Package | Modules | Tests (files, static count) | Coverage |
 |---|---|---|---|
-| `app` | 1 | `security/test_role_assessment_api.py` (54), `security/test_rate_limits.py` (25), `unit/test_startup_refusal.py` (18), `api/test_app.py` (17), `api/test_http_hardening.py` (16), `unit/test_sms_sandbox.py` (15), … (5 more) | 99.2 % |
-| `app/algorithms` | 19 | `algorithms/test_role_blueprint.py` (37), `algorithms/test_bpso.py` (33), `algorithms/test_filtering.py` (32), `algorithms/test_reputation_equations.py` (30), `algorithms/test_reputation_snapshot.py` (21), `unit/test_formation_runner.py` (21), … (28 more) | 98.9 % |
+| `app` | 1 | `security/test_role_assessment_api.py` (54), `security/test_rate_limits.py` (25), `unit/test_startup_refusal.py` (18), `api/test_app.py` (17), `api/test_http_hardening.py` (16), `unit/test_sms_sandbox.py` (15), … (4 more) | 99.2 % |
+| `app/algorithms` | 21 | `algorithms/test_role_blueprint.py` (37), `algorithms/test_bpso.py` (33), `algorithms/test_filtering.py` (32), `algorithms/test_reputation_equations.py` (30), `algorithms/test_reputation_snapshot.py` (21), `unit/test_formation_runner.py` (21), … (32 more) | 98.9 % |
 | `app/api` | 1 | — | 94.7 % |
-| `app/api/v1` | 19 | `security/test_role_assessment_api.py` (54), `security/test_projects.py` (42), `algorithms/test_reputation_equations.py` (30), `security/test_profiles_files.py` (24), `algorithms/test_reputation_snapshot.py` (21), `unit/test_formation_runner.py` (21), … (35 more) | 97.0 % |
+| `app/api/v1` | 21 | `security/test_role_assessment_api.py` (54), `security/test_projects.py` (42), `algorithms/test_reputation_equations.py` (30), `security/test_profiles_files.py` (24), `algorithms/test_reputation_snapshot.py` (21), `unit/test_formation_runner.py` (21), … (39 more) | 97.1 % |
 | `app/core` | 23 | `integration/test_role_assessment_db.py` (112), `security/test_role_assessment_api.py` (54), `security/test_login_sessions.py` (32), `security/test_rate_limits.py` (25), `security/test_profiles_files.py` (24), `unit/test_security.py` (20), … (43 more) | 96.7 % |
-| `app/db` | 4 | `integration/test_role_assessment_db.py` (112), `integration/test_rls.py` (15), `integration/test_rls_profiles.py` (14), `integration/test_foundation_db.py` (11), `integration/test_sessions_ratelimit.py` (11), `jobs/test_bidding_deadline.py` (11), … (17 more) | 98.1 % |
+| `app/db` | 4 | `integration/test_role_assessment_db.py` (112), `integration/test_rls.py` (15), `integration/test_rls_profiles.py` (14), `integration/test_foundation_db.py` (11), `integration/test_sessions_ratelimit.py` (11), `jobs/test_bidding_deadline.py` (11), … (18 more) | 98.1 % |
 | `app/integrations` | 2 | `unit/test_sms_sandbox.py` (15), `unit/test_captcha_email_totp.py` (14), `unit/test_sms.py` (10), `api/test_sms_sandbox_api.py` (4), `jobs/test_email_jobs.py` (4) | 91.9 % |
-| `app/jobs` | 11 | `unit/test_captcha_email_totp.py` (14), `security/test_bid_rules.py` (12), `jobs/test_bidding_deadline.py` (11), `jobs/test_bid_notices.py` (10), `jobs/test_job_runs.py` (7), `unit/test_task_queue.py` (7), … (5 more) | 96.4 % |
-| `app/models` | 8 | `integration/test_role_assessment_db.py` (112), `security/test_role_assessment_api.py` (54), `security/test_projects.py` (42), `unit/test_uploads.py` (38), `algorithms/test_reputation_equations.py` (30), `security/test_bidding_followups.py` (25), … (32 more) | 100.0 % |
+| `app/jobs` | 11 | `unit/test_captcha_email_totp.py` (14), `security/test_bid_rules.py` (12), `jobs/test_bidding_deadline.py` (11), `jobs/test_bid_notices.py` (10), `jobs/test_job_runs.py` (7), `unit/test_task_queue.py` (7), … (5 more) | 96.3 % |
+| `app/models` | 8 | `integration/test_role_assessment_db.py` (112), `security/test_role_assessment_api.py` (54), `security/test_projects.py` (42), `unit/test_uploads.py` (38), `algorithms/test_reputation_equations.py` (30), `security/test_bidding_followups.py` (25), … (34 more) | 100.0 % |
 | `app/repositories` | 6 | `security/test_role_assessment_api.py` (54), `security/test_projects.py` (42), `security/test_bidding_followups.py` (25), `security/test_profiles_files.py` (24), `integration/test_rls.py` (15), `integration/test_rls_profiles.py` (14), … (6 more) | 97.9 % |
-| `app/schemas` | 15 | `security/test_role_assessment_api.py` (54), `security/test_projects.py` (42), `algorithms/test_reputation_equations.py` (30), `security/test_profiles_files.py` (24), `algorithms/test_reputation_snapshot.py` (21), `unit/test_formation_runner.py` (21), … (38 more) | 99.2 % |
-| `app/services` | 24 | `security/test_role_assessment_api.py` (54), `security/test_projects.py` (42), `algorithms/test_reputation_equations.py` (30), `security/test_profiles_files.py` (24), `algorithms/test_reputation_snapshot.py` (21), `unit/test_formation_runner.py` (21), … (32 more) | 92.4 % |
+| `app/schemas` | 18 | `security/test_role_assessment_api.py` (54), `security/test_projects.py` (42), `algorithms/test_reputation_equations.py` (30), `security/test_profiles_files.py` (24), `algorithms/test_reputation_snapshot.py` (21), `unit/test_formation_runner.py` (21), … (45 more) | 99.3 % |
+| `app/services` | 26 | `security/test_role_assessment_api.py` (54), `security/test_projects.py` (42), `algorithms/test_reputation_equations.py` (30), `security/test_profiles_files.py` (24), `algorithms/test_reputation_snapshot.py` (21), `unit/test_formation_runner.py` (21), … (39 more) | 90.4 % |
 | `app/services/auth` | 6 | `security/test_login_sessions.py` (32), `security/test_registration_verification.py` (17), `unit/test_captcha_email_totp.py` (14), `api/test_demo_signin_api.py` (9), `unit/test_schemas_common.py` (7) | 94.4 % |
-| `app/services/testing` | 2 | `security/test_role_assessment_api.py` (54), `api/test_demo_signin_api.py` (9), `unit/test_seed_stage2.py` (4), `unit/test_question_bank_seed.py` (3), `api/test_seed_router.py` (2) | 82.9 % |
+| `app/services/testing` | 2 | `security/test_role_assessment_api.py` (54), `api/test_demo_signin_api.py` (9), `unit/test_seed_stage2.py` (6), `unit/test_question_bank_seed.py` (3), `api/test_seed_router.py` (2) | 83.5 % |
 | `app/uploads` | 6 | `unit/test_uploads.py` (38), `unit/test_errors.py` (8), `jobs/test_profile_jobs.py` (5), `unit/test_client_errors.py` (5) | 100.0 % |
 
 ### Frontend (`frontend/src` → Vitest)
@@ -101,9 +101,9 @@ phase threshold on statements, branches, functions and lines.
 |---|---|---|
 | `frontend/src/api` | 2 | `projects.test.tsx` (57), `plan-features.test.tsx` (22), `reputation.test.tsx` (21), `assessment.test.tsx` (20), `client.test.ts` (8), `sessionEnded.test.tsx` (8), … (2 more) |
 | `frontend/src/app` | 7 | `guards.test.tsx` (8), `sessionEnded.test.tsx` (8), `shell.test.tsx` (7), `LoginPage.test.tsx` (7), `app.test.ts` (6), `prefetch.test.ts` (5) |
-| `frontend/src/components` | 42 | `projects.test.tsx` (57), `profile.test.tsx` (26), `marketplace.test.tsx` (25), `plan-features.test.tsx` (22), `reputation.test.tsx` (21), `primitives.test.tsx` (20), … (22 more) |
+| `frontend/src/components` | 44 | `projects.test.tsx` (57), `profile.test.tsx` (26), `marketplace.test.tsx` (25), `plan-features.test.tsx` (22), `reputation.test.tsx` (21), `primitives.test.tsx` (20), … (25 more) |
 | `frontend/src/content` | 2 | `landing.test.tsx` (13), `sample.test.ts` (2) |
-| `frontend/src/design` | 4 | `projects.test.tsx` (57), `profile.test.tsx` (26), `marketplace.test.tsx` (25), `plan-features.test.tsx` (22), `primitives.test.tsx` (20), `bids.test.tsx` (18), … (16 more) |
+| `frontend/src/design` | 4 | `projects.test.tsx` (57), `profile.test.tsx` (26), `marketplace.test.tsx` (25), `plan-features.test.tsx` (22), `primitives.test.tsx` (20), `bids.test.tsx` (18), … (19 more) |
 | `frontend/src/features/account` | 1 | `profile.test.tsx` (26), `pages.test.tsx` (15), `settings.test.tsx` (9) |
 | `frontend/src/features/admin` | 5 | `pages.test.tsx` (15), `guards.test.tsx` (8), `sessionEnded.test.tsx` (8), `LoginPage.test.tsx` (7) |
 | `frontend/src/features/assessment` | 9 | `marketplace.test.tsx` (25), `assessment.test.tsx` (20) |
@@ -114,12 +114,15 @@ phase threshold on statements, branches, functions and lines.
 | `frontend/src/features/home` | 4 | `home.test.tsx` (17), `pages.test.tsx` (15), `guards.test.tsx` (8), `sessionEnded.test.tsx` (8), `shell.test.tsx` (7), `LoginPage.test.tsx` (7), … (1 more) |
 | `frontend/src/features/landing` | 22 | `profile.test.tsx` (26), `pages.test.tsx` (15), `landing.test.tsx` (13), `public.test.tsx` (8), `reputation.test.tsx` (5) |
 | `frontend/src/features/marketplace` | 4 | `marketplace.test.tsx` (25), `home.test.tsx` (17), `pages.test.tsx` (15), `guards.test.tsx` (8), `sessionEnded.test.tsx` (8), `public.test.tsx` (8), … (3 more) |
+| `frontend/src/features/notifications` | 2 | `guards.test.tsx` (8), `sessionEnded.test.tsx` (8), `shell.test.tsx` (7), `LoginPage.test.tsx` (7), `prefetch.test.ts` (5), `notifications.test.tsx` (4) |
 | `frontend/src/features/profile` | 10 | `projects.test.tsx` (57), `profile.test.tsx` (26), `marketplace.test.tsx` (25), `plan-features.test.tsx` (22), `home.test.tsx` (17), `pages.test.tsx` (15), … (7 more) |
 | `frontend/src/features/projects` | 8 | `projects.test.tsx` (57), `plan-features.test.tsx` (22), `home.test.tsx` (17), `guards.test.tsx` (8), `sessionEnded.test.tsx` (8), `shell.test.tsx` (7), … (2 more) |
 | `frontend/src/features/public` | 2 | `public.test.tsx` (8) |
 | `frontend/src/features/reputation` | 2 | `reputation.test.tsx` (21), `guards.test.tsx` (8), `sessionEnded.test.tsx` (8), `shell.test.tsx` (7), `LoginPage.test.tsx` (7), `prefetch.test.ts` (5) |
 | `frontend/src/features/sandbox` | 3 | `SmsSandboxPage.test.tsx` (11), `QuickSignIn.test.tsx` (7) |
-| `frontend/src/lib` | 14 | `projects.test.tsx` (57), `profile.test.tsx` (26), `marketplace.test.tsx` (25), `plan-features.test.tsx` (22), `reputation.test.tsx` (21), `primitives.test.tsx` (20), … (26 more) |
+| `frontend/src/features/team` | 5 | `home.test.tsx` (17), `pages.test.tsx` (15), `team.test.tsx` (15), `guards.test.tsx` (8), `sessionEnded.test.tsx` (8), `shell.test.tsx` (7), … (3 more) |
+| `frontend/src/features/workspace` | 1 | `workspace.test.tsx` (4) |
+| `frontend/src/lib` | 14 | `projects.test.tsx` (57), `profile.test.tsx` (26), `marketplace.test.tsx` (25), `plan-features.test.tsx` (22), `reputation.test.tsx` (21), `primitives.test.tsx` (20), … (29 more) |
 
 ### Modules without tests of their own (reviewed exceptions)
 

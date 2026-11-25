@@ -31,6 +31,12 @@ from app.algorithms.exact_solver import ExactLimits, combinations_count, solve_e
 from app.algorithms.explain import why_not_selected
 from app.algorithms.filtering import Mode
 from app.algorithms.formation import FormationOutcome, run_formation
+from app.algorithms.repair import (
+    PlanMilestone,
+    affected_milestones,
+    rank_replacements,
+    repair_impact,
+)
 from app.core.clock import get_clock
 from app.core.job_events import publish_sync
 from app.core.logging import get_logger
@@ -38,7 +44,14 @@ from app.core.task_queue import sync_redis
 from app.db.context import DbContext
 from app.db.session import open_session
 from app.models.bidding import Bid
-from app.models.formation import BidExplanation, FormationRun, RunStatus, Team
+from app.models.formation import (
+    BidExplanation,
+    FormationRun,
+    RepairProposal,
+    RepairStatus,
+    RunStatus,
+    Team,
+)
 from app.models.foundation import Job, JobStatus
 from app.models.projects import Project
 from app.services.notifications import notify
@@ -126,15 +139,28 @@ def build_result(
     team = []
     for i in out.team:
         c, b = cands[i], contributions[cands[i]["bid_id"]]
-        team.append({
-            "bid_id": c["bid_id"], "developer_id": c["developer_id"],
-            "developer_name": c["developer_name"], "slot_id": c["slot_id"],
-            "slot_label": c["slot_label"], "price_paisa": c["price_paisa"],
-            "days_needed": c["days"], "is_newcomer": c["newcomer"],
-            "competency": _r(c["competency"]), "teamwork": _r(c["teamwork"]),
-            "contribution": {"comp": _r(b.comp), "team": _r(b.team), "time": _r(b.time),
-                             "cost": _r(b.cost), "perf": _r(b.perf), "total": _r(b.total)},
-        })  # fmt: skip
+        team.append(
+            {
+                "bid_id": c["bid_id"],
+                "developer_id": c["developer_id"],
+                "developer_name": c["developer_name"],
+                "slot_id": c["slot_id"],
+                "slot_label": c["slot_label"],
+                "price_paisa": c["price_paisa"],
+                "days_needed": c["days"],
+                "is_newcomer": c["newcomer"],
+                "competency": _r(c["competency"]),
+                "teamwork": _r(c["teamwork"]),
+                "contribution": {
+                    "comp": _r(b.comp),
+                    "team": _r(b.team),
+                    "time": _r(b.time),
+                    "cost": _r(b.cost),
+                    "perf": _r(b.perf),
+                    "total": _r(b.total),
+                },
+            }
+        )
     v, f = out.verification, out.fairness
     summary = why.summary if why else None
     return {
@@ -154,20 +180,33 @@ def build_result(
         if why
         else {},
         "verification": {
-            "available": v.available, "reason": v.reason, "optimal": v.optimal,
-            "gap": _r(v.gap, 4), "exact_fitness": _r(v.exact_fitness, 4),
+            "available": v.available,
+            "reason": v.reason,
+            "optimal": v.optimal,
+            "gap": _r(v.gap, 4),
+            "exact_fitness": _r(v.exact_fitness, 4),
             "feasible_count": v.feasible_count,
         },
         "fairness": {
-            "requested_k": f.requested_k, "applied_k": f.applied_k, "cost": _r(f.cost, 4) or 0.0,
-            "binding": f.binding, "price_difference_paisa": f.price_difference_paisa,
-            "baseline_fitness": _r(f.baseline_fitness, 4), "reason": f.reason,
+            "requested_k": f.requested_k,
+            "applied_k": f.applied_k,
+            "cost": _r(f.cost, 4) or 0.0,
+            "binding": f.binding,
+            "price_difference_paisa": f.price_difference_paisa,
+            "baseline_fitness": _r(f.baseline_fitness, 4),
+            "reason": f.reason,
         },
         "top": [
-            {"bid_ids": [cands[i]["bid_id"] for i in t.team], "fitness": _r(t.fitness, 4),
-             "price_paisa": t.price_paisa, "newcomers": t.newcomers,
-             "mean_competency": _r(t.mean_competency), "mean_teamwork": _r(t.mean_teamwork),
-             "max_days": t.max_days, "recommended": t.team == out.team}
+            {
+                "bid_ids": [cands[i]["bid_id"] for i in t.team],
+                "fitness": _r(t.fitness, 4),
+                "price_paisa": t.price_paisa,
+                "newcomers": t.newcomers,
+                "mean_competency": _r(t.mean_competency),
+                "mean_teamwork": _r(t.mean_teamwork),
+                "max_days": t.max_days,
+                "recommended": t.team == out.team,
+            }
             for t in out.top
         ],
         "convergence": _downsample(out.pso.convergence),
@@ -176,7 +215,7 @@ def build_result(
         "timed_out": out.timed_out,
         "candidates": problem.size,
         "relaxations": snapshot.get("relaxations", []),
-    }  # fmt: skip
+    }
 
 
 def outcome_for(
@@ -187,10 +226,14 @@ def outcome_for(
 ) -> tuple[fit.Problem, FormationOutcome]:
     problem, pso, limits = problem_from(run.candidate_snapshot, run.params)
     out = run_formation(
-        problem, pso, run.seed, limits=limits,
+        problem,
+        pso,
+        run.seed,
+        limits=limits,
         critical_skills=frozenset(run.candidate_snapshot.get("critical_skills", [])),
-        should_stop=should_stop, on_progress=on_progress,
-    )  # fmt: skip
+        should_stop=should_stop,
+        on_progress=on_progress,
+    )
     return problem, out
 
 
@@ -209,8 +252,9 @@ async def execute_run(run_id: uuid.UUID) -> RunStatus:
     """Run one formation run (idempotent: a run that already started is left alone)."""
     clock = get_clock()
     async with open_session(DbContext.system(), job=True) as db:
-        run = await db.scalar(select(FormationRun).where(FormationRun.id == run_id)
-                              .with_for_update())  # fmt: skip
+        run = await db.scalar(
+            select(FormationRun).where(FormationRun.id == run_id).with_for_update()
+        )
         if run is None or run.status != RunStatus.QUEUED:
             return run.status if run is not None else RunStatus.FAILED
         run.status = RunStatus.RUNNING
@@ -222,8 +266,11 @@ async def execute_run(run_id: uuid.UUID) -> RunStatus:
     await _set_job(job_id, status=JobStatus.RUNNING, started_at=run.started_at, progress=1)
     redis = sync_redis()
     events_id = job_id or run.id
-    publish_sync(redis, events_id, {"type": "status", "status": "RUNNING", "progress": 1,
-                                    "run_id": str(run.id)})  # fmt: skip
+    publish_sync(
+        redis,
+        events_id,
+        {"type": "status", "status": "RUNNING", "progress": 1, "run_id": str(run.id)},
+    )
     timeout = float(run.params["pso"]["timeout_seconds"])
     began = time.monotonic()
     max_iter = int(run.params["pso"]["max_iter"])
@@ -252,38 +299,61 @@ async def execute_run(run_id: uuid.UUID) -> RunStatus:
     except Exception as exc:
         code = type(exc).__name__[:64]
         await _finish(run, RunStatus.FAILED, None, began, code)
-        publish_sync(redis, events_id, {"type": "done", "status": "FAILED", "progress": 100,
-                                        "run_id": str(run.id)})  # fmt: skip
+        publish_sync(
+            redis,
+            events_id,
+            {"type": "done", "status": "FAILED", "progress": 100, "run_id": str(run.id)},
+        )
         raise
     status = (
-        RunStatus.INFEASIBLE if not out.feasible
-        else RunStatus.TIMED_OUT if out.timed_out
+        RunStatus.INFEASIBLE
+        if not out.feasible
+        else RunStatus.TIMED_OUT
+        if out.timed_out
         else RunStatus.SUCCEEDED
-    )  # fmt: skip
+    )
     await _finish(run, status, result, began, None)
-    publish_sync(redis, events_id, {"type": "done", "status": status.value, "progress": 100,
-                                    "run_id": str(run.id)})  # fmt: skip
+    publish_sync(
+        redis,
+        events_id,
+        {"type": "done", "status": status.value, "progress": 100, "run_id": str(run.id)},
+    )
     return status
 
 
 async def _finish(
-    run: FormationRun, status: RunStatus, result: dict[str, Any] | None, began: float,
+    run: FormationRun,
+    status: RunStatus,
+    result: dict[str, Any] | None,
+    began: float,
     error_code: str | None,
-) -> None:  # fmt: skip
+) -> None:
     now = get_clock().now()
     runtime = int((time.monotonic() - began) * 1000)
     async with open_session(DbContext.system(), job=True) as db:
         await db.execute(
-            update(FormationRun).where(FormationRun.id == run.id).values(
-                status=status, result=result, runtime_ms=runtime, finished_at=now,
+            update(FormationRun)
+            .where(FormationRun.id == run.id)
+            .values(
+                status=status,
+                result=result,
+                runtime_ms=runtime,
+                finished_at=now,
                 error_code=error_code,
             )
-        )  # fmt: skip
+        )
         if run.job_id is not None:
             job_status = JobStatus.FAILED if status is RunStatus.FAILED else JobStatus.SUCCEEDED
-            await db.execute(update(Job).where(Job.id == run.job_id).values(
-                status=job_status, progress=100, finished_at=now, error_code=error_code,
-            ))  # fmt: skip
+            await db.execute(
+                update(Job)
+                .where(Job.id == run.job_id)
+                .values(
+                    status=job_status,
+                    progress=100,
+                    finished_at=now,
+                    error_code=error_code,
+                )
+            )
         project = await db.scalar(select(Project).where(Project.id == run.project_id))
         if project is not None and status is not RunStatus.FAILED:
             body = {
@@ -293,9 +363,14 @@ async def _finish(
                 RunStatus.INFEASIBLE: "No team fits all the requirements. Review the settings "
                 "and try again.",
             }[status]
-            notify(db, project.client_id, "FORMATION_FINISHED",
-                   title="Team formation finished", body=body,
-                   link=f"/client/projects/{project.id}/formation")  # fmt: skip
+            notify(
+                db,
+                project.client_id,
+                "FORMATION_FINISHED",
+                title="Team formation finished",
+                body=body,
+                link=f"/client/projects/{project.id}/formation",
+            )
         await db.commit()
 
 
@@ -328,12 +403,18 @@ def explanations_for(run: FormationRun, *, out_of_time: Callable[[], bool]) -> l
     team = tuple(i for i, b in enumerate(ids) if b in chosen)
     best = fit.fitness(problem, team)
     solve = _solver(problem, pso, run.seed, limits)
-    losers = sorted((i for i in range(problem.size) if i not in team),
-                    key=lambda i: (-problem.terms(i).total, i))  # fmt: skip
+    losers = sorted(
+        (i for i in range(problem.size) if i not in team),
+        key=lambda i: (-problem.terms(i).total, i),
+    )
     rows = []
     for n, i in enumerate(losers):
-        row: dict[str, Any] = {"bid_id": ids[i], "reasons": {"codes": ["NOT_SELECTED"]},
-                               "price_counterfactual_paisa": None, "main_gap": None}  # fmt: skip
+        row: dict[str, Any] = {
+            "bid_id": ids[i],
+            "reasons": {"codes": ["NOT_SELECTED"]},
+            "price_counterfactual_paisa": None,
+            "main_gap": None,
+        }
         if n < EXPLAIN_CAP and not out_of_time():
             w = why_not_selected(problem, i, team, best, solve)
             row["reasons"]["gap"] = _r(w.gap, 4)
@@ -343,16 +424,30 @@ def explanations_for(run: FormationRun, *, out_of_time: Callable[[], bool]) -> l
                 mine, rival = problem.candidates[i], problem.candidates[w.compared_with]
                 # §9.8's concrete hint: the selected bid's days and price, never who it is.
                 row["reasons"]["compare"] = {
-                    "selected_days": rival.days, "selected_price_paisa": rival.price_paisa,
-                    "your_days": mine.days, "your_price_paisa": mine.price_paisa,
-                }  # fmt: skip
+                    "selected_days": rival.days,
+                    "selected_price_paisa": rival.price_paisa,
+                    "your_days": mine.days,
+                    "your_price_paisa": mine.price_paisa,
+                }
         rows.append(row)
     for bid_id in run.candidate_snapshot.get("not_shortlisted", []):
-        rows.append({"bid_id": bid_id, "reasons": {"codes": ["NOT_SHORTLISTED"]},
-                     "price_counterfactual_paisa": None, "main_gap": None})  # fmt: skip
+        rows.append(
+            {
+                "bid_id": bid_id,
+                "reasons": {"codes": ["NOT_SHORTLISTED"]},
+                "price_counterfactual_paisa": None,
+                "main_gap": None,
+            }
+        )
     for bid_id, reason in run.candidate_snapshot.get("rejected", []):
-        rows.append({"bid_id": bid_id, "reasons": {"codes": [reason]},
-                     "price_counterfactual_paisa": None, "main_gap": None})  # fmt: skip
+        rows.append(
+            {
+                "bid_id": bid_id,
+                "reasons": {"codes": [reason]},
+                "price_counterfactual_paisa": None,
+                "main_gap": None,
+            }
+        )
     return rows
 
 
@@ -365,20 +460,186 @@ async def write_explanations(run_id: uuid.UUID) -> dict[str, int]:
         db.expunge(run)
     began = time.monotonic()
     rows = await asyncio.to_thread(
-        explanations_for, run,
+        explanations_for,
+        run,
         out_of_time=lambda: time.monotonic() - began >= EXPLAIN_BUDGET_SECONDS,
-    )  # fmt: skip
+    )
     async with open_session(DbContext.system(), job=True) as db:
         known = set(
             (await db.scalars(select(Bid.id).where(Bid.project_id == run.project_id))).all()
         )
-        values = [{"run_id": run_id, **r, "bid_id": uuid.UUID(r["bid_id"])} for r in rows
-                  if uuid.UUID(r["bid_id"]) in known]  # fmt: skip
+        values = [
+            {"run_id": run_id, **r, "bid_id": uuid.UUID(r["bid_id"])}
+            for r in rows
+            if uuid.UUID(r["bid_id"]) in known
+        ]
         if values:
-            await db.execute(pg_insert(BidExplanation).values(values).on_conflict_do_nothing(
-                constraint="uq_bid_explanations_bid_run"))  # fmt: skip
+            await db.execute(
+                pg_insert(BidExplanation)
+                .values(values)
+                .on_conflict_do_nothing(constraint="uq_bid_explanations_bid_run")
+            )
         await db.commit()
     return {"explanations": len(values)}
+
+
+# ----------------------------------------------------------------------------- repair
+
+REASON_TEXT = {
+    "NO_BIDS_FOR_SLOT": "Nobody else bid for this role.",
+    "REMAINING_BUDGET_TOO_LOW": "The budget left can't pay any of the other bidders.",
+    "NONE_AVAILABLE": "The other bidders don't have the free hours any more.",
+    "NEWCOMER_MINIMUM_RELAXED": "No newcomer bid for this role, so the newcomer minimum is "
+    "relaxed for the replacement.",
+}
+
+
+def repair_outcome(snapshot: dict[str, Any], params: dict[str, Any], seed: int) -> dict[str, Any]:
+    """Rank a repair's candidates from its frozen inputs (D128, D138): the stored result."""
+    problem, pso, limits = problem_from(snapshot, params)
+    remaining = frozenset(int(i) for i in snapshot["remaining"])
+    pool = [int(i) for i in snapshot["pool"]]
+    result = rank_replacements(
+        problem,
+        remaining,
+        pool,
+        _solver(problem, pso, seed, limits),
+        unavailable=int(snapshot.get("unavailable", 0)),
+    )
+    departed = snapshot["departed"]
+    plan = [
+        PlanMilestone(
+            id=m["id"],
+            name=m["name"],
+            duration_days=int(m["duration_days"]),
+            predecessors=tuple(m["predecessors"]),
+            skills=frozenset(m["skills"]),
+            done=bool(m["done"]),
+        )
+        for m in snapshot.get("plan", [])
+    ]
+    names = {m.id: m.name for m in plan}
+    cands = snapshot["candidates"]
+    rows = []
+    for r in result.candidates:
+        c = cands[r.index]
+        imp = repair_impact(
+            plan,
+            departed["skill_id"],
+            started=bool(snapshot.get("started")),
+            departed_days=max(1, int(departed["days"])),
+            candidate_days=max(1, int(c["days"])),
+            baseline_days=int(snapshot.get("baseline_days", 0)),
+            team_price_paisa=r.price_paisa,
+            budget_after_fee_paisa=int(snapshot["budget_after_fee_paisa"]),
+        )
+        rows.append(
+            {
+                "bid_id": c["bid_id"],
+                "developer_name": c["developer_name"],
+                "is_newcomer": bool(c["newcomer"]),
+                "competency": _r(float(c["competency"])),
+                "teamwork": _r(float(c["teamwork"])),
+                "price_paisa": int(c["price_paisa"]),
+                "days_needed": int(c["days"]),
+                "fitness": _r(r.fitness, 4),
+                "team_price_paisa": r.price_paisa,
+                "impact": {
+                    "affected_milestones": [names[a] for a in imp.affected],
+                    "baseline_days": imp.baseline_days,
+                    "new_days": imp.new_days,
+                    "delay_days": imp.delay_days,
+                    "budget_delta_paisa": imp.budget_delta_paisa,
+                    "budget_only": imp.budget_only,
+                },
+            }
+        )
+    reasons = [
+        {
+            "code": code,
+            "message": REASON_TEXT[code],
+            "shortfall_paisa": result.shortfall_paisa
+            if code == "REMAINING_BUDGET_TOO_LOW"
+            else None,
+        }
+        for code in (*result.reasons, *result.notes)
+    ]
+    affected = [
+        names[a]
+        for a in affected_milestones(
+            plan, departed["skill_id"], started=bool(snapshot.get("started"))
+        )
+    ]
+    return {
+        "status": "READY" if rows else "NO_CANDIDATES",
+        "candidates": rows,
+        "reasons": reasons,
+        "impact": {
+            "departed_slot": departed.get("slot_label", "Role"),
+            "affected_milestones": affected,
+            "min_newcomers": result.min_newcomers,
+        },
+    }
+
+
+async def execute_repair(proposal_id: uuid.UUID) -> str:
+    """`formation.repair`: rank a COMPUTING proposal (idempotent: anything else is left alone)."""
+    async with open_session(DbContext.system(), job=True) as db:
+        p = await db.scalar(select(RepairProposal).where(RepairProposal.id == proposal_id))
+        if p is None or p.status != RepairStatus.COMPUTING:
+            return p.status.value if p is not None else "MISSING"
+        snapshot, params, seed, job_id, team_id = (
+            p.candidate_snapshot,
+            p.params,
+            p.seed,
+            p.job_id,
+            p.team_id,
+        )
+    now = get_clock().now()
+    await _set_job(job_id, status=JobStatus.RUNNING, started_at=now, progress=10)
+    redis = sync_redis()
+    events = job_id or proposal_id
+    try:
+        out = await asyncio.to_thread(repair_outcome, snapshot, params, seed)
+    except Exception as exc:
+        await _set_job(
+            job_id,
+            status=JobStatus.FAILED,
+            finished_at=get_clock().now(),
+            error_code=type(exc).__name__[:64],
+        )
+        publish_sync(redis, events, {"type": "done", "status": "FAILED", "progress": 100})
+        raise
+    async with open_session(DbContext.system(), job=True) as db:
+        p = await db.scalar(
+            select(RepairProposal).where(RepairProposal.id == proposal_id).with_for_update()
+        )
+        if p is None or p.status != RepairStatus.COMPUTING:
+            await db.rollback()
+            return p.status.value if p is not None else "MISSING"  # superseded meanwhile
+        p.status = RepairStatus(out["status"])
+        p.candidates, p.reasons, p.impact = out["candidates"], out["reasons"], out["impact"]
+        team = await db.get(Team, team_id)
+        project = await db.get(Project, team.project_id) if team is not None else None
+        if project is not None:
+            ready = out["status"] == "READY"
+            notify(
+                db,
+                project.client_id,
+                "REPAIR_READY",
+                title="Replacement candidates ready" if ready else "No replacement found",
+                body=(
+                    f"DevSync ranked replacements for “{project.title}”."
+                    if ready
+                    else f"Nobody can take the open place on “{project.title}” yet. Reopen the "
+                    "place or raise the budget."
+                ),
+                link=f"/client/projects/{project.id}/team",
+            )
+        await db.commit()
+    await _set_job(job_id, status=JobStatus.SUCCEEDED, progress=100, finished_at=get_clock().now())
+    publish_sync(redis, events, {"type": "done", "status": "SUCCEEDED", "progress": 100})
+    return str(out["status"])
 
 
 # ----------------------------------------------------------------------------- verify
@@ -401,17 +662,26 @@ async def execute_verify(run_id: uuid.UUID, job_id: uuid.UUID) -> bool:
         again = [ids[i] for i in out.team]
         reproduced = sorted(team) == sorted(again) and stored.get("fitness") == _r(out.fitness, 4)
         verification = {
-            "reproduced": reproduced, "team_matches": sorted(team) == sorted(again),
-            "fitness": _r(out.fitness, 4), "optimal": out.verification.optimal,
+            "reproduced": reproduced,
+            "team_matches": sorted(team) == sorted(again),
+            "fitness": _r(out.fitness, 4),
+            "optimal": out.verification.optimal,
             "at": get_clock().now().isoformat(),
-        }  # fmt: skip
+        }
         async with open_session(DbContext.system(), job=True) as db:
-            await db.execute(update(FormationRun).where(FormationRun.id == run_id).values(
-                result={**stored, "admin_verification": verification}))  # fmt: skip
+            await db.execute(
+                update(FormationRun)
+                .where(FormationRun.id == run_id)
+                .values(result={**stored, "admin_verification": verification})
+            )
             await db.commit()
     except Exception as exc:
-        await _set_job(job_id, status=JobStatus.FAILED, finished_at=get_clock().now(),
-                       error_code=type(exc).__name__[:64])  # fmt: skip
+        await _set_job(
+            job_id,
+            status=JobStatus.FAILED,
+            finished_at=get_clock().now(),
+            error_code=type(exc).__name__[:64],
+        )
         raise
     await _set_job(job_id, status=JobStatus.SUCCEEDED, progress=100, finished_at=get_clock().now())
     return reproduced

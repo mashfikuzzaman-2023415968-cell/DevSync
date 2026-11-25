@@ -3,7 +3,8 @@
 
 - `formation.run` (high queue, 60 s, no retry);
 - `formation.explanations` (default queue, 120 s, one retry; recorded in `jobs`);
-- `formation.verify` (default queue, 120 s, no retry).
+- `formation.verify` (default queue, 120 s, no retry);
+- `formation.repair` (default queue, 60 s, one retry; team repair, §9.9).
 
 Services queue them by name through `app/core/task_queue.py`.
 """
@@ -16,6 +17,7 @@ import uuid
 from app.jobs.runs import run_recorded
 from app.services.formation_runner import (
     build_result,
+    execute_repair,
     execute_run,
     execute_verify,
     explanations_for,
@@ -25,10 +27,12 @@ from app.services.formation_runner import (
 
 __all__ = [
     "build_result",
+    "execute_repair",
     "execute_run",
     "execute_verify",
     "explanations_for",
     "formation_explanations",
+    "formation_repair",
     "formation_run",
     "formation_verify",
     "problem_from",
@@ -51,3 +55,8 @@ def formation_explanations(run_id: str) -> dict[str, int]:
 def formation_verify(run_id: str, job_id: str) -> bool:
     """RQ entry point for `formation.verify`."""
     return asyncio.run(execute_verify(uuid.UUID(run_id), uuid.UUID(job_id)))
+
+
+def formation_repair(proposal_id: str) -> str:
+    """RQ entry point for `formation.repair`."""
+    return asyncio.run(execute_repair(uuid.UUID(proposal_id)))
