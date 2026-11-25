@@ -2,11 +2,11 @@
 
 ## Current state
 - **Current owner:** Raisa Tabassum (frontend developer), Phases 6–8, from 2026-11-21 (hand-off from Taeen: `docs/handoffs/handoff-02-taeen-to-raisa.md`).
-- **Current phase:** 8 (invitations, team lead, team repair) is **built on `phase-8` and waiting for its gate**. Plan `docs/plans/phase-08.md`, decisions D118–D139, security review `docs/security-reviews/phase-08.md` (0 unresolved high). Phase 7 is done (gate PASS 2026-11-23, merged, tagged `phase-7`).
-- **Last gate result:** Phase 7 PASS, 2026-11-23 21:10 Asia/Dhaka (`runs/gate-p7i.log`). Phase 8 partial runs on Raisa's WSL laptop (2026-11-24): lint, types, static security, forbidden/layers/module tests/RLS/review, migrations — all PASS.
+- **Current phase:** 8 (invitations, team lead, team repair) is **done**: built by Raisa on `phase-8`, **gate PASS 2026-11-25 05:11 Asia/Dhaka** on Taeen's laptop (native Linux), merged to `main`, tagged `phase-8`. Plan `docs/plans/phase-08.md`, decisions D118–D140, security review `docs/security-reviews/phase-08.md` (0 unresolved high). Next: Phase 9 (project workspace).
+- **Last gate result:** Phase 8 PASS, 2026-11-25 05:11 Asia/Dhaka (`runs/gate-p8b.log`): backend 2,105 (95.1%), security 600, contract 701, frontend 568 (81.0%), E2E 93, a11y 36, visual 143 (232 baselines), Lighthouse desktop 100/100/96/100 and mobile 94/100/96/100, GPU 5/5, algorithm budgets met, phase checks (repair, lead, team RLS/API) and regression guard clean. One fix was needed (D140). Both tests Raisa flagged as timing-sensitive on WSL passed here.
 - **Verified on Raisa's laptop (WSL 2, 2026-11-24):** backend suite 2,103 passed, 1 failed (`test_admin_limit_is_per_user`, the timing-sensitive test already listed under Known issues; it failed the same way here in Phase 6), coverage 95.25 %; the Phase 8 API/unit/RLS/algorithm/authz tests 59/59 after the last changes; repair perf (10 candidates, 4 members: PSO ≈ 1.4 s, exact 0.05 s, budget 5 s); frontend 568 Vitest; full Chromium `@e2e|@a11y` 128 passed, 1 failed (`phase5 › after the bidding deadline the bid sheet is closed`, a 5 s wait against this laptop's 3–5 s repaint after a reload; it failed the same way in the Phase 6 gate attempt here, untouched); Phase 8 E2E passes (the whole flow, axe and layout on the new screens); visual: 122 existing screenshot tests match, 3 baselines updated (bell badge, team-card order), 12 new reviewed by eye; stage-2 seed builds the repair demo and `repair_check.py` passes (seeded READY with 1 candidate; scripted decline → 2 ranked); `formation_check.py` reproduces the D116 team; OpenAPI 0 problems; fuzz + property 715 passed and 1 real bug found (the admin removal list returned 500 once a request existed; fixed and tested, its 20 fuzz cases pass).
 - **In progress:** nothing.
-- **Very next step:** Raisa pushes `phase-8` from the VS Code terminal; Taeen runs `make gate PHASE=8` on the native Linux laptop (original Dell charger), then merges and tags `phase-8`.
+- **Very next step:** pull `main` (it has the D140 fix), branch `phase-9` from it and plan Phase 9 in Plan Mode. Gates run on Taeen's native Linux laptop, plugged into the original Dell charger.
 - **Open human tasks:** review the 128 drafted test questions (D34); tester's human check of the Phase 3–8 security reviews; sanity-check D39 (simulated payment-method verification); measure `make demo-reset STAGE=2` on the demo stack (the stage-2 seed now takes ≈ 27 s in the test stack, was ≈ 20 s; target < 30 s with the reset).
 
 ## Phase table
@@ -20,13 +20,15 @@
 | 5 Marketplace & filtering | Salwa (gate fixes: Taeen) | done | PASS | 2026-10-21 | phase-5 |
 | 6 Reputation & simulator | Raisa (gate fixes: Taeen) | done | PASS | 2026-11-22 | phase-6 |
 | 7 Team formation | Raisa (gate fixes: Taeen) | done | PASS | 2026-11-23 | phase-7 |
-| 8 Invitations, lead, repair | Raisa | built, waiting for the gate | — | — | — |
+| 8 Invitations, lead, repair | Raisa (gate fix: Taeen) | done | PASS | 2026-11-25 | phase-8 |
 | 9–15 | — | not started | — | — | — |
 
 ## Gate log (newest first, appended by `make gate`)
 | Finished (UTC) | Phase | Result | Tests |
 |---|---|---|---|
 <!-- gate-log -->
+| 2026-11-24T23:11:54+00:00 | phase 8 | PASS | backend 2105 / frontend 568 tests |
+| 2026-11-24T21:28:46+00:00 | phase 8 | FAIL (step 15) | backend 2104 / frontend 568 tests |
 | 2026-11-23T15:09:43+00:00 | phase 7 | PASS | backend 2044 / frontend 545 tests |
 | 2026-11-23T13:45:54+00:00 | phase 7 | FAIL (step 16) | backend 2044 / frontend 545 tests |
 | 2026-11-23T12:19:52+00:00 | phase 7 | FAIL (step 13) | backend 2044 / frontend 545 tests |
@@ -148,6 +150,8 @@
 - **`test_admin_limit_is_per_user` is timing-sensitive on slow machines.** It sends 300 admin requests that must all land inside a 60-second window. Alone on this WSL laptop it passes 3/3 but takes 52–54 s; under the full suite it went over and failed. Not a Phase 6 change; not modified. Watch it in the gate on a faster machine; if it fails there too, fix the test's timing at the cause (not by loosening the limit).
 
 ## Session log (newest first)
+### 2026-11-25 — Taeen (with Claude Code), Phase 8 gate on the native Linux laptop
+- Ran `make gate PHASE=8` on Raisa's `phase-8` (`495cc4b`); two full runs. The first failed step 15: the 12 new `client-team-repair` and `workspace-team` baselines showed the same content in another order. Members created together tie on `created_at` and fell back to random ids; open slots were listed by random id; the recommended lead followed the acceptance order and changed too. Fix (D140): the team view sorts members by role, then name, and the blockers by role; a test pins it; the 12 baselines were re-created and matched twice on fresh data. Second run PASS (`runs/gate-p8b.log`).
 ### 2026-11-23 to 2026-11-24 — Raisa (with Claude Code), Phase 8 build
 - Plan approved (`docs/plans/phase-08.md`); decisions D118–D136 from the start prompt, D137–D139 resolving open points (one bid per developer on a reopened place; repair impact arithmetic; the stage-2 golden file moved to `scripts/seed_data/` so `make demo-up STAGE=2` works in the production image).
 - Migration 0015: lead-change requests, repair proposals (immutable inputs, never deleted), removal requests, `lead_declined_at`, reopened places; `is_team_member()` counts only current members (D130); SYSTEM-only writes, and SYSTEM may now update milestones, slots and baselines (start silently activated nothing before).
