@@ -1,20 +1,14 @@
 /**
- * Workspace shell `/w/:projectId/team` (spec §13.5 #33, §13.4; D120). The header and tab bar of
- * the project workspace with the Team tab real; the other tabs arrive in Phase 9, which fills this
- * shell. Only the project's client and its members (the API answers 404 to anyone else).
- *
- * Team tab: members with their role, lead badge, reputation (0–100) and weekly hours — never each
- * other's prices or days (D130); members can ask for a lead change, withdraw it, or leave the
- * project with a reason; the lead can decline the role.
+ * Team tab `/w/:projectId/team` (spec §13.5 #33; D120, D130). Members with their role, lead
+ * badge, reputation (0–100) and weekly hours — never each other's prices or days (D130); members
+ * can ask for a lead change, withdraw it, or leave the project with a reason; the lead can decline
+ * the role. The header and tab bar come from `WorkspaceLayout`.
  */
-import { Crown, Users } from "lucide-react";
-import { Link, useParams } from "react-router";
-import { ApiError } from "@/api/client";
+import { Crown } from "lucide-react";
 import type { TeamView } from "@/api/types";
 import { ReasonDialog } from "@/components/ReasonDialog";
 import { Button } from "@/components/ui/Button";
-import { Avatar, Badge, Card, CardHeader, NewcomerBadge, Skeleton } from "@/components/ui/Display";
-import { EmptyState, ErrorState, PageHeader } from "@/components/ui/Feedback";
+import { Avatar, Badge, Card, CardHeader, NewcomerBadge } from "@/components/ui/Display";
 import { ConfirmDialog } from "@/components/ui/Overlay";
 import { toast } from "@/components/ui/toast-store";
 import {
@@ -22,62 +16,16 @@ import {
   useDeclineLead,
   useLeave,
   useRequestLeadChange,
-  useTeam,
 } from "@/features/team/api";
 import { memberStatus, score } from "@/features/team/teamText";
-
-const TABS = [
-  "Overview",
-  "Tasks",
-  "Timeline",
-  "Milestones",
-  "Team",
-  "Check-ins",
-  "Files",
-  "Payments",
-  "Risks",
-];
+import { useWorkspace } from "./context";
 
 export default function WorkspaceTeamPage() {
-  const { projectId = "" } = useParams();
-  const q = useTeam(projectId);
-  if (q.isPending) {
-    return (
-      <>
-        <PageHeader title="Team" />
-        <Card className="p-5" aria-busy="true" aria-label="Loading the team">
-          <Skeleton className="h-32 w-full" />
-        </Card>
-      </>
-    );
-  }
-  if (q.isError) {
-    const err = q.error;
-    return (
-      <>
-        <PageHeader title="Team" />
-        <Card>
-          {err instanceof ApiError && err.status === 404 ? (
-            <EmptyState
-              icon={<Users />}
-              title="We couldn’t find that workspace"
-              description="It may not exist, or you aren’t on this project’s team."
-            />
-          ) : (
-            <ErrorState
-              title="The team didn’t load"
-              requestId={err instanceof ApiError ? err.requestId : null}
-              onRetry={() => void q.refetch()}
-            />
-          )}
-        </Card>
-      </>
-    );
-  }
-  return <Workspace team={q.data} />;
+  const { team } = useWorkspace();
+  return <TeamTab team={team} />;
 }
 
-function Workspace({ team }: { team: TeamView }) {
+function TeamTab({ team }: { team: TeamView }) {
   const member = team.view === "member" ? team : null;
   const me = member ? member.members.find((m) => m.id === member.my_member_id) : undefined;
   const leave = useLeave(team.project_id);
@@ -87,43 +35,6 @@ function Workspace({ team }: { team: TeamView }) {
   const myOpen = member?.lead_change_requests.find((r) => r.status === "PENDING");
   return (
     <>
-      <PageHeader
-        title={team.project_title}
-        description={team.project_status === "IN_PROGRESS" ? "In progress." : "Waiting to start."}
-        action={
-          team.view === "client" ? (
-            <Button asChild variant="outline">
-              <Link to={`/client/projects/${team.project_id}/team`}>Manage team</Link>
-            </Button>
-          ) : null
-        }
-      />
-      {/* `relative`: the sr-only notes are absolutely positioned; without a positioned ancestor
-          inside the scroller they escape its clipping and widen the page on phones. */}
-      <nav aria-label="Workspace" className="relative -mx-4 mb-6 overflow-x-auto px-4">
-        <ul className="flex min-w-max gap-1 border-b border-border">
-          {TABS.map((tab) => (
-            <li key={tab}>
-              {tab === "Team" ? (
-                <span
-                  aria-current="page"
-                  className="inline-flex min-h-11 items-center border-b-2 border-primary px-3 text-body-sm font-medium text-text"
-                >
-                  Team
-                </span>
-              ) : (
-                <span
-                  className="inline-flex min-h-11 items-center px-3 text-body-sm text-text-muted"
-                  title={`${tab} arrives in Phase 9`}
-                >
-                  {tab}
-                  <span className="sr-only"> (arrives in Phase 9)</span>
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      </nav>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]">
         <Card>
           <CardHeader title="Members" />

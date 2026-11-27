@@ -19,8 +19,10 @@ from pydantic import BaseModel, EmailStr, Field
 from redis.asyncio import Redis
 
 from app.api.deps import app_settings, loop_redis, redis_client
+from app.core.clock import get_clock
 from app.core.config import Settings
 from app.schemas.common import StrictRequest
+from app.services import checkins, monitoring
 from app.services.testing import role_attempts, seed
 
 router = APIRouter(prefix="/__test__", tags=["test-only"], include_in_schema=False)
@@ -244,3 +246,21 @@ async def role_answer_key(attempt_id: uuid.UUID) -> dict[str, list[dict[str, obj
     if key is None:
         raise HTTPException(status_code=404)
     return {"answers": key}
+
+
+class AsOfRequest(StrictRequest):
+    """Run a job as if it were this instant (D155); omitted means now. No stored time moves."""
+
+    as_of: datetime | None = None
+
+
+@router.post("/projects/{project_id}/monitoring/evaluate")
+async def monitoring_evaluate(project_id: uuid.UUID, body: AsOfRequest) -> dict[str, object]:
+    """Evaluate one project's risks and forecast now (or on `as_of`), as the job would (D155)."""
+    return await monitoring.evaluate_project(project_id, body.as_of or get_clock().now())
+
+
+@router.post("/checkin-reminders")
+async def checkin_reminders(body: AsOfRequest) -> dict[str, int]:
+    """Run the Monday check-in reminders now (or on `as_of`), as the job would (D155)."""
+    return await checkins.send_reminders(body.as_of or get_clock().now())

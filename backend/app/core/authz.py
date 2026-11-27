@@ -408,3 +408,47 @@ def _notifications_read(p: Principal, _r: Any) -> None:
     """Any signed-in account (PENDING included) reads and marks its own notifications."""
     if p.status not in ("PENDING", "ACTIVE"):
         raise AuthError
+
+
+# --------------------------------------------------------------------------- Phase 9 workspace
+# The project decides the rest (services/workspace.py, D142): participants read, 404 for anyone
+# else; lead powers only in the lead's own project; the client reads tasks and comments, posts
+# and uploads; admins read monitoring and never write. These policies only fix the account side.
+
+
+@policy("workspace.read")
+def _workspace_read(p: Principal, _r: Any) -> None:
+    """A participant of the project, or an admin where the endpoint allows it."""
+    _require_active(p)
+
+
+@policy("workspace.task.lead")
+def _workspace_task_lead(p: Principal, _r: Any) -> None:
+    """Create, edit, delete tasks and dependencies: the project's lead (decided per project)."""
+    _require_active(p)
+    if p.role != "DEVELOPER":
+        raise ForbiddenError("Only the team lead can do this.")
+
+
+@policy("workspace.task.work")
+def _workspace_task_work(p: Principal, _r: Any) -> None:
+    """Move tasks and add evidence: the assignee or the lead; never the client (§1.6)."""
+    _require_active(p)
+    if p.role != "DEVELOPER":
+        raise ForbiddenError("Clients watch progress; the team moves the tasks.")
+
+
+@policy("workspace.checkin.post")
+def _workspace_checkin_post(p: Principal, _r: Any) -> None:
+    """Weekly check-ins: ACTIVE members (decided per project); the client reads and replies."""
+    _require_active(p)
+    if p.role != "DEVELOPER":
+        raise ForbiddenError("Team members post check-ins; clients read and reply to them.")
+
+
+@policy("workspace.write")
+def _workspace_write(p: Principal, _r: Any) -> None:
+    """Comments, discussion and files: participants (client included); admins later (D142)."""
+    _require_active(p)
+    if p.role not in ("CLIENT", "DEVELOPER"):
+        raise ForbiddenError("Admins see workspace conversations with disputes (Phase 12).")

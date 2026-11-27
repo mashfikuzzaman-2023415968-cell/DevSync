@@ -92,8 +92,10 @@ class Api:
         """Send a request; unsafe methods get `X-CSRF-Token` and `Origin` unless disabled."""
         headers = dict(kw.pop("headers", {}) or {})
         if method.upper() not in {"GET", "HEAD", "OPTIONS"}:
-            if csrf:
-                headers.setdefault("X-CSRF-Token", self.csrf_token())
+            if csrf and "X-CSRF-Token" not in headers:
+                # Not setdefault: that would fetch (and replace) the cookie even when the caller
+                # sends its own token, so the two would no longer match.
+                headers["X-CSRF-Token"] = self.csrf_token()
             if origin:
                 headers.setdefault("Origin", origin)
         return self.client.request(method, path, headers=headers, **kw)

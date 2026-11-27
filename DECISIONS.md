@@ -1948,3 +1948,49 @@ rule); ZAP's `weekly` image (not a fixed release).
 it is optional: a board drag without a version could silently overwrite a teammate's concurrent
 drop, and §13.7's rollback relies on the 409. *Rejected:* optional as for bids (lost updates on a
 shared board).
+
+**D173 · Evidence keeps its task, and project files follow the project, not the uploader.** Two
+consequences of append-only evidence (D148, D168) and participant-only files (D142, D147), found
+while writing migration 0016:
+- A task that has evidence can't be deleted (409 `INVALID_STATE`, "This task has evidence
+  attached, so it stays on the board"); `task_evidence.task_id` has no cascade, so the database
+  refuses it too. D143 lets the lead delete any task that isn't DONE; evidence already attached is
+  reputation evidence and can't vanish with it. *Rejected:* cascading the evidence away (breaks
+  append-only); soft-deleting tasks (a hidden-row rule on every board query for a rare case).
+- `file_access()` admits a project file to the project's participants and SYSTEM only — not its
+  uploader after they leave the project, and not admins until Phase 12's disputes (D142 "files
+  for admins come with Phase 12"). *Rejected:* keeping 0004's owner and admin access for project
+  files (a former member could keep downloading the team's files; admins would get files before
+  the dispute context exists).
+- Smaller points fixed in the same pass: card positions sort with `COLLATE "C"` (byte order, so
+  base-62 keys compare as numbers in any database locale); keys are appended with "the next digit
+  up" rather than a midpoint, so 1,000 appends stay about 33 characters (a midpoint toward the
+  end grows a digit every ~5 appends); `GET /projects/{id}/plan` moves to the `workspace.read`
+  account gate so members pass it and the service decides (client, admin, or a participant).
+
+**D174 · The Inventory dashboard seed's free details** (the parts §18.2 leaves open, D154).
+- **Team:** Arif (React, the lead), Farhan (FastAPI), Nusrat (UI/UX) and Imran (Testing), one bid
+  per place, so the formation run's team is forced. Each commits **10 hours a week** and has 30 or
+  more on their profile. The ordering project starts in 3 days and overlaps this one, so its
+  20-hour bids stay feasible: its 10 eligible bids and the D116 team can't move.
+- **The inactive member is Nusrat:** UI design is done, so no unfinished critical milestone needs
+  her skill (no SKILL_DEPENDENCY), and she has no task in progress (no STALLED_TASK). Her last
+  activity is day 3 at about 22:30 Dhaka, so on day 12 she has been inactive 8 whole days at any
+  hour of the day.
+- **Exact progress:**
+  - Inventory API: ten 2-hour tasks for Farhan, 7 done, so p = 0.7.
+  - Dashboard frontend: ten 1.5-hour tasks for Arif, 4 done, so p = 0.4.
+  - No task is left in progress.
+  - Open hours (6 and 9) fit inside 10 hours a week, so CAPACITY doesn't fire.
+- **Milestone skills:** Integration needs React and FastAPI; Testing needs Testing. Each is held by
+  one active, recently active member, so SKILL_DEPENDENCY doesn't fire.
+- **Rows not written through a service:** only the milestone transitions that Phase 10 will own
+  (approvals and activating a successor), set by one commented SYSTEM helper.
+- **History:** the bidding, the run, confirm, accept and the lead choice happen on day −1, and the
+  start on day 0. A member never checks in twice in one week; Imran's day-9 blocker is answered
+  by Farhan on day 10 (`blocker.answered`).
+- **Result:** at day 12 the engine gives exactly forecast 25 (+2) and the documented four risks;
+  the seed asserts it.
+
+*Rejected:* using developers with fewer hours (Rafi, Zahid), because the overlap would make
+their ordering bids infeasible; leaving a task in progress, because it would add a STALLED_TASK.

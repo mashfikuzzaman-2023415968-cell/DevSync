@@ -5,7 +5,7 @@
  * Development-only tools (`/dev/ui-kit`, `/__stills`) are compiled out of production builds.
  */
 import { lazy, Suspense } from "react";
-import { createBrowserRouter, Navigate, type RouteObject } from "react-router";
+import { createBrowserRouter, type RouteObject } from "react-router";
 import { PageSkeleton } from "@/components/shell/PageSkeleton";
 import {
   ComingSoonPage,
@@ -310,14 +310,69 @@ export const routes: RouteObject[] = [
               Component: (await import("@/features/notifications/NotificationsPage")).default,
             }),
           },
-          // The project workspace (D120): the Team tab now, the rest in Phase 9.
-          { path: "w/:projectId", element: <Navigate to="team" replace /> },
+          // The project workspace (D120, D160): one layout, a lazy route per tab.
           {
-            path: "w/:projectId/team",
-            handle: { title: "Team" },
+            path: "w/:projectId",
             lazy: async () => ({
-              Component: (await import("@/features/workspace/WorkspaceTeamPage")).default,
+              Component: (await import("@/features/workspace/WorkspaceLayout")).default,
             }),
+            children: [
+              {
+                index: true,
+                lazy: async () => ({
+                  Component: (await import("@/features/workspace/WorkspaceLayout")).WorkspaceIndex,
+                }),
+              },
+              {
+                path: "overview",
+                handle: { title: "Overview" },
+                lazy: async () => ({
+                  Component: (await import("@/features/workspace/OverviewTab")).default,
+                }),
+              },
+              {
+                path: "timeline",
+                handle: { title: "Timeline" },
+                lazy: async () => ({
+                  Component: (await import("@/features/workspace/TimelineTab")).default,
+                }),
+              },
+              {
+                path: "milestones",
+                handle: { title: "Milestones" },
+                lazy: async () => ({
+                  Component: (await import("@/features/workspace/MilestonesTab")).default,
+                }),
+              },
+              {
+                path: "risks",
+                handle: { title: "Risks" },
+                lazy: async () => ({
+                  Component: (await import("@/features/workspace/RisksTab")).default,
+                }),
+              },
+              {
+                path: "tasks",
+                handle: { title: "Tasks" },
+                lazy: async () => ({
+                  Component: (await import("@/features/workspace/TasksTab")).default,
+                }),
+              },
+              {
+                path: "check-ins",
+                handle: { title: "Check-ins" },
+                lazy: async () => ({
+                  Component: (await import("@/features/workspace/CheckinsTab")).default,
+                }),
+              },
+              {
+                path: "team",
+                handle: { title: "Team" },
+                lazy: async () => ({
+                  Component: (await import("@/features/workspace/WorkspaceTeamPage")).default,
+                }),
+              },
+            ],
           },
         ],
       },

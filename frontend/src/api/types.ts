@@ -127,3 +127,39 @@ export type LeadChangeRequest = Schemas["LeadChangeRequestOut"];
 export type NotificationItem = Schemas["NotificationOut"];
 export type NotificationPage = Schemas["Page_NotificationOut_"];
 export type ActionResult = Schemas["ActionOut"];
+
+// Workspace: tasks (spec §7.5, §10.2 Tasks; D143, D144, D148, D168, D172)
+export type TaskStatus = Schemas["TaskCard"]["status"];
+export type TaskDifficulty = Schemas["TaskCard"]["difficulty"];
+export type TaskCard = Schemas["TaskCard"];
+export type TaskDetail = Schemas["TaskDetail"];
+export type TaskPage = Schemas["Page_TaskCard_"];
+export type TaskCreate = Schemas["TaskCreate"];
+export type TaskPatch = Schemas["TaskPatch"];
+export type TaskMove = Schemas["TaskMove"];
+export type MoveOption = Schemas["MoveOption"];
+export type TaskEvidence = Schemas["EvidenceOut"];
+export type EvidenceCreate = Schemas["EvidenceCreate"];
+export type PersonRef = Schemas["PersonRef"];
+
+// Workspace: weekly check-ins (spec §10.2 Check-ins; D145)
+export type Checkin = Schemas["CheckinOut"];
+export type CheckinCreate = Schemas["CheckinCreate"];
+export type CheckinFeed = Schemas["CheckinFeed"];
+
+// Workspace: comments and discussion (spec §10.2; D146)
+export type CommentItem = Schemas["CommentOut"];
+export type CommentPage = Schemas["Page_CommentOut_"];
+
+// Workspace: monitoring (spec §10.2 Monitoring; D151, D152)
+export type DashboardForClient = Schemas["DashboardForClient"];
+export type DashboardForMember = Schemas["DashboardForMember"];
+export type Dashboard = DashboardForClient | DashboardForMember;
+export type RiskItem = Schemas["ProjectRisk"];
+export type RiskList = Schemas["RiskList"];
+export type ActivityItem = Schemas["ActivityItem"];
+export type ActivityPage = Schemas["Page_ActivityItem_"];
+export type EvidenceSummary = Schemas["EvidenceSummary"];
+export type MemberEvidence = Schemas["MemberEvidence"];
+export type PlanForecast = Schemas["PlanForecast"];
+export type ForecastNode = Schemas["ForecastNode"];

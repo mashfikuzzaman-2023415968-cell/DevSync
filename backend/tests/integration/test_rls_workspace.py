@@ -36,6 +36,7 @@ from app.models.workspace import (
     Comment,
     CommentRevision,
     CommentTarget,
+    EvidenceKind,
     ForecastSnapshot,
     NotificationPreference,
     Risk,
@@ -45,10 +46,9 @@ from app.models.workspace import (
     TaskDependency,
     TaskDifficulty,
     TaskEvidence,
-    EvidenceKind,
 )
 from tests.helpers import stack_available
-from tests.integration.test_rls_bids import as_user, make_user
+from tests.integration.test_rls_bids import as_user, make_bidding_project, make_user
 from tests.integration.test_rls_formation import _sees, _world
 
 pytestmark = pytest.mark.integration
@@ -75,9 +75,15 @@ async def _milestones(client: uuid.UUID, pid: uuid.UUID) -> tuple[uuid.UUID, uui
 
 
 def _task(pid: uuid.UUID, milestone: uuid.UUID, creator: uuid.UUID, pos: str = "V") -> Task:
-    return Task(project_id=pid, milestone_id=milestone, title="Stock list API",
-                estimate_hours=Decimal("8.0"), difficulty=TaskDifficulty.MEDIUM, position=pos,
-                created_by=creator)  # fmt: skip
+    return Task(
+        project_id=pid,
+        milestone_id=milestone,
+        title="Stock list API",
+        estimate_hours=Decimal("8.0"),
+        difficulty=TaskDifficulty.MEDIUM,
+        position=pos,
+        created_by=creator,
+    )
 
 
 async def _workspace() -> dict[str, Any]:
@@ -85,21 +91,43 @@ async def _workspace() -> dict[str, Any]:
     w = await _world()
     m1, m2 = await _milestones(w["client"], w["pid"])
     async with open_session(DbContext.system(), job=True) as db:
-        await db.execute(update(TeamMember).where(TeamMember.id == w["member_a"])
-                         .values(status=MemberStatus.ACTIVE, is_lead=True))  # fmt: skip
-        await db.execute(update(TeamMember).where(TeamMember.team_id == w["team"],
-                                                  TeamMember.id != w["member_a"])
-                         .values(status=MemberStatus.LEFT))  # fmt: skip
+        await db.execute(
+            update(TeamMember)
+            .where(TeamMember.id == w["member_a"])
+            .values(status=MemberStatus.ACTIVE, is_lead=True)
+        )
+        await db.execute(
+            update(TeamMember)
+            .where(TeamMember.team_id == w["team"], TeamMember.id != w["member_a"])
+            .values(status=MemberStatus.LEFT)
+        )
         task = _task(w["pid"], m1, w["dev_a"])
         db.add(task)
         await db.flush()
-        checkin = Checkin(project_id=w["pid"], team_member_id=w["member_a"],
-                          week_start=date(2026, 11, 23), done="Stock table", next="Filters",
-                          confidence=4, on_time=True)  # fmt: skip
-        comment = Comment(project_id=w["pid"], target_type=CommentTarget.TASK, target_id=task.id,
-                          author_id=w["client"], body="Looks good")  # fmt: skip
-        event = ActivityEvent(project_id=w["pid"], actor_id=w["dev_a"], type="task.moved",
-                              entity_type="TASK", entity_id=task.id, data={})  # fmt: skip
+        checkin = Checkin(
+            project_id=w["pid"],
+            team_member_id=w["member_a"],
+            week_start=date(2026, 11, 23),
+            done="Stock table",
+            next="Filters",
+            confidence=4,
+            on_time=True,
+        )
+        comment = Comment(
+            project_id=w["pid"],
+            target_type=CommentTarget.TASK,
+            target_id=task.id,
+            author_id=w["client"],
+            body="Looks good",
+        )
+        event = ActivityEvent(
+            project_id=w["pid"],
+            actor_id=w["dev_a"],
+            type="task.moved",
+            entity_type="TASK",
+            entity_id=task.id,
+            data={},
+        )
         budget = Risk(
             project_id=w["pid"],
             type=RiskType.BUDGET,
@@ -108,9 +136,15 @@ async def _workspace() -> dict[str, Any]:
             title="Spending ahead of progress",
             opened_at=NOW,
         )
-        stalled = Risk(project_id=w["pid"], type=RiskType.STALLED_TASK,
-                       severity=RiskSeverity.LOW, entity_type="TASK", entity_id=task.id,
-                       title="Stock list API stalled", opened_at=NOW)  # fmt: skip
+        stalled = Risk(
+            project_id=w["pid"],
+            type=RiskType.STALLED_TASK,
+            severity=RiskSeverity.LOW,
+            entity_type="TASK",
+            entity_id=task.id,
+            title="Stock list API stalled",
+            opened_at=NOW,
+        )
         snap = ForecastSnapshot(
             project_id=w["pid"],
             day=date(2026, 11, 27),
@@ -130,17 +164,31 @@ async def _workspace() -> dict[str, Any]:
         )
         db.add_all([checkin, comment, event, budget, stalled, snap, pfile])
         await db.flush()
-        ids = {"m1": m1, "m2": m2, "task": task.id, "checkin": checkin.id,
-               "comment": comment.id, "event": event.id, "budget": budget.id,
-               "stalled": stalled.id, "snap": snap.id, "file": pfile.id}  # fmt: skip
+        ids = {
+            "m1": m1,
+            "m2": m2,
+            "task": task.id,
+            "checkin": checkin.id,
+            "comment": comment.id,
+            "event": event.id,
+            "budget": budget.id,
+            "stalled": stalled.id,
+            "snap": snap.id,
+            "file": pfile.id,
+        }
         await db.commit()
     return {**w, **ids}
 
 
 async def test_participants_read_the_workspace_and_nobody_else() -> None:
     w = await _workspace()
-    rows = ((Task, "task"), (Checkin, "checkin"), (ActivityEvent, "event"),
-            (ForecastSnapshot, "snap"), (Comment, "comment"))  # fmt: skip
+    rows = (
+        (Task, "task"),
+        (Checkin, "checkin"),
+        (ActivityEvent, "event"),
+        (ForecastSnapshot, "snap"),
+        (Comment, "comment"),
+    )
     for model, key in rows:
         assert await _sees(w["client"], "CLIENT", model, w[key]), model
         assert await _sees(w["dev_a"], "DEVELOPER", model, w[key]), model
@@ -156,8 +204,11 @@ async def test_a_completed_member_still_reads_but_an_invited_one_does_not() -> N
     w = await _workspace()
     for status, visible in ((MemberStatus.COMPLETED, True), (MemberStatus.INVITED, False)):
         async with open_session(DbContext.system(), job=True) as db:
-            await db.execute(update(TeamMember).where(TeamMember.id == w["member_a"])
-                             .values(status=status, is_lead=False))  # fmt: skip
+            await db.execute(
+                update(TeamMember)
+                .where(TeamMember.id == w["member_a"])
+                .values(status=status, is_lead=False)
+            )
             await db.commit()
         assert await _sees(w["dev_a"], "DEVELOPER", Task, w["task"]) is visible, status
 
@@ -176,8 +227,12 @@ async def test_only_active_members_write_tasks() -> None:
     async with as_user(w["dev_a"], "DEVELOPER") as db:
         db.add(_task(w["pid"], w["m1"], w["dev_a"], "W"))
         await db.commit()  # the ACTIVE member may
-    for uid, role in ((w["client"], "CLIENT"), (w["dev_b"], "DEVELOPER"),
-                      (w["outsider"], "DEVELOPER"), (w["admin"], "ADMIN")):  # fmt: skip
+    for uid, role in (
+        (w["client"], "CLIENT"),
+        (w["dev_b"], "DEVELOPER"),
+        (w["outsider"], "DEVELOPER"),
+        (w["admin"], "ADMIN"),
+    ):
         async with as_user(uid, role) as db:
             db.add(_task(w["pid"], w["m1"], uid, "X"))
             with pytest.raises(DbErrors):
@@ -192,27 +247,45 @@ async def test_only_active_members_write_tasks() -> None:
 async def test_comments_are_written_as_yourself_by_participants_only() -> None:
     w = await _workspace()
     async with as_user(w["client"], "CLIENT") as db:
-        db.add(Comment(project_id=w["pid"], target_type=CommentTarget.TASK, target_id=w["task"],
-                       author_id=w["client"], body="Thanks"))  # fmt: skip
+        db.add(
+            Comment(
+                project_id=w["pid"],
+                target_type=CommentTarget.TASK,
+                target_id=w["task"],
+                author_id=w["client"],
+                body="Thanks",
+            )
+        )
         await db.commit()
     forged = ((w["client"], "CLIENT", w["dev_a"]), (w["outsider"], "DEVELOPER", w["outsider"]))
     for uid, role, author in forged:
         async with as_user(uid, role) as db:
-            db.add(Comment(project_id=w["pid"], target_type=CommentTarget.TASK,
-                           target_id=w["task"], author_id=author, body="Forged"))  # fmt: skip
+            db.add(
+                Comment(
+                    project_id=w["pid"],
+                    target_type=CommentTarget.TASK,
+                    target_id=w["task"],
+                    author_id=author,
+                    body="Forged",
+                )
+            )
             with pytest.raises(DbErrors):
                 await db.flush()
     async with as_user(w["dev_a"], "DEVELOPER") as db:  # not the author: the row is hidden
-        result = await db.execute(update(Comment).where(Comment.id == w["comment"])
-                                  .values(body="Edited by someone else"))  # fmt: skip
+        result = await db.execute(
+            update(Comment).where(Comment.id == w["comment"]).values(body="Edited by someone else")
+        )
         assert result.rowcount == 0
 
 
 async def test_an_edit_keeps_a_revision_only_admins_read() -> None:
     w = await _workspace()
     async with as_user(w["client"], "CLIENT") as db:
-        await db.execute(update(Comment).where(Comment.id == w["comment"])
-                         .values(body="Looks good now", edited_at=NOW))  # fmt: skip
+        await db.execute(
+            update(Comment)
+            .where(Comment.id == w["comment"])
+            .values(body="Looks good now", edited_at=NOW)
+        )
         await db.commit()
     rev = select(CommentRevision.body).where(CommentRevision.comment_id == w["comment"])
     async with as_user(w["admin"], "ADMIN") as db:
@@ -222,21 +295,32 @@ async def test_an_edit_keeps_a_revision_only_admins_read() -> None:
             assert list(await db.scalars(rev)) == []
     async with as_user(w["client"], "CLIENT") as db:  # who and where never change
         with pytest.raises(DbErrors):
-            await db.execute(update(Comment).where(Comment.id == w["comment"])
-                             .values(target_id=w["m1"]))  # fmt: skip
+            await db.execute(
+                update(Comment).where(Comment.id == w["comment"]).values(target_id=w["m1"])
+            )
 
 
 async def test_checkins_are_your_own_and_immutable() -> None:
     w = await _workspace()
     other_member = await _other_member(w)
     async with as_user(w["dev_a"], "DEVELOPER") as db:
-        db.add(Checkin(project_id=w["pid"], team_member_id=other_member,
-                       week_start=date(2026, 11, 30), done="x", next="y", confidence=3,
-                       on_time=True))  # fmt: skip
+        db.add(
+            Checkin(
+                project_id=w["pid"],
+                team_member_id=other_member,
+                week_start=date(2026, 11, 30),
+                done="x",
+                next="y",
+                confidence=3,
+                on_time=True,
+            )
+        )
         with pytest.raises(DbErrors):  # someone else's member row
             await db.flush()
-    for stmt in (update(Checkin).where(Checkin.id == w["checkin"]).values(done="Rewritten"),
-                 delete(Checkin).where(Checkin.id == w["checkin"])):  # fmt: skip
+    for stmt in (
+        update(Checkin).where(Checkin.id == w["checkin"]).values(done="Rewritten"),
+        delete(Checkin).where(Checkin.id == w["checkin"]),
+    ):
         async with open_session(DbContext.system(), job=True) as db:
             with pytest.raises(DbErrors):
                 await db.execute(stmt)
@@ -256,12 +340,22 @@ async def _other_member(w: dict[str, Any]) -> uuid.UUID:
 async def test_events_are_append_only_and_never_written_directly_by_the_web() -> None:
     w = await _workspace()
     async with as_user(w["dev_a"], "DEVELOPER") as db:
-        db.add(ActivityEvent(project_id=w["pid"], actor_id=w["dev_a"], type="task.done",
-                             entity_type="TASK", entity_id=w["task"], data={}))  # fmt: skip
+        db.add(
+            ActivityEvent(
+                project_id=w["pid"],
+                actor_id=w["dev_a"],
+                type="task.done",
+                entity_type="TASK",
+                entity_id=w["task"],
+                data={},
+            )
+        )
         with pytest.raises(DbErrors):
             await db.flush()
-    for stmt in (update(ActivityEvent).where(ActivityEvent.id == w["event"]).values(data={"x": 1}),
-                 delete(ActivityEvent).where(ActivityEvent.id == w["event"])):  # fmt: skip
+    for stmt in (
+        update(ActivityEvent).where(ActivityEvent.id == w["event"]).values(data={"x": 1}),
+        delete(ActivityEvent).where(ActivityEvent.id == w["event"]),
+    ):
         async with open_session(DbContext.system(), job=True) as db:
             with pytest.raises(DbErrors):
                 await db.execute(stmt)
@@ -280,7 +374,9 @@ async def test_record_activity_records_the_caller_for_participants_only() -> Non
         await db.commit()
     async with open_session(DbContext.system(), job=True) as db:
         row = await db.get(ActivityEvent, event_id)
-        assert row is not None and row.actor_id == w["dev_a"] and row.at == NOW
+        assert row is not None
+        assert row.actor_id == w["dev_a"]  # the caller, never a parameter
+        assert row.at == NOW
     refused = [
         (w["outsider"], "DEVELOPER", args),
         (w["dev_b"], "DEVELOPER", args),  # former member
@@ -307,8 +403,6 @@ async def test_a_rows_project_matches_its_parent() -> None:
 
 
 async def _other_project() -> uuid.UUID:
-    from tests.integration.test_rls_bids import make_bidding_project
-
     client = await make_user("CLIENT")
     pid, _ = await make_bidding_project(client)
     return pid
@@ -342,19 +436,39 @@ async def test_evidence_needs_a_live_project_file_and_blocks_task_deletion() -> 
         )
         db.add(portfolio)
         await db.flush()
-        db.add(TaskEvidence(project_id=w["pid"], task_id=w["task"], kind=EvidenceKind.FILE,
-                            file_id=portfolio.id, added_by=w["dev_a"]))  # fmt: skip
+        db.add(
+            TaskEvidence(
+                project_id=w["pid"],
+                task_id=w["task"],
+                kind=EvidenceKind.FILE,
+                file_id=portfolio.id,
+                added_by=w["dev_a"],
+            )
+        )
         with pytest.raises(DbErrors):  # not a project file
             await db.flush()
     async with open_session(DbContext.system(), job=True) as db:
-        db.add(TaskEvidence(project_id=w["pid"], task_id=w["task"], kind=EvidenceKind.SCREENSHOT,
-                            file_id=w["file"], added_by=w["dev_a"]))  # fmt: skip
+        db.add(
+            TaskEvidence(
+                project_id=w["pid"],
+                task_id=w["task"],
+                kind=EvidenceKind.SCREENSHOT,
+                file_id=w["file"],
+                added_by=w["dev_a"],
+            )
+        )
         with pytest.raises(DbErrors):  # a PDF isn't a screenshot (D168)
             await db.flush()
     async with as_user(w["dev_a"], "DEVELOPER") as db:
-        db.add(TaskEvidence(project_id=w["pid"], task_id=w["task"], kind=EvidenceKind.PR,
-                            url="https://github.com/acme/inventory/pull/12",
-                            added_by=w["dev_a"]))  # fmt: skip
+        db.add(
+            TaskEvidence(
+                project_id=w["pid"],
+                task_id=w["task"],
+                kind=EvidenceKind.PR,
+                url="https://github.com/acme/inventory/pull/12",
+                added_by=w["dev_a"],
+            )
+        )
         await db.commit()
     async with as_user(w["dev_a"], "DEVELOPER") as db:
         with pytest.raises(DbErrors):  # evidence is kept, so its task stays (D173)
@@ -362,8 +476,15 @@ async def test_evidence_needs_a_live_project_file_and_blocks_task_deletion() -> 
     bad_urls = ("http://github.com/a/b/pull/1", "https://gitlab.com/a/b/pull/1")
     for url in bad_urls:
         async with as_user(w["dev_a"], "DEVELOPER") as db:
-            db.add(TaskEvidence(project_id=w["pid"], task_id=w["task"], kind=EvidenceKind.PR,
-                                url=url, added_by=w["dev_a"]))  # fmt: skip
+            db.add(
+                TaskEvidence(
+                    project_id=w["pid"],
+                    task_id=w["task"],
+                    kind=EvidenceKind.PR,
+                    url=url,
+                    added_by=w["dev_a"],
+                )
+            )
             with pytest.raises(DbErrors):
                 await db.flush()
 
@@ -373,15 +494,22 @@ FILE_ACCESS = text("SELECT count(*) FROM file_access(:f)")
 
 async def test_project_files_are_for_participants_only() -> None:
     w = await _workspace()
-    readers = ((w["client"], "CLIENT", 1), (w["dev_a"], "DEVELOPER", 1),
-               (w["outsider"], "DEVELOPER", 0), (w["other_client"], "CLIENT", 0),
-               (w["admin"], "ADMIN", 0))  # fmt: skip
+    readers = (
+        (w["client"], "CLIENT", 1),
+        (w["dev_a"], "DEVELOPER", 1),
+        (w["outsider"], "DEVELOPER", 0),
+        (w["other_client"], "CLIENT", 0),
+        (w["admin"], "ADMIN", 0),
+    )
     for uid, role, expected in readers:
         async with as_user(uid, role) as db:
             assert await db.scalar(FILE_ACCESS, {"f": w["file"]}) == expected, role
     async with open_session(DbContext.system(), job=True) as db:  # the uploader leaves
-        await db.execute(update(TeamMember).where(TeamMember.id == w["member_a"])
-                         .values(status=MemberStatus.LEFT, is_lead=False))  # fmt: skip
+        await db.execute(
+            update(TeamMember)
+            .where(TeamMember.id == w["member_a"])
+            .values(status=MemberStatus.LEFT, is_lead=False)
+        )
         await db.commit()
     async with as_user(w["dev_a"], "DEVELOPER") as db:
         assert await db.scalar(FILE_ACCESS, {"f": w["file"]}) == 0
@@ -390,16 +518,25 @@ async def test_project_files_are_for_participants_only() -> None:
 async def test_a_project_file_needs_a_project_and_never_moves() -> None:
     w = await _workspace()
     async with open_session(DbContext.system(), job=True) as db:
-        db.add(StoredFile(owner_id=w["dev_a"], kind=FileKind.PROJECT_FILE,
-                          storage_key=uuid.uuid4(), original_name="x.txt", mime_type="text/plain",
-                          size_bytes=1, sha256="2" * 64))  # fmt: skip
+        db.add(
+            StoredFile(
+                owner_id=w["dev_a"],
+                kind=FileKind.PROJECT_FILE,
+                storage_key=uuid.uuid4(),
+                original_name="x.txt",
+                mime_type="text/plain",
+                size_bytes=1,
+                sha256="2" * 64,
+            )
+        )
         with pytest.raises(DbErrors):
             await db.flush()
     other_pid = await _other_project()
     async with open_session(DbContext.system(), job=True) as db:
         with pytest.raises(DbErrors):
-            await db.execute(update(StoredFile).where(StoredFile.id == w["file"])
-                             .values(project_id=other_pid))  # fmt: skip
+            await db.execute(
+                update(StoredFile).where(StoredFile.id == w["file"]).values(project_id=other_pid)
+            )
 
 
 async def test_preferences_are_your_own() -> None:

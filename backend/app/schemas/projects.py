@@ -283,8 +283,34 @@ class PlanEdge(BaseModel):
     successor: str
 
 
+class ForecastNode(BaseModel):
+    """One milestone of a started project: its state, progress and forecast (D152)."""
+
+    key: str
+    status: str
+    progress_pct: int = Field(ge=0, le=100, description="From its tasks (§9.10 weights)")
+    forecast_es: int
+    forecast_ef: int
+    days_late: int
+    revision_count: int
+    actual_start: date | None
+    actual_finish: date | None
+
+
+class PlanForecast(BaseModel):
+    """Baseline vs forecast for an IN_PROGRESS project, from the latest evaluation (D152)."""
+
+    today: int = Field(description="The project day (days since the start, Asia/Dhaka)")
+    finish_day: int
+    impact_days: int
+    start_date: date | None
+    nodes: list[ForecastNode]
+    evaluated_at: datetime | None
+
+
 class PlanOut(BaseModel):
-    """The saved baseline plan: CPM schedule and critical paths (GET /projects/{id}/plan)."""
+    """The saved baseline plan: CPM schedule and critical paths (GET /projects/{id}/plan); for a
+    started project also the forecast (D152)."""
 
     baseline_version: int | None
     duration: int
@@ -293,6 +319,7 @@ class PlanOut(BaseModel):
     critical_paths: list[list[str]]
     deadline_days: int
     exceeds_deadline: bool
+    forecast: PlanForecast | None = None
 
 
 # --------------------------------------------------------------------------- transitions

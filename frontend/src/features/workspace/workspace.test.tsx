@@ -1,5 +1,7 @@
-/** Workspace Team tab (screen 33; D120, D130): members without anyone's price, the Phase 9 tabs
- * marked, leaving with a reason of the right length, asking for a lead change; 404 for others. */
+/** Workspace layout and Team tab (screens 29–39, 33; D120, D130, D160): the §13.4 tab bar with
+ * eleven tabs (Payments says Phase 10), members without anyone's price, leaving with a reason of
+ * the right length, asking for a lead change; 404 for others; a project that hasn't started
+ * shows only the Team tab. */
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
@@ -7,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import { Toaster } from "@/components/ui/Toaster";
 import { renderRoutes } from "@/test/render";
 import { server } from "@/test/server";
+import WorkspaceLayout from "./WorkspaceLayout";
 import WorkspaceTeamPage from "./WorkspaceTeamPage";
 
 const API = "https://testserver/api/v1";
@@ -34,20 +37,24 @@ const show = () =>
   renderRoutes(
     [
       {
-        path: "/w/:projectId/team",
+        path: "/w/:projectId",
         element: (
           <>
-            <WorkspaceTeamPage />
+            <WorkspaceLayout />
             <Toaster />
           </>
         ),
+        children: [
+          { path: "team", element: <WorkspaceTeamPage /> },
+          { path: "tasks", element: <p>The board</p> },
+        ],
       },
     ],
     `/w/${PID}/team`,
   );
 
 describe("WorkspaceTeamPage", () => {
-  it("lists members without prices and marks the Phase 9 tabs", async () => {
+  it("lists members without prices under the §13.4 tab bar", async () => {
     server.use(http.get(`${API}/projects/${PID}/team`, () => HttpResponse.json(view)));
     show();
     expect(
@@ -57,8 +64,23 @@ describe("WorkspaceTeamPage", () => {
     expect(screen.getByText("(you)")).toBeInTheDocument();
     expect(screen.queryByText(/৳/)).not.toBeInTheDocument();
     const nav = screen.getByRole("navigation", { name: "Workspace" });
-    expect(within(nav).getByText("Team")).toHaveAttribute("aria-current", "page");
-    expect(within(nav).getAllByText("(arrives in Phase 9)")).toHaveLength(8);
+    expect(within(nav).getAllByRole("listitem")).toHaveLength(11);
+    expect(within(nav).getByRole("link", { name: "Team" })).toHaveAttribute("aria-current", "page");
+    expect(within(nav).getByRole("link", { name: "Tasks" })).toBeInTheDocument();
+    expect(within(nav).getByText("(arrives in Phase 10)")).toBeInTheDocument(); // Payments
+    expect(within(nav).queryByText(/arrives in Phase 9/)).not.toBeInTheDocument();
+  });
+
+  it("shows only the Team tab before the project starts", async () => {
+    server.use(
+      http.get(`${API}/projects/${PID}/team`, () =>
+        HttpResponse.json({ ...view, project_status: "TEAM_PENDING" }),
+      ),
+    );
+    show();
+    const nav = await screen.findByRole("navigation", { name: "Workspace" });
+    expect(within(nav).getAllByRole("link")).toHaveLength(1);
+    expect(within(nav).getAllByText("(opens when the project starts)")).toHaveLength(9);
   });
 
   it("leaves only with a reason of 20–500 characters", async () => {

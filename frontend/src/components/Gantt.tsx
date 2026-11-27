@@ -13,6 +13,10 @@
  * line and, once work has started, a "today" line give context. Hovering, focusing or tapping a
  * bar shows its dates, slack and dependencies in a live region under the chart.
  * Bars are keyboard-focusable with a text label; `CpmTable` is the table alternative.
+ *
+ * With `forecast` (a started project, D152) each row shows the baseline bar on top and the
+ * forecast bar under it: green when it finishes on plan, amber when it is late; the label and
+ * details say by how many days.
  */
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { CpmNode } from "@/api/types";
@@ -22,6 +26,11 @@ import { formatDate, formatDays } from "@/lib/format";
 
 export type GanttEdge = readonly [from: string, to: string];
 export type GanttZoom = "days" | "weeks" | "months";
+/** A milestone's forecast span in days from the start (§9.10 step 5). */
+export interface ForecastBar {
+  es: number;
+  ef: number;
+}
 
 export interface GanttProps {
   nodes: CpmNode[];
@@ -35,6 +44,8 @@ export interface GanttProps {
   deadlineDays?: number | null;
   /** Initial zoom; by default days for plans up to 45 days, weeks up to 180, months beyond. */
   zoom?: GanttZoom;
+  /** Forecast spans by node key: drawn under the baseline bars (baseline vs forecast). */
+  forecast?: ReadonlyMap<string, ForecastBar> | undefined;
   className?: string | undefined;
 }
 
@@ -62,11 +73,17 @@ function dateRange(startIso: string, es: number, ef: number): string {
   return `${formatDate(dayToDate(startIso, es))} – ${formatDate(dayToDate(startIso, Math.max(es, ef - 1)))}`;
 }
 
-export function ganttLabel(n: CpmNode, startDate: string | null): string {
+export function ganttLabel(n: CpmNode, startDate: string | null, f?: ForecastBar): string {
+  const late = f ? f.ef - n.ef : 0;
+  const outlook = f
+    ? late > 0
+      ? `; forecast to finish on day ${String(f.ef)}, ${formatDays(late)} late`
+      : `; forecast to finish on day ${String(f.ef)}, on plan`
+    : "";
   const base = n.critical
     ? `${n.name}: days ${String(n.es)}–${String(n.ef)}, on the critical path`
     : `${n.name}: days ${String(n.es)}–${String(n.ef)}, slack ${formatDays(n.slack)}`;
-  return startDate ? `${base}, ${dateRange(startDate, n.es, n.ef)}` : base;
+  return (startDate ? `${base}, ${dateRange(startDate, n.es, n.ef)}` : base) + outlook;
 }
 
 interface Tick {
@@ -207,12 +224,18 @@ export function Gantt({
   today = null,
   deadlineDays = null,
   zoom: initialZoom,
+  forecast,
   className,
 }: GanttProps) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const titleId = `gantt-title-${uid}`;
   const detailsId = `gantt-details-${uid}`;
-  const duration = Math.max(1, ...nodes.map((n) => n.lf), deadlineDays ?? 0);
+  const duration = Math.max(
+    1,
+    ...nodes.map((n) => n.lf),
+    ...(forecast ? [...forecast.values()].map((f) => f.ef) : []),
+    deadlineDays ?? 0,
+  );
   const [chosenZoom, setZoom] = useState<GanttZoom | null>(initialZoom ?? null);
   const [active, setActive] = useState<string | null>(null);
   const [scrollRef, available] = useWidth<HTMLDivElement>();
@@ -266,7 +289,11 @@ export function Gantt({
   return (
     <figure className={cn("flex flex-col gap-3", className)}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Legend showToday={showToday} showDeadline={deadlineDays != null} />
+        <Legend
+          showToday={showToday}
+          showDeadline={deadlineDays != null}
+          showForecast={forecast !== undefined}
+        />
         <SegmentedControl<GanttZoom>
           label="Timeline zoom"
           size="sm"
@@ -455,7 +482,9 @@ export function Gantt({
               const barY = rowMid(i) - BAR_H / 2;
               const barW = Math.max(2, (n.ef - n.es) * dayWidth);
               const slackW = n.slack * dayWidth;
-              const label = ganttLabel(n, startDate);
+              const f = forecast?.get(n.key);
+              const label = ganttLabel(n, startDate, f);
+              const half = f ? BAR_H / 2 - 1 : BAR_H;
               return (
                 <g
                   key={n.key}
@@ -484,10 +513,21 @@ export function Gantt({
                     x={x(n.es)}
                     y={barY}
                     width={barW}
-                    height={BAR_H}
+                    height={half}
                     rx="4"
                     className={n.critical ? "fill-danger" : "fill-accent"}
                   />
+                  {f ? (
+                    <rect
+                      x={x(f.es)}
+                      y={barY + half + 2}
+                      width={Math.max(2, (f.ef - f.es) * dayWidth)}
+                      height={half}
+                      rx="4"
+                      className={f.ef > n.ef ? "fill-warning" : "fill-success"}
+                      data-testid="forecast-bar"
+                    />
+                  ) : null}
                   <rect
                     x={x(n.es) - 3}
                     y={barY - 3}
@@ -514,7 +554,13 @@ export function Gantt({
         className="min-h-10 text-body-sm text-text-muted"
       >
         {activeNode ? (
-          <Details node={activeNode} startDate={startDate} edges={edges} byKey={byKey} />
+          <Details
+            node={activeNode}
+            startDate={startDate}
+            edges={edges}
+            byKey={byKey}
+            forecast={forecast?.get(activeNode.key)}
+          />
         ) : (
           "Hover, focus or tap a bar to see its dates, slack and dependencies."
         )}
@@ -528,11 +574,13 @@ function Details({
   startDate,
   edges,
   byKey,
+  forecast,
 }: {
   node: CpmNode;
   startDate: string | null;
   edges: readonly GanttEdge[];
   byKey: Map<string, CpmNode>;
+  forecast?: ForecastBar | undefined;
 }) {
   const span = node.ef - node.es;
   const when = startDate
@@ -550,11 +598,24 @@ function Details({
         ? "On the critical path, so any delay moves the finish date."
         : `Can slip ${formatDays(node.slack)} without delaying the finish.`}
       {after.length > 0 && ` Starts after ${after.join(", ")}.`}
+      {forecast
+        ? forecast.ef > node.ef
+          ? ` Forecast to finish ${formatDays(forecast.ef - node.ef)} late.`
+          : " Forecast to finish on plan."
+        : null}
     </span>
   );
 }
 
-function Legend({ showToday, showDeadline }: { showToday: boolean; showDeadline: boolean }) {
+function Legend({
+  showToday,
+  showDeadline,
+  showForecast,
+}: {
+  showToday: boolean;
+  showDeadline: boolean;
+  showForecast: boolean;
+}) {
   return (
     <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-text-muted">
       <li className="flex items-center gap-1.5">
@@ -597,6 +658,18 @@ function Legend({ showToday, showDeadline }: { showToday: boolean; showDeadline:
           <span className="h-3 w-0.5 bg-primary" aria-hidden="true" />
           Today
         </li>
+      )}
+      {showForecast && (
+        <>
+          <li className="flex items-center gap-1.5">
+            <span className="h-1.5 w-4 rounded-sm bg-success" aria-hidden="true" />
+            Forecast on plan
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span className="h-1.5 w-4 rounded-sm bg-warning" aria-hidden="true" />
+            Forecast late
+          </li>
+        </>
       )}
     </ul>
   );

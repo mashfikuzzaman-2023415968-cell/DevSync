@@ -3,12 +3,20 @@ not started, and late-predecessor propagation, plus the milestone-progress helpe
 
 from __future__ import annotations
 
+import math
+from decimal import Decimal
+from fractions import Fraction
+
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from app.algorithms.forecast import (
     MilestoneForecastInput,
     forecast,
     milestone_progress,
+    milestone_progress_exact,
+    remaining_days,
 )
 
 
@@ -20,7 +28,7 @@ def mk(
     planned_ef: int,
     *,
     predecessors: tuple[str, ...] = (),
-    progress: float = 0.0,
+    progress: float | Fraction = 0.0,
     elapsed: int = 0,
     actual_finish: int | None = None,
 ) -> MilestoneForecastInput:
@@ -149,3 +157,70 @@ def test_empty_plan_forecasts_nothing() -> None:
     assert result.nodes == {}
     assert result.project_finish == 0
     assert result.deadline_impact == 0
+
+
+# ---------------------------------------------------------------- exact arithmetic (D161)
+
+
+def test_float_rounding_would_add_a_phantom_day_the_exact_rule_does_not() -> None:
+    """p = 0.6 after 3 days: 3·0.4/0.6 is exactly 2, but in float64 it is 2.0000000000000004
+    and ceil makes it 3. The exact path keeps the §9.10 answer."""
+    assert math.ceil(3 * (1 - 0.6) / 0.6) == 3  # the float trap this guards against
+    assert remaining_days(4, 3, Fraction(3, 5)) == 2
+    exact = milestone_progress_exact([(Decimal("3.0"), "DONE"), (Decimal("2.0"), "TODO")])
+    assert exact == Fraction(3, 5)
+    plan = [mk("m", 4, "ACTIVE", 0, 4, progress=exact, elapsed=3)]
+    assert forecast(plan, today=3, baseline_duration=4).nodes["m"].forecast_finish == 5
+
+
+def test_exact_progress_uses_the_spec_weights() -> None:
+    tasks = [
+        (Decimal("2.0"), "TODO"),
+        (Decimal("2.0"), "IN_PROGRESS"),
+        (Decimal("2.0"), "REVIEW"),
+        (Decimal("4.0"), "DONE"),
+        (Decimal("1.5"), "SOMETHING_ELSE"),  # unknown statuses weigh 0
+    ]
+    expected = (Fraction(1) + Fraction(17, 10) + Fraction(4)) / Fraction(23, 2)
+    assert milestone_progress_exact(tasks) == expected
+    assert milestone_progress_exact([]) == 0
+    assert milestone_progress_exact([(Decimal("0"), "DONE")]) == 0
+
+
+def test_inventory_dashboard_forecast_is_25_days_plus_2() -> None:
+    """§18.2 item 2 on day 12: API p = 0.7 since day 4, Dashboard p = 0.4 since day 8."""
+    plan = [
+        mk("REQ", 3, "DONE", 0, 3, actual_finish=3),
+        mk("UI", 5, "DONE", 3, 8, predecessors=("REQ",), actual_finish=8),
+        mk("API", 7, "ACTIVE", 3, 10, predecessors=("REQ",), progress=Fraction(7, 10), elapsed=8),
+        mk("DASH", 8, "ACTIVE", 8, 16, predecessors=("UI",), progress=Fraction(2, 5), elapsed=4),
+        mk("INT", 3, "NOT_STARTED", 16, 19, predecessors=("API", "DASH")),
+        mk("TEST", 4, "NOT_STARTED", 19, 23, predecessors=("INT",)),
+    ]
+    result = forecast(plan, today=12, baseline_duration=23)
+    finishes = {k: v.forecast_finish for k, v in result.nodes.items()}
+    assert finishes == {"REQ": 3, "UI": 8, "API": 16, "DASH": 18, "INT": 21, "TEST": 25}
+    assert result.project_finish == 25
+    assert result.deadline_impact == 2
+
+
+@pytest.mark.property
+@settings(max_examples=300, deadline=None)
+@given(
+    st.integers(min_value=1, max_value=60),
+    st.integers(min_value=0, max_value=60),
+    st.integers(min_value=1, max_value=999),
+    st.integers(min_value=1, max_value=999),
+)
+def test_exact_and_float_agree_unless_the_float_error_crosses_an_integer(
+    duration: int, elapsed: int, done: int, total_extra: int
+) -> None:
+    p = Fraction(done, done + total_extra)
+    exact = remaining_days(duration, elapsed, p)
+    true_value = max(duration * (1 - p), elapsed * (1 - p) / p)
+    assert exact == math.ceil(true_value)  # the definition, with no rounding
+    approx = remaining_days(duration, elapsed, float(p))
+    if true_value.denominator != 1:  # not an integer: float noise can't cross one
+        assert approx == exact
+    else:
+        assert approx in (exact, exact + 1)

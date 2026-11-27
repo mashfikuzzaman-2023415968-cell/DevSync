@@ -29,12 +29,15 @@ from app.api.v1 import (
     auth,
     bids,
     captcha,
+    checkins,
+    comments,
     files,
     formation,
     health,
     jobs,
     marketplace,
     me,
+    monitoring,
     notifications,
     profiles,
     projects,
@@ -42,6 +45,7 @@ from app.api.v1 import (
     reputation,
     role_assessments,
     skill_tests,
+    tasks,
     team,
 )
 from app.core.auth_middleware import CsrfMiddleware, GlobalRateLimitMiddleware, SessionMiddleware
@@ -117,14 +121,24 @@ def _with_global_responses(app: FastAPI) -> Callable[[], dict[str, Any]]:
                 if any(kind in content for kind in _DECODED_BODIES):
                     extra.update(_BODY_DECODE_RESPONSES)
                 for status, (code, message) in extra.items():
-                    op.setdefault("responses", {}).setdefault(status, {
-                        "description": message,
-                        "content": {"application/json": {
-                            "schema": error_ref,
-                            "example": {"error": {"code": code, "message": message,
-                                                  "request_id": "req_123"}},
-                        }},
-                    })  # fmt: skip
+                    op.setdefault("responses", {}).setdefault(
+                        status,
+                        {
+                            "description": message,
+                            "content": {
+                                "application/json": {
+                                    "schema": error_ref,
+                                    "example": {
+                                        "error": {
+                                            "code": code,
+                                            "message": message,
+                                            "request_id": "req_123",
+                                        }
+                                    },
+                                }
+                            },
+                        },
+                    )
         app.openapi_schema = schema
         return schema
 
@@ -186,9 +200,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     for module in (
         health,
         captcha,
+        checkins,
+        comments,
         public,
         auth,
         me,
+        monitoring,
         admin,
         admin_assessments,
         profiles,
@@ -203,6 +220,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         reputation,
         formation,
         team,
+        tasks,
         notifications,
         jobs,
     ):

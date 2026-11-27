@@ -40,6 +40,7 @@ router = APIRouter(tags=["projects"])
 Creator = Annotated[Ctx, Depends(acting("project.create"))]
 Writer = Annotated[Ctx, Depends(acting("project.write"))]
 Reader = Annotated[Ctx, Depends(acting("project.read"))]
+PlanReader = Annotated[Ctx, Depends(acting("workspace.read"))]
 Canceller = Annotated[Ctx, Depends(acting("project.cancel"))]
 Payer = Annotated[Ctx, Depends(acting("payment.verify"))]
 IfMatch = Annotated[int | None, Header(alias="If-Match", description="Project version")]
@@ -96,21 +97,31 @@ EX_MILESTONES = [
     }
 ]
 EX_NODES = [
-    {"key": "m1", "name": "Requirements & design", "es": 0, "ef": 4, "ls": 0, "lf": 4,
-     "slack": 0, "critical": True, "share_bp": 1000}
-]  # fmt: skip
+    {
+        "key": "m1",
+        "name": "Requirements & design",
+        "es": 0,
+        "ef": 4,
+        "ls": 0,
+        "lf": 4,
+        "slack": 0,
+        "critical": True,
+        "share_bp": 1000,
+    }
+]
 EX_PREVIEW = {
     "feasible": True,
     "duration": 24,
     "nodes": EX_NODES,
-    "critical_paths": [["Requirements & design", "Database", "Backend API", "Integration",
-                        "Testing & launch"]],
+    "critical_paths": [
+        ["Requirements & design", "Database", "Backend API", "Integration", "Testing & launch"]
+    ],
     "cycle": None,
     "total_share_bp": 10000,
     "warnings": [],
     "platform_fee_bp": 500,
     "bonus_pool_bp": 1000,
-}  # fmt: skip
+}
 EX_PLAN = {
     "baseline_version": 1,
     "duration": 24,
@@ -297,7 +308,8 @@ async def preview_plan(ctx: Reader, project_id: uuid.UUID, body: PlanPreviewIn) 
     response_model=PlanOut,
     responses={200: _ok(EX_PLAN), **error_responses(401, 403, 404, 422)},
 )
-async def get_plan(ctx: Reader, project_id: uuid.UUID) -> PlanOut:
+async def get_plan(ctx: PlanReader, project_id: uuid.UUID) -> PlanOut:
+    """The project's client, an admin, or its members (D142); 404 for anyone else."""
     return await svc.get_plan(ctx, project_id)
 
 
@@ -320,9 +332,11 @@ async def publish_project(
     "/projects/{project_id}/extend-bidding",
     summary="Extend the bidding deadline",
     response_model=ProjectOut,
-    responses={200: _ok({**EX_PROJECT, "status": "BIDDING", "bidding_extensions": 1}),
-               **error_responses(401, 403, 404, 409, 422)},
-)  # fmt: skip
+    responses={
+        200: _ok({**EX_PROJECT, "status": "BIDDING", "bidding_extensions": 1}),
+        **error_responses(401, 403, 404, 409, 422),
+    },
+)
 async def extend_bidding(ctx: Writer, project_id: uuid.UUID) -> ProjectOut:
     return await svc.extend_bidding(ctx, project_id)
 
@@ -331,9 +345,11 @@ async def extend_bidding(ctx: Writer, project_id: uuid.UUID) -> ProjectOut:
     "/projects/{project_id}/cancel",
     summary="Cancel a project",
     response_model=ProjectOut,
-    responses={200: _ok({**EX_PROJECT, "status": "CANCELLED", "cancel_reason": "Budget changed."}),
-               **error_responses(401, 403, 404, 409, 422)},
-)  # fmt: skip
+    responses={
+        200: _ok({**EX_PROJECT, "status": "CANCELLED", "cancel_reason": "Budget changed."}),
+        **error_responses(401, 403, 404, 409, 422),
+    },
+)
 async def cancel_project(ctx: Canceller, project_id: uuid.UUID, body: CancelBody) -> ProjectOut:
     return await svc.cancel(ctx, project_id, body.reason)
 

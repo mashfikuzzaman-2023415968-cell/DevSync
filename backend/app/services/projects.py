@@ -56,9 +56,11 @@ from app.schemas.projects import (
     DependenciesReplace,
     DependencyOut,
     DraftOut,
+    ForecastNode,
     MilestoneOut,
     MilestonesReplace,
     PlanEdge,
+    PlanForecast,
     PlanOut,
     PlanPreviewIn,
     ProjectCreate,
@@ -69,7 +71,7 @@ from app.schemas.projects import (
     SlotsReplace,
 )
 from app.services import bids as bids_svc
-from app.services import role_assessments
+from app.services import monitoring, role_assessments, workspace
 from app.services import team as team_svc
 from app.services.context import Ctx
 from app.services.notifications import notify_users
@@ -571,8 +573,14 @@ async def plan_preview(ctx: Ctx, project_id: uuid.UUID, data: PlanPreviewIn) -> 
 
 
 async def get_plan(ctx: Ctx, project_id: uuid.UUID) -> PlanOut:
-    """The project's current CPM schedule and critical paths (baseline once published)."""
-    project = await _load_for_read(ctx, project_id)
+    """The project's current CPM schedule and critical paths (baseline once published). Read by
+    its client, an admin, and — once there is a team — its ACTIVE or COMPLETED members (§10.2
+    "Client, members, admin"; D142); anyone else gets 404."""
+    project = await repo.get_project(ctx.db, project_id)
+    if project is None:
+        raise NotFoundError
+    if project.client_id != ctx.uid and not ctx.principal.is_admin:
+        await workspace.load(ctx, project_id)  # a participant, or 404
     milestones = await repo.load_milestones(ctx.db, project_id)
     deps = await repo.load_dependencies(ctx.db, project_id)
     result = _compute_or_cycle(milestones, deps)
@@ -590,6 +598,42 @@ async def get_plan(ctx: Ctx, project_id: uuid.UUID) -> PlanOut:
         critical_paths=[[names.get(k, k) for k in path] for path in result.critical_paths],
         deadline_days=project.deadline_days,
         exceeds_deadline=result.duration > project.deadline_days,
+        forecast=await _plan_forecast(ctx, project, milestones),
+    )
+
+
+async def _plan_forecast(
+    ctx: Ctx, project: Project, milestones: Sequence[Milestone]
+) -> PlanForecast | None:
+    """Baseline vs forecast for a started project, from the same latest evaluation the Overview
+    and Timeline show (D152), with each milestone's live state for the Milestones tab."""
+    if project.status != ProjectStatus.IN_PROGRESS:
+        return None
+    data, evaluated_at = await monitoring.plan_forecast(project, ctx.now)
+    if data is None:
+        return None
+    live = {str(m.id): m for m in milestones}
+    nodes = [
+        ForecastNode(
+            key=n["id"],
+            status=live[n["id"]].status.value if n["id"] in live else n["status"],
+            progress_pct=n["progress_pct"],
+            forecast_es=n["forecast_es"],
+            forecast_ef=n["forecast_ef"],
+            days_late=n["days_late"],
+            revision_count=live[n["id"]].revision_count if n["id"] in live else 0,
+            actual_start=live[n["id"]].actual_start if n["id"] in live else None,
+            actual_finish=live[n["id"]].actual_finish if n["id"] in live else None,
+        )
+        for n in data["milestones"]
+    ]
+    return PlanForecast(
+        today=data["today"],
+        finish_day=data["finish_day"],
+        impact_days=data["impact_days"],
+        start_date=project.start_date,
+        nodes=nodes,
+        evaluated_at=evaluated_at,
     )
 
 

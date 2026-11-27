@@ -18,6 +18,7 @@ from app.core.auth_middleware import client_ip
 from app.core.authz import Principal, authorize
 from app.core.clock import get_clock
 from app.core.config import Settings
+from app.core.errors import DomainError, ErrorCode
 from app.core.ratelimit import RateLimiter, Rule, hash_key
 from app.core.redis import get_redis
 from app.core.sessions import SessionData
@@ -113,5 +114,24 @@ def acting(action: str) -> Callable[[Request, AsyncSession], Ctx]:
         if p is None:  # authorize() already raised; this narrows the type
             raise RuntimeError("unreachable")
         return Ctx(db=db, settings=app_settings(request), principal=p, now=now())
+
+    return dependency
+
+
+def only_query(*allowed: str) -> Callable[[Request], None]:
+    """Dependency: refuse query parameters a list endpoint doesn't whitelist with 400, and any
+    parameter given twice (§10.1 "unknown params → 400")."""
+    names = frozenset(allowed)
+
+    def dependency(request: Request) -> None:
+        keys = [k for k, _ in request.query_params.multi_items()]
+        unknown = sorted(set(keys) - names)
+        repeated = sorted({k for k in keys if keys.count(k) > 1})
+        if unknown or repeated:
+            fields = dict.fromkeys(unknown, "Unknown parameter")
+            fields.update(dict.fromkeys(repeated, "Given more than once"))
+            raise DomainError(
+                "This list doesn't take that parameter.", code=ErrorCode.BAD_REQUEST, fields=fields
+            )
 
     return dependency

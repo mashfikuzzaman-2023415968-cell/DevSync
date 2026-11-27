@@ -27,8 +27,12 @@ NOW = datetime(2026, 11, 24, 6, tzinfo=UTC)
 
 
 def inv(**kw: Any) -> Any:
-    base = {"sent_at": NOW - timedelta(hours=1), "expires_at": NOW + timedelta(hours=47),
-            "response": None, "responded_at": None}  # fmt: skip
+    base = {
+        "sent_at": NOW - timedelta(hours=1),
+        "expires_at": NOW + timedelta(hours=47),
+        "response": None,
+        "responded_at": None,
+    }
     return SimpleNamespace(**{**base, **kw})
 
 
@@ -61,8 +65,24 @@ def test_only_planned_roots_activate_at_start() -> None:
     assert milestone_may_activate(active, set()) is False  # type: ignore[arg-type]
 
 
-def test_no_activity_signal_until_phase_9() -> None:
-    assert asyncio.run(member_inactive_days(None, None)) is None  # type: ignore[arg-type]
+class _NoEvents:
+    """A session stand-in: the project lookup and the last-event lookup both find nothing."""
+
+    async def scalar(self, _query: object) -> None:
+        return None
+
+
+def test_inactivity_counts_from_joining_when_there_is_no_activity() -> None:
+    """D150: no evidence events yet → days since the member became ACTIVE; a member who never
+    did → None. (The event-based case runs against the database in the API tests.)"""
+    now = datetime(2026, 11, 27, 6, tzinfo=UTC)
+    joined = SimpleNamespace(
+        team_id=uuid.uuid4(), developer_id=uuid.uuid4(), joined_at=now - timedelta(days=9, hours=23)
+    )
+    days = asyncio.run(member_inactive_days(_NoEvents(), joined, now))  # type: ignore[arg-type]
+    assert days == 9  # whole days: 9 days 23 hours is 9
+    never = SimpleNamespace(team_id=uuid.uuid4(), developer_id=uuid.uuid4(), joined_at=None)
+    assert asyncio.run(member_inactive_days(_NoEvents(), never, now)) is None  # type: ignore[arg-type]
 
 
 def test_abuse_caps() -> None:

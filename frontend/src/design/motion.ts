@@ -41,6 +41,9 @@ export const timing = {
   shakeX: 4,
   /** Press-and-hold before a touch drag starts, so scrolling still works. */
   dragHoldMs: 150,
+  /** Kanban cards on phones: a deliberate long-press (§13.14, D158), so swiping between columns
+   * never picks a card up by accident. */
+  boardHoldMs: 300,
 } as const;
 
 /** No animation (reduced motion or a fixed final state). */

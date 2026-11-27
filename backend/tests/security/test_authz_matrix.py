@@ -125,6 +125,28 @@ MATRIX: dict[tuple[str, str], tuple[set[str], str, bool]] = {
     ("GET", "/api/v1/notifications/unread-count"): (SIGNED_IN, "auth", False),
     ("POST", "/api/v1/notifications/{notification_id}/read"): (SIGNED_IN, "auth", True),
     ("POST", "/api/v1/notifications/read-all"): (SIGNED_IN, "auth", False),
+    # Phase 9 workspace (D142): the account gate here, the project decides the rest (404 for
+    # non-participants, 403 for the wrong role inside the project) in the services.
+    ("GET", "/api/v1/milestones/{milestone_id}/tasks"): (ACTIVE, "auth", True),
+    ("POST", "/api/v1/milestones/{milestone_id}/tasks"): ({DEV}, "auth", True),
+    ("GET", "/api/v1/projects/{project_id}/tasks"): (ACTIVE, "auth", True),
+    ("GET", "/api/v1/tasks/{task_id}"): (ACTIVE, "auth", True),
+    ("PATCH", "/api/v1/tasks/{task_id}"): ({DEV}, "auth", True),
+    ("DELETE", "/api/v1/tasks/{task_id}"): ({DEV}, "auth", True),
+    ("POST", "/api/v1/tasks/{task_id}/move"): ({DEV}, "auth", True),
+    ("POST", "/api/v1/tasks/{task_id}/dependencies"): ({DEV}, "auth", True),
+    ("DELETE", "/api/v1/tasks/{task_id}/dependencies/{depends_on_task_id}"): ({DEV}, "auth", True),
+    ("POST", "/api/v1/tasks/{task_id}/evidence"): ({DEV}, "auth", True),
+    ("GET", "/api/v1/projects/{project_id}/checkins"): (ACTIVE, "auth", True),
+    ("POST", "/api/v1/projects/{project_id}/checkins"): ({DEV}, "auth", True),
+    ("GET", "/api/v1/projects/{project_id}/dashboard"): (ACTIVE, "auth", True),
+    ("GET", "/api/v1/projects/{project_id}/risks"): (ACTIVE, "auth", True),
+    ("GET", "/api/v1/projects/{project_id}/activity"): (ACTIVE, "auth", True),
+    ("GET", "/api/v1/projects/{project_id}/evidence"): (ACTIVE, "auth", True),
+    ("GET", "/api/v1/comments"): (ACTIVE, "auth", False),
+    ("POST", "/api/v1/comments"): ({CLIENT, DEV}, "auth", False),
+    ("PATCH", "/api/v1/comments/{comment_id}"): ({CLIENT, DEV}, "auth", True),
+    ("DELETE", "/api/v1/comments/{comment_id}"): ({CLIENT, DEV}, "auth", True),
     ("GET", "/api/v1/files/{file_id}/download"): (EVERYONE, "", True),
     ("GET", "/api/v1/files/blob/{storage_key}"): (EVERYONE, "", True),
     ("GET", "/api/v1/skill-tests"): ({DEV}, "auth", False),
@@ -143,7 +165,8 @@ MATRIX: dict[tuple[str, str], tuple[set[str], str, bool]] = {
     ("PUT", "/api/v1/projects/{project_id}/milestones"): ({CLIENT}, "auth", True),
     ("PUT", "/api/v1/projects/{project_id}/dependencies"): ({CLIENT}, "auth", True),
     ("POST", "/api/v1/projects/{project_id}/plan/preview"): ({CLIENT, ADMIN}, "auth", True),
-    ("GET", "/api/v1/projects/{project_id}/plan"): ({CLIENT, ADMIN}, "auth", True),
+    # Members read the plan too from Phase 9 (§10.2, D142); others get 404 from the service.
+    ("GET", "/api/v1/projects/{project_id}/plan"): (ACTIVE, "auth", True),
     ("POST", "/api/v1/projects/{project_id}/publish"): ({CLIENT}, "auth", True),
     ("POST", "/api/v1/projects/{project_id}/extend-bidding"): ({CLIENT}, "auth", True),
     ("POST", "/api/v1/projects/{project_id}/cancel"): ({CLIENT, ADMIN}, "auth", True),
@@ -248,9 +271,13 @@ PATH_PARAM = re.compile(r"\{[a-z_]+\}")
 
 def _openapi_routes() -> set[tuple[str, str]]:
     app = create_app(
-        Settings(DEVSYNC_ENV=Environment.DEVELOPMENT, ALLOWED_HOSTS="testserver",
-                 SECRET_KEY="k" * 64, CAPTCHA_HMAC_KEY="c" * 32)
-    )  # fmt: skip
+        Settings(
+            DEVSYNC_ENV=Environment.DEVELOPMENT,
+            ALLOWED_HOSTS="testserver",
+            SECRET_KEY="k" * 64,
+            CAPTCHA_HMAC_KEY="c" * 32,
+        )
+    )
     return {
         (method.upper(), path)
         for path, item in app.openapi()["paths"].items()

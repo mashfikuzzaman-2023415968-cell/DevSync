@@ -51,7 +51,6 @@ BOT_OK = {"captcha": "test-bypass"}
 PENDING_SCOPES = {
     "coding_submit": "Phase 13 (coding challenges)",
     "coding_practice": "Phase 13 (coding challenges, practice mode)",
-    "comment": "Phase 9 (workspace comments and discussion)",
     "review": "Phase 11 (reviews)",
     "dispute": "Phase 12 (disputes)",
     "github_sync": "Phase 13 (GitHub manual sync)",
@@ -89,6 +88,8 @@ TESTED_SCOPES = {
     "captcha_challenge": "tests/security/test_login_sessions.py",
     "public_stats": "tests/api/test_public.py",
     "client_errors": "tests/api/test_public.py::test_client_errors_are_rate_limited",
+    # Phase 9: comments (discussion posts join this scope in item 9).
+    "comment": "tests/security/test_comments_api.py::test_sixty_comments_an_hour",
 }
 
 

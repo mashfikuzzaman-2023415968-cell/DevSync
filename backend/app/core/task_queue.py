@@ -31,6 +31,10 @@ TASKS: dict[str, TaskSpec] = {
     "formation.verify": TaskSpec("app.jobs.formation_jobs.formation_verify", "default", 120, 0),
     # §11: decline/expiry/leave; 60 s, one retry (D128).
     "formation.repair": TaskSpec("app.jobs.formation_jobs.formation_repair", "default", 60, 1),
+    # §11: every 15 min + 30 s after changes (D165); 60 s, one retry.
+    "monitoring.evaluate": TaskSpec(
+        "app.jobs.workspace_jobs.monitoring_evaluate", "default", 60, 1
+    ),
 }
 
 

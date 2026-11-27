@@ -42,7 +42,7 @@ import secrets
 import sys
 import uuid
 from contextlib import AbstractAsyncContextManager
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -50,8 +50,10 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.algorithms import weeks
 from app.algorithms.filtering import ReasonCode
 from app.algorithms.simulator import Market, Persona, SimParams, simulate_market
+from app.algorithms.weeks import DHAKA
 from app.core.authz import Principal
 from app.core.clock import get_clock
 from app.core.config import Settings, get_settings
@@ -83,16 +85,30 @@ from app.models.projects import (
     Milestone,
     MilestoneDependency,
     MilestoneSkill,
+    MilestoneStatus,
     Project,
     ProjectSlot,
     ProjectStatus,
 )
 from app.models.reputation import ReputationHistory, ReputationSnapshot, ReputationSource
+from app.models.workspace import CommentTarget, ForecastSnapshot, Risk, RiskStatus
+from app.schemas.checkins import CheckinCreate
+from app.schemas.comments import CommentCreate
 from app.schemas.formation import FormationRunCreate
-from app.schemas.team import DeclineIn
+from app.schemas.tasks import TaskCreate, TaskMove
+from app.schemas.team import ChooseLeadIn, DeclineIn
 from app.services import bids as bids_svc
+from app.services import checkins as checkins_svc
+from app.services import comments as comments_svc
 from app.services import formation as formation_svc
-from app.services import formation_runner, platform_settings, reputation_engine, role_assessments
+from app.services import (
+    formation_runner,
+    monitoring,
+    platform_settings,
+    reputation_engine,
+    role_assessments,
+)
+from app.services import tasks as tasks_svc
 from app.services import team as team_svc
 from app.services.context import Ctx
 from app.services.testing import role_attempts
@@ -1051,11 +1067,15 @@ async def _make_admin(settings: Settings, password: str) -> dict[str, str]:
 
 
 def _print_accounts(
-    admin: dict[str, str], pw: dict[str, str], origin: str, cycle_id: uuid.UUID
+    admin: dict[str, str],
+    pw: dict[str, str],
+    origin: str,
+    cycle_id: uuid.UUID,
+    stage: int = 1,
 ) -> None:
     """Print the demo accounts once (`make demo-reset` saves this to runs/demos/accounts-1.txt).
     `make demo-preflight` reads the `client` line: role, email, password."""
-    print("=== DEMO ACCOUNTS (STAGE 1) ===")
+    print(f"=== DEMO ACCOUNTS (STAGE {stage}) ===")
     print(f"client       rahim@devsync.local            {pw['rahim']}")
     print(f"client       farzana@devsync.local          {pw[FARZANA]}")
     for slug in EXPERIENCED:
@@ -1166,7 +1186,7 @@ async def seed_stage1() -> None:
     await seed_stage(1)
 
 
-async def seed_stage(stage: int, *, write_golden: bool = False) -> None:
+async def seed_stage(stage: int, *, write_golden: bool = False, day: int = 12) -> None:
     check_seed_data()
     settings = get_settings()
     async with open_session(DbContext.system(), job=True) as db:
@@ -1197,22 +1217,455 @@ async def seed_stage(stage: int, *, write_golden: bool = False) -> None:
         await _assert_golden(ids, write_golden)
         await _close_ordering_bidding(pid)
         await _seed_repair_demo(ids, skills)
-    _print_accounts(admin, pw, settings.PUBLIC_ORIGIN.rstrip("/"), cycle_id)
+        await _seed_inventory(ids, skills, day)
+    _print_accounts(admin, pw, settings.PUBLIC_ORIGIN.rstrip("/"), cycle_id, stage)
+
+
+# --------------------------------------------------------------------------- Inventory (§18.2)
+
+INVENTORY = "Inventory dashboard"
+DEFAULT_DAY = 12
+DAY_RANGE = (3, 20)  # D170: the fixed history needs day 3; more than 20 days would be stale
+# (slot skill, member slug): one bid per place, so the formation run's team is forced. Every one
+# of them has ≥ 30 hours a week and commits 10 here, so the ordering project's bids (20 hours,
+# starting in 3 days, overlapping this project) stay feasible and its D116 team doesn't move.
+INVENTORY_TEAM = [
+    ("React", "arif"),
+    ("FastAPI", "farhan"),
+    ("UI/UX", "nusrat"),
+    ("Testing", "imran"),
+]
+INVENTORY_HOURS = 10
+# §18.2 item 2: (name, days, share_bp, predecessors, skills). Planned 23 days; the critical path
+# is Requirements → UI design → Dashboard frontend → Integration → Testing; Inventory API has 6
+# days of slack.
+INVENTORY_PLAN = [
+    ("Requirements", 3, 1000, [], ["React"]),
+    ("UI design", 5, 1500, [0], ["UI/UX"]),
+    ("Inventory API", 7, 2000, [0], ["FastAPI"]),
+    ("Dashboard frontend", 8, 2500, [1], ["React"]),
+    ("Integration", 3, 1500, [2, 3], ["React", "FastAPI"]),
+    ("Testing & handover", 4, 1500, [4], ["Testing"]),
+]
+
+
+def _at(start: date, day: int, hour: int = 10, minute: int = 0) -> datetime:
+    """Project day `day` at hh:mm Asia/Dhaka, as UTC."""
+    return datetime.combine(
+        start + timedelta(days=day), time(hour, minute), tzinfo=DHAKA
+    ).astimezone(UTC)
+
+
+async def _as_ctx_at(user_id: uuid.UUID, role: str, at: datetime, fn: Any) -> Any:
+    """Act as a person through the services at a past instant (a FrozenClock per action)."""
+    async with _as(user_id, role) as db:
+        ctx = Ctx(db=db, settings=get_settings(), principal=_principal(user_id, role), now=at)
+        return await fn(ctx)
+
+
+async def _system_milestone(pid: uuid.UUID, name: str, **values: Any) -> None:
+    """Phase 10's milestone transitions (approval, activating a successor) don't exist yet, so the
+    seed sets them directly as SYSTEM — the only rows it writes without a service (D154)."""
+    async with open_session(DbContext.system(), job=True) as db:
+        m = await db.scalar(
+            select(Milestone).where(Milestone.project_id == pid, Milestone.name == name)
+        )
+        if m is None:
+            raise SystemExit(f"seed assertion failed: no milestone {name!r}")
+        for key, value in values.items():
+            setattr(m, key, value)
+        await db.commit()
+
+
+async def _inventory_team(
+    ids: dict[str, uuid.UUID], skills: dict[str, uuid.UUID], start: date
+) -> tuple[uuid.UUID, dict[str, uuid.UUID]]:
+    """Publish → bids → formation run → confirm → accept → lead → start, as on the Clinic
+    project, with the clock at day −1 (and day 0 for the start). Returns project and milestones."""
+    rahim = ids["rahim"]
+    eve = _at(start, -1)
+    slot_ids: dict[str, uuid.UUID] = {}
+    async with _as(rahim, "CLIENT") as db:
+        project = Project(
+            client_id=rahim,
+            title=INVENTORY,
+            summary="Stock levels, low-stock alerts and supplier orders for a small warehouse.",
+            requirements="React dashboard, FastAPI inventory API, tested hand-over.",
+            budget_paisa=12_000_000,
+            deadline_days=30,
+            team_size=len(INVENTORY_TEAM),
+            status=ProjectStatus.BIDDING,
+            start_date=start,
+            bidding_deadline=datetime.now(UTC) + timedelta(days=1),
+        )
+        db.add(project)
+        await db.flush()
+        for name, _slug in INVENTORY_TEAM:
+            slot = ProjectSlot(
+                project_id=project.id, skill_id=skills[name], label=f"{name} developer", count=1
+            )
+            db.add(slot)
+            await db.flush()
+            slot_ids[name] = slot.id
+        await _add_plan(db, project.id, [(n, d, s, p) for n, d, s, p, _k in INVENTORY_PLAN])
+        await db.flush()
+        rows = (
+            await db.scalars(
+                select(Milestone)
+                .where(Milestone.project_id == project.id)
+                .order_by(Milestone.position)
+            )
+        ).all()
+        for m, (_n, _d, _s, _p, needs) in zip(rows, INVENTORY_PLAN, strict=True):
+            for name in needs:
+                db.add(MilestoneSkill(milestone_id=m.id, skill_id=skills[name]))
+        pid = project.id
+        milestones = {m.name: m.id for m in rows}
+        await db.commit()
+    for name, slug in INVENTORY_TEAM:
+        async with _as(ids[slug], "DEVELOPER") as db:
+            db.add(
+                Bid(
+                    project_id=pid,
+                    developer_id=ids[slug],
+                    slot_id=slot_ids[name],
+                    price_paisa=2_400_000,
+                    days_needed=20,
+                    hours_per_week_committed=INVENTORY_HOURS,
+                    status=BidStatus.ACTIVE,
+                )
+            )
+            await db.commit()
+    async with open_session(DbContext.system(), job=True) as db:
+        row = await db.get(Project, pid)
+        if row is None:
+            raise SystemExit("seed assertion failed: the Inventory project vanished")
+        row.bidding_deadline = datetime.now(UTC) - timedelta(hours=1)
+        await db.commit()
+    await bidding_jobs.close_due_bidding()
+    async with open_session(DbContext.system(), job=True) as db:
+        closed = await db.get(Project, pid)
+        if closed is None or closed.status != ProjectStatus.FORMING:
+            raise SystemExit("seed assertion failed: the Inventory project didn't start forming")
+        version, settings = await platform_settings.get_active(db)
+        snapshot, params = await formation_svc.build_snapshot(
+            db,
+            start - timedelta(days=1),
+            closed,
+            settings,
+            FormationRunCreate(preset="balanced", min_newcomers=0),
+        )
+        run = FormationRun(
+            project_id=pid,
+            requested_by=rahim,
+            settings_version=version,
+            seed=REPAIR_SEED + 1,
+            params=params,
+            candidate_snapshot=snapshot,
+        )
+        db.add(run)
+        await db.flush()
+        run_id = run.id
+        await db.commit()
+    await formation_runner.execute_run(run_id)
+    await _as_ctx_at(rahim, "CLIENT", eve, lambda ctx: formation_svc.confirm(ctx, run_id))
+    async with open_session(DbContext.system(), job=True) as db:
+        invitations = (
+            await db.execute(
+                select(Invitation.id, TeamMember.developer_id)
+                .join(TeamMember, TeamMember.id == Invitation.team_member_id)
+                .join(Team, Team.id == TeamMember.team_id)
+                .where(Team.project_id == pid)
+            )
+        ).all()
+    if len(invitations) != len(INVENTORY_TEAM):
+        raise SystemExit(f"seed assertion failed: Inventory formed {len(invitations)} places")
+    for inv_id, dev_id in invitations:
+        await _as_ctx_at(dev_id, "DEVELOPER", eve, lambda ctx, i=inv_id: team_svc.accept(ctx, i))
+    async with open_session(DbContext.system(), job=True) as db:
+        lead = await db.scalar(
+            select(TeamMember.id)
+            .join(Team, Team.id == TeamMember.team_id)
+            .where(Team.project_id == pid, TeamMember.developer_id == ids["arif"])
+        )
+        version_now = await db.scalar(select(Project.version).where(Project.id == pid))
+    if lead is None:
+        raise SystemExit("seed assertion failed: Arif isn't on the Inventory team")
+    await _as_ctx_at(
+        rahim,
+        "CLIENT",
+        eve,
+        lambda ctx: team_svc.choose_lead(ctx, pid, ChooseLeadIn(member_id=lead), version_now),
+    )
+    async with open_session(DbContext.system(), job=True) as db:
+        version_now = await db.scalar(select(Project.version).where(Project.id == pid))
+    await _as_ctx_at(
+        rahim, "CLIENT", _at(start, 0, 9), lambda ctx: team_svc.start_project(ctx, pid, version_now)
+    )
+    return pid, milestones
+
+
+async def _make_tasks(
+    lead: uuid.UUID, at: datetime, milestone: uuid.UUID, specs: list[tuple[str, str, uuid.UUID]]
+) -> list[dict[str, Any]]:
+    """The lead creates tasks (title, estimate, assignee) in a milestone."""
+    out = []
+    for title, hours, assignee in specs:
+        detail = await _as_ctx_at(
+            lead,
+            "DEVELOPER",
+            at,
+            lambda ctx, t=title, h=hours, a=assignee: tasks_svc.create_task(
+                ctx,
+                milestone,
+                TaskCreate(title=t, estimate_hours=Decimal(h), difficulty="MEDIUM", assignee_id=a),
+            ),
+        )
+        out.append({"id": detail.id, "version": detail.version, "assignee": assignee})
+    return out
+
+
+async def _finish(task: dict[str, Any], start: date, day: int, hour: int = 11) -> None:
+    """The assignee moves a task To do → In progress → Review → Done on one day."""
+    for step, status in enumerate(("IN_PROGRESS", "REVIEW", "DONE")):
+        card = await _as_ctx_at(
+            task["assignee"],
+            "DEVELOPER",
+            _at(start, day, hour, step * 15),
+            lambda ctx, s=status: tasks_svc.move_task(
+                ctx, task["id"], TaskMove(status=s), task["version"]
+            ),
+        )
+        task["version"] = card.version
+
+
+async def _checkin(
+    uid: uuid.UUID, pid: uuid.UUID, at: datetime, blockers: str | None = None
+) -> Any:
+    body = CheckinCreate(
+        done="Worked through this week's tasks on the board.",
+        next="The next tasks in my column.",
+        blockers=blockers,
+        confidence=4,
+    )
+    return await _as_ctx_at(
+        uid, "DEVELOPER", at, lambda ctx: checkins_svc.post_checkin(ctx, pid, body)
+    )
+
+
+async def _seed_inventory(
+    ids: dict[str, uuid.UUID], skills: dict[str, uuid.UUID], day: int
+) -> None:
+    """§18.2 item 2 on project day `day` (default 12): the team works through the real services
+    under a frozen clock per simulated day. The history is fixed in project days; `day` only moves
+    "today" (events after day 12 are never written, D154). Asserted at day 12: forecast 25 (+2),
+    exactly CRITICAL_PATH_DELAY (Dashboard frontend), SLACK_EATEN (Inventory API),
+    DEADLINE_IMPACT MEDIUM, INACTIVE_MEMBER MEDIUM (Nusrat, 8 days), health At risk."""
+    today = weeks.dhaka_date(datetime.now(UTC))
+    start = today - timedelta(days=day)
+    last = min(day, DEFAULT_DAY)
+    arif, farhan, nusrat, imran = ids["arif"], ids["farhan"], ids["nusrat"], ids["imran"]
+    pid, ms = await _inventory_team(ids, skills, start)
+
+    def until(d: int) -> bool:
+        return d <= last
+
+    req = await _make_tasks(
+        arif,
+        _at(start, 0),
+        ms["Requirements"],
+        [("Stock rules and user roles", "2.0", arif), ("Screens to build", "2.0", arif)],
+    )
+    ui = await _make_tasks(
+        arif,
+        _at(start, 0, 10, 30),
+        ms["UI design"],
+        [
+            ("Dashboard wireframes", "2.0", nusrat),
+            ("Component styles", "2.0", arif),
+            ("Low-stock alert design", "2.0", arif),
+        ],
+    )
+    api = await _make_tasks(
+        arif,
+        _at(start, 0, 11),
+        ms["Inventory API"],
+        [(f"Inventory API part {i + 1}", "2.0", farhan) for i in range(10)],
+    )
+    dash = await _make_tasks(
+        arif,
+        _at(start, 0, 11, 30),
+        ms["Dashboard frontend"],
+        [(f"Dashboard view {i + 1}", "1.5", arif) for i in range(10)],
+    )
+    for who in (arif, farhan, nusrat, imran):
+        await _checkin(who, pid, _at(start, 1, 9))
+    for i, task in enumerate(req):
+        await _finish(task, start, 1 + i)  # done on days 1 and 2
+    if until(3):  # Requirements approved on day 3; UI design starts (D154 helper)
+        await _system_milestone(
+            pid,
+            "Requirements",
+            status=MilestoneStatus.APPROVED,
+            actual_start=start,
+            actual_finish=start + timedelta(days=3),
+        )
+        await _system_milestone(
+            pid, "UI design", status=MilestoneStatus.ACTIVE, actual_start=start + timedelta(days=3)
+        )
+        await _finish(ui[0], start, 3, 22)  # Nusrat's last activity: day 3, 22:00–22:30
+    if until(4):
+        await _system_milestone(
+            pid,
+            "Inventory API",
+            status=MilestoneStatus.ACTIVE,
+            actual_start=start + timedelta(days=4),
+        )
+    for i, task in enumerate(api[:7]):  # 7 of 10 done → p = 0.7
+        if until(4 + i):
+            await _finish(task, start, 4 + i, 14)  # days 4 to 10
+    for i, task in enumerate(ui[1:]):
+        if until(5 + i):
+            await _finish(task, start, 5 + i)  # days 5 and 6
+    if until(8):  # UI design approved after one revision; the dashboard starts
+        await _system_milestone(
+            pid,
+            "UI design",
+            status=MilestoneStatus.APPROVED,
+            actual_finish=start + timedelta(days=8),
+            revision_count=1,
+        )
+        await _system_milestone(
+            pid,
+            "Dashboard frontend",
+            status=MilestoneStatus.ACTIVE,
+            actual_start=start + timedelta(days=8),
+        )
+        for who in (arif, farhan):
+            await _checkin(who, pid, _at(start, 8, 9))
+    for i, task in enumerate(dash[:4]):  # 4 of 10 done → p = 0.4
+        if until(8 + i):
+            await _finish(task, start, 8 + i, 16)  # days 8 to 11
+    if until(9):  # Imran is blocked; Farhan answers the next day
+        blocked = await _checkin(
+            imran,
+            pid,
+            _at(start, 9, 9),
+            blockers="The stock API's error codes aren't documented yet.",
+        )
+        if until(10):
+            reply = CommentCreate(
+                target_type=CommentTarget.CHECKIN,
+                target_id=blocked.id,
+                body="I've added them to the API notes; see the README.",
+            )
+            await _as_ctx_at(
+                farhan,
+                "DEVELOPER",
+                _at(start, 10, 10),
+                lambda ctx: comments_svc.create_comment(ctx, reply),
+            )
+    if until(11):
+        note = CommentCreate(
+            target_type=CommentTarget.TASK,
+            target_id=dash[4]["id"],
+            body="Next up: the stock table. Can you check the paging params?",
+            mention_ids=[farhan],
+        )
+        await _as_ctx_at(
+            arif,
+            "DEVELOPER",
+            _at(start, 11, 12),
+            lambda ctx: comments_svc.create_comment(ctx, note),
+        )
+        plan_note = CommentCreate(
+            target_type=CommentTarget.MILESTONE,
+            target_id=ms["Testing & handover"],
+            body="Test plan drafted; it starts once integration lands.",
+        )
+        await _as_ctx_at(
+            imran,
+            "DEVELOPER",
+            _at(start, 11, 15),
+            lambda ctx: comments_svc.create_comment(ctx, plan_note),
+        )
+    result = await monitoring.evaluate_project(pid, datetime.now(UTC))
+    await _assert_inventory(pid, day, result)
+
+
+async def _assert_inventory(pid: uuid.UUID, day: int, result: dict[str, Any]) -> None:
+    async with open_session(DbContext.system(), job=True) as db:
+        rows = (
+            await db.execute(
+                select(Risk.type, Risk.severity, Risk.entity_type).where(
+                    Risk.project_id == pid, Risk.status == RiskStatus.OPEN
+                )
+            )
+        ).all()
+        snap = await db.scalar(
+            select(ForecastSnapshot.forecast)
+            .where(ForecastSnapshot.project_id == pid)
+            .order_by(ForecastSnapshot.day.desc())
+            .limit(1)
+        )
+    found = sorted((t.value, s.value, e) for t, s, e in rows)
+    health = snap["health"] if snap else "?"
+    print(
+        f"seed-demo STAGE=2: “{INVENTORY}” on day {day}: forecast "
+        f"{snap['finish_day'] if snap else '?'} (+{result.get('impact_days')}), health {health}, "
+        f"risks {', '.join(f'{t} {s}' for t, s, _e in found)}"
+    )
+    if day != DEFAULT_DAY:
+        return
+    expected = sorted(
+        [
+            ("CRITICAL_PATH_DELAY", "CRITICAL", "MILESTONE"),
+            ("SLACK_EATEN", "MEDIUM", "MILESTONE"),
+            ("DEADLINE_IMPACT", "MEDIUM", "PROJECT"),
+            ("INACTIVE_MEMBER", "MEDIUM", "MEMBER"),
+        ]
+    )
+    if (
+        snap is None
+        or snap["finish_day"] != 25
+        or snap["impact_days"] != 2
+        or found != expected
+        or health != "AT_RISK"
+        or snap["overall"] != "CRITICAL"
+    ):
+        raise SystemExit(
+            f"seed assertion failed: Inventory dashboard on day 12 is {found}, "
+            f"health {health}, snapshot {snap and snap['finish_day']}"
+        )
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="DevSync demo seed")
     parser.add_argument("--stage", type=int, default=1)
     parser.add_argument(
-        "--write-golden", action="store_true",
+        "--write-golden",
+        action="store_true",
         help="stage 2: rewrite scripts/seed_data/stage2_reputation_golden.json (a reviewed change)",
-    )  # fmt: skip
+    )
+    parser.add_argument(
+        "--day",
+        type=int,
+        default=None,
+        help=f"stage 2: the Inventory dashboard's project day ({DAY_RANGE[0]}–{DAY_RANGE[1]}, "
+        f"default {DEFAULT_DAY}; D170)",
+    )
     args = parser.parse_args()
-    if args.stage not in (1, 2):
-        raise SystemExit(f"stage {args.stage} is not available yet")
-    if args.write_golden and args.stage != 2:  # the stage number
+    stage = args.stage
+    if args.day is not None and stage == 1:
+        raise SystemExit("DAY needs stage 2: only stage 2 has the Inventory dashboard (D170)")
+    day = DEFAULT_DAY if args.day is None else args.day
+    if not DAY_RANGE[0] <= day <= DAY_RANGE[1]:
+        raise SystemExit(f"DAY must be {DAY_RANGE[0]}–{DAY_RANGE[1]} (D170)")
+    if stage not in (1, 2):
+        raise SystemExit(f"stage {stage} is not available yet")
+    if args.write_golden and stage != 2:  # the stage number
         raise SystemExit("--write-golden applies to stage 2 only")
-    asyncio.run(seed_stage(args.stage, write_golden=args.write_golden))
+    asyncio.run(seed_stage(stage, write_golden=args.write_golden, day=day))
     return 0
 
 

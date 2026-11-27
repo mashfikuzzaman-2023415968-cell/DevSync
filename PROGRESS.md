@@ -1,13 +1,15 @@
 # DevSync progress
 
 ## Current state
-- **Current owner:** Raisa Tabassum (frontend developer), Phases 6–8, from 2026-11-21 (hand-off from Taeen: `docs/handoffs/handoff-02-taeen-to-raisa.md`).
-- **Current phase:** 8 (invitations, team lead, team repair) is **done**: built by Raisa on `phase-8`, **gate PASS 2026-11-25 05:11 Asia/Dhaka** on Taeen's laptop (native Linux), merged to `main`, tagged `phase-8`. Plan `docs/plans/phase-08.md`, decisions D118–D140, security review `docs/security-reviews/phase-08.md` (0 unresolved high). Next: Phase 9 (project workspace).
+- **Current owner:** Sara Binte Shafayet (tester), Phases 9–11, from 2026-11-27 (start prompt `phase-09-start-prompt.md`; Raisa owned Phases 6–8 until 2026-11-25).
+- **Current phase:** 9 (workspace and monitoring) is **in progress** on `phase-9` (Sara with Claude Code; plan `docs/plans/phase-09.md`, decisions D141–D174). Done and committed: the plan, migration 0016 with RLS. Built and being verified: tasks and the Kanban board, check-ins and reminders, comments with mentions, evidence events and the Phase 8 hooks, the risk engine, monitoring and the forecast with the Overview, Timeline, Milestones and Risks tabs, and the Inventory dashboard seed with `phase9_checks`. Still to build (D159 order): project files, discussion, the notification stream and preferences, the Evidence tab, My projects and the dashboards, then DAST and the finishing work.
+- **Phase 8:** done (gate PASS 2026-11-25 05:11 Asia/Dhaka on Taeen's laptop), merged to `main`, tagged `phase-8`.
 - **Last gate result:** Phase 8 PASS, 2026-11-25 05:11 Asia/Dhaka (`runs/gate-p8b.log`): backend 2,105 (95.1%), security 600, contract 701, frontend 568 (81.0%), E2E 93, a11y 36, visual 143 (232 baselines), Lighthouse desktop 100/100/96/100 and mobile 94/100/96/100, GPU 5/5, algorithm budgets met, phase checks (repair, lead, team RLS/API) and regression guard clean. One fix was needed (D140). Both tests Raisa flagged as timing-sensitive on WSL passed here.
 - **Verified on Raisa's laptop (WSL 2, 2026-11-24):** backend suite 2,103 passed, 1 failed (`test_admin_limit_is_per_user`, the timing-sensitive test already listed under Known issues; it failed the same way here in Phase 6), coverage 95.25 %; the Phase 8 API/unit/RLS/algorithm/authz tests 59/59 after the last changes; repair perf (10 candidates, 4 members: PSO ≈ 1.4 s, exact 0.05 s, budget 5 s); frontend 568 Vitest; full Chromium `@e2e|@a11y` 128 passed, 1 failed (`phase5 › after the bidding deadline the bid sheet is closed`, a 5 s wait against this laptop's 3–5 s repaint after a reload; it failed the same way in the Phase 6 gate attempt here, untouched); Phase 8 E2E passes (the whole flow, axe and layout on the new screens); visual: 122 existing screenshot tests match, 3 baselines updated (bell badge, team-card order), 12 new reviewed by eye; stage-2 seed builds the repair demo and `repair_check.py` passes (seeded READY with 1 candidate; scripted decline → 2 ranked); `formation_check.py` reproduces the D116 team; OpenAPI 0 problems; fuzz + property 715 passed and 1 real bug found (the admin removal list returned 500 once a request existed; fixed and tested, its 20 fuzz cases pass).
-- **In progress:** nothing.
-- **Very next step:** pull `main` (it has the D140 fix), branch `phase-9` from it and plan Phase 9 in Plan Mode. Gates run on Taeen's native Linux laptop, plugged into the original Dell charger.
-- **Open human tasks:** review the 128 drafted test questions (D34); tester's human check of the Phase 3–8 security reviews; sanity-check D39 (simulated payment-method verification); measure `make demo-reset STAGE=2` on the demo stack (the stage-2 seed now takes ≈ 27 s in the test stack, was ≈ 20 s; target < 30 s with the reset).
+- **In progress:** Phase 9 items 2–7 of D159 (see the session log); then items 8–12.
+- **Very next step:** finish verifying the Inventory seed (`monitoring_check.py`), commit, then project files (item 8). Gates run on Taeen's native Linux laptop, plugged into the original Dell charger.
+- **Open human tasks:** review the 128 drafted test questions (D34); tester's human check of the Phase 3–8 security reviews; sanity-check D39 (simulated payment-method verification). `make demo-reset STAGE=2` was measured on Sara's laptop on 2026-11-27 before Phase 9 at 23 s (target < 30 s); measure it again with the Inventory project.
+- **Sprint notes:** they stopped at `sprint-03.md`; from Phase 9 they resume at `sprint-07.md` (23–29 Nov) without back-filling sprints 4–6.
 
 ## Phase table
 | Phase | Owner | Status | Gate | Date | Tag |
@@ -150,6 +152,56 @@
 - **`test_admin_limit_is_per_user` is timing-sensitive on slow machines.** It sends 300 admin requests that must all land inside a 60-second window. Alone on this WSL laptop it passes 3/3 but takes 52–54 s; under the full suite it went over and failed. Not a Phase 6 change; not modified. Watch it in the gate on a faster machine; if it fails there too, fix the test's timing at the cause (not by loosening the limit).
 
 ## Session log (newest first)
+### 2026-11-27 — Sara (with Claude Code), Phase 9 start and build (WSL 2 laptop)
+- **Setup:**
+  - Laptop set up: Ubuntu 26.04 on WSL 2, Docker 29.6, Node 22, uv, make, jq and mkcert; there is
+    no `/dev/dri`, so gate step 16 runs on Taeen's laptop.
+  - `main` at `f7fedc1`.
+  - Unit tests 1,003 passed; Vitest 563 + 5 skipped.
+  - Stage 2 verified by hand, including starting the Clinic team through the API.
+  - `demo-reset STAGE=2` takes 23 s.
+- **Plan and decisions:** written and approved; D141–D159 (the brief's decisions), D160–D161 from
+  the study, D162–D172 from planning, D173–D174 during the build.
+- **Item 1:**
+  - Migration 0016 with RLS, `record_activity()` and the guard triggers, plus settings v6.
+  - 15 RLS tests; migrating up, down and up again is clean; `check_rls` reports 0 unprotected
+    tables.
+- **Items 2–7, built:**
+  - tasks and the Kanban board (one-step moves, fractional positions, dependencies, evidence);
+  - weekly check-ins and the Monday reminders job;
+  - comments with mentions and the safe linkifier;
+  - all 22 evidence event schemas, plus the Phase 8 hooks (`member.left`, `member.replaced`,
+    unassigning a departing member's tasks);
+  - `member_inactive_days` with its real body (D150);
+  - the pure risk engine, `monitoring.evaluate` (sweep, debounced flush, CRITICAL notices) and the
+    cached role-shaped dashboard;
+  - the forecast on the plan, which members can now read;
+  - the Overview, Tasks, Timeline, Milestones, Check-ins and Risks tabs, and the plan page's
+    baseline-vs-forecast view;
+  - the Inventory dashboard seed (`DAY`, D170, D174), `monitoring_check.py` and `phase9_checks`.
+- **Tests on this laptop:**
+  - the backend set for items 2–6 plus the Phase 8 team suite: 665 passed and 6 failed, all six
+    in my new tests or reads; all fixed, and the comments, monitoring, sessions and HTTP-hardening
+    files pass (92 + 19);
+  - one of the six was a bug in the test helper, not the app: `Api.request` called
+    `headers.setdefault("X-CSRF-Token", self.csrf_token())`, which fetches a new cookie even
+    when the caller sends its own token, so the two never matched. It now fetches only when no
+    token was given;
+  - full backend suite in the test stack: 3,139 passed, 2 failed. The `comment` scope was still
+    listed as pending in `test_rate_limits.py` (moved to tested). The other was a schemathesis
+    10 s read timeout on `POST /me/certificates`, which schemathesis itself couldn't reproduce;
+    both pass on a re-run;
+  - frontend: lint and typecheck clean, Vitest 48 files passed and 1 skipped;
+  - `demo-reset` + `seed_demo.py --stage 2` in the test stack: Inventory day 12 forecasts 25
+    (+2), CRITICAL_PATH_DELAY CRITICAL, DEADLINE_IMPACT, INACTIVE_MEMBER and SLACK_EATEN MEDIUM,
+    health At risk; `monitoring_check.py` passes and is idempotent; `formation_check.py`
+    unchanged (16.18 %).
+- **Laptop notes:**
+  - BuildKit crashes ("frontend grpc server closed") when `tests` and `api` are built in one
+    `compose build`, or alongside other load; building them one at a time works every time.
+  - The ZAP image took 55 minutes to pull here.
+  - Long suites need the dev stack stopped (memory).
+
 ### 2026-11-25 — Taeen (with Claude Code), Phase 8 gate on the native Linux laptop
 - Ran `make gate PHASE=8` on Raisa's `phase-8` (`495cc4b`); two full runs. The first failed step 15: the 12 new `client-team-repair` and `workspace-team` baselines showed the same content in another order. Members created together tie on `created_at` and fell back to random ids; open slots were listed by random id; the recommended lead followed the acceptance order and changed too. Fix (D140): the team view sorts members by role, then name, and the blockers by role; a test pins it; the 12 baselines were re-created and matched twice on fresh data. Second run PASS (`runs/gate-p8b.log`).
 ### 2026-11-23 to 2026-11-24 — Raisa (with Claude Code), Phase 8 build

@@ -1,23 +1,22 @@
 /**
- * Project plan page (spec §13.9 "CPM planner / plan page"). Shows the saved critical-path
- * schedule as a Gantt (or table) plus the dependency graph, with summary chips for duration,
- * number of critical milestones and the finish date. Read-only: the plan is the baseline fixed
- * at publish time.
+ * Project plan page (spec §13.9 "CPM planner / plan page", §13.5 #22). Shows the saved
+ * critical-path schedule as a Gantt, a list (the phone default, D158) or a table, plus the
+ * dependency graph, with summary chips for duration, number of critical milestones and the finish
+ * date. Read-only: the plan is the baseline fixed at publish time; once the project has started a
+ * switch shows the forecast against it (D152).
  */
 import { useMemo, useState } from "react";
 import { useParams } from "react-router";
 import { ApiError } from "@/api/client";
 import type { GraphEdge } from "@/components/DependencyGraph";
-import { CpmTable } from "@/components/CpmTable";
 import { DependencyGraph } from "@/components/DependencyGraph";
-import { dayToDate, Gantt } from "@/components/Gantt";
+import { dayToDate } from "@/components/Gantt";
+import { ScheduleView } from "@/components/ScheduleView";
+import { Switch } from "@/components/ui/Choice";
 import { Badge, Card, CardHeader, Skeleton } from "@/components/ui/Display";
 import { EmptyState, ErrorState, PageHeader } from "@/components/ui/Feedback";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { formatDate, formatDays } from "@/lib/format";
 import { useProject, useProjectPlan } from "./api";
-
-type View = "gantt" | "table";
 
 /** Statuses in which work is under way, so the Gantt shows a "today" line. */
 const STARTED = new Set(["IN_PROGRESS", "ON_HOLD", "REVIEW_WINDOW"]);
@@ -27,7 +26,7 @@ export default function PlanPage() {
   const { id = "" } = useParams();
   const project = useProject(id);
   const plan = useProjectPlan(id);
-  const [view, setView] = useState<View>("gantt");
+  const [showForecast, setShowForecast] = useState(true);
 
   const edges = useMemo<GraphEdge[]>(
     () => (plan.data?.edges ?? []).map((e): GraphEdge => [e.predecessor, e.successor]),
@@ -109,31 +108,30 @@ export default function PlanPage() {
           <Card>
             <CardHeader
               title="Schedule"
+              description={
+                p?.forecast
+                  ? `Baseline and forecast: at the current pace the work ends on day ${String(p.forecast.finish_day)}.`
+                  : undefined
+              }
               action={
-                <SegmentedControl<View>
-                  label="Schedule view"
-                  size="sm"
-                  value={view}
-                  onChange={setView}
-                  segments={[
-                    { value: "gantt", label: "Gantt" },
-                    { value: "table", label: "Table" },
-                  ]}
-                />
+                p?.forecast ? (
+                  <Switch
+                    label="Show the forecast"
+                    checked={showForecast}
+                    onCheckedChange={setShowForecast}
+                  />
+                ) : null
               }
             />
             <div className="p-5">
-              {view === "gantt" ? (
-                <Gantt
-                  nodes={nodes}
-                  edges={edges}
-                  startDate={startDate}
-                  today={today}
-                  deadlineDays={p?.deadline_days ?? null}
-                />
-              ) : (
-                <CpmTable nodes={nodes} />
-              )}
+              <ScheduleView
+                nodes={nodes}
+                edges={edges}
+                startDate={startDate}
+                today={today}
+                deadlineDays={p?.deadline_days ?? null}
+                forecast={showForecast ? p?.forecast?.nodes : undefined}
+              />
             </div>
           </Card>
 

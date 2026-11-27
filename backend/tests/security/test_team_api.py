@@ -492,15 +492,16 @@ def test_leave_removal_and_cancel(
     assert api.post(f"{BASE}/projects/{world['pid']}/start").status_code == 200
     members = team(api, world["pid"])["members"]
     other = next(m for m in members if m["id"] != lead_id)
-    # Removal needs an activity signal (Phase 9): refused now.
+    # Removal for inactivity needs repair_days (10) without activity (D150): the member just
+    # joined, so it is refused with the measured days.
     r = api.post(
         f"{BASE}/team-members/{other['id']}/removal-requests",
         json={"reason": "No updates for twelve days.", "basis": "INACTIVITY"},
     )
     assert (r.status_code, _code(r)) == (409, "INVALID_STATE")
-    assert "Phase 9" in r.json()["error"]["message"]
+    assert "removal needs 10 days" in r.json()["error"]["message"]
 
-    async def twelve_days(_db: object, _m: object) -> int:
+    async def twelve_days(_db: object, _m: object, _now: object = None) -> int:
         return 12
 
     monkeypatch.setattr(team_svc, "member_inactive_days", twelve_days)

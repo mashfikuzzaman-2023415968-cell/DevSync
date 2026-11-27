@@ -11,10 +11,18 @@ import signal
 from types import FrameType
 
 from apscheduler.schedulers.blocking import BlockingScheduler
+from rq import Retry
 
 from app.core.config import get_settings, validate_production
 from app.core.logging import configure_logging, get_logger
-from app.jobs import bid_notice_jobs, bidding_jobs, email_jobs, profile_jobs, tasks
+from app.jobs import (
+    bid_notice_jobs,
+    bidding_jobs,
+    email_jobs,
+    profile_jobs,
+    tasks,
+    workspace_jobs,
+)
 from app.jobs.queues import get_queue
 
 log = get_logger(__name__)
@@ -26,6 +34,16 @@ ATTEMPTS_EXPIRE_MINUTES = 1
 BIDDING_DEADLINE_MINUTES = 5
 NEW_BID_NOTICE_HOURS = 1
 BID_DIGEST_HOUR = 8  # Asia/Dhaka, the morning after
+CHECKIN_REMINDER_HOUR = 10  # Mondays, Asia/Dhaka (§11)
+MONITORING_SWEEP_MINUTES = 15  # §11
+MONITORING_FLUSH_SECONDS = 30  # D165: changed projects, debounced 30 s
+
+
+def enqueue_checkin_reminders() -> None:
+    """Weekly check-in reminders and missed weeks (§11: 5 min, 1 retry; D145)."""
+    get_queue("default").enqueue(
+        workspace_jobs.checkin_reminders, job_timeout=300, result_ttl=86400, retry=Retry(max=1)
+    )
 
 
 def enqueue_ping() -> None:
@@ -66,6 +84,16 @@ def enqueue_new_bid_notices() -> None:
 def enqueue_bid_digests() -> None:
     """Daily email digest of yesterday's new bids (§12)."""
     get_queue("low").enqueue(bid_notice_jobs.bid_digests, job_timeout=300, result_ttl=86400)
+
+
+def enqueue_monitoring_sweep() -> None:
+    """Evaluate every IN_PROGRESS project (§11, every 15 min)."""
+    get_queue("default").enqueue(workspace_jobs.monitoring_sweep, job_timeout=60, result_ttl=3600)
+
+
+def enqueue_monitoring_flush() -> None:
+    """Evaluate projects changed at least 30 s ago (D165)."""
+    get_queue("default").enqueue(workspace_jobs.monitoring_flush, job_timeout=30, result_ttl=600)
 
 
 def build_scheduler() -> BlockingScheduler:
@@ -128,6 +156,32 @@ def build_scheduler() -> BlockingScheduler:
         hour=BID_DIGEST_HOUR,
         minute=0,
         id="bids.daily_digest",
+        coalesce=True,
+        max_instances=1,
+    )
+    scheduler.add_job(
+        enqueue_checkin_reminders,
+        "cron",
+        day_of_week="mon",
+        hour=CHECKIN_REMINDER_HOUR,
+        minute=0,
+        id="checkin.reminders",
+        coalesce=True,
+        max_instances=1,
+    )
+    scheduler.add_job(
+        enqueue_monitoring_sweep,
+        "interval",
+        minutes=MONITORING_SWEEP_MINUTES,
+        id="monitoring.sweep",
+        coalesce=True,
+        max_instances=1,
+    )
+    scheduler.add_job(
+        enqueue_monitoring_flush,
+        "interval",
+        seconds=MONITORING_FLUSH_SECONDS,
+        id="monitoring.flush",
         coalesce=True,
         max_instances=1,
     )

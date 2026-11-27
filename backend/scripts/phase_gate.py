@@ -744,6 +744,7 @@ def step_phase_checks(g: Gate) -> str:
         6: phase6_checks,
         7: phase7_checks,
         8: phase8_checks,
+        9: phase9_checks,
     }
     if g.phase not in checks:
         raise StepFailed(f"no PHASE_CHECKS defined for phase {g.phase}")
@@ -1006,6 +1007,37 @@ def phase8_checks(g: Gate) -> str:
         if not (ROOT / doc).exists():
             raise StepFailed(f"{doc} is missing")
     return f"{p7}; {line.removeprefix('repair-check: ')}; lead, repair, team RLS and API checks"
+
+
+def phase9_checks(g: Gate) -> str:
+    """Phase 9 checks (spec §17): everything of Phase 8 (which chains 7 and 6, so the D116 team,
+    the homepage figures and the Clinic repair stay guarded); the seeded "Inventory dashboard"
+    shows the documented risks and impact (scripts/monitoring_check.py, D154); the named Phase 9
+    security, RLS and engine tests hold."""
+    p8 = phase8_checks(g)
+    proc = in_tests(["python", "scripts/monitoring_check.py"])
+    line = next((x for x in proc.stdout.splitlines() if x.startswith("monitoring-check: ")), "")
+    if not line:
+        raise StepFailed("monitoring_check printed no result")
+    in_tests(
+        [
+            "pytest", "-q", "-p", "no:cacheprovider",
+            "tests/algorithms/test_risks.py", "tests/algorithms/test_positions.py",
+            "tests/algorithms/test_forecast.py", "tests/algorithms/test_weeks.py",
+            "tests/unit/test_activity_schemas.py",
+            "tests/integration/test_rls_workspace.py",
+            "tests/security/test_tasks_api.py", "tests/security/test_checkins_api.py",
+            "tests/security/test_comments_api.py", "tests/security/test_monitoring_api.py",
+        ]
+    )  # fmt: skip
+    for doc in (
+        "docs/plans/phase-09.md",
+        "docs/ALGORITHMS.md",
+        "docs/security-reviews/phase-09.md",
+    ):
+        if not (ROOT / doc).exists():
+            raise StepFailed(f"{doc} is missing")
+    return f"{p8}; {line.removeprefix('monitoring-check: ')}; workspace RLS, API and engine checks"
 
 
 def role_assessment_checks() -> str:

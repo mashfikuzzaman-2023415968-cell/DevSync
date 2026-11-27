@@ -25,7 +25,7 @@ from app.algorithms import availability as avail
 from app.algorithms.lead import LeadCandidate, recommend_lead
 from app.core.audit import write_audit
 from app.core.authz import authorize
-from app.core.clock import to_display
+from app.core.clock import get_clock, to_display
 from app.core.config import get_settings
 from app.core.errors import DomainError, ErrorCode, InvalidStateTransition, NotFoundError
 from app.core.logging import get_logger
@@ -58,6 +58,7 @@ from app.models.projects import (
     ProjectSlot,
     ProjectStatus,
 )
+from app.models.workspace import ActivityEvent, Task, TaskStatus
 from app.repositories import bids as bidrepo
 from app.repositories import projects as projrepo
 from app.schemas.platform_settings import PlatformSettingsValues
@@ -82,7 +83,7 @@ from app.schemas.team import (
     TeamMemberForClient,
     TeamMemberForMember,
 )
-from app.services import outbox, reputation_read
+from app.services import activity, outbox, reputation_read
 from app.services import repair as repair_svc
 from app.services.context import Ctx
 from app.services.notifications import notify
@@ -120,12 +121,41 @@ def milestone_may_activate(milestone: Milestone, predecessors: set[uuid.UUID]) -
     return not predecessors and milestone.status == MilestoneStatus.PLANNED
 
 
-async def member_inactive_days(db: AsyncSession, member: TeamMember) -> int | None:
-    """Days since the member's last activity, or None while there is no activity signal (D121).
-    Phase 9 fills this from check-ins and task activity; until then removal for inactivity is
-    refused. Tests replace this function; there is no production bypass."""
-    del db, member
-    return None
+# What counts as a member being active in a project (D150): their check-ins, task events,
+# comments and discussion posts — read from the evidence events, so nothing new is tracked.
+ACTIVITY_SIGNALS = (
+    "checkin.posted",
+    "task.moved",
+    "task.done",
+    "task.reopened",
+    "task.evidence_added",
+    "work.started",
+    "comment.posted",
+    "comment.replied",
+    "blocker.reported",
+    "blocker.answered",
+)
+
+
+async def member_inactive_days(
+    db: AsyncSession, member: TeamMember, now: datetime | None = None
+) -> int | None:
+    """Whole days since the member's last check-in, task event, comment or discussion post in
+    the project; with none, since they became ACTIVE (D150, replacing D121's "no signal"). None
+    only for a member who never became ACTIVE. INACTIVE_MEMBER and removal both use it."""
+    at = now or get_clock().now()
+    project_id = await db.scalar(select(Team.project_id).where(Team.id == member.team_id))
+    last = await db.scalar(
+        select(func.max(ActivityEvent.at)).where(
+            ActivityEvent.project_id == project_id,
+            ActivityEvent.actor_id == member.developer_id,
+            ActivityEvent.type.in_(ACTIVITY_SIGNALS),
+        )
+    )
+    since = last or member.joined_at
+    if since is None:
+        return None
+    return max(0, (at - since).days)
 
 
 async def _email(db: AsyncSession, user_id: uuid.UUID, template: str, **payload: str) -> None:
@@ -434,6 +464,21 @@ async def accept(ctx: Ctx, invitation_id: uuid.UUID) -> ActionOut:
             db.add(res)
         res.status = ReservationStatus.CONFIRMED
         res.from_date, res.to_date = period.from_, period.to
+        if a.invitation.is_replacement:  # D149: the team was repaired
+            activity.record_system(
+                db,
+                project_id=a.project.id,
+                type="member.replaced",
+                entity_type="TEAM_MEMBER",
+                entity_id=a.member.id,
+                actor_id=ctx.uid,
+                subject_id=ctx.uid,
+                data={
+                    "member_id": a.member.id,
+                    "slot_label": await _slot_label(db, a.member.slot_id),
+                },
+                at=ctx.now,
+            )
         notify(
             db,
             a.project.client_id,
@@ -1455,7 +1500,66 @@ async def _depart(
         body=f"A member {word} “{project.title}”. DevSync is looking for a replacement.{extra}",
         link=_link_team(project.id),
     )
+    # Evidence (D149): who left and from which place — never the reason (private, D130).
+    activity.record_system(
+        db,
+        project_id=project.id,
+        type="member.left",
+        entity_type="TEAM_MEMBER",
+        entity_id=member.id,
+        actor_id=None,
+        subject_id=member.developer_id,
+        data={
+            "member_id": member.id,
+            "slot_label": await _slot_label(db, member.slot_id),
+            "how": "LEFT" if status == MemberStatus.LEFT else "REMOVED",
+        },
+        at=now,
+    )
+    await _unassign_tasks(db, project, team, member, now=now)
     return await repair_svc.open_repair(db, project, team, member, now=now, settings=settings)
+
+
+async def _slot_label(db: AsyncSession, slot_id: uuid.UUID) -> str:
+    slot = await db.get(ProjectSlot, slot_id)
+    if slot is None:
+        return "Role"
+    if slot.label:
+        return slot.label
+    return (await _skill_names(db, [slot.skill_id])).get(slot.skill_id, "Role")
+
+
+async def _unassign_tasks(
+    db: AsyncSession, project: Project, team: Team, member: TeamMember, *, now: datetime
+) -> None:
+    """A departing member's unfinished tasks become unassigned and the lead is told (D143)."""
+    result = await db.execute(
+        update(Task)
+        .where(
+            Task.project_id == project.id,
+            Task.assignee_id == member.developer_id,
+            Task.status != TaskStatus.DONE,
+        )
+        .values(assignee_id=None, version=Task.version + 1, updated_at=now)
+        .returning(Task.id)
+    )
+    count = len(result.all())
+    lead = await db.scalar(
+        select(TeamMember.developer_id).where(
+            TeamMember.team_id == team.id,
+            TeamMember.is_lead.is_(True),
+            TeamMember.status == MemberStatus.ACTIVE,
+        )
+    )
+    if count and lead is not None:
+        notify(
+            db,
+            lead,
+            "TASKS_UNASSIGNED",
+            title=f"{count} {'task needs' if count == 1 else 'tasks need'} a new assignee",
+            body=f"A member left “{project.title}”; their unfinished tasks are unassigned.",
+            link=f"/w/{project.id}/tasks",
+        )
 
 
 async def leave(ctx: Ctx, member_id: uuid.UUID, body: LeaveIn) -> ActionOut:
@@ -1530,11 +1634,10 @@ async def request_removal(
                 "Removal after a dispute arrives with disputes in Phase 12.",
                 code=ErrorCode.INVALID_STATE,
             )
-        days = await member_inactive_days(db, member)
-        if days is None:
+        days = await member_inactive_days(db, member, ctx.now)
+        if days is None:  # never became ACTIVE: nothing to measure
             raise DomainError(
-                "Activity tracking arrives with the workspace (Phase 9), so "
-                "inactivity can't be shown yet.",
+                "This member hasn't started on the project, so inactivity can't be measured.",
                 code=ErrorCode.INVALID_STATE,
             )
         if days < settings.alerts.repair_days:

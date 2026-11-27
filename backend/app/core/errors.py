@@ -72,6 +72,16 @@ class ErrorCode(StrEnum):
     ROLE_ASSESSMENT_REQUIRED = "ROLE_ASSESSMENT_REQUIRED"
     # Team lifecycle (Phase 8).
     UNAVAILABLE = "UNAVAILABLE"
+    # Workspace (Phase 9, D143–D146).
+    ONE_STEP_ONLY = "ONE_STEP_ONLY"
+    MILESTONE_NOT_ACTIVE = "MILESTONE_NOT_ACTIVE"
+    MILESTONE_FINISHED = "MILESTONE_FINISHED"
+    DEPENDENCIES_NOT_DONE = "DEPENDENCIES_NOT_DONE"
+    DEPENDENTS_DONE = "DEPENDENTS_DONE"
+    DEPENDENCY_CYCLE = "DEPENDENCY_CYCLE"
+    DEPENDENCIES_BLOCK_MOVE = "DEPENDENCIES_BLOCK_MOVE"
+    CHECKIN_EXISTS = "CHECKIN_EXISTS"
+    EDIT_WINDOW_CLOSED = "EDIT_WINDOW_CLOSED"
 
 
 STATUS_BY_CODE: dict[ErrorCode, int] = {
@@ -117,6 +127,15 @@ STATUS_BY_CODE: dict[ErrorCode, int] = {
     ErrorCode.DEADLINE_PASSED: 409,
     ErrorCode.ROLE_ASSESSMENT_REQUIRED: 409,
     ErrorCode.UNAVAILABLE: 409,
+    ErrorCode.ONE_STEP_ONLY: 409,
+    ErrorCode.MILESTONE_NOT_ACTIVE: 409,
+    ErrorCode.MILESTONE_FINISHED: 409,
+    ErrorCode.DEPENDENCIES_NOT_DONE: 409,
+    ErrorCode.DEPENDENTS_DONE: 409,
+    ErrorCode.DEPENDENCY_CYCLE: 409,
+    ErrorCode.DEPENDENCIES_BLOCK_MOVE: 409,
+    ErrorCode.CHECKIN_EXISTS: 409,
+    ErrorCode.EDIT_WINDOW_CLOSED: 409,
     ErrorCode.RATE_LIMITED: 429,
     ErrorCode.INTERNAL_ERROR: 500,
     ErrorCode.DEPENDENCY_UNAVAILABLE: 503,
@@ -164,6 +183,15 @@ SAFE_MESSAGES: dict[ErrorCode, str] = {
     ErrorCode.DEADLINE_PASSED: "Time is up for this assessment.",
     ErrorCode.ROLE_ASSESSMENT_REQUIRED: "Newcomers need a passing role assessment for this role.",
     ErrorCode.UNAVAILABLE: "You don't have enough free hours a week for this project.",
+    ErrorCode.ONE_STEP_ONLY: "Tasks move one column at a time.",
+    ErrorCode.MILESTONE_NOT_ACTIVE: "Work on this milestone can start once it's active.",
+    ErrorCode.MILESTONE_FINISHED: "This milestone is finished, so its tasks can't change.",
+    ErrorCode.DEPENDENCIES_NOT_DONE: "Finish the tasks this one depends on first.",
+    ErrorCode.DEPENDENTS_DONE: "A finished task depends on this one.",
+    ErrorCode.DEPENDENCY_CYCLE: "That dependency would make the tasks wait for each other.",
+    ErrorCode.DEPENDENCIES_BLOCK_MOVE: "Remove this task's dependencies before moving it.",
+    ErrorCode.CHECKIN_EXISTS: "You've already checked in this week.",
+    ErrorCode.EDIT_WINDOW_CLOSED: "Comments can be edited for 15 minutes after posting.",
 }
 
 

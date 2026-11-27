@@ -101,28 +101,32 @@ reputation-recalculate: ## Recompute every reputation from its history (job repu
 create-admin: ## Create an administrator (prints TOTP setup and recovery codes once)
 	$(COMPOSE) run --rm worker python scripts/create_admin.py
 
-DEMO_STAGE ?= $(or $(STAGE),1)
+# DAY=N (3–20) sets the Inventory dashboard's project day; it exists in stage 2 only, so DAY
+# without STAGE means stage 2 (§17 Phase 9 "make seed-demo DAY=12", D170).
+DEMO_STAGE ?= $(or $(STAGE),$(if $(DAY),2,1))
+DEMO_DAY_ARG = $(if $(DAY),--day $(DAY),)
 # Seeded passwords are random and printed once; DEMO_PASSWORD=… (12+ characters) gives every
 # demo account that one password for rehearsals.
 DEMO_ACCOUNTS = runs/demos/accounts-$(DEMO_STAGE).txt
 
 # The demo targets run one-off containers with --no-deps, so they never recreate a running
 # stack's services (Postgres must be up: `make demo-up`).
-seed-demo: ## Load demo data for a stage on the demo stack: make seed-demo STAGE=1 (spec §18)
+seed-demo: ## Load demo data for a stage on the demo stack: make seed-demo STAGE=1 [DAY=12] (spec §18)
 	@mkdir -p runs/demos
 	umask 077; $(COMPOSE_DEMO) run --rm --no-deps -T -e DEMO_PASSWORD worker \
-	  python scripts/seed_demo.py --stage $(DEMO_STAGE) | tee $(DEMO_ACCOUNTS); exit $${PIPESTATUS[0]}
+	  python scripts/seed_demo.py --stage $(DEMO_STAGE) $(DEMO_DAY_ARG) | tee $(DEMO_ACCOUNTS); \
+	  exit $${PIPESTATUS[0]}
 
 demo-reset: ## Reset and reload the demo seed (prints accounts): make demo-reset STAGE=1
 	$(COMPOSE_DEMO) run --rm --no-deps migrate
 	$(COMPOSE_DEMO) run --rm --no-deps --entrypoint python migrate scripts/demo_reset.py
 	@rm -f $(DEMO_ACCOUNTS)
-	@$(MAKE) --no-print-directory seed-demo STAGE=$(DEMO_STAGE)
+	@$(MAKE) --no-print-directory seed-demo STAGE=$(DEMO_STAGE) $(if $(DAY),DAY=$(DAY),)
 
 demo-up: ## Start the production-style demo stack and load the seed: make demo-up STAGE=1 (§17.0)
 	@test -s infra/nginx/certs/dev.crt || infra/nginx/make-certs.sh
 	$(COMPOSE_DEMO) up -d --build --wait
-	@$(MAKE) --no-print-directory demo-reset STAGE=$(DEMO_STAGE)
+	@$(MAKE) --no-print-directory demo-reset STAGE=$(DEMO_STAGE) $(if $(DAY),DAY=$(DAY),)
 	@echo "Demo ready: https://localhost   Mailpit (emails and texts): http://127.0.0.1:8025   accounts: $(DEMO_ACCOUNTS)"
 
 demo-down: ## Stop the demo stack (data kept; `make up` returns to development)
