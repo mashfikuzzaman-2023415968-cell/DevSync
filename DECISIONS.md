@@ -1545,3 +1545,327 @@ name (case-folded), then id, and the blockers by slot label (the Phase 7 formati
 same order). `_members` keeps creation order for the locking paths. Test:
 `test_the_team_reads_in_a_stable_order_role_then_name`; the 12 baselines were re-created and pass
 twice in a row on fresh data.
+
+## Phase 9 (workspace and monitoring; Sara with Claude Code)
+
+Decisions D141–D159 were made by Sara Binte Shafayet (tester, owner of Phases 9–11) with Taeen
+(team leader) before the plan (`phase-09-start-prompt.md` Step 5, decisions 1–19, in that order).
+D160 onward are open points Claude Code resolved while studying, by Sara's instruction for this
+phase ("decide, record, report"; it overrides CLAUDE.md's "ask, don't guess" for Phase 9 only).
+
+**D141 · Phase 9's scope edges.** Built now: workspace tabs Overview (29), Tasks (30), Timeline
+(31), Check-ins (34), Files (35), Discussion (36), Evidence (38, the activity part), Risks (39), and
+the existing Team tab (33) gains "contribution so far"; developer My projects (13); the progress
+parts of both dashboards (9, 20); baseline vs forecast on the plan page (22); the notification
+stream (18) and preferences (19). A **read-only Milestones tab** is built now (§17 Phase 9's E2E
+opens "Milestones", while screen 32 belongs to Phase 10): status, share, planned and forecast
+dates, progress from tasks, revision count; Phase 10 adds submission, review, escrow and the
+auto-approval countdown to the same tab. Later: Payments (37) "arrives in Phase 10"; Reviews and
+Post-mortem Phase 11; Disputes tab Phase 12; Evidence's GitHub part Phase 13 (the tab says so);
+the admin's read-only project view Phase 12 (screen 45). Task evidence is Phase 9 (§17 lists
+"evidence attachments"), so `docs/BACKLOG.md` FR-DEL-1 moves from Phase 10. Plan change requests
+(FR-PROJ-5, `/plan-changes`) are not in §17 Phase 9: deferred to after Demo 2 (backlog row says so
+with this decision); FR-PROJ-6 (baseline vs forecast) is built. Phase 13's `github_stats` table,
+`POST /projects/{id}/github/sync` and the sync button are not created now. Phase 9's DAST is the
+ZAP **baseline**; the OpenAPI-driven API scan (§16.1) comes with full DAST in Phases 14–15.
+
+**D142 · Who may see and change the workspace.** Migration 0016 adds the §14.15 helpers
+`is_project_member(project)` (an `ACTIVE` member; `COMPLETED` also counts for reading, so Phase 11
+can show finished projects) and `is_participant(project)` (the project's client or a member),
+`STABLE`, `search_path` pinned. Read: participants; members who are `INVITED`, `DECLINED`,
+`EXPIRED`, `LEFT` or `REMOVED` get 404, like D130. Write: `ACTIVE` members within §2.2; the client
+may comment, post in discussion and upload files and nothing else — task create, assign, move,
+evidence and check-ins are 403 for the client, and the UI shows no drag handles or task actions
+(§1.6). §17 Phase 9 says the client's tabs are read-only "except comments/discussion", while §2.2
+also lets the client "Upload project files (own project)": the permission matrix is the more
+specific rule, so the client may upload. Writes need the project `IN_PROGRESS` (409
+`INVALID_STATE` otherwise); a `TEAM_PENDING` project shows only the Team tab. `GET
+/projects/{id}/plan` (client or admin today, `_load_for_read`) is readable by members too (§10.2
+"Client, members, admin"; the Timeline needs it); the client-only paths keep their own loader.
+Admins read the dashboard, risks, activity and plan through the API (§2.2 "read-only"); comments,
+discussion and files for admins come with Phase 12's dispute context, so those routes are 403 for
+admins until then. Admins never use `/w/...` (D120).
+
+**D143 · Tasks.** The lead creates and assigns tasks in any unfinished milestone (`PLANNED`,
+`FUNDED`, `ACTIVE`, `CHANGES_REQUESTED`); a task leaves TODO only while its milestone is `ACTIVE`
+or `CHANGES_REQUESTED`. The assignee is an `ACTIVE` member of the project or nobody; only the lead
+moves an unassigned task. Moves follow §8's chain one step at a time (TODO ↔ IN_PROGRESS ↔ REVIEW ↔
+DONE); the board shows a refused drop target with the reason. DONE only if every dependency is
+DONE (409 naming them); a task can't leave DONE while a task that depends on it is DONE (409
+naming them); leaving DONE records `task.reopened`. `progress_pct` derives from the status weight
+(0, 50, 85, 100; §9.10), never typed in. Dependencies: same milestone, acyclic (409 with the cycle
+in order), ≤ 20 per task. Delete: the lead, only when not DONE; its dependency rows go with it; the
+deletion is recorded. A member who leaves or is removed has their unfinished tasks unassigned and
+the lead is notified. Tasks carry `version` (`If-Match`); a stale move is 409 and the board rolls
+back. `PATCH /tasks/{id}` is the lead's (title, description, assignee, deadline, estimate,
+difficulty, milestone); a task changes milestone only to another unfinished milestone, only while
+TODO and only with no dependencies either way (dependencies never cross milestones), else 409
+naming which to remove. The assignee moves the task and adds evidence and comments. Bounds: title
+1–160; description ≤ 5000; estimate > 0 and ≤ 999.9 h, one decimal (`Decimal`, `numeric(5,1)`);
+difficulty `EASY|MEDIUM|HARD`; deadline optional, not before the project's start date; named caps
+(D63): 1000 tasks per project, 20 dependencies and 20 evidence items per task. `last_activity_at`
+is updated by every move, evidence and comment (STALLED_TASK reads it). Task is a §8 state machine,
+so every status move, creation, reassignment and deletion writes an audit entry (`write_audit`)
+besides the activity event; reordering within a column is not a transition. `task.done` and
+`task.moved` record the task's milestone, its assignee at that moment and its estimate (§9.13
+credits completed hours to whoever finished them; §9.1.1's t comes from the member's milestones).
+
+**D144 · Card order: fractional positions.** `position` is a text key generated by the server
+from the neighbours the client names (`after_id` / `before_id` in the same column); every list
+orders by `(position, id)`, so it never ties (the D140 lesson). The key generator is a small pure
+module with property tests (between any two keys there is another; keys stay short under repeated
+inserts); no new dependency. Moves into a column take a per-milestone advisory lock
+(`app/db/locks.py`) so two simultaneous drops between the same neighbours can't produce the same
+key; if the neighbours' keys are equal or a key grows past a set length, the server re-keys that
+column inside the same lock. Neighbours must be in the target column and milestone, or the move is
+422.
+
+**D145 · Check-ins.** A check-in belongs to the week (Monday–Sunday, Asia/Dhaka) it is posted
+in: one per member per week (`UNIQUE(member, week_start)`), immutable once posted (reputation
+evidence; corrections go in a comment). Fields: `done` and `next` required, 1–2000 characters;
+`blockers` optional ≤ 2000; `confidence` integer 1–5; `week_start` and `on_time` set by the
+server. On time = posted by Tuesday 23:59 Asia/Dhaka of that week (the Monday 10:00 reminder gives
+a day and a half). Expected weeks run from the first Monday on or after the member became `ACTIVE`
+in an `IN_PROGRESS` project until they leave or the project leaves `IN_PROGRESS`.
+`checkin.reminders` (Monday 10:00, §11) reminds every member who hasn't posted this week (in-app +
+email, §12) and records `checkin.missed` for every finished expected week with neither a check-in
+nor a `checkin.missed` yet, so a run skipped while the scheduler was down is caught up; idempotent
+per member-week. A check-in with non-empty `blockers` notifies the lead (`blocker.reported`);
+anyone in the project may reply (a `CHECKIN` comment, D146), the client too; the first reply by
+**another member** records `blocker.answered` with who answered (§9.1.5 counts teammates helping,
+so replies from the client or the author don't count).
+
+**D146 · Comments and discussion.** Comment targets are `TASK`, `MILESTONE` and `CHECKIN` (an
+addition to §7.5's enum, for blocker replies). A comment may name a `reply_to` on the same target;
+when the replied-to comment's author had mentioned the replier, the reply records
+`comment.replied` with the response time in seconds (§9.1.4 reply score). Mentions: the client
+sends user ids explicitly (picked from a member list); the server keeps only participants of that
+project and drops anyone else silently (§17 "mention of non-member ignored"); at most 10 per
+comment or post. Bodies are plain text ≤ 4000, rendered as text (the injection corpus comes back
+inert); §13.7's linkifier turns only `https://` URLs into links with `rel="noopener noreferrer
+nofollow"` (`javascript:`, `data:`, `http:` never become links; unit-tested). Authors may edit for
+15 minutes ("edited" label; previous versions in `comment_revisions` / post revisions) and
+soft-delete their own (`deleted_at`, shown as "Comment deleted"). Discussion: threads per project
+(title 3–120), posts ≤ 4000 with optional `reply_to`, the same mention and edit rules, polled every
+15 s while the tab is visible. A post records `comment.posted` (and `comment.replied` under the
+reply rule) with `entity_type` `DISCUSSION_POST`, so §9.1.4 sees both places people talk.
+Participants never see a deleted comment's or post's earlier text or revisions; rows are kept for
+Phase 12's dispute evidence (admin only). Comments and posts share one 60/hour bucket per user
+(§14.8).
+
+**D147 · Project files.** `files` gains `project_id NULL` and the kind `PROJECT_FILE` (CHECK:
+project files have a project, others don't). Allowed types are exactly §14.9's (images
+re-encoded, PDF ≤ 10 MB, plain text/markdown ≤ 1 MB; ZIP and everything else refused by
+signature), through the existing pipeline. Participants upload; the uploader or the lead deletes
+(soft). `file_access()` and the `files` RLS policies are extended so project participants can read
+project files and nobody else can; downloads keep the signed-URL path (5 min, `attachment`,
+`nosniff`, `sandbox`). Limits: 20 uploads/hour (`ratelimit.upload`, existing) and 500 MB/day per
+user; the byte budget gets a new settings key (e.g. `ratelimit.upload_bytes_per_day`) in
+`alembic/seed/platform_settings_v6.json`, inserted as a new settings version by 0016 exactly as
+0011 added v5; every settings test that checks the seed files against the schema defaults passes
+with v6. `files.project_id` joins the columns `files_identity_immutable()` protects. Deleted
+project files are hidden and never served, but their bytes are kept (Phase 12 evidence), so the
+24-hour orphan cleanup must not purge them. Evidence of kind `FILE` must reference a project file
+of the same project. Screen 35's "linked task/milestone" comes from that evidence; no link columns
+are added to `files` (Phase 10's submissions link milestones through `evidence_ids`).
+
+**D148 · Task evidence.** Kinds `FILE`, `LINK`, `PR`, `SCREENSHOT`. URLs `https://` only, ≤ 2048
+characters, **never fetched** (no previews, no unfurling); a `PR` must look like
+`https://github.com/<owner>/<repo>/pull/<n>` (format check only; Phase 13 verifies). Note ≤ 500.
+Added by the task's assignee or the lead (§2.2), recorded as `task.evidence_added`.
+
+**D149 · Activity events (§9.1.6).** One Pydantic schema per event type in one module, covering
+all 22 catalogue types (Phases 10–13 emit the later ones); every write is validated and the Phase 9
+tests validate every schema. The table is append-only (`reject_mutation()` trigger, like the audit
+log; UPDATE and DELETE fail at the DB level; tested). Events are written in the same transaction as
+the change they record, through a `SECURITY DEFINER` function (`record_activity()`) that checks the
+actor is the caller (`app_uid()`), the caller is a participant of the project and the type is in
+the catalogue; direct INSERT stays SYSTEM-only (§14.15); the definer pins `search_path` and has its
+own RLS tests. Paths that already run as SYSTEM (team services through `_system()`, jobs such as
+`checkin.missed`, admin decisions such as removal approval) insert directly in their own
+transaction — the definer would rightly refuse an admin, who isn't a participant. Event `data`
+never holds money or another member's private data (no prices, days, or reasons for leaving):
+every participant reads the feed and D130 keeps prices sealed among members; the schemas enforce
+it and a test scans the feed as a member. Phase 8 paths start recording too: `member.left` (leave
+and removal) and `member.replaced` (a replacement accepts). Every input §9.1.4–9.1.5 needs is
+recoverable from events (on-time ratio, reply times, DONE-not-reopened, work start, blockers
+answered); the plan says which event carries which input.
+
+**D150 · Inactivity.** `member_inactive_days()` (D121) gets its real body: whole days since the
+member's last `checkin.posted`, task event, comment or discussion post in that project; with none,
+since they became `ACTIVE`. `INACTIVE_MEMBER` uses the same function. Removal for inactivity now
+works at ≥ `alerts.repair_days`: D121's "no signal" 409 is replaced by the real check, and the
+tests and `docs/BACKLOG.md` P8-7 are updated.
+
+**D151 · The risk engine and monitoring.** A pure engine in `algorithms/risks.py` (§4): every
+§9.11 rule, team health, overall risk, schedule progress, budget usage; one function per rule,
+every threshold from settings; the project day is calendar days since `start_date` in
+Asia/Dhaka. Saving settings rejects `alerts.inactive_days ≥ alerts.repair_days`. CAPACITY compares
+a member's open task hours with their committed hours for this project (the reservation's
+`hours_per_week`) × weeks until those tasks' deadlines (≥ 1 week; a task without a deadline uses
+its milestone's forecast finish). SKILL_DEPENDENCY's "skill held by exactly one active member"
+means the member's slot skill on this team. Severities: STALLED_TASK LOW at ≥
+`alerts.stalled_days`, MEDIUM at ≥ 2 × it; INACTIVE_MEMBER MEDIUM at ≥ `alerts.inactive_days`,
+CRITICAL at ≥ `alerts.repair_days`; for SKILL_DEPENDENCY "inactive ≥ 5 days" means ≥
+`alerts.stalled_days` and "overloaded" means an open CAPACITY risk on that member.
+CRITICAL_PATH_DELAY and SLACK_EATEN look at started (`ACTIVE`) milestones only; not-started
+milestones pushed by a late predecessor aren't flagged again, the ripple shows once in
+DEADLINE_IMPACT (otherwise the seeded Inventory project would show three CRITICAL risks and
+"Critical" health, where §13.9 shows one CRITICAL and "At risk"). Milestone → forecast state:
+`APPROVED`, `AUTO_APPROVED`, `PAID` → DONE; `ACTIVE`, `SUBMITTED`, `CHANGES_REQUESTED`, `DISPUTED`
+→ ACTIVE; `PLANNED`, `FUNDED` → NOT_STARTED; p from tasks (§9.10 weights; no tasks → 0). BUDGET
+and AUTO_APPROVAL_SOON are written and unit-tested now but fed zeros until Phase 10 (they can't
+fire; the budget donut honestly shows released 0, committed 0). One computation,
+`monitoring.evaluate(project, now)`: risks upserted by (project, type, entity), OPEN ones unique;
+a severity change updates the row; a risk resolves when its rule stops firing; today's
+`forecast_snapshots` row is upserted with every milestone's planned and forecast start and finish,
+the project finish and impact, and which milestones caused the delay (Phase 11's post-mortem reads
+the causes). A risk that opens as or is raised to CRITICAL notifies the client and the lead once
+(in-app + email, §12, subject to preferences); re-evaluations don't repeat it. Triggers: the
+scheduler every 15 min per `IN_PROGRESS` project; task and milestone events debounced 30 s per
+project with a Redis key, designed so the last event of a burst is never lost (e.g. a dirty flag
+re-checked at the end of the job; tested). `GET /projects/{id}/dashboard` reads the latest
+evaluation plus live task counts and shows when it was evaluated; it is cached 30 s in Redis per
+project and per response shape (client and member never share an entry); the triggering events
+invalidate it; the cache goes through a new `core/cache.py` (§4, §15.1: cache-aside, versioned
+keys, invalidation after commit, single-flight lock) with its own tests; p99 < 2 s. Dashboard and
+risks are role-shaped: the budget part (released, committed, remaining) and the BUDGET and
+AUTO_APPROVAL_SOON risks are for the client and admins only; members get progress, schedule,
+forecast, health and the other risks; separate response models (`…ForClient` / `…ForMember`, the
+D130 pattern) and a test scanning a member's responses for budget fields. INACTIVE_MEMBER at
+CRITICAL suggests "Request removal / find a replacement" to the client — a suggestion only (§9.9)
+linking to the Phase 8 removal request; it never starts a repair by itself.
+
+**D152 · Forecast on the plan and the Timeline.** `GET /projects/{id}/plan` adds the forecast
+when the project is `IN_PROGRESS`: per-milestone forecast start and finish, the forecast finish,
+the impact in days and the critical paths, taken from the same latest evaluation so Overview,
+Timeline and plan page never disagree. Screen 22 gets the baseline/forecast toggle; screen 31
+shows baseline vs forecast with the critical path and a today line. The read-only Milestones tab
+(D141) reads this response too: for an `IN_PROGRESS` project each node also carries its status,
+task progress (0–100), revision count and actual dates, so no extra endpoint is needed.
+
+**D153 · Notifications: stream and preferences.** `GET /notifications/stream` exactly as
+D107/§10.3: session cookie, the Origin/`Sec-Fetch-Site` rule, the same `sse:concurrent:{user}`
+counter (job streams and the notification stream together ≤ 3), heartbeat 20 s, close after 30
+min, `Last-Event-ID` resume, no DB connection held while open. Events carry only the notification
+id, type and the user's own title, through Redis pub/sub (§15.2; the demo stack runs two API
+replicas, so no in-process state), published only after the notification's transaction commits.
+Because pub/sub drops what nobody heard, on connect and on resume the stream first sends the
+user's notifications newer than `Last-Event-ID` with one short query, releases the connection, then
+follows the channel. Nginx gets its location (like `jobs/{id}/events`) and an edge test. The bell
+and page update live; the 60 s refresh stays as the fallback. Preferences: the
+`notification_preferences` table, `GET/PUT /notification-preferences` and a Settings section
+(screen 19) linked from Notifications, covering every §12 row (including those Phases 5–8 already
+send) except account and security emails (verification, password reset, new-device sign-in),
+which can't be turned off. Enforced in one place — `notify`/`notify_users` and the email enqueue,
+keyed by type — with a test that an existing Phase 8 notification respects a turned-off
+preference. One catalogue (an enum) of notification types; every existing `notify(..., kind)`
+string and email template is mapped to a §12 row in the plan, and `notify` refuses an unknown type
+(a test greps every caller). Defaults follow §12's columns; mentions are in-app on and email off by
+default (§12 has no mention email, §17 says "email outbox for … mentions": the email exists but is
+opt-in); CRITICAL risks and check-in reminders are in-app and email on. Preferences may move to
+Demo 3 only if the Demo 2 walkthrough itself is at risk (§17.0); then the stream stays, the move is
+recorded and reported.
+
+**D154 · The Inventory dashboard seed (§18.2 item 2).** Stage 2 gains "Inventory dashboard"
+`IN_PROGRESS` on project day N (default 12; `make seed-demo STAGE=2 DAY=N`) with §18.2's numbers:
+Requirements done 0→3; UI design done 3→8 with `revision_count = 1`; Inventory API active from
+day 4 at p = 0.7; Dashboard frontend active from day 8 at p = 0.4; Integration and Testing not
+started; planned 23, forecast 25 (+2); one member inactive 8 days. The team goes through the real
+services (publish, bids, a formation run with `formation_runner`, confirm, accept, lead, start)
+with the clock frozen at past days so the start date is today − N. The start (D118) activates only
+Requirements; every later milestone change is done by one commented SYSTEM seed helper (approval
+and activation after a predecessor are Phase 10's services): Requirements `APPROVED` finished day
+3; UI design `ACTIVE` from day 3 then `APPROVED` finished day 8, `revision_count = 1`; Inventory
+API `ACTIVE`, `actual_start` day 4; Dashboard frontend `ACTIVE`, `actual_start` day 8. No money
+rows (ledger history and the disputed split on UI design come with Phases 10 and 12). The history
+is fixed in project days and `DAY` only moves "today": every task move, check-in and comment has a
+project day ≤ 12 and the seed writes only those ≤ `DAY` (`DAY=12` is §18.2 exactly; `DAY=14`
+shows the inactive member at 10 days → CRITICAL and the forecast slipping; `DAY=10` is quieter;
+the gate asserts `DAY=12` only). Tasks, moves, check-ins and comments go through the Phase 9
+services under a `FrozenClock` per simulated day; append-only rows are never rewritten. Task
+estimates and statuses give exactly p = 0.7 and 0.4. Only the documented risks: exactly one
+CRITICAL_PATH_DELAY (Dashboard frontend, forecast finish 18 vs 16), SLACK_EATEN (Inventory API),
+DEADLINE_IMPACT MEDIUM (2 ≤ 10 % of 23), INACTIVE_MEMBER MEDIUM (8 days); health "At risk",
+overall CRITICAL. The inactive member is chosen so SKILL_DEPENDENCY and STALLED_TASK don't fire
+and estimates fit everyone's hours so CAPACITY doesn't; the seed asserts its end state. If §18.2's
+numbers can't produce exactly this set, the gate- and demo-visible result is kept (forecast 25, +2,
+one CRITICAL on Dashboard frontend, "At risk") and only details §18.2 doesn't fix are adjusted,
+recorded and asserted. Must not change: the ordering project's eligible bids and D116 team, the
+golden reputations, the Clinic repair, the homepage figures; Inventory reservations must not
+overlap the ordering project's period; `make demo-reset STAGE=2` stays under 30 s (measured).
+
+**D155 · Test-only routes (D133 pattern, `DEVSYNC_ENV=test` only, `assert_no_test_routes`).**
+Run `monitoring.evaluate` for a project now with an optional `as_of` date (the engine's `now`;
+how E2E and API tests move time forward without rewriting append-only rows), and run
+`checkin.reminders` now with an optional `as_of`. No route changes stored timestamps.
+
+**D156 · Endpoints §10.2 doesn't list** (contract in the plan, `docs/API.md` and OpenAPI; §10.2's
+names are kept for the routes it lists): `GET /projects/{id}/tasks?milestone_id=&assignee_id=&mine=&status=&cursor=&limit=`
+(the board's "All milestones", "Only mine" and each column's "Show more" after 50 cards, D158);
+`GET /tasks/{id}` (the drawer); the discussion post edit and delete (exact paths fixed in the
+plan); `GET /me/projects` (developer My projects, active and completed); `GET
+/projects/{id}/evidence` (the Evidence tab's per-member activity summary); the two test-only
+routes of D155. The final list is recorded here when the plan is approved.
+
+**D157 · The DAST step (gate step 17) and `make zap`.** Implemented in Phase 9 and must pass from
+now on. Image: ZAP, pinned to an exact version tag and digest, at least 14 days old (recorded here
+when chosen). The baseline (passive) scan runs against the running test stack through Nginx over
+HTTPS with an authenticated context (a seeded test user's session from the test router, injected
+as a header), excluding sign-out and every state-changing URL from the spider, with start URLs for
+the main signed-in pages and the workspace. The report goes to `runs/zap/`; the gate note gives
+the alert counts. Any High or Medium fails; a rules file may ignore an alert only with a DECISIONS
+entry naming it and showing why it is a false positive; never relax a header or security default.
+Findings on pages from Phases 1–8 are fixed at their cause (a trial run on day one). ZAP accepts
+the test stack's self-signed certificate for this target only; TLS is never turned off.
+`--offline` records a skip, like step 7; Taeen pre-pulls the image (Known issues line).
+
+**D158 · Phones and long lists (§13.14).** Kanban on phones: one column per screen with
+horizontal snap scrolling and column tabs, long-press drag (300 ms) with edge auto-scroll, a "Move
+to…" menu on every card, "New task" as a floating action button for the lead. Timeline on phones
+defaults to the CPM list (cards with dates, slack, critical badge) with "Show timeline" for the
+scrollable Gantt (sticky name column, zoom buttons), built once in the shared components and used
+on the plan page too. Comments and discussion on phones open as a full-screen thread with the input
+fixed above the keyboard. Lists over 50 items are virtualized (activity feed, notifications,
+discussion posts, files, check-ins feed); Kanban columns instead show 50 cards then "Show more"
+(cursor). The one new frontend dependency is `@tanstack/react-virtual` (TanStack family, no
+dependencies, positions rows through the CSSOM — no injected `<style>`, D23), pinned to an exact
+version ≥ 14 days old, installed with `npx npm@10 install` (D15), version and reason recorded here,
+proven by `csp.spec.ts` on a long list and the route-chunk budget. If it breaks CSP or the budget:
+no hand-written virtualizer — cursor pages of 50 with "Show more", at most 200 rows mounted, the
+dependency removed, and the change recorded.
+
+**D159 · Order of work (Demo 2 first).** (1) migration and RLS; (2) tasks, Kanban and evidence;
+(3) check-ins; (4) comments with mentions; (5) activity events; (6) monitoring (engine, job,
+dashboard, risks, forecast) and the Overview, Timeline, Milestones and Risks tabs; (7) the
+Inventory seed and `phase9_checks`; (8) files; (9) discussion; (10) the notification stream and
+preferences; (11) Evidence tab, My projects, the dashboards' progress parts; (12) the DAST step.
+The gate still needs everything; if behind, keep this order, report items at risk, never cut tests
+or security. The only scope §17.0 lets move to Demo 3 is notification preferences (D153).
+
+**D160 · The workspace tab bar follows §13.4 (all eleven tabs).** The Phase 8 shell lists nine
+tabs, matching the §13.9 wireframe (no Discussion, no Evidence), while §13.4 lists Overview ·
+Tasks · Timeline · Milestones · Team · Check-ins · Files · Discussion · Payments · Evidence · Risks,
+and Phase 9 builds Discussion (36) and Evidence (38) under D141. §13.4 is the layout rule (the more
+specific section for navigation); §13.9's wireframes say they fix structure but are illustrative in
+detail. So the bar has §13.4's eleven tabs in §13.4's order; Payments stays "arrives in Phase 10"
+(D141). *Rejected:* keeping nine tabs (Discussion and Evidence would be unreachable); appending the
+two tabs at the end (breaks §13.4's order for no reason). The `workspace.test.tsx` placeholder
+count and the `workspace-team` baselines change accordingly (reviewed by eye).
+
+**D161 · The forecast's remaining time is computed exactly, not in binary floating point.** While
+checking §18.2 against `algorithms/forecast.py` (Phase 4, pure, called by no service yet), the
+Dashboard frontend (p = 0.4, elapsed 4 days) gives `remaining = max(8·0.6, 4·0.6/0.4)`; in float64
+the second term is `5.999999999999999`, which `ceil` turns into 6 (forecast finish 18, as §18.2
+says) only by luck — other progress values land a hair above an integer and `ceil` adds a whole
+day (e.g. forecast 19, impact +3), so a monitored project could show a delay that doesn't exist.
+§9.10's rule (ours, not [PCS]) is unchanged: `forecast finish = today + ceil(max(dur·(1−p),
+e·(1−p)/p))`; only its arithmetic becomes exact: progress comes from `numeric(5,1)` estimates and
+fixed weights, so it is a rational number, and the service passes it as a `Fraction` (from
+`Decimal`) that the pure function uses for both terms before `ceil`. Unit tests pin the boundary
+(remaining exactly 6 → 6, never 7) and a property test checks the exact and the old result agree
+whenever the float error can't cross an integer. *Rejected:* rounding the float to n decimals
+before `ceil` (an arbitrary tolerance that would also round genuine fractions); leaving it and
+relying on the seed's assertion (the seed would pass while real projects could show a phantom
+day). This changes `forecast.py`'s input type for `progress` (float → `Fraction | float`, floats
+still accepted for existing tests) and adds tests; `milestone_progress` gains an exact variant.
