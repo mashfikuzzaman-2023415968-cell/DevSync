@@ -1869,3 +1869,82 @@ before `ceil` (an arbitrary tolerance that would also round genuine fractions); 
 relying on the seed's assertion (the seed would pass while real projects could show a phantom
 day). This changes `forecast.py`'s input type for `progress` (float → `Fraction | float`, floats
 still accepted for existing tests) and adds tests; `milestone_progress` gains an exact variant.
+
+**D162 · One notification catalogue; preferences per §12 row.** `app/core/notification_types.py`
+defines `NotificationType` (StrEnum): every kind Phases 5–8 send plus Phase 9's (TASK_ASSIGNED,
+TASKS_UNASSIGNED, MENTIONED, BLOCKER_REPORTED, CHECKIN_REMINDER, RISK_CRITICAL). Each type belongs
+to exactly one `Category`, which is a §12 row (`bids_received`, `bidding_outcome`, `formation`,
+`selected`, `bid_updates`, `invitation_responses`, `team`, `task_assigned`, `mentions`,
+`blockers`, `checkin_reminder`, `critical_risk`, `verification`; the mapping table is in
+`docs/plans/phase-09.md`). `notification_preferences.type` stores the category key, so one switch
+in Settings covers one §12 row. Defaults follow §12's columns; email can only be switched on where
+§12 has an email, except mentions (email exists, off by default, D153). `notify()` refuses
+anything that isn't a `NotificationType`; a test checks every caller. *Rejected:* a preference per
+type (about 30 switches nobody understands); keeping free strings (nothing stops a typo or an
+unmapped kind).
+
+**D163 · Preferences are enforced in the two writers.** `notify` becomes `async` and skips the
+in-app row when the recipient switched its category off. `outbox.enqueue` gains `user_id` and
+`notification_type`; the six account templates (`verify_email`, `reset_password`,
+`account_exists`, `account_locked`, `new_device`, `password_changed`) form `ACCOUNT_TEMPLATES`,
+are always sent and take no type; every other template must name a type and is skipped when the
+category's email is off. A test lists every template and asserts it is an account template or
+mapped. *Rejected:* a database trigger that silently drops rows (invisible in review, can't cover
+email).
+
+**D164 · Live notifications are published only after commit.** `notify` appends
+`(user_id, id, type, title)` to `session.info["notif_pending"]`; a SQLAlchemy `after_commit`
+listener publishes them to Redis channel `notif:{user_id}` and `after_rollback` discards them. A
+rolled-back change never reaches a browser and no caller has to remember to publish. *Rejected:*
+Postgres `LISTEN/NOTIFY` (§15.2 names Redis pub/sub, and it holds a database connection per
+listener); publishing inside the service before commit (leaks rolled-back events).
+
+**D165 · Debounced evaluation that never loses the last event.** After commit, task and milestone
+changes do `ZADD NX mon:dirty <now> <project_id>`. A scheduler job `monitoring.flush` every 30 s
+enqueues `monitoring.evaluate` for each project whose score is ≥ 30 s old and removes exactly that
+member with that score (a Lua compare-and-remove), so an event arriving during the evaluation
+re-adds the project and the next flush evaluates again. Worst case ≈ 60 s after the last event; the
+15-minute sweep stays as the backstop. *Rejected:* `enqueue_in` (no RQ scheduler runs); sleeping
+30 s inside a worker (ties up a worker per project).
+
+**D166 · Workspace rows carry `project_id`.** `tasks`, `task_dependencies`, `task_evidence`,
+`comments`, `checkins`, `discussion_threads` and `discussion_posts` store `project_id NOT NULL`;
+a guard trigger checks it matches the parent (milestone, task, target, thread or team member) and
+keeps it immutable. RLS policies are then one helper call per row (`is_participant(project_id)`)
+and the §7.9 queries stay index-only. *Rejected:* joins inside every policy (slower and easy to
+get subtly wrong).
+
+**D167 · `activity_events.subject_id`.** A nullable column for the member an event is about when
+that differs from the actor or there is no actor (`checkin.missed` and `member.left` written by
+SYSTEM). The Evidence tab and Phase 11 aggregate on it; `data` holds no user ids except mentions
+and reply targets. *Rejected:* the subject inside `data` (can't be indexed or constrained).
+
+**D168 · Evidence kinds and immutability.** `FILE` references any live project file of the same
+project; `SCREENSHOT` references an image project file; `LINK` and `PR` carry an `https://` URL
+(D148). Evidence rows are immutable (no edit or delete; reputation evidence, like check-ins), and
+the 20-per-task cap counts them. *Rejected:* a URL for screenshots (would mean trusting or fetching
+remote images); deletable evidence (a member could erase evidence after a dispute starts).
+
+**D169 · Comment and post revisions are captured by a trigger and readable only by admins.** A
+`BEFORE UPDATE` trigger on `comments` and `discussion_posts` (definer, pinned `search_path`) copies
+the old body into the revisions table. Participants see only the "edited" label, which keeps
+earlier and deleted text private (D146) without per-row rules; the rows stay for Phase 12's
+disputes. *Rejected:* showing edit history (not in §13.5, and it leaks text the author replaced).
+
+**D170 · `make seed-demo DAY=N` without `STAGE` means stage 2.** §17 writes the command without a
+stage, and only stage 2 has the Inventory project. `DAY` with `STAGE=1` is refused; `DAY` must be
+3–20 so the fixed history fits. *Rejected:* requiring `STAGE=2` (breaks §17's literal command);
+silently ignoring `DAY` on stage 1 (hides a mistake).
+
+**D171 · The two new Phase 9 dependencies, pinned** (completes D157 and D158).
+`@tanstack/react-virtual` **3.14.26** (published 2026-11-03, 24 days before pinning); its only
+dependency is `@tanstack/virtual-core` (same family, no dependencies of its own), recorded here
+because D158 said "no dependencies". ZAP: `zaproxy/zap-stable:2.17.0@sha256:9624669db72f54d86c4b46a7064518bd9bf79d8c61a4c31befa9923489f328af`
+(published 2026-11-03). *Rejected:* newer react-virtual 3.14.27/28 (5 days old, under the 14-day
+rule); ZAP's `weekly` image (not a fixed release).
+
+**D172 · Task writes require `If-Match`.** `PATCH /tasks/{id}`, `POST /tasks/{id}/move` and
+`DELETE /tasks/{id}` refuse a missing `If-Match` with 422 (`fields.If-Match`), unlike bids where
+it is optional: a board drag without a version could silently overwrite a teammate's concurrent
+drop, and §13.7's rollback relies on the 409. *Rejected:* optional as for bids (lost updates on a
+shared board).
