@@ -69,6 +69,7 @@ class FileKind(enum.StrEnum):
     PORTFOLIO_IMAGE = "PORTFOLIO_IMAGE"
     CERTIFICATE = "CERTIFICATE"
     EXTERNAL_REVIEW = "EXTERNAL_REVIEW"
+    PROJECT_FILE = "PROJECT_FILE"  # a workspace file; has a project (D147)
 
 
 class ScanStatus(enum.StrEnum):
@@ -209,10 +210,24 @@ class StoredFile(UUIDPrimaryKey, Timestamps, Base):
     )
     attached_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Project files only (D147): readable by the project's participants; never moves project.
+    project_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("projects.id"))
 
     __table_args__ = (
         CheckConstraint("size_bytes > 0", name="size_positive"),
         CheckConstraint("char_length(original_name) BETWEEN 1 AND 200", name="name_len"),
+        CheckConstraint(
+            "(kind::text = 'PROJECT_FILE') = (project_id IS NOT NULL)", name="project_iff_kind"
+        ),
+        Index(
+            "ix_files_project_created",
+            "project_id",
+            "created_at",
+            "id",
+            postgresql_where=text(  # forbidden-ok: constant DDL predicate
+                "project_id IS NOT NULL AND deleted_at IS NULL"
+            ),
+        ),
     )
 
 

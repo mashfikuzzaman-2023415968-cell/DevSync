@@ -19,6 +19,8 @@ from sqlalchemy import Connection, MetaData, Table, create_engine, select, text
 # tests/integration/test_demo_reset.py fails when another one appears, so it can't be emptied
 # unnoticed.
 PRESERVED = ("question_bank",)
+# Tables with a statement-level TRUNCATE guard that the cascade reaches.
+APPEND_ONLY = ("audit_log", "activity_events")
 
 
 def reset(conn: Connection) -> None:
@@ -26,11 +28,14 @@ def reset(conn: Connection) -> None:
     # Held in memory (a few hundred rows): the migrator may not create temporary tables.
     bank = Table("question_bank", MetaData(), autoload_with=conn)
     rows = [{**row, "reviewed_by_user": None} for row in conn.execute(select(bank)).mappings()]
-    # The cascade reaches audit_log, whose append-only trigger blocks TRUNCATE; disable the user
-    # triggers for this transaction (the migrator owns the table) and re-enable them.
-    conn.execute(text("ALTER TABLE audit_log DISABLE TRIGGER USER"))
+    # The cascade reaches audit_log and activity_events, whose append-only triggers block
+    # TRUNCATE; disable their user triggers for this transaction (the migrator owns the tables)
+    # and re-enable them.
+    for table in APPEND_ONLY:
+        conn.execute(text(f"ALTER TABLE {table} DISABLE TRIGGER USER"))
     conn.execute(text("TRUNCATE users RESTART IDENTITY CASCADE"))
-    conn.execute(text("ALTER TABLE audit_log ENABLE TRIGGER USER"))
+    for table in APPEND_ONLY:
+        conn.execute(text(f"ALTER TABLE {table} ENABLE TRIGGER USER"))
     if rows:
         conn.execute(bank.insert(), rows)
 

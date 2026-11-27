@@ -20,7 +20,8 @@ SEED_V1 = SEED_DIR / "platform_settings_v1.json"
 SEED_V2 = SEED_DIR / "platform_settings_v2.json"
 SEED_V3 = SEED_DIR / "platform_settings_v3.json"
 SEED_V4 = SEED_DIR / "platform_settings_v4.json"
-SEED = SEED_DIR / "platform_settings_v5.json"
+SEED_V5 = SEED_DIR / "platform_settings_v5.json"
+SEED = SEED_DIR / "platform_settings_v6.json"
 
 
 def doc_with(path: str, value: Any) -> dict[str, Any]:
@@ -80,6 +81,31 @@ def test_v4_snapshot_still_validates_with_the_assessment_defaults_filled_in() ->
     assert filled.assessment.question_count == 12
     assert filled.assessment.difficulty_mix == (4, 5, 3)
     assert filled.ratelimit.assessment_start[0].limit == 10
+
+
+def test_v5_snapshot_still_validates_with_the_upload_byte_budget_filled_in() -> None:
+    v5 = json.loads(SEED_V5.read_text(encoding="utf-8"))
+    assert "upload_bytes_per_day" not in v5["ratelimit"]
+    assert validate_settings(v5).ratelimit.upload_bytes_per_day == 500 * 1024 * 1024
+
+
+@pytest.mark.parametrize(
+    ("inactive", "repair", "ok"), [(9, 10, True), (10, 10, False), (11, 10, False)]
+)
+def test_inactive_days_must_stay_below_repair_days(inactive: int, repair: int, ok: bool) -> None:
+    doc = copy.deepcopy(default_settings_document())
+    doc["alerts"] = {"inactive_days": inactive, "repair_days": repair, "stalled_days": 5}
+    if ok:
+        assert validate_settings(doc).alerts.inactive_days == inactive
+    else:
+        with pytest.raises(SettingsValidationError):
+            validate_settings(doc)
+
+
+@pytest.mark.parametrize("value", [1_048_575, 10_737_418_241, 0])
+def test_upload_byte_budget_bounds(value: int) -> None:
+    with pytest.raises(SettingsValidationError):
+        validate_settings(doc_with("ratelimit.upload_bytes_per_day", value))
 
 
 def test_defaults_serialize_decimals_as_strings() -> None:

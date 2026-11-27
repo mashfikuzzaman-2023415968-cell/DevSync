@@ -19,6 +19,9 @@ USER_SCOPED = {
     "reputation_history", "reputation_log", "reputation_skill", "reputation_snapshots", "sessions",
     "skill_evidence", "test_attempts", "totp_credentials",
     "user_accommodations",
+    # Phase 9 workspace (D141): tasks, evidence, talk, events and preferences go with their users.
+    "activity_events", "comments", "discussion_posts", "discussion_threads",
+    "notification_preferences", "task_evidence", "tasks",
 }  # fmt: skip
 
 REFERENCING_USERS = text(

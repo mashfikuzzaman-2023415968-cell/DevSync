@@ -186,6 +186,14 @@ class AlertSettings(_Group):
     repair_days: int = Field(10, ge=1, le=60)
     stalled_days: int = Field(5, ge=1, le=60)
 
+    @model_validator(mode="after")
+    def _order(self) -> Self:
+        # INACTIVE_MEMBER is MEDIUM from inactive_days and CRITICAL from repair_days (D151):
+        # equal or inverted values would skip or invert the severity step.
+        if self.inactive_days >= self.repair_days:
+            raise ValueError("alerts.inactive_days must be less than alerts.repair_days")
+        return self
+
 
 class BiddingSettings(_Group):
     """Too-few-bids handling (§9.19)."""
@@ -236,6 +244,8 @@ class RateLimitSettings(_Group):
     review: tuple[RateRule, ...] = _rules((30, HOUR))
     dispute: tuple[RateRule, ...] = _rules((5, DAY))
     upload: tuple[RateRule, ...] = _rules((20, HOUR))
+    # §14.8 "500 MB/day" per user (D147): a byte budget, counted per Asia/Dhaka day.
+    upload_bytes_per_day: int = Field(524_288_000, ge=1_048_576, le=10_737_418_240)
     github_sync: tuple[RateRule, ...] = _rules((1, 10 * MINUTE))
     data_export: tuple[RateRule, ...] = _rules((2, DAY))
     admin: tuple[RateRule, ...] = _rules((300, MINUTE))
