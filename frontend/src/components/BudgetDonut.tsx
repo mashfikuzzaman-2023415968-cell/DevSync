@@ -22,7 +22,12 @@ export function BudgetDonut({ budget }: { budget: BudgetParts }) {
   const [view, setView] = useState<"chart" | "table">("chart");
   const parts = [
     { label: "Released", paisa: budget.released_paisa, stroke: "stroke-chart-1", bg: "bg-chart-1" },
-    { label: "Committed", paisa: budget.committed_paisa, stroke: "stroke-chart-2", bg: "bg-chart-2" },
+    {
+      label: "Committed",
+      paisa: budget.committed_paisa,
+      stroke: "stroke-chart-2",
+      bg: "bg-chart-2",
+    },
     { label: "Remaining", paisa: budget.remaining_paisa, stroke: "stroke-border", bg: "bg-border" },
   ];
   const total = Math.max(1, budget.budget_paisa);
@@ -47,11 +52,24 @@ export function BudgetDonut({ budget }: { budget: BudgetParts }) {
       />
       {view === "chart" ? (
         <div className="flex items-center gap-5">
-          <svg viewBox="0 0 100 100" className="size-28 shrink-0 -rotate-90" role="img"
-               aria-label={`Budget ${formatMoney(budget.budget_paisa)}: ${parts.map((p) => `${p.label.toLowerCase()} ${formatMoney(p.paisa)}`).join(", ")}`}>
+          <svg
+            viewBox="0 0 100 100"
+            className="size-28 shrink-0 -rotate-90"
+            role="img"
+            aria-label={`Budget ${formatMoney(budget.budget_paisa)}: ${parts.map((p) => `${p.label.toLowerCase()} ${formatMoney(p.paisa)}`).join(", ")}`}
+          >
             {arcs.map((a) => (
-              <circle key={a.label} cx="50" cy="50" r={R} fill="none" strokeWidth="12"
-                      className={a.stroke} strokeDasharray={a.dash} strokeDashoffset={a.offset} />
+              <circle
+                key={a.label}
+                cx="50"
+                cy="50"
+                r={R}
+                fill="none"
+                strokeWidth="12"
+                className={a.stroke}
+                strokeDasharray={a.dash}
+                strokeDashoffset={a.offset}
+              />
             ))}
           </svg>
           <ul className="space-y-1 text-body-sm">
@@ -69,13 +87,19 @@ export function BudgetDonut({ budget }: { budget: BudgetParts }) {
           <tbody>
             {parts.map((p) => (
               <tr key={p.label} className="border-b border-border">
-                <th scope="row" className="py-1.5 text-left font-normal text-text-muted">{p.label}</th>
+                <th scope="row" className="py-1.5 text-left font-normal text-text-muted">
+                  {p.label}
+                </th>
                 <td className="tabular py-1.5 text-right text-text">{formatMoney(p.paisa)}</td>
               </tr>
             ))}
             <tr>
-              <th scope="row" className="py-1.5 text-left font-medium">Budget</th>
-              <td className="tabular py-1.5 text-right font-medium">{formatMoney(budget.budget_paisa)}</td>
+              <th scope="row" className="py-1.5 text-left font-medium">
+                Budget
+              </th>
+              <td className="tabular py-1.5 text-right font-medium">
+                {formatMoney(budget.budget_paisa)}
+              </td>
             </tr>
           </tbody>
         </table>

@@ -156,53 +156,53 @@ function FileRow({ projectId, file }: { projectId: string; file: ProjectFile }) 
   const Icon = file.mime.startsWith("image/") ? ImageIcon : FileText;
   return (
     <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary">
-          <Icon className="size-5" aria-hidden="true" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="break-all font-medium text-text">{file.name}</p>
-          <p className="text-caption text-text-muted">
-            {file.uploaded_by.name}, {formatDate(file.created_at)}, {formatBytes(file.size_bytes)}
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary">
+        <Icon className="size-5" aria-hidden="true" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="break-all font-medium text-text">{file.name}</p>
+        <p className="text-caption text-text-muted">
+          {file.uploaded_by.name}, {formatDate(file.created_at)}, {formatBytes(file.size_bytes)}
+        </p>
+        {file.links.length > 0 ? (
+          <p className="mt-1 text-caption text-text-muted">
+            Evidence for{" "}
+            {file.links.map((l, i) => (
+              <span key={l.task_id}>
+                {i > 0 ? ", " : ""}
+                <span className="text-text">{l.task_title}</span> ({l.milestone_title})
+              </span>
+            ))}
           </p>
-          {file.links.length > 0 ? (
-            <p className="mt-1 text-caption text-text-muted">
-              Evidence for{" "}
-              {file.links.map((l, i) => (
-                <span key={l.task_id}>
-                  {i > 0 ? ", " : ""}
-                  <span className="text-text">{l.task_title}</span> ({l.milestone_title})
-                </span>
-              ))}
-            </p>
-          ) : null}
-        </div>
-        <div className="flex gap-2">
-          <Button asChild variant="outline" size="sm" className="flex-1 sm:flex-none">
-            <a href={fileUrl(file.id)} download aria-label={`Download ${file.name}`}>
-              <Download className="size-4" aria-hidden="true" /> Download
-            </a>
-          </Button>
-          {file.can_delete ? (
-            <ConfirmDialog
-              trigger={
-                <IconButton aria-label={`Delete ${file.name}`}>
-                  <Trash2 />
-                </IconButton>
+        ) : null}
+      </div>
+      <div className="flex gap-2">
+        <Button asChild variant="outline" size="sm" className="flex-1 sm:flex-none">
+          <a href={fileUrl(file.id)} download aria-label={`Download ${file.name}`}>
+            <Download className="size-4" aria-hidden="true" /> Download
+          </a>
+        </Button>
+        {file.can_delete ? (
+          <ConfirmDialog
+            trigger={
+              <IconButton aria-label={`Delete ${file.name}`}>
+                <Trash2 />
+              </IconButton>
+            }
+            title={`Delete ${file.name}?`}
+            description="It disappears from Files for everyone and can’t be downloaded any more. Tasks that used it keep a note that it was attached."
+            confirmLabel="Delete file"
+            onConfirm={async () => {
+              try {
+                await remove.mutateAsync(file.id);
+                toast({ tone: "success", title: "File deleted" });
+              } catch (e) {
+                toast({ tone: "danger", title: messageFor(e) });
               }
-              title={`Delete ${file.name}?`}
-              description="It disappears from Files for everyone and can’t be downloaded any more. Tasks that used it keep a note that it was attached."
-              confirmLabel="Delete file"
-              onConfirm={async () => {
-                try {
-                  await remove.mutateAsync(file.id);
-                  toast({ tone: "success", title: "File deleted" });
-                } catch (e) {
-                  toast({ tone: "danger", title: messageFor(e) });
-                }
-              }}
-            />
-          ) : null}
-        </div>
+            }}
+          />
+        ) : null}
+      </div>
     </Card>
   );
 }

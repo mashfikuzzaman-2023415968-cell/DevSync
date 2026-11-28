@@ -67,7 +67,8 @@ function show(files: ProjectFile[], view: "member" | "client" = "member", status
   );
 }
 
-const png = () => new File([new Uint8Array([137, 80, 78, 71, 1, 2, 3])], "board.png", { type: "image/png" });
+const png = () =>
+  new File([new Uint8Array([137, 80, 78, 71, 1, 2, 3])], "board.png", { type: "image/png" });
 
 describe("FilesTab", () => {
   it("lists files with who, when, how big and the tasks that use them", async () => {
@@ -114,7 +115,12 @@ describe("FilesTab", () => {
       http.post(`${API}/projects/${PID}/files`, () => {
         calls += 1;
         return HttpResponse.json(
-          { error: { code: "PAYLOAD_TOO_LARGE", message: "This type of file can be at most 10 MB." } },
+          {
+            error: {
+              code: "PAYLOAD_TOO_LARGE",
+              message: "This type of file can be at most 10 MB.",
+            },
+          },
           { status: 413 },
         );
       }),
@@ -127,7 +133,9 @@ describe("FilesTab", () => {
       input,
       new File([new Uint8Array(1024 * 1024 + 1)], "big.txt", { type: "text/plain" }),
     );
-    expect(await screen.findByText("A text or Markdown file can be at most 1 MB.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("A text or Markdown file can be at most 1 MB."),
+    ).toBeInTheDocument();
     expect(calls).toBe(0);
     await user.upload(input, new File(["%PDF-1.7"], "spec.pdf", { type: "application/pdf" }));
     expect(await screen.findByText("This type of file can be at most 10 MB.")).toBeInTheDocument();
@@ -199,11 +207,18 @@ describe("file rules", () => {
   it("needs a file for file evidence and an https link for links", () => {
     const base = { url: "", file_id: "", note: "" };
     expect(evidenceFormSchema.safeParse({ ...base, kind: "FILE" }).success).toBe(false);
-    expect(evidenceFormSchema.safeParse({ ...base, kind: "SCREENSHOT", file_id: "f1" }).success).toBe(true);
-    expect(evidenceFormSchema.safeParse({ ...base, kind: "LINK", url: "http://x.io" }).success).toBe(false);
-    expect(evidenceFormSchema.safeParse({ ...base, kind: "LINK", url: "https://x.io" }).success).toBe(true);
     expect(
-      evidenceFormSchema.safeParse({ ...base, kind: "PR", url: "https://gitlab.com/a/b/pull/1" }).success,
+      evidenceFormSchema.safeParse({ ...base, kind: "SCREENSHOT", file_id: "f1" }).success,
+    ).toBe(true);
+    expect(
+      evidenceFormSchema.safeParse({ ...base, kind: "LINK", url: "http://x.io" }).success,
+    ).toBe(false);
+    expect(
+      evidenceFormSchema.safeParse({ ...base, kind: "LINK", url: "https://x.io" }).success,
+    ).toBe(true);
+    expect(
+      evidenceFormSchema.safeParse({ ...base, kind: "PR", url: "https://gitlab.com/a/b/pull/1" })
+        .success,
     ).toBe(false);
   });
 });

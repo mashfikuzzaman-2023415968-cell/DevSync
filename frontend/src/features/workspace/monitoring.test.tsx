@@ -73,12 +73,16 @@ function show(view: "member" | "client", path: string, element: React.ReactNode)
   server.use(
     http.get(`${API}/projects/${PID}/team`, () => HttpResponse.json(team(view))),
     http.get(`${API}/projects/${PID}/dashboard`, () => HttpResponse.json(dashboard(view))),
-    http.get(`${API}/projects/${PID}/risks`, () =>
+    http.get(
+      `${API}/projects/${PID}/risks`,
+      () =>
       HttpResponse.json({ items: [risk(), risk({ id: "r2", type: "INACTIVE_MEMBER",
         severity: "MEDIUM", title: "Rafi has been inactive for 10 days",
         actions: ["MESSAGE_MEMBER", "FIND_REPLACEMENT"] })], evaluated_at: null }), // prettier-ignore
     ),
-    http.get(`${API}/projects/${PID}/activity`, () =>
+    http.get(
+      `${API}/projects/${PID}/activity`,
+      () =>
       HttpResponse.json({ items: [{ id: "e1", type: "task.done", actor: null, subject: null,
         summary: "Nusrat Jahan finished a task", entity_type: "TASK", entity_id: null,
         at: "2026-11-27T05:00:00Z" }], next_cursor: null }), // prettier-ignore

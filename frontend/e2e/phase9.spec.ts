@@ -121,7 +121,9 @@ test("Phase 9: the team works on the board and the client watches progress @e2e"
   await member.page.goto(`/w/${projectId}/tasks`);
   await member.page.getByRole("button", { name: TASK, exact: true }).click(LOAD);
   const drawer = member.page.getByRole("dialog");
-  await drawer.getByRole("textbox", { name: "Write a comment" }).fill("Paging is ready to review.", LOAD);
+  await drawer
+    .getByRole("textbox", { name: "Write a comment" })
+    .fill("Paging is ready to review.", LOAD);
   await drawer.getByRole("combobox", { name: "Mention someone" }).click();
   await member.page.getByRole("option", { name: lead }).click();
   await drawer.getByRole("button", { name: "Post comment" }).click();
@@ -167,9 +169,9 @@ test("Phase 9: the team works on the board and the client watches progress @e2e"
   await expect(page.getByText(TASK)).toBeVisible(LOAD);
   await expect(page.getByRole("button", { name: `Move ${TASK}`, exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "New task" })).toHaveCount(0);
-  const tasks = (await (
-    await page.request.get(`/api/v1/projects/${projectId}/tasks`)
-  ).json()) as { items: { id: string; version: number }[] };
+  const tasks = (await (await page.request.get(`/api/v1/projects/${projectId}/tasks`)).json()) as {
+    items: { id: string; version: number }[];
+  };
   const task = tasks.items.at(0);
   if (!task) throw new Error("no task");
   const moved = await page.request.post(`/api/v1/tasks/${task.id}/move`, {
@@ -200,14 +202,12 @@ test("Phase 9: the team works on the board and the client watches progress @e2e"
   const columns = member.page.getByRole("navigation", { name: "Board columns" });
   await expect(columns).toBeVisible(LOAD);
   await columns.getByRole("button", { name: /In progress/ }).click();
-  await member.page
-    .getByRole("button", { name: `Move ${TASK} to another column` })
-    .click(LOAD);
+  await member.page.getByRole("button", { name: `Move ${TASK} to another column` }).click(LOAD);
   await member.page.getByRole("menuitem", { name: "Move to Review" }).click();
   await columns.getByRole("button", { name: /Review/ }).click();
-  await expect(
-    member.page.getByRole("list", { name: "Review tasks" }).getByText(TASK),
-  ).toBeVisible(LOAD);
+  await expect(member.page.getByRole("list", { name: "Review tasks" }).getByText(TASK)).toBeVisible(
+    LOAD,
+  );
 
   await leader.ctx.close();
   await member.ctx.close();

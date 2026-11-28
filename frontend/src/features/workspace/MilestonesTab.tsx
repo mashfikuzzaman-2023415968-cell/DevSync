@@ -12,18 +12,19 @@ import { useProjectPlan } from "@/features/projects/api";
 import { formatDate } from "@/lib/format";
 import { useWorkspace } from "./context";
 
-const STATUS: Record<string, { label: string; tone: "neutral" | "info" | "success" | "warning" }> = {
-  PLANNED: { label: "Planned", tone: "neutral" },
-  FUNDED: { label: "Funded", tone: "neutral" },
-  ACTIVE: { label: "Active", tone: "info" },
-  SUBMITTED: { label: "Submitted", tone: "info" },
-  CHANGES_REQUESTED: { label: "Changes requested", tone: "warning" },
-  DISPUTED: { label: "Disputed", tone: "warning" },
-  APPROVED: { label: "Approved", tone: "success" },
-  AUTO_APPROVED: { label: "Approved", tone: "success" },
-  PAID: { label: "Paid", tone: "success" },
-  REFUNDED: { label: "Refunded", tone: "neutral" },
-};
+const STATUS: Record<string, { label: string; tone: "neutral" | "info" | "success" | "warning" }> =
+  {
+    PLANNED: { label: "Planned", tone: "neutral" },
+    FUNDED: { label: "Funded", tone: "neutral" },
+    ACTIVE: { label: "Active", tone: "info" },
+    SUBMITTED: { label: "Submitted", tone: "info" },
+    CHANGES_REQUESTED: { label: "Changes requested", tone: "warning" },
+    DISPUTED: { label: "Disputed", tone: "warning" },
+    APPROVED: { label: "Approved", tone: "success" },
+    AUTO_APPROVED: { label: "Approved", tone: "success" },
+    PAID: { label: "Paid", tone: "success" },
+    REFUNDED: { label: "Refunded", tone: "neutral" },
+  };
 
 export default function MilestonesTab() {
   const ws = useWorkspace();
@@ -51,7 +52,10 @@ export default function MilestonesTab() {
       <ul className="space-y-3">
         {p.nodes.map((n) => {
           const live = byKey.get(n.key);
-          const status = STATUS[live?.status ?? "PLANNED"] ?? { label: live?.status ?? "", tone: "neutral" };
+          const status = STATUS[live?.status ?? "PLANNED"] ?? {
+            label: live?.status ?? "",
+            tone: "neutral",
+          };
           return (
             <li key={n.key}>
               <Card className="space-y-2 p-4">
@@ -64,11 +68,17 @@ export default function MilestonesTab() {
                   </span>
                 </div>
                 {live ? (
-                  <Progress value={live.progress_pct} label={`${String(live.progress_pct)}% of its tasks done`} showValue />
+                  <Progress
+                    value={live.progress_pct}
+                    label={`${String(live.progress_pct)}% of its tasks done`}
+                    showValue
+                  />
                 ) : null}
                 <p className="text-body-sm text-text-muted" data-volatile>
                   Planned {day(n.es)} to {day(Math.max(n.es, n.ef - 1))}
-                  {live ? `; forecast to ${day(Math.max(live.forecast_es, live.forecast_ef - 1))}` : ""}
+                  {live
+                    ? `; forecast to ${day(Math.max(live.forecast_es, live.forecast_ef - 1))}`
+                    : ""}
                   {live && live.days_late > 0 ? ` (${String(live.days_late)} days late)` : ""}.
                   {live && live.revision_count > 0
                     ? ` ${String(live.revision_count)} ${live.revision_count === 1 ? "revision" : "revisions"}.`

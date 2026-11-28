@@ -116,7 +116,10 @@ function FeedCard({ projectId }: { projectId: string }) {
   const items = q.data?.pages.flatMap((p) => p.items) ?? [];
   return (
     <Card>
-      <CardHeader title="Activity" description="Everything that counts as evidence, newest first." />
+      <CardHeader
+        title="Activity"
+        description="Everything that counts as evidence, newest first."
+      />
       <div className="px-5 pb-5">
         {q.isPending ? (
           <Skeleton className="h-32 w-full" />

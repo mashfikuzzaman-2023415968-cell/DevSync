@@ -99,7 +99,9 @@ describe("DiscussionTab", () => {
     const posts = [post("p1", "t1", "Opening post of t1")];
     show([thread("t1", "Release checklist")], `/w/${PID}/discussion?thread=t1`);
     server.use(
-      http.get(`${API}/threads/t1/posts`, () => HttpResponse.json({ items: posts, next_cursor: null })),
+      http.get(`${API}/threads/t1/posts`, () =>
+        HttpResponse.json({ items: posts, next_cursor: null }),
+      ),
       http.post(`${API}/threads/t1/posts`, async ({ request }) => {
         sent = await request.json();
         posts.push(post("p2", "t1", "Agreed"));
@@ -128,7 +130,9 @@ describe("DiscussionTab", () => {
     await user.click(screen.getByRole("button", { name: "New thread" }));
     await user.type(screen.getByLabelText("Title"), "Hi");
     await user.click(screen.getByRole("button", { name: "Start thread" }));
-    expect(await screen.findByText("Give the thread a title of at least 3 characters")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Give the thread a title of at least 3 characters"),
+    ).toBeInTheDocument();
     expect(screen.getByText("Write the first post")).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Title"));
     await user.type(screen.getByLabelText("Title"), "Demo plan");

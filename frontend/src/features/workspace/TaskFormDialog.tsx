@@ -78,7 +78,10 @@ export function TaskFormDialog({
       if (task) {
         await patch.mutateAsync({
           task,
-          body: { ...fields, ...(v.milestone_id !== task.milestone_id ? { milestone_id: v.milestone_id } : {}) },
+          body: {
+            ...fields,
+            ...(v.milestone_id !== task.milestone_id ? { milestone_id: v.milestone_id } : {}),
+          },
         });
         toast({ tone: "success", title: "Task saved" });
       } else {
@@ -88,7 +91,14 @@ export function TaskFormDialog({
       }
       setOpen(false);
     } catch (e) {
-      const keys = ["title", "description", "assignee_id", "deadline", "estimate_hours", "milestone_id"] as const;
+      const keys = [
+        "title",
+        "description",
+        "assignee_id",
+        "deadline",
+        "estimate_hours",
+        "milestone_id",
+      ] as const;
       if (!applyFieldErrors(e, form.setError, [...keys])) setNotice(messageFor(e));
     }
   });
@@ -102,10 +112,17 @@ export function TaskFormDialog({
       }}
       trigger={trigger}
       title={task ? "Edit task" : "New task"}
-      description={task ? undefined : "It starts in To do. Only you, the lead, can change it later."}
+      description={
+        task ? undefined : "It starts in To do. Only you, the lead, can change it later."
+      }
       footer={
         <>
-          <Button variant="ghost" onClick={() => { setOpen(false); }}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setOpen(false);
+            }}
+          >
             Cancel
           </Button>
           <Button type="submit" form="task-form" loading={form.formState.isSubmitting}>
@@ -123,7 +140,12 @@ export function TaskFormDialog({
               control={form.control}
               name="milestone_id"
               render={({ field }) => (
-                <Select {...a11y} value={field.value} onChange={field.onChange} options={milestones} />
+                <Select
+                  {...a11y}
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={milestones}
+                />
               )}
             />
           )}
@@ -158,12 +180,22 @@ export function TaskFormDialog({
                 control={form.control}
                 name="difficulty"
                 render={({ field }) => (
-                  <Select {...a11y} value={field.value} onChange={field.onChange} options={DIFFICULTIES} />
+                  <Select
+                    {...a11y}
+                    value={field.value}
+                    onChange={field.onChange}
+                    options={DIFFICULTIES}
+                  />
                 )}
               />
             )}
           </FormField>
-          <Field label="Deadline" type="date" error={errors.deadline?.message} {...form.register("deadline")} />
+          <Field
+            label="Deadline"
+            type="date"
+            error={errors.deadline?.message}
+            {...form.register("deadline")}
+          />
         </div>
         <FormField label="Description" error={errors.description?.message}>
           <Textarea rows={4} maxLength={5000} {...form.register("description")} />

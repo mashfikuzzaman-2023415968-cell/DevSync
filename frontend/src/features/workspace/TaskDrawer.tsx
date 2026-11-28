@@ -76,7 +76,11 @@ export function TaskDrawer({
         </div>
       ) : q.isError ? (
         <ErrorState
-          title={q.error instanceof ApiError && q.error.status === 404 ? "This task is gone" : "The task didn’t load"}
+          title={
+            q.error instanceof ApiError && q.error.status === 404
+              ? "This task is gone"
+              : "The task didn’t load"
+          }
           requestId={q.error instanceof ApiError ? q.error.requestId : null}
           onRetry={() => void q.refetch()}
         />
@@ -86,7 +90,9 @@ export function TaskDrawer({
           projectId={projectId}
           onClose={onClose}
           onMove={onMove}
-          candidates={candidates.filter((c) => c.milestone_id === q.data.milestone_id && c.id !== q.data.id)}
+          candidates={candidates.filter(
+            (c) => c.milestone_id === q.data.milestone_id && c.id !== q.data.id,
+          )}
           milestones={milestones}
           members={members}
           myUserId={myUserId}
@@ -114,7 +120,9 @@ function Details({
   const removeDep = useRemoveDependency(projectId, task.id);
   const [dep, setDep] = useState<string>("");
   const [editing, setEditing] = useState(false);
-  const mayAddEvidence = task.can_edit || (myUserId !== null && task.assignee?.id === myUserId && task.can_move_to.length > 0);
+  const mayAddEvidence =
+    task.can_edit ||
+    (myUserId !== null && task.assignee?.id === myUserId && task.can_move_to.length > 0);
   const milestoneName = milestones.find((m) => m.value === task.milestone_id)?.label ?? "";
   return (
     <div className="space-y-6 p-5">
@@ -150,7 +158,9 @@ function Details({
                   variant="outline"
                   size="sm"
                   disabled={!o.allowed}
-                  onClick={() => { onMove(task, o.status); }}
+                  onClick={() => {
+                    onMove(task, o.status);
+                  }}
                 >
                   {STATUS_LABEL[o.status]}
                 </Button>
@@ -172,7 +182,9 @@ function Details({
             {task.dependencies.map((d) => (
               <li key={d.id} className="flex items-center justify-between gap-2">
                 <span className="inline-flex min-w-0 items-center gap-1.5">
-                  {d.status !== "DONE" ? <Lock className="size-3.5 shrink-0 text-warning" aria-hidden="true" /> : null}
+                  {d.status !== "DONE" ? (
+                    <Lock className="size-3.5 shrink-0 text-warning" aria-hidden="true" />
+                  ) : null}
                   <span className="truncate">{d.title}</span>
                   <span className="text-text-muted">({STATUS_LABEL[d.status]})</span>
                 </span>
@@ -181,10 +193,11 @@ function Details({
                     variant="ghost"
                     size="sm"
                     aria-label={`Stop waiting for ${d.title}`}
-                    onClick={() => { removeDep.mutate(d.id, {
+                    onClick={() => {
+                      removeDep.mutate(d.id, {
                         onError: (e) => toast({ tone: "danger", title: messageFor(e) }),
-                      }); }
-                    }
+                      });
+                    }}
                   >
                     <Trash2 className="size-4" aria-hidden="true" />
                   </Button>
@@ -195,7 +208,8 @@ function Details({
         )}
         {task.dependents.length > 0 ? (
           <p className="mt-2 text-caption text-text-muted">
-            {task.dependents.map((d) => d.title).join(", ")} {task.dependents.length === 1 ? "waits" : "wait"} for this task.
+            {task.dependents.map((d) => d.title).join(", ")}{" "}
+            {task.dependents.length === 1 ? "waits" : "wait"} for this task.
           </p>
         ) : null}
         {task.can_edit && candidates.length > 0 ? (
@@ -215,11 +229,14 @@ function Details({
               variant="outline"
               disabled={!dep}
               loading={addDep.isPending}
-              onClick={() => { addDep.mutate(dep, {
-                  onSuccess: () => { setDep(""); },
+              onClick={() => {
+                addDep.mutate(dep, {
+                  onSuccess: () => {
+                    setDep("");
+                  },
                   onError: (e) => toast({ tone: "danger", title: messageFor(e) }),
-                }); }
-              }
+                });
+              }}
             >
               Add
             </Button>
@@ -272,7 +289,12 @@ function Details({
 
       {task.can_edit ? (
         <div className="flex flex-wrap gap-2 border-t border-border pt-4">
-          <Button variant="outline" onClick={() => { setEditing(true); }}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setEditing(true);
+            }}
+          >
             Edit task
           </Button>
           <TaskFormDialog
@@ -335,7 +357,11 @@ function EvidenceAdd({ projectId, taskId }: { projectId: string; taskId: string 
     }
   });
   return (
-    <form noValidate onSubmit={(e) => void submit(e)} className="mt-4 space-y-3 rounded-lg bg-surface-2 p-3">
+    <form
+      noValidate
+      onSubmit={(e) => void submit(e)}
+      className="mt-4 space-y-3 rounded-lg bg-surface-2 p-3"
+    >
       {notice ? <Alert tone="danger">{notice}</Alert> : null}
       <FormField label="Kind">
         {(a11y) => (
@@ -394,7 +420,11 @@ function EvidenceAdd({ projectId, taskId }: { projectId: string; taskId: string 
           {...form.register("url")}
         />
       )}
-      <Field label="Note (optional)" error={form.formState.errors.note?.message} {...form.register("note")} />
+      <Field
+        label="Note (optional)"
+        error={form.formState.errors.note?.message}
+        {...form.register("note")}
+      />
       <Button type="submit" variant="outline" loading={form.formState.isSubmitting}>
         <Link2 className="size-4" aria-hidden="true" /> Add evidence
       </Button>

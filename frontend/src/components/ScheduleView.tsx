@@ -37,10 +37,13 @@ export function ScheduleView({
 }) {
   const [view, setView] = useState<View>(() => (phone() ? "list" : "gantt"));
   const bars = forecast
-    ? new Map<string, ForecastBar>(forecast.map((f) => [f.key, { es: f.forecast_es, ef: f.forecast_ef }]))
+    ? new Map<string, ForecastBar>(
+        forecast.map((f) => [f.key, { es: f.forecast_es, ef: f.forecast_ef }]),
+      )
     : undefined;
   const byKey = new Map((forecast ?? []).map((f) => [f.key, f]));
-  const date = (day: number) => (startDate ? formatDate(dayToDate(startDate, day)) : `day ${String(day)}`);
+  const date = (day: number) =>
+    startDate ? formatDate(dayToDate(startDate, day)) : `day ${String(day)}`;
   return (
     <div className="space-y-4">
       <SegmentedControl<View>
@@ -82,7 +85,10 @@ export function ScheduleView({
                     {n.critical ? "." : `; can slip ${formatDays(n.slack)}.`}
                   </p>
                   {f ? (
-                    <p className={late > 0 ? "font-medium text-warning" : "text-success"} data-volatile>
+                    <p
+                      className={late > 0 ? "font-medium text-warning" : "text-success"}
+                      data-volatile
+                    >
                       Forecast to finish {date(Math.max(f.forecast_es, f.forecast_ef - 1))}
                       {late > 0 ? `, ${formatDays(late)} late.` : ", on plan."}
                     </p>

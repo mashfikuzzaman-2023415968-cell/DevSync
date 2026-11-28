@@ -76,23 +76,32 @@ export default function TasksTab() {
   );
   const cards = columns.flatMap((c) => c.q.data?.pages.flatMap((p) => p.items) ?? []);
 
-  const open = (card: TaskCard) => { setParams((p) => ({ ...Object.fromEntries(p), task: card.id })); };
-  const close = () => { setParams((p) => {
+  const open = (card: TaskCard) => {
+    setParams((p) => ({ ...Object.fromEntries(p), task: card.id }));
+  };
+  const close = () => {
+    setParams((p) => {
       const next = new URLSearchParams(p);
       next.delete("task");
       return next;
-    }); };
-  const doMove = ({ card, status, afterId, beforeId }: KanbanMove) => { move.mutate(
+    });
+  };
+  const doMove = ({ card, status, afterId, beforeId }: KanbanMove) => {
+    move.mutate(
       { task: card, status, afterId, beforeId },
       {
         onError: (e) =>
           toast({
             tone: "danger",
-            title: e instanceof ApiError && e.status === 409 ? "That move didn’t happen" : "Couldn’t move the task",
+            title:
+              e instanceof ApiError && e.status === 409
+                ? "That move didn’t happen"
+                : "Couldn’t move the task",
             description: messageFor(e),
           }),
       },
-    ); };
+    );
+  };
 
   if (columns.some((c) => c.q.isPending)) {
     return (
@@ -111,7 +120,9 @@ export default function TasksTab() {
         <ErrorState
           title="The board didn’t load"
           requestId={err instanceof ApiError ? err.requestId : null}
-          onRetry={() => { columns.forEach((c) => void c.q.refetch()); }}
+          onRetry={() => {
+            columns.forEach((c) => void c.q.refetch());
+          }}
         />
       </Card>
     );
@@ -144,7 +155,9 @@ export default function TasksTab() {
           <Select
             aria-label="Milestone"
             value={filters.milestoneId ?? ALL}
-            onChange={(v) => { setFilters((f) => ({ ...f, milestoneId: v === ALL ? undefined : v })); }}
+            onChange={(v) => {
+              setFilters((f) => ({ ...f, milestoneId: v === ALL ? undefined : v }));
+            }}
             options={[{ value: ALL, label: "All milestones" }, ...milestones]}
           />
         </div>
@@ -152,7 +165,9 @@ export default function TasksTab() {
           <Select
             aria-label="Assignee"
             value={filters.assigneeId ?? ALL}
-            onChange={(v) => { setFilters((f) => ({ ...f, assigneeId: v === ALL ? undefined : v })); }}
+            onChange={(v) => {
+              setFilters((f) => ({ ...f, assigneeId: v === ALL ? undefined : v }));
+            }}
             options={[{ value: ALL, label: "Everyone" }, ...members]}
           />
         </div>
@@ -161,11 +176,18 @@ export default function TasksTab() {
             label="Only mine"
             className="justify-start"
             checked={Boolean(filters.mine)}
-            onCheckedChange={(on) => { setFilters((f) => ({ ...f, mine: on || undefined })); }}
+            onCheckedChange={(on) => {
+              setFilters((f) => ({ ...f, mine: on || undefined }));
+            }}
           />
         ) : null}
         {ws.isLead ? (
-          <Button className="ml-auto hidden md:inline-flex" onClick={() => { setCreating(true); }}>
+          <Button
+            className="ml-auto hidden md:inline-flex"
+            onClick={() => {
+              setCreating(true);
+            }}
+          >
             <Plus className="size-5" aria-hidden="true" /> New task
           </Button>
         ) : null}
@@ -180,7 +202,17 @@ export default function TasksTab() {
                 ? "Break the active milestone into tasks so the team can start."
                 : "The team lead adds tasks here; you’ll see them as soon as they do."
             }
-            action={ws.isLead ? <Button onClick={() => { setCreating(true); }}>New task</Button> : undefined}
+            action={
+              ws.isLead ? (
+                <Button
+                  onClick={() => {
+                    setCreating(true);
+                  }}
+                >
+                  New task
+                </Button>
+              ) : undefined
+            }
           />
         </Card>
       ) : (
@@ -199,7 +231,9 @@ export default function TasksTab() {
         <Button
           className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-30 size-14 rounded-full shadow-lg md:hidden"
           aria-label="New task"
-          onClick={() => { setCreating(true); }}
+          onClick={() => {
+            setCreating(true);
+          }}
         >
           <Plus className="size-6" aria-hidden="true" />
         </Button>
@@ -209,7 +243,9 @@ export default function TasksTab() {
         projectId={ws.projectId}
         taskId={taskId}
         onClose={close}
-        onMove={(task, status) => { doMove({ card: task, status, afterId: null, beforeId: null }); }}
+        onMove={(task, status) => {
+          doMove({ card: task, status, afterId: null, beforeId: null });
+        }}
         candidates={cards}
         milestones={milestones}
         members={members}

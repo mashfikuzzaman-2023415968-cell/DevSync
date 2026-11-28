@@ -108,11 +108,16 @@ describe("DevProjectsPage", () => {
         const state = new URL(request.url).searchParams.get("state") ?? "";
         seen.push(state);
         const items =
-          state === "completed" ? [mine("done", { status: "COMPLETED", progress_pct: 100 })] : [mine("a")];
+          state === "completed"
+            ? [mine("done", { status: "COMPLETED", progress_pct: 100 })]
+            : [mine("a")];
         return HttpResponse.json({ items, next_cursor: null });
       }),
     );
-    const { router } = renderRoutes([{ path: "/dev/projects", element: <DevProjectsPage /> }], "/dev/projects");
+    const { router } = renderRoutes(
+      [{ path: "/dev/projects", element: <DevProjectsPage /> }],
+      "/dev/projects",
+    );
     expect(await screen.findByRole("link", { name: "Project a" })).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole("radio", { name: "Completed" }));
     expect(await screen.findByRole("link", { name: "Project done" })).toBeInTheDocument();
@@ -121,17 +126,24 @@ describe("DevProjectsPage", () => {
   });
 
   it("says when there are no projects yet", async () => {
-    server.use(http.get(`${API}/me/projects`, () => HttpResponse.json({ items: [], next_cursor: null })));
+    server.use(
+      http.get(`${API}/me/projects`, () => HttpResponse.json({ items: [], next_cursor: null })),
+    );
     renderRoutes([{ path: "/dev/projects", element: <DevProjectsPage /> }], "/dev/projects");
     expect(await screen.findByText("No active projects yet")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Browse open projects" })).toHaveAttribute("href", "/dev/find");
+    expect(screen.getByRole("link", { name: "Browse open projects" })).toHaveAttribute(
+      "href",
+      "/dev/find",
+    );
   });
 });
 
 describe("ClientProjectPulse", () => {
   it("shows progress, days late and the risk in words", async () => {
     server.use(
-      http.get(`${API}/projects/p1/dashboard`, () =>
+      http.get(
+        `${API}/projects/p1/dashboard`,
+        () =>
         HttpResponse.json({
           view: "client", progress_pct: 49, schedule: { actual_pct: 49, planned_pct: 45 },
           forecast: { finish_day: 25, finish_date: "2026-12-08", baseline_days: 23, impact_days: 2 },
@@ -152,7 +164,14 @@ describe("ClientProjectPulse", () => {
 describe("VirtualList", () => {
   const list = (n: number) => Array.from({ length: n }, (_, i) => `item ${String(i)}`);
   const draw = (items: string[]) =>
-    render(<VirtualList items={items} getKey={(s) => s} estimate={40} render={(s) => <span>{s}</span>} />);
+    render(
+      <VirtualList
+        items={items}
+        getKey={(s) => s}
+        estimate={40}
+        render={(s) => <span>{s}</span>}
+      />,
+    );
 
   it("draws every row up to the threshold", () => {
     draw(list(VIRTUALIZE_AFTER));

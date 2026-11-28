@@ -104,7 +104,11 @@ export default function CheckinsTab() {
           ))
         )}
         {q.hasNextPage ? (
-          <Button variant="outline" loading={q.isFetchingNextPage} onClick={() => void q.fetchNextPage()}>
+          <Button
+            variant="outline"
+            loading={q.isFetchingNextPage}
+            onClick={() => void q.fetchNextPage()}
+          >
             Show earlier weeks
           </Button>
         ) : null}
@@ -117,7 +121,10 @@ export default function CheckinsTab() {
 function ThisWeekCard({ week, isMember }: { week: CheckinFeed["this_week"]; isMember: boolean }) {
   return (
     <Card>
-      <CardHeader title="This week" description={`Due ${formatDateTime(week.due_at)} (Dhaka time).`} />
+      <CardHeader
+        title="This week"
+        description={`Due ${formatDateTime(week.due_at)} (Dhaka time).`}
+      />
       <div className="space-y-3 px-5 pb-5 text-body-sm">
         {isMember && week.posted ? <Alert tone="success">You checked in this week.</Alert> : null}
         {week.missing.length === 0 ? (
@@ -152,43 +159,47 @@ function feedRows(items: Checkin[]): FeedRow[] {
 function CheckinCard({ checkin }: { checkin: Checkin }) {
   return (
     <Card className="p-4">
-        <div className="mb-2 flex flex-wrap items-center gap-2">
-          <span className="font-medium text-text">{checkin.member.name}</span>
-          {checkin.on_time ? (
-            <Badge tone="success">On time</Badge>
-          ) : (
-            <Badge tone="warning">Late</Badge>
-          )}
-          <span className="text-caption text-text-muted">
-            Confidence {checkin.confidence} of 5
-          </span>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <span className="font-medium text-text">{checkin.member.name}</span>
+        {checkin.on_time ? (
+          <Badge tone="success">On time</Badge>
+        ) : (
+          <Badge tone="warning">Late</Badge>
+        )}
+        <span className="text-caption text-text-muted">Confidence {checkin.confidence} of 5</span>
+      </div>
+      <dl className="space-y-2 text-body-sm">
+        <div>
+          <dt className="font-medium text-text">Done</dt>
+          <dd className="whitespace-pre-wrap break-words text-text">{checkin.done}</dd>
         </div>
-        <dl className="space-y-2 text-body-sm">
-          <div>
-            <dt className="font-medium text-text">Done</dt>
-            <dd className="whitespace-pre-wrap break-words text-text">{checkin.done}</dd>
+        <div>
+          <dt className="font-medium text-text">Next</dt>
+          <dd className="whitespace-pre-wrap break-words text-text">{checkin.next}</dd>
+        </div>
+        {checkin.blockers ? (
+          <div className="rounded-md bg-warning-bg p-2">
+            <dt className="font-medium text-text">Blockers</dt>
+            <dd className="whitespace-pre-wrap break-words text-text">{checkin.blockers}</dd>
           </div>
-          <div>
-            <dt className="font-medium text-text">Next</dt>
-            <dd className="whitespace-pre-wrap break-words text-text">{checkin.next}</dd>
-          </div>
-          {checkin.blockers ? (
-            <div className="rounded-md bg-warning-bg p-2">
-              <dt className="font-medium text-text">Blockers</dt>
-              <dd className="whitespace-pre-wrap break-words text-text">{checkin.blockers}</dd>
-            </div>
-          ) : null}
-        </dl>
-        {checkin.reply_count > 0 ? (
-          <p className="mt-2 text-caption text-text-muted">
-            {checkin.reply_count} {checkin.reply_count === 1 ? "reply" : "replies"}
-          </p>
         ) : null}
+      </dl>
+      {checkin.reply_count > 0 ? (
+        <p className="mt-2 text-caption text-text-muted">
+          {checkin.reply_count} {checkin.reply_count === 1 ? "reply" : "replies"}
+        </p>
+      ) : null}
     </Card>
   );
 }
 
-function CheckinFormCard({ projectId, week }: { projectId: string; week: CheckinFeed["this_week"] }) {
+function CheckinFormCard({
+  projectId,
+  week,
+}: {
+  projectId: string;
+  week: CheckinFeed["this_week"];
+}) {
   const post = usePostCheckin(projectId);
   const [notice, setNotice] = useState<string | null>(null);
   const form = useForm<CheckinForm>({

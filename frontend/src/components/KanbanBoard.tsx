@@ -118,8 +118,15 @@ function TaskTile({
   onOpen: () => void;
   today: string;
 }) {
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
-    useSortable({ id: card.id, data: { status: card.status }, disabled: !draggable });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: card.id, data: { status: card.status }, disabled: !draggable });
   const overdue = card.deadline !== null && card.deadline < today && card.status !== "DONE";
   return (
     <li
@@ -222,7 +229,10 @@ function Column({
         isOver && refusedReason !== null && "border-danger",
       )}
     >
-      <h2 id={headingId} className="mb-3 flex items-center justify-between text-body-sm font-semibold">
+      <h2
+        id={headingId}
+        className="mb-3 flex items-center justify-between text-body-sm font-semibold"
+      >
         {column.label}
         <span className="tabular rounded-full bg-surface px-2 text-caption text-text-muted">
           {column.cards.length}
@@ -230,7 +240,10 @@ function Column({
         </span>
       </h2>
       {isOver && refusedReason ? (
-        <p role="status" className="mb-2 rounded-md bg-danger-bg px-2 py-1 text-caption text-danger">
+        <p
+          role="status"
+          className="mb-2 rounded-md bg-danger-bg px-2 py-1 text-caption text-danger"
+        >
           {refusedReason}
         </p>
       ) : null}
@@ -323,7 +336,13 @@ export function KanbanBoard({
           onSelect: () => {
             const reason = refusal(card, c.status);
             if (reason) onRefused(reason);
-            else onMove({ card, status: c.status, afterId: c.cards.at(-1)?.id ?? null, beforeId: null });
+            else
+              onMove({
+                card,
+                status: c.status,
+                afterId: c.cards.at(-1)?.id ?? null,
+                beforeId: null,
+              });
           },
         }))}
     />
@@ -335,7 +354,9 @@ export function KanbanBoard({
       collisionDetection={closestCorners}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
-      onDragCancel={() => { setOver(null); }}
+      onDragCancel={() => {
+        setOver(null);
+      }}
       accessibility={{
         announcements: {
           onDragStart: ({ active }) => `Picked up ${cardOf(active.id)?.title ?? "the task"}.`,
@@ -352,7 +373,8 @@ export function KanbanBoard({
             o
               ? `${cardOf(active.id)?.title ?? "The task"} dropped in ${labelOf(statusOf(o.id))}.`
               : `${cardOf(active.id)?.title ?? "The task"} put back.`,
-          onDragCancel: ({ active }) => `Moving ${cardOf(active.id)?.title ?? "the task"} was cancelled.`,
+          onDragCancel: ({ active }) =>
+            `Moving ${cardOf(active.id)?.title ?? "the task"} was cancelled.`,
         },
         screenReaderInstructions: {
           draggable:
@@ -398,7 +420,9 @@ export function KanbanBoard({
                     card={card}
                     draggable={!readOnly && canMove(card)}
                     menu={!readOnly && canMove(card) ? moveMenu(card) : null}
-                    onOpen={() => { onOpen(card); }}
+                    onOpen={() => {
+                      onOpen(card);
+                    }}
                     today={today}
                   />
                 ))}

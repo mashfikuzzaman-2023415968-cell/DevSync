@@ -94,7 +94,12 @@ export default function DiscussionTab() {
             Threads
           </h2>
           {writable && !starting ? (
-            <Button size="sm" onClick={() => { setStarting(true); }}>
+            <Button
+              size="sm"
+              onClick={() => {
+                setStarting(true);
+              }}
+            >
               <Plus className="size-4" aria-hidden="true" /> New thread
             </Button>
           ) : null}
@@ -120,13 +125,23 @@ export default function DiscussionTab() {
           <ul className="space-y-2">
             {threads.map((t) => (
               <li key={t.id}>
-                <ThreadButton thread={t} active={t.id === openId} onOpen={() => { select(t.id); }} />
+                <ThreadButton
+                  thread={t}
+                  active={t.id === openId}
+                  onOpen={() => {
+                    select(t.id);
+                  }}
+                />
               </li>
             ))}
           </ul>
         )}
         {q.hasNextPage ? (
-          <Button variant="outline" loading={q.isFetchingNextPage} onClick={() => void q.fetchNextPage()}>
+          <Button
+            variant="outline"
+            loading={q.isFetchingNextPage}
+            onClick={() => void q.fetchNextPage()}
+          >
             Show older threads
           </Button>
         ) : null}
@@ -135,7 +150,14 @@ export default function DiscussionTab() {
       <section aria-label="Open thread" className={cn(!openId && "hidden lg:block")}>
         {open ? (
           <Card className="p-5">
-            <Button variant="ghost" size="sm" className="mb-3 lg:hidden" onClick={() => { select(null); }}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mb-3 lg:hidden"
+              onClick={() => {
+                select(null);
+              }}
+            >
               <ArrowLeft className="size-4" aria-hidden="true" /> All threads
             </Button>
             <h2 className="break-words text-h4 font-semibold">{open.title}</h2>
@@ -160,7 +182,12 @@ export default function DiscussionTab() {
               title="This thread isn’t here"
               description="It may be on an older page of threads, or the link is wrong."
               action={
-                <Button variant="outline" onClick={() => { select(null); }}>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    select(null);
+                  }}
+                >
                   All threads
                 </Button>
               }
@@ -180,7 +207,15 @@ export default function DiscussionTab() {
   );
 }
 
-function ThreadButton({ thread, active, onOpen }: { thread: Thread; active: boolean; onOpen: () => void }) {
+function ThreadButton({
+  thread,
+  active,
+  onOpen,
+}: {
+  thread: Thread;
+  active: boolean;
+  onOpen: () => void;
+}) {
   return (
     <button
       type="button"
@@ -192,7 +227,10 @@ function ThreadButton({ thread, active, onOpen }: { thread: Thread; active: bool
       )}
     >
       <span className="block break-words font-medium text-text">{thread.title}</span>
-      <span className="block text-caption text-text-muted" title={formatDateTime(thread.last_post_at)}>
+      <span
+        className="block text-caption text-text-muted"
+        title={formatDateTime(thread.last_post_at)}
+      >
         {thread.post_count} {thread.post_count === 1 ? "post" : "posts"}, last{" "}
         {formatRelative(thread.last_post_at)}
       </span>
@@ -200,7 +238,13 @@ function ThreadButton({ thread, active, onOpen }: { thread: Thread; active: bool
   );
 }
 
-function NewThread({ projectId, onDone }: { projectId: string; onDone: (t: Thread | null) => void }) {
+function NewThread({
+  projectId,
+  onDone,
+}: {
+  projectId: string;
+  onDone: (t: Thread | null) => void;
+}) {
   const create = useCreateThread(projectId);
   const [notice, setNotice] = useState<string | null>(null);
   const form = useForm<ThreadForm>({
@@ -223,7 +267,12 @@ function NewThread({ projectId, onDone }: { projectId: string; onDone: (t: Threa
       <CardHeader title="New thread" description="Everyone on the project can read and reply." />
       <form noValidate onSubmit={(e) => void submit(e)} className="space-y-3 px-5 pb-5">
         {notice ? <Alert tone="danger">{notice}</Alert> : null}
-        <Field label="Title" maxLength={120} error={errors.title?.message} {...form.register("title")} />
+        <Field
+          label="Title"
+          maxLength={120}
+          error={errors.title?.message}
+          {...form.register("title")}
+        />
         <FormField label="First post" required error={errors.body?.message}>
           <Textarea rows={4} maxLength={4000} {...form.register("body")} />
         </FormField>
@@ -231,7 +280,12 @@ function NewThread({ projectId, onDone }: { projectId: string; onDone: (t: Threa
           <Button type="submit" loading={form.formState.isSubmitting}>
             Start thread
           </Button>
-          <Button variant="ghost" onClick={() => { onDone(null); }}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              onDone(null);
+            }}
+          >
             Cancel
           </Button>
         </div>

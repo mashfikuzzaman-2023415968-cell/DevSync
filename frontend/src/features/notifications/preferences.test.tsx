@@ -50,7 +50,9 @@ describe("NotificationPreferencesCard", () => {
     show();
     expect(await screen.findByText("Someone mentioned you")).toBeInTheDocument();
     expect(screen.getByRole("switch", { name: "Someone mentioned you: in DevSync" })).toBeChecked();
-    expect(screen.getByRole("switch", { name: "Someone mentioned you: by email" })).not.toBeChecked();
+    expect(
+      screen.getByRole("switch", { name: "Someone mentioned you: by email" }),
+    ).not.toBeChecked();
     expect(
       screen.queryByRole("switch", { name: "A teammate reported a blocker: by email" }),
     ).not.toBeInTheDocument();
@@ -72,7 +74,9 @@ describe("NotificationPreferencesCard", () => {
     );
     show();
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("switch", { name: "Someone mentioned you: by email" }));
+    await user.click(
+      await screen.findByRole("switch", { name: "Someone mentioned you: by email" }),
+    );
     expect(sent).toEqual({ items: [{ category: "mentions", in_app: true, email: true }] });
     expect(screen.getByRole("switch", { name: "Someone mentioned you: by email" })).toBeChecked();
   });
@@ -83,7 +87,9 @@ describe("NotificationPreferencesCard", () => {
       http.get("*/api/v1/notification-preferences", () => HttpResponse.json(PREFS)),
       http.put("*/api/v1/notification-preferences", () =>
         HttpResponse.json(
-          { error: { code: "VALIDATION_ERROR", message: "This kind of notification has no email." } },
+          {
+            error: { code: "VALIDATION_ERROR", message: "This kind of notification has no email." },
+          },
           { status: 422 },
         ),
       ),
@@ -104,7 +110,9 @@ describe("NotificationPreferencesCard", () => {
     );
     show();
     const card = await screen.findByText("Your notification settings didn’t load");
-    expect(within(card.closest("div") ?? document.body).getByText(/didn’t load/)).toBeInTheDocument();
+    expect(
+      within(card.closest("div") ?? document.body).getByText(/didn’t load/),
+    ).toBeInTheDocument();
   });
 });
 
@@ -144,14 +152,24 @@ describe("useNotificationStream", () => {
 
   it("stays closed while signed out", () => {
     const qc = new QueryClient();
-    renderHook(() => { useNotificationStream(false); }, { wrapper: wrapper(qc) });
+    renderHook(
+      () => {
+        useNotificationStream(false);
+      },
+      { wrapper: wrapper(qc) },
+    );
     expect(FakeEventSource.instances).toHaveLength(0);
   });
 
   it("re-reads notifications on each event and retries after the browser gives up", () => {
     const qc = new QueryClient();
     const invalidate = vi.spyOn(qc, "invalidateQueries");
-    const { unmount } = renderHook(() => { useNotificationStream(true); }, { wrapper: wrapper(qc) });
+    const { unmount } = renderHook(
+      () => {
+        useNotificationStream(true);
+      },
+      { wrapper: wrapper(qc) },
+    );
     const first = FakeEventSource.instances[0];
     if (!first) throw new Error("no stream opened");
     expect(first.url).toBe("/api/v1/notifications/stream");

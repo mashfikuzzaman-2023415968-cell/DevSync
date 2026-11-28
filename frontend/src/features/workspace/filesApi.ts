@@ -29,8 +29,7 @@ export const PROJECT_FILE_RULE: FileRule = {
 
 /** The per-type limits the server applies, checked early for a quicker answer. */
 export function sizeProblem(file: File): string | null {
-  if (file.type === "application/pdf" && file.size > 10 * MB)
-    return "A PDF can be at most 10 MB.";
+  if (file.type === "application/pdf" && file.size > 10 * MB) return "A PDF can be at most 10 MB.";
   if (file.type.startsWith("text/") && file.size > MB)
     return "A text or Markdown file can be at most 1 MB.";
   return null;

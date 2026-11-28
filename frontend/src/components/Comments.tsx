@@ -247,7 +247,11 @@ function CommentRow({
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-baseline gap-x-2 text-caption text-text-muted">
           <span className="text-body-sm font-medium text-text">{comment.author.name}</span>
-          <time dateTime={comment.created_at} title={formatDateTime(comment.created_at)} data-volatile>
+          <time
+            dateTime={comment.created_at}
+            title={formatDateTime(comment.created_at)}
+            data-volatile
+          >
             {formatRelative(comment.created_at)}
           </time>
           {comment.edited && !comment.deleted ? <span>edited</span> : null}

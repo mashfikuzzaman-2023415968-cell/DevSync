@@ -139,7 +139,10 @@ export default function OverviewTab() {
             <CardHeader title="Next milestone" />
             <div className="space-y-2 px-5 pb-5 text-body-sm">
               <p className="font-medium text-text">{d.next_milestone.name}</p>
-              <Progress value={d.next_milestone.progress_pct} label={`${String(d.next_milestone.progress_pct)}% done`} />
+              <Progress
+                value={d.next_milestone.progress_pct}
+                label={`${String(d.next_milestone.progress_pct)}% done`}
+              />
               <p className="text-text-muted" data-volatile>
                 {d.next_milestone.forecast_finish_date
                   ? `Forecast ${formatDate(d.next_milestone.forecast_finish_date)}`
@@ -163,16 +166,25 @@ export default function OverviewTab() {
           <CardHeader title="Recent activity" />
           <ul className="space-y-2 px-5 pb-5 text-body-sm">
             {feed.isPending ? (
-              <li><Skeleton className="h-12 w-full" /></li>
+              <li>
+                <Skeleton className="h-12 w-full" />
+              </li>
             ) : (feed.data?.pages[0]?.items ?? []).length === 0 ? (
               <li className="text-text-muted">Nothing yet.</li>
             ) : (
               (feed.data?.pages[0]?.items ?? []).map((a) => (
                 <li key={a.id} className="flex items-start gap-2">
-                  <Activity className="mt-0.5 size-4 shrink-0 text-text-subtle" aria-hidden="true" />
+                  <Activity
+                    className="mt-0.5 size-4 shrink-0 text-text-subtle"
+                    aria-hidden="true"
+                  />
                   <span className="min-w-0 flex-1 text-text">{a.summary}</span>
-                  <time className="shrink-0 text-caption text-text-muted" dateTime={a.at}
-                        title={formatDateTime(a.at)} data-volatile>
+                  <time
+                    className="shrink-0 text-caption text-text-muted"
+                    dateTime={a.at}
+                    title={formatDateTime(a.at)}
+                    data-volatile
+                  >
                     {formatRelative(a.at)}
                   </time>
                 </li>

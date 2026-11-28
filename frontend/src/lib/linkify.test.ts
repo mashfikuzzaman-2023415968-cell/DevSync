@@ -3,7 +3,10 @@
 import { describe, expect, it } from "vitest";
 import { linkify } from "./linkify";
 
-const links = (text: string) => linkify(text).filter((s) => s.kind === "link").map((s) => s.value);
+const links = (text: string) =>
+  linkify(text)
+    .filter((s) => s.kind === "link")
+    .map((s) => s.value);
 
 describe("linkify", () => {
   it("links https URLs and keeps the rest as text", () => {
@@ -30,7 +33,11 @@ describe("linkify", () => {
     "vbscript:msgbox(1)",
   ])("never links %s", (text) => {
     expect(links(text)).toEqual([]);
-    expect(linkify(text).map((s) => s.value).join("")).toBe(text);
+    expect(
+      linkify(text)
+        .map((s) => s.value)
+        .join(""),
+    ).toBe(text);
   });
 
   it("leaves sentence punctuation outside the link", () => {
@@ -49,7 +56,11 @@ describe("linkify", () => {
 
   it("keeps all of the text, in order", () => {
     const text = "a https://x.org b <script>c</script>";
-    expect(linkify(text).map((s) => s.value).join("")).toBe(text);
+    expect(
+      linkify(text)
+        .map((s) => s.value)
+        .join(""),
+    ).toBe(text);
   });
 
   it("refuses absurdly long URLs", () => {

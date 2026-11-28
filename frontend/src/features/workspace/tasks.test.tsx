@@ -53,7 +53,10 @@ const plan = {
 function board(cards: TaskCard[]) {
   return http.get(`${API}/projects/${PID}/tasks`, ({ request }) => {
     const status = new URL(request.url).searchParams.get("status");
-    return HttpResponse.json({ items: cards.filter((c) => c.status === status), next_cursor: null });
+    return HttpResponse.json({
+      items: cards.filter((c) => c.status === status),
+      next_cursor: null,
+    });
   });
 }
 

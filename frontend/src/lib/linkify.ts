@@ -5,7 +5,8 @@
  * `http:` and any other scheme never become links — and nothing is ever parsed as HTML.
  */
 
-export type Segment = { kind: "text"; value: string } | { kind: "link"; value: string; href: string };
+export type Segment =
+  { kind: "text"; value: string } | { kind: "link"; value: string; href: string };
 
 // A run of non-space characters starting with https:// (lowercase scheme only).
 const CANDIDATE = /https:\/\/[^\s<>"']+/g;
