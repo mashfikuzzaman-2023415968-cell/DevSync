@@ -101,7 +101,8 @@ class RequestIdMiddleware:
 # Multipart upload endpoints (POST only) accept files up to MAX_UPLOAD_MB (spec §14.9); the
 # same paths get a larger `client_max_body_size` in Nginx.
 UPLOAD_PATHS = re.compile(
-    r"^/api/v1/(?:me/portfolio/[^/]+/images|me/certificates|me/external-reviews)$"
+    r"^/api/v1/(?:me/portfolio/[^/]+/images|me/certificates|me/external-reviews"
+    r"|projects/[^/]+/files)$"
 )
 MULTIPART_OVERHEAD_BYTES = 64 * 1024
 

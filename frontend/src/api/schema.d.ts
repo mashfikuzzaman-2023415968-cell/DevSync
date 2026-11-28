@@ -1058,6 +1058,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/files/{file_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a project file (uploader or lead)
+         * @description Hidden and never served again; kept for disputes. Only project files can be deleted
+         *     here (anything else is 404).
+         */
+        delete: operations["delete_file_api_v1_files__file_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/files/{file_id}/download": {
         parameters: {
             query?: never;
@@ -2142,6 +2163,32 @@ export interface paths {
         put?: never;
         /** Extend the bidding deadline */
         post: operations["extend_bidding_api_v1_projects__project_id__extend_bidding_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The project's files
+         * @description Newest first, with the tasks that use each file as evidence.
+         */
+        get: operations["list_files_api_v1_projects__project_id__files_get"];
+        put?: never;
+        /**
+         * Upload a project file (participants)
+         * @description PDF (≤ 10 MB), plain text or Markdown (≤ 1 MB), or a PNG, JPEG or WebP image
+         *     (re-encoded); anything else is refused by its content. 20 uploads an hour and 500 MB a day
+         *     per person (429 with `Retry-After`).
+         */
+        post: operations["upload_file_api_v1_projects__project_id__files_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3654,6 +3701,14 @@ export interface components {
              * @description Platform, e.g. Upwork.
              */
             source: string;
+        };
+        /** Body_upload_file_api_v1_projects__project_id__files_post */
+        Body_upload_file_api_v1_projects__project_id__files_post: {
+            /**
+             * File
+             * @description The file (type checked by its content).
+             */
+            file: string;
         };
         /**
          * BotCheck
@@ -5563,6 +5618,13 @@ export interface components {
             /** Next Cursor */
             next_cursor?: string | null;
         };
+        /** Page[ProjectFile] */
+        Page_ProjectFile_: {
+            /** Items */
+            items: components["schemas"]["ProjectFile"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
         /** Page[ProjectListItem] */
         Page_ProjectListItem_: {
             /** Items */
@@ -5910,6 +5972,54 @@ export interface components {
             team_size: number;
             /** Title */
             title: string;
+        };
+        /**
+         * ProjectFile
+         * @description A file in the project's Files tab. Download through `GET /files/{id}/download`.
+         */
+        ProjectFile: {
+            /**
+             * Can Delete
+             * @description The caller uploaded it or leads the team.
+             */
+            can_delete: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Links */
+            links: components["schemas"]["ProjectFileLink"][];
+            /** Mime */
+            mime: string;
+            /**
+             * Name
+             * @description Sanitized name; the extension matches the detected type.
+             */
+            name: string;
+            /** Size Bytes */
+            size_bytes: number;
+            uploaded_by: components["schemas"]["PersonRef"];
+        };
+        /**
+         * ProjectFileLink
+         * @description A task that uses the file as evidence (screen 35's "linked task/milestone").
+         */
+        ProjectFileLink: {
+            /** Milestone Title */
+            milestone_title: string;
+            /**
+             * Task Id
+             * Format: uuid
+             */
+            task_id: string;
+            /** Task Title */
+            task_title: string;
         };
         /**
          * ProjectListItem
@@ -16911,6 +17021,170 @@ export interface operations {
                      *       "error": {
                      *         "code": "PAYLOAD_TOO_LARGE",
                      *         "message": "The request is too large.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Some fields need attention. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "Some fields need attention.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests. Please wait and try again. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Too many requests. Please wait and try again.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_file_api_v1_files__file_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                file_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Please sign in to continue. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Please sign in to continue.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Your account can't do this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "ROLE_NOT_ALLOWED",
+                     *         "message": "Your account can't do this.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description We couldn't find that. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "We couldn't find that.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description This can't be done in the current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INVALID_STATE",
+                     *         "message": "This can't be done in the current state.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The request is too large. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "PAYLOAD_TOO_LARGE",
+                     *         "message": "The request is too large.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Send the request body as JSON. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNSUPPORTED_MEDIA_TYPE",
+                     *         "message": "Send the request body as JSON.",
                      *         "request_id": "req_123"
                      *       }
                      *     }
@@ -28768,6 +29042,411 @@ export interface operations {
                      *       "error": {
                      *         "code": "RATE_LIMITED",
                      *         "message": "Too many requests. Please wait and try again.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_files_api_v1_projects__project_id__files_get: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "can_delete": true,
+                     *           "created_at": "2026-12-14T05:30:00Z",
+                     *           "id": "5a0e9b1c-3d2f-4e6a-8b7c-9d0e1f2a3b4c",
+                     *           "links": [
+                     *             {
+                     *               "milestone_title": "UI design",
+                     *               "task_id": "7c6b5a49-3827-4615-a5b4-c3d2e1f0a9b8",
+                     *               "task_title": "UI kit"
+                     *             }
+                     *           ],
+                     *           "mime": "application/pdf",
+                     *           "name": "wireframes.pdf",
+                     *           "size_bytes": 204800,
+                     *           "uploaded_by": {
+                     *             "id": "0f3c2b1a-9e8d-4c7b-a6f5-e4d3c2b1a098",
+                     *             "name": "Farhan Hossain"
+                     *           }
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Page_ProjectFile_"];
+                };
+            };
+            /** @description The request could not be understood. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "BAD_REQUEST",
+                     *         "message": "The request could not be understood.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Please sign in to continue. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Please sign in to continue.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Your account can't do this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "ROLE_NOT_ALLOWED",
+                     *         "message": "Your account can't do this.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description We couldn't find that. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "We couldn't find that.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The request is too large. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "PAYLOAD_TOO_LARGE",
+                     *         "message": "The request is too large.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Some fields need attention. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "Some fields need attention.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests. Please wait and try again. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Too many requests. Please wait and try again.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    upload_file_api_v1_projects__project_id__files_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Content-Length"?: number | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_file_api_v1_projects__project_id__files_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "can_delete": true,
+                     *       "created_at": "2026-12-14T05:30:00Z",
+                     *       "id": "5a0e9b1c-3d2f-4e6a-8b7c-9d0e1f2a3b4c",
+                     *       "links": [
+                     *         {
+                     *           "milestone_title": "UI design",
+                     *           "task_id": "7c6b5a49-3827-4615-a5b4-c3d2e1f0a9b8",
+                     *           "task_title": "UI kit"
+                     *         }
+                     *       ],
+                     *       "mime": "application/pdf",
+                     *       "name": "wireframes.pdf",
+                     *       "size_bytes": 204800,
+                     *       "uploaded_by": {
+                     *         "id": "0f3c2b1a-9e8d-4c7b-a6f5-e4d3c2b1a098",
+                     *         "name": "Farhan Hossain"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ProjectFile"];
+                };
+            };
+            /** @description The request could not be understood. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "BAD_REQUEST",
+                     *         "message": "The request could not be understood.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Please sign in to continue. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Please sign in to continue.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Your account can't do this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "ROLE_NOT_ALLOWED",
+                     *         "message": "Your account can't do this.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description We couldn't find that. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "We couldn't find that.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description This can't be done in the current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INVALID_STATE",
+                     *         "message": "This can't be done in the current state.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The request is too large. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "PAYLOAD_TOO_LARGE",
+                     *         "message": "The request is too large.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Send the request body as JSON. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNSUPPORTED_MEDIA_TYPE",
+                     *         "message": "Send the request body as JSON.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Some fields need attention. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "Some fields need attention.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests. Please wait and try again. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Too many requests. Please wait and try again.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A service we depend on is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "DEPENDENCY_UNAVAILABLE",
+                     *         "message": "A service we depend on is unavailable.",
                      *         "request_id": "req_123"
                      *       }
                      *     }

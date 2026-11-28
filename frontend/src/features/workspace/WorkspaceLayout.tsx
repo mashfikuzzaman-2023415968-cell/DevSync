@@ -17,7 +17,16 @@ import { cn } from "@/lib/cn";
 import { useWorkspace, WORKSPACE_TABS, workspaceContext } from "./context";
 
 /** Tabs with a page in this build; the rest show as coming, never as dead links. */
-const BUILT = new Set(["overview", "tasks", "timeline", "milestones", "team", "check-ins", "risks"]);
+const BUILT = new Set([
+  "overview",
+  "tasks",
+  "timeline",
+  "milestones",
+  "team",
+  "check-ins",
+  "files",
+  "risks",
+]);
 
 export default function WorkspaceLayout() {
   const { projectId = "" } = useParams();

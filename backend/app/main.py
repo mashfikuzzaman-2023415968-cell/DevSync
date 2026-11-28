@@ -40,6 +40,7 @@ from app.api.v1 import (
     monitoring,
     notifications,
     profiles,
+    project_files,
     projects,
     public,
     reputation,
@@ -210,6 +211,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         admin_assessments,
         profiles,
         files,
+        project_files,
         skill_tests,
         role_assessments,
         # marketplace before projects so /projects/search and /projects/recommended match their

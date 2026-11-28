@@ -29,6 +29,7 @@ import {
   useRemoveDependency,
   useTask,
 } from "./api";
+import { useProjectFiles } from "./filesApi";
 import { evidenceFormSchema, type EvidenceForm } from "./schemas";
 import { TaskFormDialog } from "./TaskFormDialog";
 
@@ -307,19 +308,30 @@ function Details({
 
 function EvidenceAdd({ projectId, taskId }: { projectId: string; taskId: string }) {
   const add = useAddEvidence(projectId, taskId);
+  const files = useProjectFiles(projectId);
   const [notice, setNotice] = useState<string | null>(null);
   const form = useForm<EvidenceForm>({
     resolver: zodResolver(evidenceFormSchema),
-    defaultValues: { kind: "LINK", url: "", note: "" },
+    defaultValues: { kind: "LINK", url: "", file_id: "", note: "" },
   });
+  const kind = form.watch("kind");
+  const usesFile = kind === "FILE" || kind === "SCREENSHOT";
+  // The first page (newest 20) is enough to pick from; older files are on the Files tab.
+  const choices: Option[] = (files.data?.pages[0]?.items ?? [])
+    .filter((f) => kind !== "SCREENSHOT" || f.mime.startsWith("image/"))
+    .map((f) => ({ value: f.id, label: f.name }));
   const submit = form.handleSubmit(async (v) => {
     setNotice(null);
     try {
-      await add.mutateAsync({ kind: v.kind, url: v.url, note: v.note || null });
+      await add.mutateAsync(
+        usesFile
+          ? { kind: v.kind, file_id: v.file_id, note: v.note || null }
+          : { kind: v.kind, url: v.url, note: v.note || null },
+      );
       form.reset();
       toast({ tone: "success", title: "Evidence added" });
     } catch (e) {
-      if (!applyFieldErrors(e, form.setError, ["url", "note"])) setNotice(messageFor(e));
+      if (!applyFieldErrors(e, form.setError, ["url", "file_id", "note"])) setNotice(messageFor(e));
     }
   });
   return (
@@ -338,20 +350,50 @@ function EvidenceAdd({ projectId, taskId }: { projectId: string; taskId: string 
                 options={[
                   { value: "LINK", label: "Link" },
                   { value: "PR", label: "Pull request" },
+                  { value: "FILE", label: "File" },
+                  { value: "SCREENSHOT", label: "Screenshot" },
                 ]}
               />
             )}
           />
         )}
       </FormField>
-      <Field
-        label="Link"
-        type="url"
-        inputMode="url"
-        placeholder="https://"
-        error={form.formState.errors.url?.message}
-        {...form.register("url")}
-      />
+      {usesFile ? (
+        choices.length === 0 ? (
+          <p className="text-body-sm text-text-muted">
+            {kind === "SCREENSHOT"
+              ? "Upload an image to the project’s Files first."
+              : "Upload a file to the project’s Files first."}
+          </p>
+        ) : (
+          <FormField label="File" error={form.formState.errors.file_id?.message}>
+            {(a11y) => (
+              <Controller
+                control={form.control}
+                name="file_id"
+                render={({ field }) => (
+                  <Select
+                    {...a11y}
+                    value={field.value || undefined}
+                    onChange={field.onChange}
+                    placeholder="Choose a file"
+                    options={choices}
+                  />
+                )}
+              />
+            )}
+          </FormField>
+        )
+      ) : (
+        <Field
+          label="Link"
+          type="url"
+          inputMode="url"
+          placeholder="https://"
+          error={form.formState.errors.url?.message}
+          {...form.register("url")}
+        />
+      )}
       <Field label="Note (optional)" error={form.formState.errors.note?.message} {...form.register("note")} />
       <Button type="submit" variant="outline" loading={form.formState.isSubmitting}>
         <Link2 className="size-4" aria-hidden="true" /> Add evidence

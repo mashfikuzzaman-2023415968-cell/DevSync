@@ -151,6 +151,10 @@ export type CheckinFeed = Schemas["CheckinFeed"];
 export type CommentItem = Schemas["CommentOut"];
 export type CommentPage = Schemas["Page_CommentOut_"];
 
+// Workspace: project files (spec §10.2 Files; D147)
+export type ProjectFile = Schemas["ProjectFile"];
+export type ProjectFilePage = Schemas["Page_ProjectFile_"];
+
 // Workspace: monitoring (spec §10.2 Monitoring; D151, D152)
 export type DashboardForClient = Schemas["DashboardForClient"];
 export type DashboardForMember = Schemas["DashboardForMember"];

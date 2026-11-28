@@ -23,6 +23,7 @@ from app.models.profiles import (
     DeveloperProfile,
     DeveloperSkill,
     ExternalReview,
+    FileKind,
     PortfolioImage,
     PortfolioItem,
     Skill,
@@ -298,12 +299,14 @@ async def count_external_reviews(db: AsyncSession, user_id: uuid.UUID) -> int:
 
 
 async def purgeable_files(db: AsyncSession, cutoff: datetime, limit: int) -> Sequence[StoredFile]:
-    """Deleted files, and files never attached that are older than `cutoff` (SYSTEM context)."""
+    """Deleted files, and files never attached that are older than `cutoff` (SYSTEM context).
+    Never a project file: deleted ones keep their bytes as evidence (D147)."""
     stmt = (
         select(StoredFile)
         .where(
+            StoredFile.kind != FileKind.PROJECT_FILE,
             (StoredFile.deleted_at.is_not(None))
-            | (StoredFile.attached_at.is_(None) & (StoredFile.created_at < cutoff))
+            | (StoredFile.attached_at.is_(None) & (StoredFile.created_at < cutoff)),
         )
         .order_by(StoredFile.created_at)
         .limit(limit)

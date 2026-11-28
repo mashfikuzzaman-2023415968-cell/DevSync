@@ -366,6 +366,13 @@ export const routes: RouteObject[] = [
                 }),
               },
               {
+                path: "files",
+                handle: { title: "Files" },
+                lazy: async () => ({
+                  Component: (await import("@/features/workspace/FilesTab")).default,
+                }),
+              },
+              {
                 path: "team",
                 handle: { title: "Team" },
                 lazy: async () => ({

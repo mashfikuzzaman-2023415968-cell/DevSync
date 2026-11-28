@@ -90,3 +90,13 @@ export function formatRelative(value: Date | string, now: Date = new Date()): st
   }
   return "just now";
 }
+
+const KB = 1024;
+const sizeFmt = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 });
+
+/** File sizes: "820 bytes", "200 KB", "1.5 MB" (binary units, at most one decimal). */
+export function formatBytes(bytes: number): string {
+  if (bytes < KB) return `${String(bytes)} ${bytes === 1 ? "byte" : "bytes"}`;
+  if (bytes < KB * KB) return `${sizeFmt.format(bytes / KB)} KB`;
+  return `${sizeFmt.format(bytes / (KB * KB))} MB`;
+}

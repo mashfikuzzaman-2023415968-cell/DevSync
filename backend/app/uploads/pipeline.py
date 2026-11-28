@@ -23,11 +23,14 @@ ALLOWED: dict[FileKind, frozenset[str]] = {
     FileKind.PORTFOLIO_IMAGE: detect.IMAGE_TYPES,
     FileKind.CERTIFICATE: detect.IMAGE_TYPES | {detect.PDF_TYPE},
     FileKind.EXTERNAL_REVIEW: detect.IMAGE_TYPES | {detect.PDF_TYPE, detect.TEXT_TYPE},
+    # §14.9 exactly (D147): images re-encoded, PDF ≤ 10 MB, plain text/markdown ≤ 1 MB.
+    FileKind.PROJECT_FILE: detect.IMAGE_TYPES | {detect.PDF_TYPE, detect.TEXT_TYPE},
 }
 _DESCRIBE = {
     FileKind.PORTFOLIO_IMAGE: "PNG, JPEG or WebP images",
     FileKind.CERTIFICATE: "PDF files or PNG, JPEG or WebP images",
     FileKind.EXTERNAL_REVIEW: "PDF, plain text, or PNG, JPEG or WebP images",
+    FileKind.PROJECT_FILE: "PDF, plain text or Markdown, or PNG, JPEG or WebP images",
 }
 _EXTENSION = {
     "image/png": ".png",
@@ -61,8 +64,13 @@ def type_limit(mime: str, max_upload_bytes: int) -> int:
 
 
 def _display_name(name: str | None, mime: str) -> str:
-    """Sanitized name whose extension matches the detected type (never the claimed one)."""
-    stem = sanitize_name(name).rsplit(".", 1)[0] or "file"
+    """Sanitized name whose extension matches the detected type (never the claimed one). Plain
+    text named as Markdown keeps `.md`: it is still stored and served as `text/plain`."""
+    before, dot, after = sanitize_name(name).rpartition(".")
+    stem, claimed = (before, after.lower()) if dot else (after, "")
+    stem = stem or "file"
+    if mime == detect.TEXT_TYPE and claimed in {"md", "markdown"}:
+        return stem[:100] + ".md"
     return stem[:100] + _EXTENSION[mime]
 
 

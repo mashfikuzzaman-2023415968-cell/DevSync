@@ -196,6 +196,24 @@
     (+2), CRITICAL_PATH_DELAY CRITICAL, DEADLINE_IMPACT, INACTIVE_MEMBER and SLACK_EATEN MEDIUM,
     health At risk; `monitoring_check.py` passes and is idempotent; `formation_check.py`
     unchanged (16.18 %).
+- **Item 8 (project files, 2026-11-28):**
+  - upload, list and soft delete;
+  - §14.9 types only (Markdown keeps `.md`, served as plain text);
+  - 20 uploads an hour and a reserved daily byte budget (D175), failing closed when Redis is
+    down;
+  - evidence links shown in the list; the orphan cleanup keeps deleted project files;
+  - the Files tab, and file or screenshot evidence in the task drawer.
+  - Fixed on the way:
+    - the upload path was missing from `UPLOAD_PATHS`, so it got 415 (Nginx already had it);
+    - a lead couldn't soft-delete a member's file under RLS. PostgreSQL checks the updated
+      row against the SELECT policies, so `project_file_select` in 0016 now lets the lead see
+      deleted rows of the project (D175). The test stack's database got the same policy by
+      hand; the gate migrates a fresh one.
+  - Tests:
+    - backend: 110 passed (project files, RLS workspace, authz matrix, profile files, jobs);
+    - unit and rate limits: 943 passed;
+    - frontend workspace: 96 passed;
+    - OpenAPI check: 0 problems.
 - **Laptop notes:**
   - BuildKit crashes ("frontend grpc server closed") when `tests` and `api` are built in one
     `compose build`, or alongside other load; building them one at a time works every time.

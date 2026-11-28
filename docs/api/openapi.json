@@ -2079,6 +2079,21 @@
         "title": "Body_create_external_review_api_v1_me_external_reviews_post",
         "type": "object"
       },
+      "Body_upload_file_api_v1_projects__project_id__files_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "The file (type checked by its content).",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_file_api_v1_projects__project_id__files_post",
+        "type": "object"
+      },
       "BotCheck": {
         "additionalProperties": false,
         "description": "Fields every public form carries (spec §14.16).",
@@ -7041,6 +7056,33 @@
         "title": "Page[ProjectCard]",
         "type": "object"
       },
+      "Page_ProjectFile_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectFile"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "Page[ProjectFile]",
+        "type": "object"
+      },
       "Page_ProjectListItem_": {
         "properties": {
           "items": {
@@ -7935,6 +7977,86 @@
           "schedule"
         ],
         "title": "ProjectDetail",
+        "type": "object"
+      },
+      "ProjectFile": {
+        "description": "A file in the project's Files tab. Download through `GET /files/{id}/download`.",
+        "properties": {
+          "can_delete": {
+            "description": "The caller uploaded it or leads the team.",
+            "title": "Can Delete",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectFileLink"
+            },
+            "title": "Links",
+            "type": "array"
+          },
+          "mime": {
+            "title": "Mime",
+            "type": "string"
+          },
+          "name": {
+            "description": "Sanitized name; the extension matches the detected type.",
+            "title": "Name",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "uploaded_by": {
+            "$ref": "#/components/schemas/PersonRef"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "mime",
+          "size_bytes",
+          "uploaded_by",
+          "created_at",
+          "can_delete",
+          "links"
+        ],
+        "title": "ProjectFile",
+        "type": "object"
+      },
+      "ProjectFileLink": {
+        "description": "A task that uses the file as evidence (screen 35's \"linked task/milestone\").",
+        "properties": {
+          "milestone_title": {
+            "title": "Milestone Title",
+            "type": "string"
+          },
+          "task_id": {
+            "format": "uuid",
+            "title": "Task Id",
+            "type": "string"
+          },
+          "task_title": {
+            "title": "Task Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task_id",
+          "task_title",
+          "milestone_title"
+        ],
+        "title": "ProjectFileLink",
         "type": "object"
       },
       "ProjectListItem": {
@@ -22100,6 +22222,169 @@
         ]
       }
     },
+    "/api/v1/files/{file_id}": {
+      "delete": {
+        "description": "Hidden and never served again; kept for disputes. Only project files can be deleted\nhere (anything else is 404).",
+        "operationId": "delete_file_api_v1_files__file_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "File Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Send the request body as JSON.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Send the request body as JSON."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "Delete a project file (uploader or lead)",
+        "tags": [
+          "files"
+        ]
+      }
+    },
     "/api/v1/files/{file_id}/download": {
       "get": {
         "description": "Owners and admins may download any of their files; anyone who may see a profile may\ndownload its portfolio images. Everything else is 'not found'.",
@@ -34564,6 +34849,461 @@
         "summary": "Extend the bidding deadline",
         "tags": [
           "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/files": {
+      "get": {
+        "description": "Newest first, with the tasks that use each file as evidence.",
+        "operationId": "list_files_api_v1_projects__project_id__files_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 300,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [
+                    {
+                      "can_delete": true,
+                      "created_at": "2026-12-14T05:30:00Z",
+                      "id": "5a0e9b1c-3d2f-4e6a-8b7c-9d0e1f2a3b4c",
+                      "links": [
+                        {
+                          "milestone_title": "UI design",
+                          "task_id": "7c6b5a49-3827-4615-a5b4-c3d2e1f0a9b8",
+                          "task_title": "UI kit"
+                        }
+                      ],
+                      "mime": "application/pdf",
+                      "name": "wireframes.pdf",
+                      "size_bytes": 204800,
+                      "uploaded_by": {
+                        "id": "0f3c2b1a-9e8d-4c7b-a6f5-e4d3c2b1a098",
+                        "name": "Farhan Hossain"
+                      }
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ProjectFile_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "The request could not be understood.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request could not be understood."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          }
+        },
+        "summary": "The project's files",
+        "tags": [
+          "files"
+        ]
+      },
+      "post": {
+        "description": "PDF (≤ 10 MB), plain text or Markdown (≤ 1 MB), or a PNG, JPEG or WebP image\n(re-encoded); anything else is refused by its content. 20 uploads an hour and 500 MB a day\nper person (429 with `Retry-After`).",
+        "operationId": "upload_file_api_v1_projects__project_id__files_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Content-Length",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1099511627776,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Content-Length"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_file_api_v1_projects__project_id__files_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "can_delete": true,
+                  "created_at": "2026-12-14T05:30:00Z",
+                  "id": "5a0e9b1c-3d2f-4e6a-8b7c-9d0e1f2a3b4c",
+                  "links": [
+                    {
+                      "milestone_title": "UI design",
+                      "task_id": "7c6b5a49-3827-4615-a5b4-c3d2e1f0a9b8",
+                      "task_title": "UI kit"
+                    }
+                  ],
+                  "mime": "application/pdf",
+                  "name": "wireframes.pdf",
+                  "size_bytes": 204800,
+                  "uploaded_by": {
+                    "id": "0f3c2b1a-9e8d-4c7b-a6f5-e4d3c2b1a098",
+                    "name": "Farhan Hossain"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectFile"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "The request could not be understood.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request could not be understood."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Please sign in to continue.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Please sign in to continue."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "ROLE_NOT_ALLOWED",
+                    "message": "Your account can't do this.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Your account can't do this."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "We couldn't find that.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "We couldn't find that."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "INVALID_STATE",
+                    "message": "This can't be done in the current state.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "This can't be done in the current state."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "The request is too large.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request is too large."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Send the request body as JSON.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Send the request body as JSON."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Some fields need attention.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Some fields need attention."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests. Please wait and try again.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many requests. Please wait and try again."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "DEPENDENCY_UNAVAILABLE",
+                    "message": "A service we depend on is unavailable.",
+                    "request_id": "req_123"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "A service we depend on is unavailable."
+          }
+        },
+        "summary": "Upload a project file (participants)",
+        "tags": [
+          "files"
         ]
       }
     },

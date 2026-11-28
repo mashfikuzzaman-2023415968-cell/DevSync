@@ -36,9 +36,15 @@ def storage_for(settings: Settings) -> Storage:
 
 
 async def store_upload(
-    ctx: Ctx, source: Readable, kind: FileKind, filename: str | None
+    ctx: Ctx,
+    source: Readable,
+    kind: FileKind,
+    filename: str | None,
+    *,
+    project_id: uuid.UUID | None = None,
 ) -> StoredFile:
     """Run the upload pipeline and record the file as attached (in the caller's transaction).
+    Project files (`PROJECT_FILE`) carry their project; no other kind does (a CHECK).
 
     If the transaction later fails, the bytes on disk have no row and the cleanup job removes
     them after 24 hours.
@@ -53,6 +59,7 @@ async def store_upload(
     row = StoredFile(
         owner_id=ctx.uid,
         kind=kind,
+        project_id=project_id,
         storage_key=uuid.UUID(upload.storage_key),
         original_name=upload.original_name,
         mime_type=upload.mime_type,
@@ -124,7 +131,8 @@ def _older_than(path: Path, cutoff: datetime) -> bool:
 async def purge_orphans(db: AsyncSession, storage: Storage, now: datetime) -> dict[str, int]:
     """Worker job (SYSTEM context, §14.9): remove deleted files and uploads never attached for
     24 hours — both their rows and their bytes — plus bytes on disk that no row knows (a request
-    that failed after storing) and stale temp files."""
+    that failed after storing) and stale temp files. Project files are never purged, deleted or
+    not: their bytes are kept as evidence for Phase 12 (D147); the query leaves them out."""
     counts = {"rows": 0, "skipped": 0, "orphan_bytes": 0, "incoming": 0}
     cutoff = now - ORPHAN_AGE
     for f in await repo.purgeable_files(db, cutoff, limit=500):

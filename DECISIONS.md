@@ -1994,3 +1994,34 @@ while writing migration 0016:
 
 *Rejected:* using developers with fewer hours (Rafi, Zahid), because the overlap would make
 their ordering bids infeasible; leaving a task in progress, because it would add a STALLED_TASK.
+
+**D175 · Project files: the daily byte budget and Markdown names.** Decided by Claude Code
+during the Phase 9 build (item 8), by the brief's order (spec intent, then secure).
+- **The budget counter:** one Redis counter per user and Dhaka calendar day,
+  `rl:upload_bytes:<hashed user>:<date>`. It sits under `rl:` with the other limits, so the
+  test-only limit reset also clears it.
+- **Reserve, then settle:** before the body is read, the request's `Content-Length`
+  (capped at `MAX_UPLOAD_MB`) is reserved in one atomic script; without a usable
+  `Content-Length`, the whole `MAX_UPLOAD_MB` is reserved. After the upload is stored, the
+  counter is corrected to the stored size; a failed upload gives back everything it reserved.
+  Two parallel uploads therefore can't both slip under the budget, as a check-then-charge would
+  allow.
+- **Over budget:** 429 `RATE_LIMITED` with `Retry-After` until midnight in Dhaka.
+- **Redis down:** the budget fails closed with 503. The plan said the `upload` scope already
+  fails closed, but it fails open (`FAIL_CLOSED_SCOPES` doesn't list it). It stays as it is
+  (changing it isn't part of this phase). The budget is new and fails closed, because an
+  unmetered disk is the thing it exists to prevent.
+- **Markdown:** a file detected as plain text keeps a `.md` name when it was uploaded as `.md` or
+  `.markdown`. It is still stored and served as `text/plain`, as an attachment, so it can't be
+  rendered. Every other type gets the extension of its detected type, as before.
+
+*Rejected:* a check-only budget (races between parallel uploads); naming every text file
+`.txt` (it breaks the §14.9 "markdown" promise for no security gain).
+- **The lead's delete and RLS:** PostgreSQL also checks an UPDATE's new row against the SELECT
+  policies, and a soft-deleted project file was visible only to its owner. So a lead couldn't
+  delete a member's file (500 in the API test). In 0016, `project_file_select` now also lets
+  the project's lead see deleted rows of that project. Everyone else still can't, and the
+  list and downloads hide deleted files for everyone (the service filters them, and
+  `file_access()` checks `deleted_at`). *Rejected:* a SECURITY DEFINER delete function
+  (it would repeat the uploader-or-lead rule in SQL); dropping the `deleted_at` condition for
+  every participant (wider than needed).

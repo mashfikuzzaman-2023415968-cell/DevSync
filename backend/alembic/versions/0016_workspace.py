@@ -415,8 +415,12 @@ CREATE POLICY own_write ON notification_preferences FOR ALL TO {DML_ROLES}
 """
 
 FILE_POLICIES = f"""
+-- The lead also sees deleted rows of the project: PostgreSQL checks an UPDATE's new row against
+-- the SELECT policies, so without this a lead couldn't soft-delete a member's file (D175).
+-- Listing and downloads still hide deleted files (the service and file_access()).
 CREATE POLICY project_file_select ON files FOR SELECT TO {DML_ROLES}
-  USING (project_id IS NOT NULL AND deleted_at IS NULL AND is_participant(project_id));
+  USING (project_id IS NOT NULL AND is_participant(project_id)
+         AND (deleted_at IS NULL OR is_project_lead(project_id)));
 CREATE POLICY project_file_delete ON files FOR UPDATE TO {DML_ROLES}
   USING (project_id IS NOT NULL AND is_project_lead(project_id))
   WITH CHECK (project_id IS NOT NULL AND is_project_lead(project_id));
