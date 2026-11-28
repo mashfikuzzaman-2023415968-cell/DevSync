@@ -25,6 +25,7 @@ const BUILT = new Set([
   "team",
   "check-ins",
   "files",
+  "discussion",
   "risks",
 ]);
 

@@ -150,6 +150,9 @@ export type CheckinFeed = Schemas["CheckinFeed"];
 // Workspace: comments and discussion (spec §10.2; D146)
 export type CommentItem = Schemas["CommentOut"];
 export type CommentPage = Schemas["Page_CommentOut_"];
+export type Thread = Schemas["ThreadOut"];
+export type ThreadPage = Schemas["Page_ThreadOut_"];
+export type ThreadCreate = Schemas["ThreadCreate"];
 
 // Workspace: project files (spec §10.2 Files; D147)
 export type ProjectFile = Schemas["ProjectFile"];

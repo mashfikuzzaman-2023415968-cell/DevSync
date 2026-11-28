@@ -214,6 +214,17 @@
     - unit and rate limits: 943 passed;
     - frontend workspace: 96 passed;
     - OpenAPI check: 0 problems.
+- **Item 9 (discussion, 2026-11-28):**
+  - threads with a first post, ordered by latest activity; posts with mentions, replies,
+    15-minute edits (revisions kept) and soft delete;
+  - `comment.posted` / `comment.replied` recorded with `DISCUSSION_POST`;
+  - shares the 60/hour `comment` limit;
+  - admins: 403 on the project's thread list, and 404 on a thread id (RLS hides thread rows
+    from them);
+  - the Discussion tab (list and thread, `?thread=` from notifications, 15-second polling)
+    reuses `Comments`, which gained optional labels.
+  - Tests: backend 24 passed (and 117 with the rate-limit and event-schema suites); frontend
+    173 passed; OpenAPI check: 0 problems.
 - **Laptop notes:**
   - BuildKit crashes ("frontend grpc server closed") when `tests` and `api` are built in one
     `compose build`, or alongside other load; building them one at a time works every time.

@@ -373,6 +373,13 @@ export const routes: RouteObject[] = [
                 }),
               },
               {
+                path: "discussion",
+                handle: { title: "Discussion" },
+                lazy: async () => ({
+                  Component: (await import("@/features/workspace/DiscussionTab")).default,
+                }),
+              },
+              {
                 path: "team",
                 handle: { title: "Team" },
                 lazy: async () => ({

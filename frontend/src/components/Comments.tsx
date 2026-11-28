@@ -62,9 +62,21 @@ interface Props {
   me: PersonRef | null;
   canWrite: boolean;
   label?: string;
+  /** The composer's label and its send button (a discussion thread says "post" and "Post"). */
+  writeLabel?: string;
+  sendLabel?: string;
 }
 
-export function Comments({ targetType, targetId, people, me, canWrite, label = "Comments" }: Props) {
+export function Comments({
+  targetType,
+  targetId,
+  people,
+  me,
+  canWrite,
+  label = "Comments",
+  writeLabel = "Write a comment",
+  sendLabel = "Post comment",
+}: Props) {
   const q = useComments(targetType, targetId);
   const post = usePostComment(targetType, targetId);
   const [body, setBody] = useState("");
@@ -143,7 +155,7 @@ export function Comments({ targetType, targetId, people, me, canWrite, label = "
             </p>
           ) : null}
           <Textarea
-            aria-label="Write a comment"
+            aria-label={writeLabel}
             rows={2}
             maxLength={MAX_BODY}
             value={body}
@@ -193,7 +205,7 @@ export function Comments({ targetType, targetId, people, me, canWrite, label = "
               loading={post.isPending}
               onClick={send}
             >
-              <AtSign className="size-4" aria-hidden="true" /> Post comment
+              <AtSign className="size-4" aria-hidden="true" /> {sendLabel}
             </Button>
           </div>
         </div>

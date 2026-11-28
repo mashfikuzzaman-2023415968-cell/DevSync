@@ -30,7 +30,14 @@ from app.db.context import DbContext
 from app.db.session import open_session
 from app.models.formation import MemberStatus, TeamMember
 from app.models.projects import Milestone
-from app.models.workspace import ActivityEvent, Checkin, Comment, CommentTarget, Task
+from app.models.workspace import (
+    ActivityEvent,
+    Checkin,
+    Comment,
+    CommentTarget,
+    DiscussionPost,
+    Task,
+)
 from app.schemas.comments import EDIT_WINDOW_SECONDS, CommentCreate, CommentOut, CommentPatch
 from app.schemas.common import Page
 from app.schemas.tasks import PersonRef
@@ -199,7 +206,7 @@ async def record_conversation(
     target_type: str,
     target_id: uuid.UUID,
     mentions: list[uuid.UUID],
-    replied: Comment | None,
+    replied: Comment | DiscussionPost | None,
 ) -> None:
     """`comment.posted`, and `comment.replied` when the replied-to author had mentioned the
     caller (§9.1.4) — shared by comments and discussion posts (D146)."""

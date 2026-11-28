@@ -1850,6 +1850,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/posts/{post_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete your post */
+        delete: operations["delete_post_api_v1_posts__post_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Edit your post (within 15 minutes)
+         * @description 409 `EDIT_WINDOW_CLOSED` after 15 minutes; earlier text is kept for disputes only.
+         */
+        patch: operations["edit_post_api_v1_posts__post_id__patch"];
+        trace?: never;
+    };
     "/api/v1/projects": {
         parameters: {
             query?: never;
@@ -2533,6 +2554,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/threads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The project's discussion threads
+         * @description Most recently active first.
+         */
+        get: operations["list_threads_api_v1_projects__project_id__threads_get"];
+        put?: never;
+        /**
+         * Start a thread (participants)
+         * @description The body becomes the thread's first post; mentions outside the project are dropped.
+         */
+        post: operations["create_thread_api_v1_projects__project_id__threads_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/developers/{developer_id}": {
         parameters: {
             query?: never;
@@ -2828,6 +2873,30 @@ export interface paths {
          * @description Needs a basis: 10 days without activity (tracked from Phase 9) or a dispute (Phase 12).
          */
         post: operations["request_removal_api_v1_team_members__member_id__removal_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/threads/{thread_id}/posts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A thread's posts
+         * @description Oldest first. Deleted posts keep their place without their text.
+         */
+        get: operations["list_posts_api_v1_threads__thread_id__posts_get"];
+        put?: never;
+        /**
+         * Post in a thread (participants)
+         * @description A reply names a post of the same thread (422 otherwise).
+         */
+        post: operations["create_post_api_v1_threads__thread_id__posts_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5646,6 +5715,13 @@ export interface components {
             /** Next Cursor */
             next_cursor?: string | null;
         };
+        /** Page[ThreadOut] */
+        Page_ThreadOut_: {
+            /** Items */
+            items: components["schemas"]["ThreadOut"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
         /**
          * PersonRef
          * @description A participant shown on a card: their user id and display name only.
@@ -5812,6 +5888,15 @@ export interface components {
         PortfolioReorder: {
             /** Ids */
             ids: string[];
+        };
+        /** PostCreate */
+        PostCreate: {
+            /** Body */
+            body: string;
+            /** Mention Ids */
+            mention_ids?: string[];
+            /** Reply To Id */
+            reply_to_id?: string | null;
         };
         /**
          * PreviewMilestone
@@ -7619,6 +7704,38 @@ export interface components {
              * Format: date
              */
             week_start: string;
+        };
+        /** ThreadCreate */
+        ThreadCreate: {
+            /** Body */
+            body: string;
+            /** Mention Ids */
+            mention_ids?: string[];
+            /** Title */
+            title: string;
+        };
+        /** ThreadOut */
+        ThreadOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            created_by: components["schemas"]["PersonRef"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Last Post At
+             * Format: date-time
+             */
+            last_post_at: string;
+            /** Post Count */
+            post_count: number;
+            /** Title */
+            title: string;
         };
         /**
          * Thresholds
@@ -24825,6 +24942,387 @@ export interface operations {
             };
         };
     };
+    delete_post_api_v1_posts__post_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Post version */
+                "If-Match"?: number | null;
+            };
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Please sign in to continue. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Please sign in to continue.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Your account can't do this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "ROLE_NOT_ALLOWED",
+                     *         "message": "Your account can't do this.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description We couldn't find that. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "We couldn't find that.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description This can't be done in the current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INVALID_STATE",
+                     *         "message": "This can't be done in the current state.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The request is too large. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "PAYLOAD_TOO_LARGE",
+                     *         "message": "The request is too large.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Send the request body as JSON. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNSUPPORTED_MEDIA_TYPE",
+                     *         "message": "Send the request body as JSON.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Some fields need attention. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "Some fields need attention.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests. Please wait and try again. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Too many requests. Please wait and try again.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    edit_post_api_v1_posts__post_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Post version */
+                "If-Match"?: number | null;
+            };
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommentPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "author": {
+                     *         "id": "7a6b5c4d-3e2f-4a1b-9c8d-7e6f5a4b3c2d",
+                     *         "name": "Arif Hossain"
+                     *       },
+                     *       "body": "@Nusrat Jahan can you check the paging?",
+                     *       "can_edit": true,
+                     *       "created_at": "2026-11-23T06:00:00Z",
+                     *       "deleted": false,
+                     *       "edited": false,
+                     *       "id": "6c7d8e9f-0a1b-4c2d-8e3f-4a5b6c7d8e9f",
+                     *       "mentions": [
+                     *         {
+                     *           "id": "5f0c6c1e-2a43-4d9b-9a53-0a1f5a1b2c3d",
+                     *           "name": "Nusrat Jahan"
+                     *         }
+                     *       ],
+                     *       "target_id": "8e9f0a1b-2c3d-4e5f-9a6b-7c8d9e0f1a2b",
+                     *       "target_type": "DISCUSSION_POST",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["CommentOut"];
+                };
+            };
+            /** @description The request could not be understood. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "BAD_REQUEST",
+                     *         "message": "The request could not be understood.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Please sign in to continue. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Please sign in to continue.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Your account can't do this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "ROLE_NOT_ALLOWED",
+                     *         "message": "Your account can't do this.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description We couldn't find that. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "We couldn't find that.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description This can't be done in the current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INVALID_STATE",
+                     *         "message": "This can't be done in the current state.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The request is too large. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "PAYLOAD_TOO_LARGE",
+                     *         "message": "The request is too large.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Send the request body as JSON. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNSUPPORTED_MEDIA_TYPE",
+                     *         "message": "Send the request body as JSON.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Some fields need attention. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "Some fields need attention.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests. Please wait and try again. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Too many requests. Please wait and try again.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_projects_api_v1_projects_get: {
         parameters: {
             query?: {
@@ -32887,6 +33385,375 @@ export interface operations {
             };
         };
     };
+    list_threads_api_v1_projects__project_id__threads_get: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "created_at": "2026-11-23T06:00:00Z",
+                     *           "created_by": {
+                     *             "id": "5f0c6c1e-2a43-4d9b-9a53-0a1f5a1b2c3d",
+                     *             "name": "Nusrat Jahan"
+                     *           },
+                     *           "id": "8e9f0a1b-2c3d-4e5f-9a6b-7c8d9e0f1a2b",
+                     *           "last_post_at": "2026-11-23T07:00:00Z",
+                     *           "post_count": 3,
+                     *           "title": "Release checklist"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Page_ThreadOut_"];
+                };
+            };
+            /** @description The request could not be understood. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "BAD_REQUEST",
+                     *         "message": "The request could not be understood.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Please sign in to continue. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Please sign in to continue.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Your account can't do this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "ROLE_NOT_ALLOWED",
+                     *         "message": "Your account can't do this.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description We couldn't find that. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "We couldn't find that.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The request is too large. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "PAYLOAD_TOO_LARGE",
+                     *         "message": "The request is too large.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Some fields need attention. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "Some fields need attention.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests. Please wait and try again. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Too many requests. Please wait and try again.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_thread_api_v1_projects__project_id__threads_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ThreadCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2026-11-23T06:00:00Z",
+                     *       "created_by": {
+                     *         "id": "5f0c6c1e-2a43-4d9b-9a53-0a1f5a1b2c3d",
+                     *         "name": "Nusrat Jahan"
+                     *       },
+                     *       "id": "8e9f0a1b-2c3d-4e5f-9a6b-7c8d9e0f1a2b",
+                     *       "last_post_at": "2026-11-23T07:00:00Z",
+                     *       "post_count": 3,
+                     *       "title": "Release checklist"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ThreadOut"];
+                };
+            };
+            /** @description The request could not be understood. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "BAD_REQUEST",
+                     *         "message": "The request could not be understood.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Please sign in to continue. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Please sign in to continue.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Your account can't do this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "ROLE_NOT_ALLOWED",
+                     *         "message": "Your account can't do this.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description We couldn't find that. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "We couldn't find that.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description This can't be done in the current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INVALID_STATE",
+                     *         "message": "This can't be done in the current state.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The request is too large. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "PAYLOAD_TOO_LARGE",
+                     *         "message": "The request is too large.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Send the request body as JSON. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNSUPPORTED_MEDIA_TYPE",
+                     *         "message": "Send the request body as JSON.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Some fields need attention. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "Some fields need attention.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests. Please wait and try again. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Too many requests. Please wait and try again.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_public_developer_api_v1_public_developers__developer_id__get: {
         parameters: {
             query?: never;
@@ -35538,6 +36405,395 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["RemovalRequestOut"];
+                };
+            };
+            /** @description The request could not be understood. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "BAD_REQUEST",
+                     *         "message": "The request could not be understood.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Please sign in to continue. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Please sign in to continue.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Your account can't do this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "ROLE_NOT_ALLOWED",
+                     *         "message": "Your account can't do this.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description We couldn't find that. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "We couldn't find that.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description This can't be done in the current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INVALID_STATE",
+                     *         "message": "This can't be done in the current state.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The request is too large. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "PAYLOAD_TOO_LARGE",
+                     *         "message": "The request is too large.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Send the request body as JSON. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNSUPPORTED_MEDIA_TYPE",
+                     *         "message": "Send the request body as JSON.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Some fields need attention. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "Some fields need attention.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests. Please wait and try again. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Too many requests. Please wait and try again.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_posts_api_v1_threads__thread_id__posts_get: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                thread_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "author": {
+                     *             "id": "7a6b5c4d-3e2f-4a1b-9c8d-7e6f5a4b3c2d",
+                     *             "name": "Arif Hossain"
+                     *           },
+                     *           "body": "@Nusrat Jahan can you check the paging?",
+                     *           "can_edit": true,
+                     *           "created_at": "2026-11-23T06:00:00Z",
+                     *           "deleted": false,
+                     *           "edited": false,
+                     *           "id": "6c7d8e9f-0a1b-4c2d-8e3f-4a5b6c7d8e9f",
+                     *           "mentions": [
+                     *             {
+                     *               "id": "5f0c6c1e-2a43-4d9b-9a53-0a1f5a1b2c3d",
+                     *               "name": "Nusrat Jahan"
+                     *             }
+                     *           ],
+                     *           "target_id": "8e9f0a1b-2c3d-4e5f-9a6b-7c8d9e0f1a2b",
+                     *           "target_type": "DISCUSSION_POST",
+                     *           "version": 1
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Page_CommentOut_"];
+                };
+            };
+            /** @description The request could not be understood. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "BAD_REQUEST",
+                     *         "message": "The request could not be understood.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Please sign in to continue. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Please sign in to continue.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Your account can't do this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "ROLE_NOT_ALLOWED",
+                     *         "message": "Your account can't do this.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description We couldn't find that. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "We couldn't find that.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The request is too large. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "PAYLOAD_TOO_LARGE",
+                     *         "message": "The request is too large.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Some fields need attention. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "Some fields need attention.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests. Please wait and try again. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Too many requests. Please wait and try again.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_post_api_v1_threads__thread_id__posts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                thread_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PostCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "author": {
+                     *         "id": "7a6b5c4d-3e2f-4a1b-9c8d-7e6f5a4b3c2d",
+                     *         "name": "Arif Hossain"
+                     *       },
+                     *       "body": "@Nusrat Jahan can you check the paging?",
+                     *       "can_edit": true,
+                     *       "created_at": "2026-11-23T06:00:00Z",
+                     *       "deleted": false,
+                     *       "edited": false,
+                     *       "id": "6c7d8e9f-0a1b-4c2d-8e3f-4a5b6c7d8e9f",
+                     *       "mentions": [
+                     *         {
+                     *           "id": "5f0c6c1e-2a43-4d9b-9a53-0a1f5a1b2c3d",
+                     *           "name": "Nusrat Jahan"
+                     *         }
+                     *       ],
+                     *       "target_id": "8e9f0a1b-2c3d-4e5f-9a6b-7c8d9e0f1a2b",
+                     *       "target_type": "DISCUSSION_POST",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["CommentOut"];
                 };
             };
             /** @description The request could not be understood. */
