@@ -106,6 +106,18 @@ def test_job_event_stream_location_proxies_to_the_api(edge: httpx.Client) -> Non
     assert "x-accel-buffering" not in other.headers
 
 
+def test_notification_stream_location_proxies_to_the_api(edge: httpx.Client) -> None:
+    """The notification stream has its own unbuffered SSE location (D153); only the exact path
+    gets it."""
+    r = edge.get("/api/v1/notifications/stream")
+    assert r.status_code == 401
+    assert r.json()["error"]["code"] == "UNAUTHENTICATED"
+    assert r.headers["x-accel-buffering"] == "no"
+    assert r.headers["strict-transport-security"].startswith("max-age=31536000")
+    other = edge.get("/api/v1/notifications/streamx")
+    assert "x-accel-buffering" not in other.headers
+
+
 @pytest.mark.parametrize("path", ["/metrics", "/api/v1/health/ready"])
 def test_internal_endpoints_are_not_reachable(edge: httpx.Client, path: str) -> None:
     assert edge.get(path).status_code == 404

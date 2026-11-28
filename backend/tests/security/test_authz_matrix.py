@@ -125,6 +125,9 @@ MATRIX: dict[tuple[str, str], tuple[set[str], str, bool]] = {
     ("GET", "/api/v1/notifications/unread-count"): (SIGNED_IN, "auth", False),
     ("POST", "/api/v1/notifications/{notification_id}/read"): (SIGNED_IN, "auth", True),
     ("POST", "/api/v1/notifications/read-all"): (SIGNED_IN, "auth", False),
+    ("GET", "/api/v1/notifications/stream"): (SIGNED_IN, "auth", False),
+    ("GET", "/api/v1/notification-preferences"): (SIGNED_IN, "auth", False),
+    ("PUT", "/api/v1/notification-preferences"): (SIGNED_IN, "auth", False),
     # Phase 9 workspace (D142): the account gate here, the project decides the rest (404 for
     # non-participants, 403 for the wrong role inside the project) in the services.
     ("GET", "/api/v1/milestones/{milestone_id}/tasks"): (ACTIVE, "auth", True),

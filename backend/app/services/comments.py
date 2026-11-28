@@ -44,7 +44,7 @@ from app.schemas.tasks import PersonRef
 from app.services import activity, monitoring
 from app.services import workspace as wsp
 from app.services.context import Ctx
-from app.services.notifications import notify_users
+from app.services.notifications import EmailSpec, notify_users
 
 READING_MEMBERS = (MemberStatus.ACTIVE, MemberStatus.COMPLETED)
 
@@ -312,6 +312,10 @@ async def notify_mentions(
             body=f"In {ws.project.title}. Open the conversation to reply.",
             link=link,
             once=False,
+            email=EmailSpec(
+                "mentioned",
+                {"who": names.get(author, "Someone"), "project": ws.project.title},
+            ),
         )
 
 

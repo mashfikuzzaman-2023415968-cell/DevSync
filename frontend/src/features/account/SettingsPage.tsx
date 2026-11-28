@@ -1,5 +1,6 @@
-/** Settings (spec §13.5 #19): account name, a client's organisation, appearance (theme, reduced motion), signed-in
- * devices, change password. Data export and account deletion arrive with Phase 12. */
+/** Settings (spec §13.5 #19): account name, a client's organisation, appearance (theme, reduced motion),
+ * notification switches (§12, D162), signed-in devices, change password. Data export and account deletion
+ * arrive with Phase 12. */
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LaptopMinimal, LogOut, Monitor, Moon, Sun } from "lucide-react";
 import { useState } from "react";
@@ -26,6 +27,7 @@ import {
 import { applyFieldErrors, messageFor } from "@/features/auth/errors";
 import { PASSWORD_RULES } from "@/features/auth/PasswordRules";
 import { changePasswordSchema, profileSchema } from "@/features/auth/schemas";
+import { NotificationPreferencesCard } from "@/features/notifications/NotificationPreferencesCard";
 import { ClientProfileCard } from "@/features/profile/ClientProfileCard";
 import { formatDateTime, formatRelative } from "@/lib/format";
 
@@ -277,6 +279,9 @@ export default function SettingsPage() {
           <AppearanceCard />
         </div>
         <div className="space-y-6">
+          <div id="notifications" className="scroll-mt-24">
+            <NotificationPreferencesCard />
+          </div>
           <DevicesCard />
           <PasswordCard />
         </div>

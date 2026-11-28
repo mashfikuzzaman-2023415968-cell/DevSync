@@ -363,7 +363,7 @@ async def _finish(
                 RunStatus.INFEASIBLE: "No team fits all the requirements. Review the settings "
                 "and try again.",
             }[status]
-            notify(
+            await notify(
                 db,
                 project.client_id,
                 "FORMATION_FINISHED",
@@ -623,7 +623,7 @@ async def execute_repair(proposal_id: uuid.UUID) -> str:
         project = await db.get(Project, team.project_id) if team is not None else None
         if project is not None:
             ready = out["status"] == "READY"
-            notify(
+            await notify(
                 db,
                 project.client_id,
                 "REPAIR_READY",

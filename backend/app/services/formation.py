@@ -591,9 +591,15 @@ async def confirm(ctx: Ctx, run_id: uuid.UUID) -> ConfirmOut:
         # Phase 8 (D123): invitations go out now and the 48 h clock starts.
         await team_svc.send_invitations(db, locked, team, ctx.now, await active_settings(db))
         for bid in not_selected:
-            notify(db, bid.developer_id, "BID_NOT_SELECTED", title="Your bid was not selected",
-                   body=f"The client formed a team for “{project.title}” without your bid. "
-                   "See why, and what would have helped.", link=f"/dev/bids/{bid.id}")  # fmt: skip
+            await notify(
+                db,
+                bid.developer_id,
+                "BID_NOT_SELECTED",
+                title="Your bid was not selected",
+                body=f"The client formed a team for “{project.title}” without your bid. "
+                "See why, and what would have helped.",
+                link=f"/dev/bids/{bid.id}",
+            )
         after = {"run_id": str(run.id), "project_id": str(project.id),
                  "members": len(team_bids), "not_selected": len(not_selected)}  # fmt: skip
         await write_audit(db, action="formation.confirmed", entity_type="team", entity_id=team.id,

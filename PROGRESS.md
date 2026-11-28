@@ -225,6 +225,23 @@
     reuses `Comments`, which gained optional labels.
   - Tests: backend 24 passed (and 117 with the rate-limit and event-schema suites); frontend
     173 passed; OpenAPI check: 0 problems.
+- **Item 10 (notifications, 2026-11-28):**
+  - the catalogue (`core/notification_types.py`): 32 types in 13 §12 categories; anything
+    outside it is refused;
+  - `notify` is now async and honours the in-app switch;
+  - `outbox.enqueue` honours the email switch for every non-account template (the six account
+    templates are always sent);
+  - new emails: `mentioned` (opt-in), `checkin_reminder`, `risk_critical`;
+  - the new-bids job now goes through `notify`;
+  - new notifications are published to Redis after commit (dropped on rollback);
+  - `GET /notifications/stream` (SSE, D107 rules, shared 3-stream limit, `Last-Event-ID`
+    replay) with its own Nginx location;
+  - preferences GET/PUT, audited;
+  - frontend: `useNotificationStream` in the app shell, with backoff when the browser gives up
+    and the 60 s refresh kept as the fallback; the notification switches on Settings; a link
+    from Notifications. Decisions: D176.
+  - Tests: backend 125 passed (catalogue, live and preference tests plus every suite that sends
+    notifications) and 47 with the edge tests; frontend 27 passed; OpenAPI check: 0 problems.
 - **Laptop notes:**
   - BuildKit crashes ("frontend grpc server closed") when `tests` and `api` are built in one
     `compose build`, or alongside other load; building them one at a time works every time.

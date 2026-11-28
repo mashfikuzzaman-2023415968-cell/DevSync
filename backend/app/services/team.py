@@ -172,6 +172,7 @@ async def _email(db: AsyncSession, user_id: uuid.UUID, template: str, **payload:
             "link": f"{get_settings().PUBLIC_ORIGIN}{link}",
             **payload,
         },
+        user_id=user.id,
     )
 
 
@@ -332,7 +333,7 @@ async def send_invitations(
             title, template = "You were selected as a replacement", "invitation_replacement"
         else:
             title, template = "You were selected", "invitation_selected"
-        notify(
+        await notify(
             db,
             member.developer_id,
             "INVITATION_SELECTED",
@@ -479,7 +480,7 @@ async def accept(ctx: Ctx, invitation_id: uuid.UUID) -> ActionOut:
                 },
                 at=ctx.now,
             )
-        notify(
+        await notify(
             db,
             a.project.client_id,
             "INVITATION_ACCEPTED",
@@ -514,7 +515,7 @@ async def decline(ctx: Ctx, invitation_id: uuid.UUID, body: DeclineIn) -> Action
         a.bid.version += 1
         if a.reservation is not None:
             a.reservation.status = ReservationStatus.RELEASED
-        notify(
+        await notify(
             db,
             a.project.client_id,
             "INVITATION_DECLINED",
@@ -618,7 +619,7 @@ async def expire_due(now: datetime) -> dict[str, int]:
                 bid.version += 1
             if res is not None:
                 res.status = ReservationStatus.RELEASED
-            notify(
+            await notify(
                 db,
                 project.client_id,
                 "INVITATION_EXPIRED",
@@ -1048,7 +1049,7 @@ async def choose_lead(
             .tuples()
             .all()
         )
-        notify(
+        await notify(
             db,
             target.developer_id,
             "LEAD_CHOSEN",
@@ -1068,7 +1069,7 @@ async def choose_lead(
             lead_name = names.get(target.developer_id, "A teammate")
             for m in members:
                 if m.status == MemberStatus.ACTIVE and m.id != target.id:
-                    notify(
+                    await notify(
                         db,
                         m.developer_id,
                         "LEAD_CHANGED",
@@ -1123,7 +1124,7 @@ async def decline_lead(ctx: Ctx, project_id: uuid.UUID) -> ActionOut:
         me.is_lead = False
         me.lead_declined_at = ctx.now
         project.version += 1
-        notify(
+        await notify(
             db,
             project.client_id,
             "LEAD_DECLINED",
@@ -1210,7 +1211,7 @@ async def request_lead_change(
         )
         db.add(req)
         await db.flush()
-        notify(
+        await notify(
             db,
             project.client_id,
             "LEAD_CHANGE_REQUESTED",
@@ -1276,7 +1277,7 @@ async def decide_lead_change(
             if lead is not None:
                 lead.is_lead = False
                 req.outgoing_member_id = lead.id
-                notify(
+                await notify(
                     db,
                     lead.developer_id,
                     "LEAD_CHANGED",
@@ -1285,7 +1286,7 @@ async def decide_lead_change(
                     link=_link_workspace(project.id),
                 )
             project.version += 1
-        notify(
+        await notify(
             db,
             req.requested_by,
             "LEAD_CHANGE_DECIDED",
@@ -1439,7 +1440,7 @@ async def _start_notices(db: AsyncSession, project: Project, active: list[TeamMe
     lead = next(m for m in active if m.is_lead)
     for user_id in [project.client_id, *(m.developer_id for m in active)]:
         link = _link_workspace(project.id)
-        notify(
+        await notify(
             db,
             user_id,
             "PROJECT_STARTED",
@@ -1448,7 +1449,7 @@ async def _start_notices(db: AsyncSession, project: Project, active: list[TeamMe
             link=link,
         )
         await _email(db, user_id, "project_started", project=project.title, link=link)
-    notify(
+    await notify(
         db,
         lead.developer_id,
         "LEAD_CHOSEN",
@@ -1492,7 +1493,7 @@ async def _depart(
     project.version += 1
     word = "left" if status == MemberStatus.LEFT else "was removed from"
     extra = " Choose a new team lead." if was_lead else ""
-    notify(
+    await notify(
         db,
         project.client_id,
         "MEMBER_LEFT",
@@ -1552,7 +1553,7 @@ async def _unassign_tasks(
         )
     )
     if count and lead is not None:
-        notify(
+        await notify(
             db,
             lead,
             "TASKS_UNASSIGNED",
@@ -1773,7 +1774,7 @@ async def decide_removal(
                 now=ctx.now,
                 settings=settings,
             )
-            notify(
+            await notify(
                 db,
                 member.developer_id,
                 "MEMBER_REMOVED",
@@ -1781,7 +1782,7 @@ async def decide_removal(
                 body=f"An admin removed you from “{project.title}”: {reason}",
                 link="/dev",
             )
-        notify(
+        await notify(
             db,
             project.client_id,
             "REMOVAL_DECIDED",

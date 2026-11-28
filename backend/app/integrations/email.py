@@ -139,6 +139,28 @@ TEMPLATES: dict[str, EmailTemplate] = {
         html="<p>Hi $name,</p><p>$lead is now the team lead for “$project”.</p>"
         '<p><a href="$link">Open the project</a></p>',
     ),
+    # Phase 9 (§12): mentions (opt-in, D153), the weekly check-in reminder and CRITICAL risks.
+    # No message text is quoted: the email only says where to look.
+    "mentioned": EmailTemplate(
+        subject="$who mentioned you in “$project”",
+        text="Hi $name,\n\n$who mentioned you in “$project”. Open the conversation to reply: $link",
+        html="<p>Hi $name,</p><p>$who mentioned you in “$project”.</p>"
+        '<p><a href="$link">Open the conversation</a></p>',
+    ),
+    "checkin_reminder": EmailTemplate(
+        subject="Your weekly check-in for “$project”",
+        text="Hi $name,\n\nPost this week's check-in for “$project” by Tuesday night "
+        "(Asia/Dhaka): what you finished, what's next and anything in your way.\n\n$link",
+        html="<p>Hi $name,</p><p>Post this week's check-in for “$project” by Tuesday night "
+        "(Asia/Dhaka): what you finished, what's next and anything in your way.</p>"
+        '<p><a href="$link">Check in</a></p>',
+    ),
+    "risk_critical": EmailTemplate(
+        subject="A critical risk opened on “$project”",
+        text="Hi $name,\n\nA critical risk opened on “$project”: $risk\n\nSee what to do: $link",
+        html="<p>Hi $name,</p><p>A critical risk opened on “$project”: $risk</p>"
+        '<p><a href="$link">See what to do</a></p>',
+    ),
 }
 
 

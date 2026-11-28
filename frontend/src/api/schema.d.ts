@@ -1776,6 +1776,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notification-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My notification switches
+         * @description Every §12 row with your in-app and email switches. Account and security emails aren't
+         *     listed: they are always sent.
+         */
+        get: operations["get_preferences_api_v1_notification_preferences_get"];
+        /**
+         * Change my notification switches
+         * @description Only the rows you send change. Email can't be switched on where §12 has none (422).
+         */
+        put: operations["put_preferences_api_v1_notification_preferences_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/notifications": {
         parameters: {
             query?: never;
@@ -1807,6 +1832,27 @@ export interface paths {
         put?: never;
         /** Mark all read */
         post: operations["read_all_api_v1_notifications_read_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Live notifications (Server-Sent Events)
+         * @description Your notifications as they happen. Same-origin only; at most 3 open streams per user
+         *     (job streams included).
+         */
+        get: operations["stream_api_v1_notifications_stream_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3835,6 +3881,11 @@ export interface components {
             /** Signature */
             signature: string;
         };
+        /**
+         * Category
+         * @enum {string}
+         */
+        Category: "bids_received" | "bidding_outcome" | "formation" | "selected" | "bid_updates" | "invitation_responses" | "team" | "task_assigned" | "mentions" | "blockers" | "checkin_reminder" | "critical_risk" | "verification";
         /**
          * CertificateOut
          * @description A certificate and its verification status.
@@ -5897,6 +5948,49 @@ export interface components {
             mention_ids?: string[];
             /** Reply To Id */
             reply_to_id?: string | null;
+        };
+        /**
+         * PreferenceItem
+         * @description One §12 row with the caller's switches (defaults where never changed).
+         */
+        PreferenceItem: {
+            /** Category */
+            category: string;
+            /** Email */
+            email: boolean;
+            /**
+             * Email Available
+             * @description §12 has an email for this row
+             */
+            email_available: boolean;
+            /** In App */
+            in_app: boolean;
+            /** Label */
+            label: string;
+        };
+        /** PreferenceSet */
+        PreferenceSet: {
+            category: components["schemas"]["Category"];
+            /** Email */
+            email: boolean;
+            /** In App */
+            in_app: boolean;
+        };
+        /**
+         * Preferences
+         * @description Account and security emails aren't listed: they are always sent.
+         */
+        Preferences: {
+            /** Items */
+            items: components["schemas"]["PreferenceItem"][];
+        };
+        /**
+         * PreferencesUpdate
+         * @description The rows to change (others keep their values); each category at most once.
+         */
+        PreferencesUpdate: {
+            /** Items */
+            items: components["schemas"]["PreferenceSet"][];
         };
         /**
          * PreviewMilestone
@@ -24391,6 +24485,324 @@ export interface operations {
             };
         };
     };
+    get_preferences_api_v1_notification_preferences_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "category": "mentions",
+                     *           "email": false,
+                     *           "email_available": true,
+                     *           "in_app": true,
+                     *           "label": "Someone mentioned you"
+                     *         },
+                     *         {
+                     *           "category": "blockers",
+                     *           "email": false,
+                     *           "email_available": false,
+                     *           "in_app": true,
+                     *           "label": "A teammate reported a blocker"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Preferences"];
+                };
+            };
+            /** @description Please sign in to continue. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Please sign in to continue.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Your account can't do this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "ROLE_NOT_ALLOWED",
+                     *         "message": "Your account can't do this.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description We couldn't find that. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "We couldn't find that.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The request is too large. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "PAYLOAD_TOO_LARGE",
+                     *         "message": "The request is too large.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many requests. Please wait and try again. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Too many requests. Please wait and try again.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_preferences_api_v1_notification_preferences_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreferencesUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "category": "mentions",
+                     *           "email": false,
+                     *           "email_available": true,
+                     *           "in_app": true,
+                     *           "label": "Someone mentioned you"
+                     *         },
+                     *         {
+                     *           "category": "blockers",
+                     *           "email": false,
+                     *           "email_available": false,
+                     *           "in_app": true,
+                     *           "label": "A teammate reported a blocker"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Preferences"];
+                };
+            };
+            /** @description The request could not be understood. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "BAD_REQUEST",
+                     *         "message": "The request could not be understood.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Please sign in to continue. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Please sign in to continue.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Your account can't do this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "ROLE_NOT_ALLOWED",
+                     *         "message": "Your account can't do this.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description We couldn't find that. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "We couldn't find that.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The request is too large. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "PAYLOAD_TOO_LARGE",
+                     *         "message": "The request is too large.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Send the request body as JSON. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNSUPPORTED_MEDIA_TYPE",
+                     *         "message": "Send the request body as JSON.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Some fields need attention. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "Some fields need attention.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests. Please wait and try again. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Too many requests. Please wait and try again.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_notifications_api_v1_notifications_get: {
         parameters: {
             query?: {
@@ -24647,6 +25059,142 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many requests. Please wait and try again. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Too many requests. Please wait and try again.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    stream_api_v1_notifications_stream_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "last-event-id"?: string | null;
+                "sec-fetch-site"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description An event stream of `notification` events with `{id, type, title}`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example id: 5f0c2b7e-3d4a-4e8b-9c1d-2a3b4c5d6e7f
+                     *     event: notification
+                     *     data: {"id":"5f0c2b7e-3d4a-4e8b-9c1d-2a3b4c5d6e7f","type":"MENTIONED","title":"Arif Hossain mentioned you"}
+                     */
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description Please sign in to continue. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Please sign in to continue.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Your account can't do this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "ROLE_NOT_ALLOWED",
+                     *         "message": "Your account can't do this.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description We couldn't find that. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "We couldn't find that.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The request is too large. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "PAYLOAD_TOO_LARGE",
+                     *         "message": "The request is too large.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Some fields need attention. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "Some fields need attention.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
                 };
             };
             /** @description Too many requests. Please wait and try again. */

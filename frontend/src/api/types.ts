@@ -126,6 +126,8 @@ export type RepairCandidate = Schemas["RepairCandidate"];
 export type LeadChangeRequest = Schemas["LeadChangeRequestOut"];
 export type NotificationItem = Schemas["NotificationOut"];
 export type NotificationPage = Schemas["Page_NotificationOut_"];
+export type NotificationPreferences = Schemas["Preferences"];
+export type PreferenceItem = Schemas["PreferenceItem"];
 export type ActionResult = Schemas["ActionOut"];
 
 // Workspace: tasks (spec §7.5, §10.2 Tasks; D143, D144, D148, D168, D172)

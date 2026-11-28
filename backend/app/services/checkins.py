@@ -35,7 +35,7 @@ from app.schemas.tasks import PersonRef
 from app.services import activity, monitoring
 from app.services import workspace as wsp
 from app.services.context import Ctx
-from app.services.notifications import notify_once, notify_users
+from app.services.notifications import EmailSpec, notify_once, notify_users
 
 log = get_logger(__name__)
 
@@ -309,6 +309,7 @@ async def send_reminders(now: datetime) -> dict[str, int]:
                 body=f"Tell {project.title}'s team what you did and what's next, by Tuesday night.",
                 link=f"/w/{project.id}/check-ins",
                 since=since,
+                email=EmailSpec("checkin_reminder", {"project": project.title}),
             ):
                 reminded += 1
         await db.commit()

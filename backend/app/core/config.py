@@ -84,6 +84,8 @@ class Settings(BaseSettings):
 
     UPLOAD_DIR: str = "/data/uploads"
     MAX_UPLOAD_MB: int = Field(default=20, ge=1, le=100)
+    # How long one notification stream stays open before the browser reconnects (D107, D153).
+    SSE_MAX_SECONDS: int = Field(default=1800, ge=1, le=3600)
     TRUSTED_PROXY_IPS: str = "172.16.0.0/12"
 
     GUNICORN_WORKERS: int = Field(default=0, ge=0, le=64)  # 0 → 2×CPU+1

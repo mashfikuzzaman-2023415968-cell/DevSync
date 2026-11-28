@@ -1,10 +1,11 @@
 /**
- * Notifications `/notifications` (spec §13.5 #18; D122): your notifications grouped by day
+ * Notifications `/notifications` (spec §13.5 #18; D122, D153): your notifications grouped by day
  * (Asia/Dhaka), an unread dot, "Mark all read", and each one opening its page (a validated app
- * path, or none). The live stream and preferences arrive in Phase 9.
+ * path, or none). New ones arrive live (the shell keeps the stream open); the switches are on
+ * Settings.
  */
 import { Bell } from "lucide-react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { ApiError } from "@/api/client";
 import type { NotificationItem } from "@/api/types";
 import { Button } from "@/components/ui/Button";
@@ -49,6 +50,13 @@ export default function NotificationsPage() {
           ) : null
         }
       />
+      <p className="-mt-2 mb-4 text-body-sm text-text-muted">
+        Choose what reaches you, in DevSync or by email, in{" "}
+        <Link to="/settings#notifications" className="text-primary underline">
+          notification settings
+        </Link>
+        .
+      </p>
       {q.isPending ? (
         <Card className="p-5" aria-busy="true" aria-label="Loading notifications">
           <Skeleton className="h-16 w-full" />

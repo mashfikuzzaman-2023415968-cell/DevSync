@@ -33,6 +33,7 @@ from app.models.bidding import Bid, BidStatus
 from app.models.identity import EmailOutbox, Notification, User, UserStatus
 from app.models.projects import Project, ProjectStatus
 from app.services import outbox
+from app.services.notifications import notify
 
 log = structlog.get_logger(__name__)
 
@@ -104,19 +105,20 @@ async def notify_new_bids(now: datetime | None = None) -> dict[str, int]:
             )
             if count == 0:
                 continue
-            db.add(
-                Notification(
-                    user_id=client_id,
-                    type=NEW_BIDS,
-                    title=f"{_plural(count, 'new bid')} on your project",
-                    body=f"“{title}” received {_plural(count, 'new sealed bid')}. "
-                    "Open the bids to see who qualifies.",
-                    link_path=link,
-                    created_at=cutoff,  # the watermark the next run counts from
-                )
+            # Through `notify` (D163–D164): the client's switch and the live push apply. With
+            # the in-app switch off there is no row, so no watermark either; nothing is sent.
+            delivered = await notify(
+                db,
+                client_id,
+                NEW_BIDS,
+                title=f"{_plural(count, 'new bid')} on your project",
+                body=f"“{title}” received {_plural(count, 'new sealed bid')}. "
+                "Open the bids to see who qualifies.",
+                link=link,
+                at=cutoff,  # the watermark the next run counts from
             )
             await db.commit()
-            created += 1
+            created += delivered
     log.info("new_bid_notices", created=created)
     return {"notified": created}
 
@@ -184,6 +186,7 @@ async def send_bid_digests(now: datetime | None = None) -> dict[str, int]:
                     "link": f"{get_settings().PUBLIC_ORIGIN}/client/projects",
                     "digest_date": day,
                 },
+                user_id=client.id,
             )
             await db.commit()
             sent += 1

@@ -83,7 +83,7 @@ from app.schemas.tasks import PersonRef
 from app.services import team as team_svc
 from app.services import workspace as wsp
 from app.services.context import Ctx
-from app.services.notifications import notify_users
+from app.services.notifications import EmailSpec, notify_users
 
 log = get_logger(__name__)
 CLIENT_ONLY = frozenset({RiskType.BUDGET, RiskType.AUTO_APPROVAL_SOON})
@@ -349,6 +349,7 @@ async def evaluate_project(project_id: uuid.UUID, now: datetime) -> dict[str, An
                 body=f"In {title}. Open the Risks tab for what it means and what to do.",
                 link=f"/w/{project_id}/risks",
                 once=False,
+                email=EmailSpec("risk_critical", {"project": title, "risk": risk_title}),
             )
     await cache.invalidate(get_redis(), f"project:{project_id}")
     return {

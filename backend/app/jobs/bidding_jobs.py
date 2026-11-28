@@ -178,6 +178,7 @@ async def _email_client(
             "link": f"{get_settings().PUBLIC_ORIGIN}{link}",
             **extra,
         },
+        user_id=client.id,
     )
 
 
@@ -204,7 +205,7 @@ async def _auto_close(db: AsyncSession, project: Project, now: datetime) -> None
         (project.client_id, f"/client/projects/{project.id}/bids"),
         *[(dev, "/dev/bids") for dev in await bidrepo.active_bidder_ids(db, project.id)],
     ]:
-        notify(db, user_id, _AUTO_CLOSED, title=title, body=body, link=link)  # happens once
+        await notify(db, user_id, _AUTO_CLOSED, title=title, body=body, link=link)  # happens once
 
 
 def bidding_deadline() -> dict[str, int]:

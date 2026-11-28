@@ -643,7 +643,7 @@ async def close_reopened(now: datetime) -> int:
                     proposal = await open_repair(
                         db, project, team, departed, now=now, settings=settings
                     )
-                notify(
+                await notify(
                     db,
                     project.client_id,
                     "SLOT_CLOSED",

@@ -36,6 +36,9 @@ def stack_settings(**overrides: Any) -> Settings:
         "SECRET_KEY": os.environ.get("SECRET_KEY", "test-secret-key-" * 4),
         "CAPTCHA_HMAC_KEY": os.environ.get("CAPTCHA_HMAC_KEY", "test-captcha-key-" * 2),
         "SMS_PROVIDER": "noop",
+        # Notification streams end after 2 s in tests (30 min in production), so a test that
+        # opens one gets the whole response back (D153).
+        "SSE_MAX_SECONDS": 2,
     }
     values.update(overrides)
     return Settings(**values)

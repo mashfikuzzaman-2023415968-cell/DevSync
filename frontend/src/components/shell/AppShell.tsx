@@ -32,7 +32,7 @@ import { DropdownMenu, Sheet, Tooltip } from "@/components/ui/Overlay";
 import { useMediaQuery, usePreferences } from "@/design/preferences";
 import { useMotion } from "@/design/useMotion";
 import { useLogout, useMe } from "@/features/auth/api";
-import { useUnreadCount } from "@/features/notifications/api";
+import { useNotificationStream, useUnreadCount } from "@/features/notifications/api";
 import { cn } from "@/lib/cn";
 import { readPref, writePref } from "@/lib/storage";
 import { CommandPalette, useCommandShortcut } from "./CommandPalette";
@@ -177,8 +177,9 @@ function AccountMenu({ profilePath }: { profilePath: string }) {
 
 export function AppShell({ nav, children }: { nav: ShellNav; children?: ReactNode }) {
   const me = useMe();
-  // The bell's count (D122): re-read on focus and every 60 s while the page is visible.
+  // The bell's count (D122): live over SSE (D153), re-read on focus and every 60 s as a fallback.
   const unread = useUnreadCount(Boolean(me.data)).data?.unread ?? 0;
+  useNotificationStream(Boolean(me.data));
   const location = useLocation();
   const navigate = useNavigate();
   const logout = useLogout();

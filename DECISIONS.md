@@ -2025,3 +2025,33 @@ during the Phase 9 build (item 8), by the brief's order (spec intent, then secur
   `file_access()` checks `deleted_at`). *Rejected:* a SECURITY DEFINER delete function
   (it would repeat the uploader-or-lead rule in SQL); dropping the `deleted_at` condition for
   every participant (wider than needed).
+
+**D176 · Notification delivery details (item 10).** Decided by Claude Code during the Phase 9
+build, within D153 and D162–D164.
+- **One path for every notice:**
+  - Every in-app notification goes through `notify` / `notify_once` / `notify_users`. That
+    includes the hourly new-bids notice, which used to insert rows itself and skipped both the
+    switch and the live push. It now keeps its watermark through `notify(..., at=cutoff)`.
+  - The recipient's switches are read in a short SYSTEM session (`notification_prefs.switches`),
+    because the writer usually acts for someone else and RLS keeps preference rows to their
+    owner.
+  - `outbox.enqueue` reads the same switch for every non-account template.
+- **The three new §12 emails:** `mentioned` (opt-in), `checkin_reminder` and `risk_critical`.
+  They go with their notifications through `EmailSpec` and never quote message text.
+- **Publishing:**
+  - The `after_commit` listener publishes `{id, type, title}` with a small synchronous Redis
+    client, because listeners can't await. A publish that fails is logged and skipped: the row
+    is stored, and the browser catches up through `Last-Event-ID` or the 60 s refresh.
+  - `after_rollback` drops the pending entries.
+- **The stream:**
+  - It subscribes first, then replays the notifications newer than `Last-Event-ID` (a
+    notification id; at most 50; an unknown, malformed or foreign id replays nothing). Live
+    messages already replayed are dropped.
+  - The stream's length is the setting `SSE_MAX_SECONDS` (30 min). The test stack sets it to
+    2 s so tests get complete responses; the production default is unchanged.
+- **Known limit:** with someone's in-app switch off there is no row to de-duplicate against.
+  So a job re-run for the same occasion (the Monday reminder, for example) can email twice.
+  The jobs that de-duplicate this way run once per occasion.
+
+*Rejected:* publishing from an asyncio task created in the listener (an RQ job's event loop
+ends before it runs); polling the database from the stream (holds connections, D107).

@@ -56,6 +56,7 @@ function render(...handlers: Parameters<typeof server.use>) {
     http.get("*/api/v1/auth/csrf", () => new HttpResponse(null, { status: 204 })),
     http.get("*/api/v1/me", () => HttpResponse.json(ME)),
     http.get("*/api/v1/auth/sessions", () => HttpResponse.json(SESSIONS)),
+    http.get("*/api/v1/notification-preferences", () => HttpResponse.json({ items: [] })),
   );
   return renderRoutes(
     [
