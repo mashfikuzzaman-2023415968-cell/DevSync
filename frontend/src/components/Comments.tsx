@@ -11,6 +11,7 @@ import { AtSign, Reply, X } from "lucide-react";
 import { useState } from "react";
 import { ApiError } from "@/api/client";
 import type { CommentItem, PersonRef } from "@/api/types";
+import { VirtualList } from "@/components/VirtualList";
 import { Button } from "@/components/ui/Button";
 import { Avatar, Skeleton } from "@/components/ui/Display";
 import { Alert, ErrorState } from "@/components/ui/Feedback";
@@ -119,10 +120,14 @@ export function Comments({
       ) : items.length === 0 ? (
         <p className="text-body-sm text-text-muted">No comments yet.</p>
       ) : (
-        <ul className="space-y-3">
-          {items.map((c) => (
+        // Long threads (a busy discussion) are drawn only where they're on screen (D158).
+        <VirtualList
+          items={items}
+          getKey={(c) => c.id}
+          estimate={84}
+          gap={12}
+          render={(c) => (
             <CommentRow
-              key={c.id}
               comment={c}
               parent={c.reply_to_id ? byId.get(c.reply_to_id) : undefined}
               targetType={targetType}
@@ -133,8 +138,8 @@ export function Comments({
                 setReplyTo(c);
               }}
             />
-          ))}
-        </ul>
+          )}
+        />
       )}
       {canWrite && me ? (
         <div className="sticky bottom-0 space-y-2 border-t border-border bg-surface pt-3">
@@ -237,7 +242,7 @@ function CommentRow({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(comment.body);
   return (
-    <li className="flex gap-3">
+    <div className="flex gap-3">
       <Avatar name={comment.author.name} size="sm" />
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-baseline gap-x-2 text-caption text-text-muted">
@@ -344,6 +349,6 @@ function CommentRow({
           </div>
         ) : null}
       </div>
-    </li>
+    </div>
   );
 }

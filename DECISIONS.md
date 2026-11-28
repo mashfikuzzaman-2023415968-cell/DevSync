@@ -2055,3 +2055,40 @@ build, within D153 and D162–D164.
 
 *Rejected:* publishing from an asyncio task created in the listener (an RQ job's event loop
 ends before it runs); polling the database from the stream (holds connections, D107).
+
+**D177 · How the DAST step runs (item 12, completes D157).** Decided by Claude Code during the
+Phase 9 build.
+- **An Automation Framework plan, not `zap-baseline.py`:** `backend/scripts/zap_scan.py` writes
+  ZAP's own plan, which gives exact control over:
+  - the context and its exclusions: the test-only router, sign-out, both SSE streams and signed
+    blob URLs;
+  - the session, added to every request by the `replacer` job;
+  - explicit start requests: the main signed-in pages, a workspace and the API reads behind
+    them;
+  - both spiders, two minutes each.
+
+  Only passive rules run: nothing is attacked or changed.
+- **Target:** ZAP runs in Nginx's network namespace against `https://localhost:8443`. That is
+  the test stack's `PUBLIC_ORIGIN`; the day-one trial aimed at port 443, where nothing listens.
+  ZAP's own proxy listens on 8099, because 8080 is Nginx's.
+- **The session:**
+  - `backend/scripts/zap_session.py` seeds a throwaway verified developer through the
+    test-only router and signs in through Nginx, as a browser would.
+  - The cookie travels on stdout to the scan script and into the plan file. The plan file is
+    deleted when ZAP ends. No log, report or summary contains the cookie; failures print only
+    the error code.
+- **TLS:** ZAP accepts any upstream certificate, and the test stack's is self-signed. ZAP has no
+  per-target switch, so the limit is the target itself: the scan only ever talks to the test
+  stack inside its own network. TLS stays on.
+- **Pass rule:**
+  - any High or Medium alert fails;
+  - `infra/zap/ignore.json` may list an alert only with a DECISIONS entry that exists, and the
+    script checks that it does;
+  - the list starts empty.
+
+  Reports go to `runs/zap/<timestamp>/` (JSON, HTML, a one-line summary and ZAP's output).
+- **`--offline`:** records N/A, as step 7 does.
+
+*Rejected:* `zap-baseline.py` with `-z` replacer flags (the cookie would show in the process
+list, and there's no way to exclude paths from the spider); an API key instead of a session
+(the app has none, and adding one for a scanner would widen the attack surface).

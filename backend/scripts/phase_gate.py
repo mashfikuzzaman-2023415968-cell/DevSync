@@ -728,9 +728,22 @@ def step_performance(g: Gate) -> str:
 
 
 def step_dast(g: Gate) -> str:
+    """ZAP's passive scan of the running test stack, signed in (D157, D171): any High or Medium
+    alert fails unless `infra/zap/ignore.json` names it with a DECISIONS entry."""
     if g.phase < 9:
         raise NotApplicable("ZAP baseline starts in phase 9")
-    raise StepFailed("DAST step not implemented yet")
+    if g.offline:
+        raise NotApplicable(
+            "--offline: the ZAP image and the scan need the full machine (recorded)"
+        )
+    run([*COMPOSE, "up", "-d", "--wait", "postgres", "redis", "api", "nginx"], timeout=600)
+    proc = run(["python3", "backend/scripts/zap_scan.py"], timeout=2400, check=False)
+    lines = (proc.stdout or "").strip().splitlines()
+    verdict = next((ln for ln in reversed(lines) if ln.startswith("zap: ")), "")
+    if proc.returncode != 0:
+        tail = "\n".join(lines[-15:])
+        raise StepFailed(f"ZAP found High/Medium alerts or could not run:\n{tail}")
+    return verdict.removeprefix("zap: ") or "ZAP baseline passed"
 
 
 def step_phase_checks(g: Gate) -> str:

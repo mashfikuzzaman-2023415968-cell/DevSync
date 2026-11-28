@@ -170,5 +170,8 @@ fuzz: test-stack-up ## Contract fuzzing (schemathesis) + property tests on the t
 	  -e FUZZ_EXAMPLES -e FUZZ_AUTH_EXAMPLES -e FUZZ_STATEFUL_EXAMPLES -e FUZZ_STATEFUL_STEPS \
 	  tests pytest -q -p no:cacheprovider -m "fuzz or property" $(PYTEST_ARGS)
 
-zap load chaos experiments backup restore-drill docs deps-update ledger-report: ## Arrive in later phases
+zap: test-stack-up ## DAST: ZAP's passive scan of the test stack, signed in (D157); reports in runs/zap/
+	python3 backend/scripts/zap_scan.py
+
+load chaos experiments backup restore-drill docs deps-update ledger-report: ## Arrive in later phases
 	@echo "make $@: available from the phase that builds it (see DEVSYNC_BUILD_SPEC.md §16.6 / §17)"

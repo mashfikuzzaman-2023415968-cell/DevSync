@@ -149,6 +149,10 @@
 - **Gate step 16 can't pass on WSL 2 (checked 2026-11-21).** `/dev/dri/renderD128` exists under WSLg, but inside the GPU Playwright image Chromium falls back to `llvmpipe` (software), and the `@perf|@gpu` tests correctly refuse it (5 failed). The real GPU is reached through `/dev/dxg` (Direct3D 12); the image has no Vulkan-on-D3D12 driver. Run the gate on a native Linux laptop (D28), or decide (with Taeen) whether to extend the GPU image for WSL.
 - **Load flakes seen on this WSL laptop (2026-11-21), all Phase 1–5 screens, none changed:** `login-totp` responsive (the sign-in CAPTCHA asked to "complete the verification check again"), `app shell light 390` visual (profile page slow to load) and `assessment-required light 768` visual (a 401 while its setup published a project). Each passed 2/2 when re-run alone, matching its baseline. Watch them in the gate.
 - **Visual baselines (2026-11-21):** 6 new — `reputation-experienced-{light,dark}-{390,768,1440}.png`, reviewed by eye (labels 12 px at every width after the chart-sizing fix); no existing baseline changed (the full `@visual` run matched all 202).
+- **Gate step 17 (DAST, Phase 9) needs the ZAP image, about 3.7 GB.** Pull it before the gate:
+  `docker pull zaproxy/zap-stable:2.17.0@sha256:9624669db72f54d86c4b46a7064518bd9bf79d8c61a4c31befa9923489f328af`.
+  On Sara's laptop the pull took 55 minutes, and the scan takes about 3–4 minutes (D157, D171,
+  D177).
 - **`test_admin_limit_is_per_user` is timing-sensitive on slow machines.** It sends 300 admin requests that must all land inside a 60-second window. Alone on this WSL laptop it passes 3/3 but takes 52–54 s; under the full suite it went over and failed. Not a Phase 6 change; not modified. Watch it in the gate on a faster machine; if it fails there too, fix the test's timing at the cause (not by loosening the limit).
 
 ## Session log (newest first)
@@ -254,6 +258,22 @@
     50 items: the activity feed, notifications and the check-ins feed.
   - Tests: backend 14 passed (My projects, monitoring); frontend 268 passed; no Phase 9
     placeholders left.
+- **Item 12 (DAST, 2026-11-28):**
+  - `make zap` and gate step 17: `backend/scripts/zap_scan.py` runs a ZAP Automation Framework
+    plan, signed in through `zap_session.py`, passive rules only, against
+    `https://localhost:8443`;
+  - High or Medium fails; `infra/zap/ignore.json` (empty) accepts an alert only with a
+    DECISIONS entry. D177.
+  - Result: `--only dast` PASS (High 0, Medium 0, Low 0, Informational 2: "modern web
+    application" and the cache-control review), in about 3 minutes.
+  - A run with a bogus session fails as intended ("wasn't signed in").
+  - ZAP echoes its plan, so the session cookie is redacted from its output and the reports. The
+    reports were checked to hold no cookie value, and the earlier runs' output was redacted too.
+  - D158's remaining lists now virtualize past 50: project files and discussion posts (and
+    comments, through `Comments`).
+  - Tests: 32 unit tests (scan rules and module checks); workspace and component Vitest 78 of
+    79. The one failure, `WorkspaceTeamPage` "lists members without prices", is a timing flake
+    on this laptop: alone it failed once and passed once, on a page none of this touches.
 - **Laptop notes:**
   - BuildKit crashes ("frontend grpc server closed") when `tests` and `api` are built in one
     `compose build`, or alongside other load; building them one at a time works every time.

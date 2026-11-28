@@ -8,6 +8,7 @@ import { Download, FileText, Image as ImageIcon, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { ApiError, fileUrl } from "@/api/client";
 import type { ProjectFile } from "@/api/types";
+import { VirtualList } from "@/components/VirtualList";
 import { Button, IconButton } from "@/components/ui/Button";
 import { Card, CardHeader, Skeleton } from "@/components/ui/Display";
 import { EmptyState, ErrorState } from "@/components/ui/Feedback";
@@ -134,11 +135,13 @@ function FileList({ projectId, files, canUpload, more, loadingMore, onMore }: Li
       <h2 id="files-heading" className="text-body font-semibold">
         Project files
       </h2>
-      <ul className="space-y-3">
-        {files.map((f) => (
-          <FileRow key={f.id} projectId={projectId} file={f} />
-        ))}
-      </ul>
+      <VirtualList
+        items={files}
+        getKey={(f) => f.id}
+        estimate={96}
+        gap={12}
+        render={(f) => <FileRow projectId={projectId} file={f} />}
+      />
       {more ? (
         <Button variant="outline" loading={loadingMore} onClick={onMore}>
           Show older files
@@ -152,8 +155,7 @@ function FileRow({ projectId, file }: { projectId: string; file: ProjectFile }) 
   const remove = useDeleteFile(projectId);
   const Icon = file.mime.startsWith("image/") ? ImageIcon : FileText;
   return (
-    <li>
-      <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+    <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary">
           <Icon className="size-5" aria-hidden="true" />
         </span>
@@ -201,7 +203,6 @@ function FileRow({ projectId, file }: { projectId: string; file: ProjectFile }) 
             />
           ) : null}
         </div>
-      </Card>
-    </li>
+    </Card>
   );
 }
