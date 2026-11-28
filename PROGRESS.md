@@ -2,12 +2,36 @@
 
 ## Current state
 - **Current owner:** Sara Binte Shafayet (tester), Phases 9–11, from 2026-11-27 (start prompt `phase-09-start-prompt.md`; Raisa owned Phases 6–8 until 2026-11-25).
-- **Current phase:** 9 (workspace and monitoring) is **in progress** on `phase-9` (Sara with Claude Code; plan `docs/plans/phase-09.md`, decisions D141–D174). Done and committed: the plan, migration 0016 with RLS. Built and being verified: tasks and the Kanban board, check-ins and reminders, comments with mentions, evidence events and the Phase 8 hooks, the risk engine, monitoring and the forecast with the Overview, Timeline, Milestones and Risks tabs, and the Inventory dashboard seed with `phase9_checks`. Still to build (D159 order): project files, discussion, the notification stream and preferences, the Evidence tab, My projects and the dashboards, then DAST and the finishing work.
+- **Current phase:** 9 (workspace and monitoring) is **built; finishing** on `phase-9` (Sara with
+  Claude Code; plan `docs/plans/phase-09.md`, decisions D141–D177).
+  - **Committed:** all 12 D159 items; the docs; the security review (0 unresolved high); sprint
+    notes 07–08; the Phase 9 E2E and the workspace screens.
+  - **Pre-push gate subset** (lint, types, static security, forbidden/layers/RLS/module tests,
+    migrations): PASS on 2026-11-28, after fixes at their causes (Prettier on 24 files, two mypy
+    errors in the seed, f-string SQL in `demo_reset`, two `target=_blank` links and the ZAP
+    session's TLS exception given the repo's `forbidden-ok` markers, workspace enums moved to
+    `core` for the layer rules, the risk engine's `today` field renamed to `day`).
+  - **Still to do:** the full backend suite, Vitest, a passing Phase 9 E2E run, the visual
+    baselines Phase 9 changes, then the push of `phase-9` for Taeen's gate.
 - **Phase 8:** done (gate PASS 2026-11-25 05:11 Asia/Dhaka on Taeen's laptop), merged to `main`, tagged `phase-8`.
 - **Last gate result:** Phase 8 PASS, 2026-11-25 05:11 Asia/Dhaka (`runs/gate-p8b.log`): backend 2,105 (95.1%), security 600, contract 701, frontend 568 (81.0%), E2E 93, a11y 36, visual 143 (232 baselines), Lighthouse desktop 100/100/96/100 and mobile 94/100/96/100, GPU 5/5, algorithm budgets met, phase checks (repair, lead, team RLS/API) and regression guard clean. One fix was needed (D140). Both tests Raisa flagged as timing-sensitive on WSL passed here.
 - **Verified on Raisa's laptop (WSL 2, 2026-11-24):** backend suite 2,103 passed, 1 failed (`test_admin_limit_is_per_user`, the timing-sensitive test already listed under Known issues; it failed the same way here in Phase 6), coverage 95.25 %; the Phase 8 API/unit/RLS/algorithm/authz tests 59/59 after the last changes; repair perf (10 candidates, 4 members: PSO ≈ 1.4 s, exact 0.05 s, budget 5 s); frontend 568 Vitest; full Chromium `@e2e|@a11y` 128 passed, 1 failed (`phase5 › after the bidding deadline the bid sheet is closed`, a 5 s wait against this laptop's 3–5 s repaint after a reload; it failed the same way in the Phase 6 gate attempt here, untouched); Phase 8 E2E passes (the whole flow, axe and layout on the new screens); visual: 122 existing screenshot tests match, 3 baselines updated (bell badge, team-card order), 12 new reviewed by eye; stage-2 seed builds the repair demo and `repair_check.py` passes (seeded READY with 1 candidate; scripted decline → 2 ranked); `formation_check.py` reproduces the D116 team; OpenAPI 0 problems; fuzz + property 715 passed and 1 real bug found (the admin removal list returned 500 once a request existed; fixed and tested, its 20 fuzz cases pass).
-- **In progress:** Phase 9 items 2–7 of D159 (see the session log); then items 8–12.
-- **Very next step:** finish verifying the Inventory seed (`monitoring_check.py`), commit, then project files (item 8). Gates run on Taeen's native Linux laptop, plugged into the original Dell charger.
+- **In progress:** Phase 9 finishing work: the remaining checks and the push.
+- **Very next step:**
+  1. the full backend suite and Vitest, each run alone;
+  2. the Phase 9 E2E;
+  3. `make visual-update` for the changed screens (review each diff);
+  4. push `phase-9`.
+
+  The gate runs on Taeen's native Linux laptop, plugged into the original Dell charger. Pull the
+  ZAP image first (Known issues).
+- **This laptop under load (2026-11-28):** E2E attempts failed before the test proper:
+  - the API stalled once on startup;
+  - Chromium once didn't launch within 3 minutes;
+  - test-user seeding twice went over the 10 s route timeout.
+
+  These came from heavy Windows-side load and from running the gate's 30-minute ESLint step
+  next to Docker. Run heavy steps one at a time.
 - **Open human tasks:** review the 128 drafted test questions (D34); tester's human check of the Phase 3–8 security reviews; sanity-check D39 (simulated payment-method verification). `make demo-reset STAGE=2` was measured on Sara's laptop on 2026-11-27 before Phase 9 at 23 s (target < 30 s); measure it again with the Inventory project.
 - **Sprint notes:** they stopped at `sprint-03.md`; from Phase 9 they resume at `sprint-07.md` (23–29 Nov) without back-filling sprints 4–6.
 

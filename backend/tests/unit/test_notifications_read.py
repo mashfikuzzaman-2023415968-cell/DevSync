@@ -33,4 +33,7 @@ def test_routes() -> None:
         ("GET", "/notifications/unread-count"),
         ("POST", "/notifications/{notification_id}/read"),
         ("POST", "/notifications/read-all"),
+        ("GET", "/notifications/stream"),
+        ("GET", "/notification-preferences"),
+        ("PUT", "/notification-preferences"),
     }

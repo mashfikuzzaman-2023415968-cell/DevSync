@@ -253,7 +253,7 @@ def snapshot_json(loaded: Loaded, e: engine.Evaluation, now: datetime) -> dict[s
     crit = {m.id: m.critical for m in loaded.data.milestones}
     return {
         "evaluated_at": now.isoformat(),
-        "today": loaded.data.today,
+        "today": loaded.data.day,
         "baseline_days": loaded.data.baseline_duration,
         "finish_day": e.finish_day,
         "finish_date": str(_day_date(start, e.finish_day)) if start else None,
