@@ -41,8 +41,8 @@ export function CommentText({ text }: { text: string }) {
           <a
             key={`${String(i)}-${s.href}`}
             href={s.href}
-            target="_blank"
             rel="noopener noreferrer nofollow"
+            target="_blank" // forbidden-ok: rel="noopener noreferrer nofollow" is set above
             className="break-all text-primary underline"
           >
             {s.value}

@@ -181,7 +181,7 @@ def inventory(day: int = 12, inactive: int = 8) -> ProjectIn:
         member("rafi", "design", inactive=inactive),  # design work is done: no skill risk
     )
     return ProjectIn(
-        today=day,
+        day=day,
         baseline_duration=23,
         milestones=milestones,
         tasks=tuple(api_tasks + dash_tasks),
@@ -252,7 +252,7 @@ def _one(
 ) -> ProjectIn:
     m = ms("M", "Build", status, dur, 0, dur, slack=slack, critical=critical, p=p, start=start)
     return ProjectIn(
-        today=today,
+        day=today,
         baseline_duration=dur + slack,
         milestones=(m,),
         tasks=extra_tasks,
@@ -290,7 +290,7 @@ def test_deadline_impact_steps_at_ten_percent(impact_days: int, severity: str | 
     # D = 20, so 10% is 2 days: 2 is MEDIUM, 3 is CRITICAL.
     m = ms("M", "Build", "APPROVED", 20, 0, 20, finish=20 + impact_days)
     p = ProjectIn(
-        today=25,
+        day=25,
         baseline_duration=20,
         milestones=(m,),
         tasks=(),

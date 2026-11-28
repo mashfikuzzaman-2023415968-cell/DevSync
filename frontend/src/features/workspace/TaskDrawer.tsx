@@ -259,8 +259,8 @@ function Details({
                   {e.url ? (
                     <a
                       href={e.url}
-                      target="_blank"
                       rel="noopener noreferrer nofollow"
+                      target="_blank" // forbidden-ok: rel="noopener noreferrer nofollow" is set above
                       className="inline-flex min-w-0 items-center gap-1 break-all text-primary underline"
                     >
                       {e.url}

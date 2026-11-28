@@ -1558,6 +1558,7 @@ async def _seed_inventory(
                 target_type=CommentTarget.CHECKIN,
                 target_id=blocked.id,
                 body="I've added them to the API notes; see the README.",
+                mention_ids=[],
             )
             await _as_ctx_at(
                 farhan,
@@ -1582,6 +1583,7 @@ async def _seed_inventory(
             target_type=CommentTarget.MILESTONE,
             target_id=ms["Testing & handover"],
             body="Test plan drafted; it starts once integration lands.",
+            mention_ids=[],
         )
         await _as_ctx_at(
             imran,

@@ -14,8 +14,6 @@
     "app/services/auth/credentials.py": "Password change, forgot and reset; tested through the API in tests/security/test_login_sessions.py (single-use tokens, expiry, sign-out of every device).",
     "app/services/bidding_terms.py": "Too-few-bids actions (D54); tested through the API in tests/security/test_bidding_followups.py (preview, apply, bounds, If-Match, audit, notifications).",
     "app/services/context.py": "The acting context (who acts, which session, when) passed to every service; built and asserted in every service test.",
-    "app/services/notifications.py": "Notification writer; asserted by its effects in tests/security/test_bidding_followups.py and tests/jobs/test_bidding_deadline.py (one notification per closing, per bidder).",
-    "app/services/outbox.py": "Email outbox writer; tests/jobs/test_email_jobs.py claims, sends and retries the rows it writes.",
     "app/services/public_stats.py": "Cached homepage counters; tested through the API in tests/api/test_public.py."
   },
   "frontend": {

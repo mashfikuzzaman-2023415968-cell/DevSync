@@ -13,7 +13,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Header, Query, Response, status
 
 from app.api.deps import acting, only_query
-from app.models.workspace import TaskStatus
+from app.core.workspace_types import TaskStatus
 from app.schemas.common import Page, error_responses
 from app.schemas.tasks import (
     EX_DEPENDENCY,

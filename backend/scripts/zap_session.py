@@ -31,7 +31,8 @@ def _code(r: httpx.Response) -> str:
 
 
 def main() -> int:
-    with httpx.Client(base_url=BASE, verify=False, headers=HEADERS, timeout=30) as client:  # noqa: S501 - self-signed test-stack certificate, this target only
+    # TLS verification is off for this one target: the test stack's self-signed certificate.
+    with httpx.Client(base_url=BASE, verify=False, headers=HEADERS, timeout=30) as client:  # noqa: S501  # forbidden-ok: self-signed test-stack certificate, this target only
 
         def token() -> str:
             r = client.get("/api/v1/auth/csrf")

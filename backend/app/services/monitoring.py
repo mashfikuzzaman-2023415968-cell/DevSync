@@ -231,7 +231,7 @@ async def load_input(db: AsyncSession, project: Project, team: Team, now: dateti
             )
         )
     data = engine.ProjectIn(
-        today=today,
+        day=today,
         baseline_duration=cpm.duration,
         milestones=milestone_in,
         tasks=task_in,

@@ -147,7 +147,7 @@ class Thresholds:
 
 @dataclass(frozen=True)
 class ProjectIn:
-    today: int  # project day (calendar days since start, Asia/Dhaka)
+    day: int  # today's project day (calendar days since start, Asia/Dhaka)
     baseline_duration: int
     milestones: tuple[MilestoneIn, ...]
     tasks: tuple[TaskIn, ...]
@@ -224,7 +224,7 @@ def _forecast(p: ProjectIn) -> dict[str, MilestoneOutlook]:
     inputs = []
     for m in p.milestones:
         state = milestone_state(m.status)
-        elapsed = max(0, p.today - m.actual_start_day) if m.actual_start_day is not None else 0
+        elapsed = max(0, p.day - m.actual_start_day) if m.actual_start_day is not None else 0
         inputs.append(
             MilestoneForecastInput(
                 id=m.id,
@@ -238,7 +238,7 @@ def _forecast(p: ProjectIn) -> dict[str, MilestoneOutlook]:
                 actual_finish=m.actual_finish_day,
             )
         )
-    result = forecast(inputs, p.today, p.baseline_duration)
+    result = forecast(inputs, p.day, p.baseline_duration)
     out: dict[str, MilestoneOutlook] = {}
     for m in p.milestones:
         node = result.nodes[m.id]
@@ -413,7 +413,7 @@ def capacity(p: ProjectIn, look: dict[str, MilestoneOutlook]) -> list[RiskOut]:
             t.deadline_day if t.deadline_day is not None else look[t.milestone_id].forecast_ef
             for t in mine
         )
-        weeks = max(1, math.ceil(max(0, last - p.today) / 7))
+        weeks = max(1, math.ceil(max(0, last - p.day) / 7))
         available = m.hours_per_week * weeks
         if hours > available:
             out.append(
@@ -564,7 +564,7 @@ def schedule_progress(p: ProjectIn, look: dict[str, MilestoneOutlook]) -> tuple[
     if total == 0:
         return Fraction(0), Fraction(0)
     actual = sum((m.share_bp * look[m.id].progress for m in p.milestones), Fraction(0)) / total
-    planned = Fraction(sum(m.share_bp for m in p.milestones if m.planned_ef <= p.today), total)
+    planned = Fraction(sum(m.share_bp for m in p.milestones if m.planned_ef <= p.day), total)
     return actual, planned
 
 

@@ -10,7 +10,7 @@ from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.models.workspace import CommentTarget
+from app.core.workspace_types import CommentTarget
 from app.schemas.common import StrictRequest
 from app.schemas.tasks import PersonRef
 

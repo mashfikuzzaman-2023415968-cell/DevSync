@@ -12,7 +12,7 @@ from typing import Annotated, Self
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.models.workspace import EvidenceKind, TaskDifficulty, TaskStatus
+from app.core.workspace_types import EvidenceKind, TaskDifficulty, TaskStatus
 from app.schemas.common import StrictRequest
 
 MAX_DEPENDENCIES = 20  # per task (D143, a D63-style cap)

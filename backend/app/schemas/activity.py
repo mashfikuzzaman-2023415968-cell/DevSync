@@ -15,7 +15,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from app.models.workspace import ACTIVITY_TYPES, EvidenceKind, TaskStatus
+from app.core.workspace_types import ACTIVITY_TYPES, EvidenceKind, TaskStatus
 
 Hours = Annotated[Decimal, Field(gt=0, le=Decimal("999.9"), decimal_places=1)]
 

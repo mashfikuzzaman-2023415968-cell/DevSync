@@ -47,38 +47,15 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.workspace_types import (  # re-exported: services import them from here
+    ACTIVITY_TYPES,
+    CommentTarget,
+    EvidenceKind,
+    TaskDifficulty,
+    TaskStatus,
+)
 from app.db.base import Base, Timestamps, UUIDPrimaryKey
 from app.models.identity import _pg_enum
-
-
-class TaskStatus(enum.StrEnum):
-    """§8 Task: TODO ↔ IN_PROGRESS ↔ REVIEW ↔ DONE, one step at a time (D143)."""
-
-    TODO = "TODO"
-    IN_PROGRESS = "IN_PROGRESS"
-    REVIEW = "REVIEW"
-    DONE = "DONE"
-
-
-class TaskDifficulty(enum.StrEnum):
-    EASY = "EASY"
-    MEDIUM = "MEDIUM"
-    HARD = "HARD"
-
-
-class EvidenceKind(enum.StrEnum):
-    FILE = "FILE"
-    LINK = "LINK"
-    PR = "PR"
-    SCREENSHOT = "SCREENSHOT"
-
-
-class CommentTarget(enum.StrEnum):
-    """§7.5 plus CHECKIN for blocker replies (D146)."""
-
-    TASK = "TASK"
-    MILESTONE = "MILESTONE"
-    CHECKIN = "CHECKIN"
 
 
 class RiskType(enum.StrEnum):
@@ -114,31 +91,13 @@ STATUS_PROGRESS: dict[TaskStatus, int] = {
     TaskStatus.DONE: 100,
 }
 
-# The §9.1.6 evidence catalogue: the only allowed `activity_events.type` values (a CHECK too).
-ACTIVITY_TYPES: tuple[str, ...] = (
-    "checkin.posted",
-    "checkin.missed",
-    "comment.posted",
-    "comment.replied",
-    "task.moved",
-    "task.done",
-    "task.reopened",
-    "task.evidence_added",
-    "milestone.submitted",
-    "milestone.approved",
-    "milestone.changes_requested",
-    "milestone.auto_approved",
-    "work.started",
-    "blocker.reported",
-    "blocker.answered",
-    "github.pr_merged",
-    "github.review_given",
-    "split.proposed",
-    "split.agreed",
-    "split.objected",
-    "member.left",
-    "member.replaced",
-)
+__all__ = [
+    "ACTIVITY_TYPES",
+    "CommentTarget",
+    "EvidenceKind",
+    "TaskDifficulty",
+    "TaskStatus",
+]
 
 _ACTIVITY_CHECK = "type IN (" + ", ".join(f"'{t}'" for t in ACTIVITY_TYPES) + ")"
 _PROGRESS_CHECK = (

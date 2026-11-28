@@ -10,7 +10,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Header, Query, Response, status
 
 from app.api.deps import acting, only_query, rate_limit
-from app.models.workspace import CommentTarget
+from app.core.workspace_types import CommentTarget
 from app.schemas.comments import (
     EX_COMMENT,
     EX_COMMENT_PAGE,
