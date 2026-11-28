@@ -373,3 +373,119 @@ is TEAM_PENDING with one declined invitation and a READY repair, and runs a scri
 confirm → decline on the ordering project: the repair ranks at least one replacement, every one
 on the open slot and none already in the team.
 
+
+## Monitoring: progress, forecast, risks and team health — spec §9.10–9.11 — Phase 9
+
+Everything here is pure (`algorithms/risks.py`, `forecast.py`, `positions.py`, `weeks.py`): plain
+data in, results out. There is no clock, database or randomness. The service
+(`services/monitoring.py`) loads a SYSTEM snapshot of one project, and every threshold comes
+from the platform settings.
+
+### Progress (§9.10)
+
+- **A task's weight follows its column:** To do 0, In progress ½, Review 17⁄20, Done 1.
+- **Milestone progress** is Σ(estimate × weight) / Σ estimate. It is computed exactly as a
+  `Fraction`, from the `numeric(5,1)` estimates; a milestone with no tasks has progress 0.
+- **Project progress** is Σ(share × milestone progress) / Σ share, with shares in basis points.
+- **Schedule progress** pairs that number with the shares of the milestones planned to be done
+  by today. For example, "41 % done, 48 % planned" means a little behind.
+
+### Forecast (§9.10, D161)
+
+A started milestone finishes at
+
+`today + ceil(max(duration × (1 − p), elapsed × (1 − p) / p))`
+
+Not-started milestones then follow the critical path from there, and done ones keep their
+actual dates.
+- The arithmetic is exact (`Fraction`) right up to `ceil`. In binary floating point, 4 × 0.6 /
+  0.4 is 5.999…, and a less lucky value would add a day that doesn't exist.
+- The finish is the latest forecast finish. The **deadline impact** is that finish minus the
+  planned duration D.
+- The plan screen shows the forecast bars next to the baseline (`PlanOut.forecast`).
+
+### Risk rules (§9.11)
+
+| Rule | When | Severity |
+|---|---|---|
+| CRITICAL_PATH_DELAY | a started critical milestone is forecast past its planned finish | CRITICAL |
+| SLACK_EATEN | a started non-critical milestone has used more than half its slack | MEDIUM |
+| DEADLINE_IMPACT | the project is forecast to finish ≥ 1 day late | CRITICAL above 10 % of D, else MEDIUM |
+| STALLED_TASK | an In-progress task with no activity for `stalled_days` | LOW; MEDIUM from twice that |
+| INACTIVE_MEMBER | no check-in and no task activity for `inactive_days` | MEDIUM; CRITICAL from `repair_days`, with a repair suggestion only |
+| CAPACITY | a member's open task hours exceed weekly hours × weeks to those deadlines | MEDIUM |
+| SKILL_DEPENDENCY | a critical milestone needs a skill only one active member holds, and that member is idle or overloaded | MEDIUM |
+| BUDGET, AUTO_APPROVAL_SOON | money and submissions (Phase 10; zeros now) | client only |
+
+Notes on the rules:
+- Delays are reported where they start. CRITICAL_PATH_DELAY and SLACK_EATEN look only at
+  milestones that have started; the knock-on effect on later milestones shows once, in
+  DEADLINE_IMPACT.
+- **Upserts:** each evaluation opens new risks, updates the ones still firing (by type and
+  entity) and resolves the rest. A CRITICAL notice goes to the client and the lead once per
+  opening.
+- **Team health:** Healthy (no CRITICAL, at most one MEDIUM), At risk (two or more MEDIUM, or
+  one CRITICAL), Critical (two or more CRITICAL).
+- **Overall risk** is the highest open severity.
+
+### Worked example: the seeded Inventory dashboard on day 12 (§18.2, D154, D174)
+
+The plan:
+- Requirements (3 days);
+- then UI design (5) and Inventory API (7) in parallel;
+- Dashboard frontend (8) after UI design;
+- Integration (3) after both branches;
+- Testing & handover (4).
+
+D = 3 + 5 + 8 + 3 + 4 = **23** days. The critical path runs through UI design and Dashboard
+frontend; Inventory API (planned to finish on day 10) has 6 days of slack before Integration
+starts on day 16.
+
+On day 12:
+- **Dashboard frontend** started on day 8. It has p = 0.4 (4 of 10 tasks of 1.5 h done) and
+  4 days elapsed:
+  - remaining = ceil(max(8 × 0.6, 4 × 0.6 ⁄ 0.4)) = ceil(max(4.8, 6)) = **6**;
+  - forecast finish 18 instead of 16;
+  - so **CRITICAL_PATH_DELAY** (CRITICAL): "Dashboard frontend late pushes the deadline by
+    2 days".
+- **Inventory API** started on day 4. It has p = 0.7 (7 of 10 tasks of 2 h done) and 8 days
+  elapsed:
+  - remaining = ceil(max(7 × 0.3, 8 × 0.3 ⁄ 0.7)) = ceil(max(2.1, 3.43)) = **4**;
+  - forecast finish 16, which uses all 6 days of slack (more than half);
+  - so **SLACK_EATEN** (MEDIUM).
+- **Integration** is forecast for 18–21 and **Testing** for 21–25. The forecast finish is
+  **25**, so the impact is **+2**. That is 2 ⁄ 23 ≈ 8.7 % ≤ 10 %, so **DEADLINE_IMPACT** is
+  MEDIUM.
+- **Nusrat** has been inactive since day 3 at 22:30, which is 8 whole days, at least
+  `inactive_days`. So **INACTIVE_MEMBER** (MEDIUM).
+- Nothing else fires:
+  - no task is left in progress (no STALLED_TASK);
+  - the open hours fit within the weekly hours (no CAPACITY);
+  - each skill on a critical milestone is held by an active, recently active member (no
+    SKILL_DEPENDENCY).
+- **Result:** team health is **At risk** (one CRITICAL), and the overall risk is CRITICAL.
+
+`backend/scripts/monitoring_check.py` (gate step 19) asserts exactly this on the stage-2 seed:
+forecast 25 (+2), the four risks, health At risk. A second evaluation changes nothing.
+
+### Card positions on the board (D144)
+
+Kanban order uses fractional keys (`positions.py`).
+- **The keys:** base-62 strings over `0-9A-Za-z`, read as fractions in (0, 1). A key never ends
+  in "0", so string order (the column is `COLLATE "C"`) equals numeric order, and there is
+  always a key strictly between two different keys.
+- **A move:** the client names the neighbours (`after_id`, `before_id`), and the server
+  computes:
+  - a key one step after the last card;
+  - a key one step before the first card;
+  - or a midpoint between two neighbours.
+- **Re-keying:** keys rarely grow. When one passes 48 characters, the column is re-keyed evenly
+  (`spread`).
+
+### Check-in weeks (D145)
+
+Weeks start on Monday in Asia/Dhaka.
+- A check-in is on time until Tuesday 23:59:59.999999 Dhaka.
+- A member's first expected week is the one starting on the first Monday on or after the day
+  they became active.
+- The Monday job records each finished week with no check-in once, as `checkin.missed`.

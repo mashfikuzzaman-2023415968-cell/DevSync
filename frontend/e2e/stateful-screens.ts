@@ -343,47 +343,99 @@ export const STATEFUL_SCREENS: StatefulScreen[] = [
     // prices, the lead badge, the other tabs marked for Phase 9.
     name: "workspace-team",
     prepare: async (page, baseURL) => {
-      const { projectId, bidders } = await formedProject(page, baseURL, true);
-      const client = await page.context().cookies();
-      const team = (await (
-        await page.request.get(`/api/v1/projects/${projectId}/team`)
-      ).json()) as { members: { developer_name: string }[] };
-      for (const m of team.members) {
-        await apiSignInAs(page, baseURL, must(bidders, m.developer_name));
-        await post(
-          page,
-          baseURL,
-          `/api/v1/invitations/${await invitationOf(page, projectId)}/accept`,
-        );
-      }
-      await page.context().clearCookies();
-      await page.context().addCookies(client);
-      const view = (await (
-        await page.request.get(`/api/v1/projects/${projectId}/team`)
-      ).json()) as { project_version: number; recommendation: { member_id: string } | null };
-      const lead = await page.request.post(`/api/v1/projects/${projectId}/team/lead`, {
-        headers: {
-          ...(await csrfHeaders(page.request, baseURL)),
-          "If-Match": String(view.project_version),
-        },
-        data: { member_id: view.recommendation?.member_id },
-      });
-      if (!lead.ok()) throw new Error(`lead → ${String(lead.status())} ${await lead.text()}`);
-      const now = (await (await page.request.get(`/api/v1/projects/${projectId}/team`)).json()) as {
-        project_version: number;
-      };
-      const start = await page.request.post(`/api/v1/projects/${projectId}/start`, {
-        headers: {
-          ...(await csrfHeaders(page.request, baseURL)),
-          "If-Match": String(now.project_version),
-        },
-      });
-      if (!start.ok()) throw new Error(`start → ${String(start.status())} ${await start.text()}`);
+      const { projectId, bidders } = await startedProject(page, baseURL);
       await apiSignInAs(page, baseURL, must(bidders, "Sadia Islam"));
       return { path: `/w/${projectId}/team` };
     },
   },
+  ...PHASE9_SCREENS(),
 ];
+
+/** A started ordering project (§13.5 #29–39 need one): the confirmed team accepts, the client
+ * confirms the recommended lead and starts the project. Leaves the client signed in. */
+export async function startedProject(
+  page: Page,
+  baseURL: string,
+): Promise<{ projectId: string; bidders: Map<string, Bidder>; lead: string; members: string[] }> {
+  const { projectId, bidders } = await formedProject(page, baseURL, true);
+  const client = await page.context().cookies();
+  const team = (await (await page.request.get(`/api/v1/projects/${projectId}/team`)).json()) as {
+    members: { developer_name: string }[];
+  };
+  for (const m of team.members) {
+    await apiSignInAs(page, baseURL, must(bidders, m.developer_name));
+    await post(page, baseURL, `/api/v1/invitations/${await invitationOf(page, projectId)}/accept`);
+  }
+  await page.context().clearCookies();
+  await page.context().addCookies(client);
+  const view = (await (await page.request.get(`/api/v1/projects/${projectId}/team`)).json()) as {
+    project_version: number;
+    recommendation: { member_id: string } | null;
+    members: { id: string; developer_name: string }[];
+  };
+  const leadId = view.recommendation?.member_id;
+  const lead = await page.request.post(`/api/v1/projects/${projectId}/team/lead`, {
+    headers: {
+      ...(await csrfHeaders(page.request, baseURL)),
+      "If-Match": String(view.project_version),
+    },
+    data: { member_id: leadId },
+  });
+  if (!lead.ok()) throw new Error(`lead → ${String(lead.status())} ${await lead.text()}`);
+  const now = (await (await page.request.get(`/api/v1/projects/${projectId}/team`)).json()) as {
+    project_version: number;
+  };
+  const start = await page.request.post(`/api/v1/projects/${projectId}/start`, {
+    headers: {
+      ...(await csrfHeaders(page.request, baseURL)),
+      "If-Match": String(now.project_version),
+    },
+  });
+  if (!start.ok()) throw new Error(`start → ${String(start.status())} ${await start.text()}`);
+  const leadName = view.members.find((m) => m.id === leadId)?.developer_name ?? "";
+  return {
+    projectId,
+    bidders,
+    lead: leadName,
+    members: view.members.map((m) => m.developer_name),
+  };
+}
+
+/** Sign in as one of the project's bidders by name (cookies replaced). */
+export async function signInAsBidder(
+  page: Page,
+  baseURL: string,
+  bidders: Map<string, Bidder>,
+  name: string,
+): Promise<void> {
+  await apiSignInAs(page, baseURL, must(bidders, name));
+}
+
+/** Phase 9's workspace screens (§13.5 #29–39). Dates on them follow the day the project starts
+ * (forecast dates, check-in weeks, "Started" days), so they get no pixel baseline: the axe scan
+ * and the viewport matrix cover them in full, and the E2E walkthrough covers what they do. */
+function PHASE9_SCREENS(): StatefulScreen[] {
+  const tab = (name: string, path: string, as: "lead" | "client"): StatefulScreen => ({
+    name,
+    randomContent: true,
+    prepare: async (page, baseURL) => {
+      const { projectId, bidders, lead } = await startedProject(page, baseURL);
+      if (as === "lead") await apiSignInAs(page, baseURL, must(bidders, lead));
+      return { path: `/w/${projectId}/${path}` };
+    },
+  });
+  return [
+    tab("workspace-overview", "overview", "client"),
+    tab("workspace-tasks", "tasks", "lead"),
+    tab("workspace-timeline", "timeline", "client"),
+    tab("workspace-milestones", "milestones", "client"),
+    tab("workspace-checkins", "check-ins", "lead"),
+    tab("workspace-files", "files", "lead"),
+    tab("workspace-discussion", "discussion", "lead"),
+    tab("workspace-evidence", "evidence", "client"),
+    tab("workspace-risks", "risks", "client"),
+  ];
+}
 
 function must(bidders: Map<string, Bidder>, name: string): Bidder {
   const b = bidders.get(name);
@@ -401,7 +453,7 @@ async function invitationOf(page: Page, projectId: string): Promise<string> {
   return inv.id;
 }
 
-interface Bidder {
+export interface Bidder {
   email: string;
   password: string;
   bidId: string;

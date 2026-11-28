@@ -50,6 +50,24 @@ cost of fairness chip after a run) · PrioritySliders (always total 100 %) · Co
 RiskList · BudgetDonut · EscrowTimeline (Not funded → Funded → In review → Paid/Frozen) ·
 SplitEditor (must total 100 %) · EvidenceList · WhyNotSelectedCard · CPMTable.
 
+Built in Phase 9 (use these rather than new ones):
+- **`KanbanBoard`:** `columns`, `readOnly` (the client: no handles or menus),
+  `canMove(card)`, `refusal(card, target)`, `onMove({card, status, afterId, beforeId})`,
+  `onRefused`, `onOpen`, `today`.
+  - Keyboard: Space to lift, arrows to move, Space to drop.
+  - Every card has a "Move to…" menu; a refused drop shows the reason.
+  - On phones: column tabs and a 300 ms long-press.
+- **`ScheduleView`** (List / Gantt / Table; phones default to List). `Gantt` takes `forecast`
+  to draw the forecast bars next to the baseline.
+- **`RiskList`:** severity, why and actions.
+- **`BudgetDonut`:** client and admin only.
+- **`Comments`:** `targetType` is `TASK`, `MILESTONE`, `CHECKIN` or `DISCUSSION_POST`; `people`
+  are the mention choices; `canWrite`; `label`, `writeLabel`, `sendLabel`.
+- **`CommentText`** (plain text through `linkify`, https only).
+- **`VirtualList`:** `items`, `getKey`, `render`, `estimate`, `gap`; windowed past 50 rows,
+  following the page scroll.
+- **`MyProjectRow`** and **`ClientProjectPulse`** (`features/projects/ProjectPulse.tsx`).
+
 ## 3. Shell and navigation
 
 - `AppShell nav={…}`: top bar (logo → role home, Ctrl/⌘K palette, bell, account menu),
@@ -70,7 +88,9 @@ reputation, earnings, notifications, settings.
 Client: dashboard `/client`, create-project wizard, plan, bids, team formation, team, payments,
 disputes, analytics.
 Workspace `/w/:projectId/…`: overview, tasks (Kanban), timeline, milestones, team, check-ins,
-files, discussion, payments, evidence, risks, reviews, post-mortem, disputes.
+files, discussion, payments, evidence, risks, reviews, post-mortem, disputes. Built through
+Phase 9: everything up to risks except payments (Phase 10); `WorkspaceLayout`'s `BUILT` set
+decides which tabs link.
 Admin: dashboard, users, projects, formation runs, integrity flags, alerts, disputes,
 reputation, payments, fairness analytics, content, settings, audit log.
 

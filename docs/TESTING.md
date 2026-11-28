@@ -35,6 +35,42 @@ scanned for answer data); frontend `features/assessment/assessment.test.tsx` (22
 own checks: `make question-bank` (validator, `--check` in the gate) and `make question-checks` (99
 execution checks that run each code question's snippet in Python, Node or a throwaway PostgreSQL).
 
+Phase 9 adds:
+- **Algorithms:** `tests/algorithms/test_risks.py` (every §9.11 rule at its thresholds, team
+  health, and the Inventory day 12 giving exactly the four risks), `test_positions.py`,
+  `test_weeks.py`, and new cases in `test_forecast.py` (exact remaining time, D161).
+- **RLS:** `tests/integration/test_rls_workspace.py`.
+- **Security and API** (`tests/security/`):
+  - `test_tasks_api.py`, `test_checkins_api.py`, `test_comments_api.py`;
+  - `test_discussion_api.py`, `test_project_files_api.py`;
+  - `test_monitoring_api.py`, `test_my_projects_api.py`;
+  - `test_notifications_live.py` (preferences, publish after commit, the SSE rules).
+- **Unit:**
+  - `test_activity_schemas.py`, `test_notification_catalogue.py` (a scan of every
+    `notify` kind and email template);
+  - `test_project_files_budget.py`, `test_zap_scan.py`;
+  - an edge test for the stream's Nginx location.
+- **Frontend:**
+  - `features/workspace/{workspace,tasks,checkins,monitoring,files,discussion,evidence}.test.tsx`;
+  - `components/KanbanBoard.test.tsx`, `lib/linkify.test.ts`;
+  - `features/notifications/preferences.test.tsx`.
+- **E2E:** `e2e/phase9.spec.ts`, the Demo 2 path:
+  - the lead creates a task; the member drags it by keyboard, checks in, comments with a
+    mention and uploads a file;
+  - the client watches with no handles, and a move by API is 403;
+  - a late critical milestone opens a CRITICAL risk;
+  - the board on a phone.
+
+  The workspace tabs are also in `stateful-screens.ts`, for axe and the viewport matrix (their
+  dates follow the start day, so no pixel baselines).
+- **DAST:** `make zap` (gate step 17) is ZAP's passive scan, signed in; any High or Medium alert
+  fails (D157, D177).
+- **Seeds and checks:**
+  - `make demo-reset STAGE=2` seeds the Inventory dashboard (`DAY=3…20`, default 12);
+  - `backend/scripts/monitoring_check.py` asserts its forecast and risks (gate step 19).
+- **Tests use `SSE_MAX_SECONDS=2`** (the stack settings in `tests/helpers.py`), so stream
+  responses end.
+
 E2E notes: every test starts with fresh rate-limit counters (`e2e/test.ts`, D27) and runs on one
 worker; signed-in tests seed users through the test-only router and sign in via the API. Screens
 with a fixed address are listed in `e2e/screens.ts`; screens that need state (verification, the

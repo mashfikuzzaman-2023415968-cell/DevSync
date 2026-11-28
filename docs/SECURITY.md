@@ -259,6 +259,27 @@ E = Elevation of privilege.
 | Email templates autoescaped; no other users' private data | `integrations/email.py` (`invitation_selected`, `invitation_replacement`, `project_started`, `team_lead`, `lead_changed`) | `tests/jobs/test_email_jobs.py` |
 | Test-only routes absent outside `DEVSYNC_ENV=test` (D133) | `app/api/v1/test_seed.py` | existing test-router checks |
 
+## Controls implemented (Phase 9)
+Threats added by the workspace: one participant reading another project; a member doing the
+lead's work; a client moving tasks; stored XSS in comments or names; dangerous uploads; filling
+the disk; the live stream leaking someone else's notices or being opened from another site; and
+money leaking to members.
+
+| Control | Where | Tests |
+|---|---|---|
+| Participants only: the client and ACTIVE (reading: also COMPLETED) members; anyone else, a former member included, gets 404; admins 403 on conversations and files until Phase 12; writes only while IN_PROGRESS (D142) | `services/workspace.py::load`, migration 0016 (RLS ENABLE+FORCE on every new table; `is_participant`, `is_project_lead`, …) | `tests/integration/test_rls_workspace.py`, `tests/security/test_*_api.py` (workspace), `test_authz_matrix.py` |
+| Lead powers only in the lead's own project; moves only by the assignee or the lead; the client never moves tasks (§1.6) | `core/authz.py` (workspace policies), `services/tasks.py` | `tests/security/test_tasks_api.py` (client move 403, another member 403) |
+| Lost updates refused: `If-Match` required on task writes (D172) | `api/v1/tasks.py` | `test_tasks_api.py` |
+| User text stays text: plain bodies, a server-built activity sentence, `linkify` only for `https://` with `rel="noopener noreferrer nofollow"`; no `dangerouslySetInnerHTML` | `components/Comments.tsx` (`CommentText`), `lib/linkify.ts`, `services/monitoring.py` (SUMMARY templates) | injection corpus in `test_comments_api.py` and `test_discussion_api.py`; `lib/linkify.test.ts` |
+| Mentions kept to participants (at most 10); notices never quote message text | `services/comments.py::keep_participants`, `integrations/email.py` (`mentioned`) | `test_comments_api.py`, `test_discussion_api.py` |
+| Evidence links never fetched; https only; PRs only GitHub pull URLs; evidence append-only (trigger) | `schemas/tasks.py`, migration 0016 (`reject_mutation`) | `test_tasks_api.py`, `test_rls_workspace.py` |
+| Activity events only through the `record_activity()` definer (or SYSTEM), payloads checked against 22 schemas; append-only, TRUNCATE refused | `services/activity.py`, `schemas/activity.py`, migration 0016 | `tests/unit/test_activity_schemas.py`, `test_rls_workspace.py` |
+| Uploads: §14.9 types by signature (polyglots, SVG, HTML, archives, executables, scripted PDFs refused); images re-encoded; per-type sizes; 20 an hour and a reserved 500 MB a day (fails closed, D175); deleted files never served, and their bytes kept for disputes | `uploads/pipeline.py` (PROJECT_FILE), `services/project_files.py`, `file_access()` in 0016 | `tests/security/test_project_files_api.py`, `tests/unit/test_project_files_budget.py` |
+| Money never reaches members: role-shaped dashboard and risks (BUDGET and AUTO_APPROVAL_SOON are client-only), cache key per shape | `schemas/monitoring.py`, `services/monitoring.py` | `tests/security/test_monitoring_api.py` (response scans for `_paisa`), `test_my_projects_api.py` |
+| Live notifications: session required; same-origin only (`Origin`, `Sec-Fetch-Site`); 3 streams per user, shared with jobs; only `{id, type, title}`; own channel only; replay only the caller's own rows; unbuffered exact-path Nginx location | `api/v1/notifications.py`, `services/notifications.py`, `infra/nginx/nginx.conf` | `tests/security/test_notifications_live.py`, `tests/edge/test_edge.py` |
+| Preferences honoured by both writers; account and security emails always sent (D163) | `services/notification_prefs.py`, `services/outbox.py` | `tests/unit/test_notification_catalogue.py`, `test_notifications_live.py` |
+| DAST: ZAP passive scan, signed in, fails on any High or Medium (D157, D177) | `backend/scripts/zap_scan.py`, gate step 17 | `tests/unit/test_zap_scan.py` |
+
 ## Dependency update policy (§14.21)
 Dependabot weekly (pip, npm, Docker, GitHub Actions). Critical vulnerabilities fixed within
 48 hours, high within 7 days. `make lock` re-resolves Python locks; the gate fails on unfixed

@@ -95,6 +95,30 @@ alternative). **Brand**: `Logo`/`Wordmark`/`Mark`, `NodeArt` (2D motif), `Still`
 3D stills). Later phases add KanbanBoard, ReputationPanel, FairnessDial, PrioritySliders,
 ConvergenceChart, RiskList, EscrowTimeline, SplitEditor and more from these primitives.
 
+**Phase 9 composites (reuse them):**
+- **`KanbanBoard`** (@dnd-kit):
+  - pointer, keyboard and touch sensors, with spoken announcements;
+  - a "Move to…" menu on every card, so moving never depends on dragging;
+  - a refused drop says why, with the server's reason;
+  - on phones, one column at a time with column tabs, snap scrolling and a 300 ms long-press.
+- **`ScheduleView`:** List, Gantt or Table, the phone defaulting to the list. It wraps `Gantt`,
+  which can now draw a **forecast layer** next to the baseline, and is used on the plan page and
+  the Timeline tab.
+- **`RiskList`:** severity with icon and text, the one-sentence "why" and the suggested actions.
+- **`BudgetDonut`:** released, committed and remaining, with "View as table". Client and admin
+  only.
+- **`Comments`:**
+  - one conversation component for tasks, milestones, check-ins and discussion threads
+    (`targetType="DISCUSSION_POST"`);
+  - mentions are picked from the team, never parsed out of the text;
+  - 15-minute edits; posting is optimistic;
+  - `writeLabel` and `sendLabel` name the composer.
+- **`CommentText`** with `linkify`: plain text, and only `https://` becomes a link.
+- **`VirtualList`:** plain up to 50 rows, windowed beyond. Spacing goes in `gap`, never margins.
+  Used by activity, notifications, check-ins, files and discussion.
+- **`MyProjectRow`** and **`ClientProjectPulse`**: progress, next deadline, days late and risk
+  at a glance (`features/projects/ProjectPulse.tsx`).
+
 ## 6. Page pattern
 
 Every signed-in page renders inside the role shell and starts with `PageHeader`: breadcrumbs

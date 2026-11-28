@@ -134,9 +134,49 @@ RQ jobs reload their data and re-check permissions; they never trust the queue p
 | `bidding.deadline` | 5 min | default | Closes bidding (→ FORMING, or too-few-bids notice + email), marks filtered-out bids INELIGIBLE, shortfall reminder at 7 days, auto-cancel at 14 days (D54) |
 | `bids.new_notices` | 1 h | default | One in-app notice per project for the bids placed since its last notice (§12 "batched hourly") |
 | `bids.daily_digest` | 08:00 Dhaka | low | One email per client summarising the previous Dhaka day's new bids (§12) |
+| `checkin.reminders` | Monday 10:00 Dhaka | default | Reminds members who haven't checked in; records each finished missed week once (D145) |
+| `monitoring.sweep` | 15 min | default | Enqueues `monitoring.evaluate` for every project in progress (time-based risks) |
+| `monitoring.flush` | 30 s | default | Enqueues `monitoring.evaluate` for projects marked dirty by task and milestone changes, clearing the mark first so no change is lost (D165) |
 
-In-app notifications are written by SYSTEM sessions (`services/notifications.py`); the inbox
-UI arrives in Phase 9.
+`monitoring.evaluate` (default queue, 60 s) runs the pure risk engine (`algorithms/risks.py`)
+on a SYSTEM snapshot of one project, under a per-project advisory lock. It upserts the risks,
+writes the day's forecast snapshot, sends CRITICAL notices once per opening, and invalidates the
+project's dashboard cache.
+
+### Notifications: written, published, streamed (Phase 9, D153, D162–D164)
+
+```
+service ── notify() ──► notifications row (SYSTEM session) + session.info["notif_pending"]
+                         │ after_commit                          │ after_rollback
+                         ▼                                       ▼
+              Redis PUBLISH notif:{user} {id,type,title}      dropped
+                         │
+GET /notifications/stream (SSE) ── SUBSCRIBE notif:{user} ──► browser (EventSource)
+        on connect: replay newer than Last-Event-ID (≤ 50) in one short session
+```
+
+- **Every notification type is in one catalogue** (`core/notification_types.py`). Each type
+  belongs to a §12 category, and the user's switches are kept per category.
+  - `notify` refuses unknown types and skips the in-app row when that switch is off.
+  - `outbox.enqueue` skips a non-account email when its switch is off. The six account and
+    security templates are always sent.
+- **The stream holds no database connection:** it subscribes first, replays, then forwards what
+  is published.
+  - It ends after `SSE_MAX_SECONDS`, and the browser reconnects with `Last-Event-ID`.
+  - Users have 3 stream slots, shared with job progress streams (`core/job_events.py`).
+  - Nginx gives the stream its own unbuffered location (`proxy-sse.conf`).
+- **The 60-second unread-count refresh stays** as the fallback when the stream can't connect.
+
+### Read cache (`core/cache.py`, D151)
+
+`cached(redis, name, scope, parts, ttl, loader)` stores JSON under
+`cache:v1:{name}:{generation}:{parts}`.
+- **Invalidation:** bumping `cache:gen:{scope}` invalidates everything in that scope; old entries
+  simply expire.
+- **Single flight:** one loader at a time per key, using `SET NX PX`; the others wait briefly.
+- **Redis down:** the loader runs directly. The cache is never a security gate.
+- **Use:** the project dashboard is cached for 30 s, per project and per shape (client or
+  member), so two shapes never share an entry.
 
 ## 6. Frontend
 
@@ -192,7 +232,8 @@ The ERD is regenerated from the SQLAlchemy models with `make erd` →
 4. **Stateless API replicas** behind Nginx `least_conn`; all shared state in Postgres/Redis.
 5. **Money uses a double-entry ledger** whose entries always balance (Phase 10).
 6. **Pure algorithms** for testability and paper alignment.
-7. **Polling + SSE, no WebSockets** — less attack surface (SSE arrives in Phase 9).
+7. **Polling + SSE, no WebSockets** — less attack surface (job progress since Phase 7, live
+   notifications since Phase 9).
 8. **Self-hosted everything** (fonts, icons, 3D assets): a strict CSP with no third-party origins.
 
 ## 9. What later phases add
@@ -202,7 +243,7 @@ The ERD is regenerated from the SQLAlchemy models with `make erd` →
 | 6 | Reputation engine ([PCS] Eq. 1–12) writing `reputation_snapshots` (replacing the seeded values, D44/D48); market simulator |
 | 7 | Formation runs as RQ jobs (BPSO, exact solver ≤ 18, fairness, explanations), job status polling, run quotas and idempotency |
 | 8 | Invitations, team lead, team repair; availability re-checked on acceptance |
-| 9 | Workspace tables, Kanban, check-ins, risk engine and forecasts, SSE (cookie auth + Origin), notification inbox |
+| 9 (done) | Workspace tables (RLS, `record_activity()` definer, append-only evidence), Kanban, check-ins, comments and discussion, project files, risk engine and forecasts with the debounced evaluation jobs, the dashboard cache, live notifications (SSE + Redis pub/sub) and preferences, DAST (ZAP) in the gate |
 | 10 | Double-entry ledger with `post_transaction()` (SECURITY DEFINER), escrow, payouts, idempotency keys in use |
 | 11–12 | Blind reviews, integrity rules, disputes, the full admin console with step-up |
 | 13 | GitHub evidence and Judge0 on the isolated `sandbox` network, webhook verification |

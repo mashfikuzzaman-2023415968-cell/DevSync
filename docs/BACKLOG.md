@@ -51,7 +51,7 @@ authority; proposal IDs are mapped in `FR_MAPPING.md`.
 | P8-4 | Repair job, choose replacement, reopen place, raise budget; notifications read API | 8 | Core | done | Raisa |
 | P8-5 | Screens: client Team (#25), Teams list, dashboard invitations, workspace Team tab (#33), notifications (#18) + bell | 8 | Core | done | Raisa |
 | P8-6 | Stage-2 repair demo seed, `repair_check.py`, Phase 8 E2E | 8 | Core | done | Raisa |
-| P8-7 | Removal for inactivity needs Phase 9's activity signal (D121) | 9 | Expected | todo | — |
+| P8-7 | Removal for inactivity needs Phase 9's activity signal (D121) | 9 | Expected | done | Sara (`member_inactive_days` from evidence events, D150) |
 | P8-8 | Self-deletion / suspension during a team (D136) | 12 | Expected | todo | — |
 
 ## Functional requirements (proposal FR-IDs, see `FR_MAPPING.md`)
@@ -66,7 +66,7 @@ Status as of 24 Nov 2026 (Phase 8 built, waiting for its gate). *done* = built, 
 | FR-AUTH-3 | Email verification link | 1 | Expected | done | |
 | FR-AUTH-4 | Password reset by email | 1 | Expected | done | Reset revokes all sessions |
 | FR-AUTH-5 | Admin two-factor login | 1 | Core | done | TOTP, recovery codes, step-up |
-| FR-AUTH-6 | Settings: password, notification preferences, profile visibility | 1, 3, 9 | Expected | partial | Password, sessions and profile visibility done; notification preferences come with the inbox (Phase 9) |
+| FR-AUTH-6 | Settings: password, notification preferences, profile visibility | 1, 3, 9 | Expected | done | Notification switches per §12 row on Settings (Phase 9, D162) |
 | FR-PROF-1 | Developer profile: bio, skills, availability, GitHub, portfolio | 3 | Core | done | Autosave, drag reorder, screenshots |
 | FR-PROF-2 | Certificates with admin verification and badge | 3, 12 | Expected | partial | Upload and badge done; admin verification screen in Phase 12 (DB rule D35 already in place) |
 | FR-PROF-3 | Profile shows reputation, scores, history, portfolio, newcomer badge | 3, 6, 11 | Core | partial | Skill evidence, portfolio, certificates, newcomer badge done; reputation (C, P, newcomer, seeded note; D58) on profiles and in the bids view; full reputation model and project history in Phases 6/11 |
@@ -85,8 +85,8 @@ Status as of 24 Nov 2026 (Phase 8 built, waiting for its gate). *done* = built, 
 | FR-PROJ-2 | Milestones with duration, skills, share (Σ 100 %) | 4 | Core | done | Enforced in service and DB |
 | FR-PROJ-3 | CPM: ES/EF/LS/LF, slack, critical path | 4 | Core | done | Pure `cpm.py` |
 | FR-PROJ-4 | Dependency graph + Gantt + table | 4 | Core | done | Gantt polished 23 Oct |
-| FR-PROJ-5 | Plan changes need client + lead agreement, new baseline | 9 | Expected | planned | `plan_change_requests` table exists |
-| FR-PROJ-6 | Baseline vs forecast | 9 | Expected | planned | Pure `forecast.py` exists |
+| FR-PROJ-5 | Plan changes need client + lead agreement, new baseline | after Demo 2 | Expected | planned | Deferred by D141 (not in §17 Phase 9); `plan_change_requests` table exists |
+| FR-PROJ-6 | Baseline vs forecast | 9 | Expected | done | Plan page and Timeline: forecast bars beside the baseline (D161) |
 | FR-BID-1 | One sealed bid per project with slot, price, days, proposal, portfolio, contribution | 5 | Core | done | Edit and withdraw included |
 | FR-BID-2 | Algorithm 1 filtering with reasons | 5 | Core | done | "How the filter decided" |
 | FR-BID-3 | Newcomer rule | 5 | Core | done | |
@@ -102,17 +102,17 @@ Status as of 24 Nov 2026 (Phase 8 built, waiting for its gate). *done* = built, 
 | FR-INV-3 | Lead change / decline | 8 | Expected | done | |
 | FR-INV-4 | Team repair with ranked candidates | 8 | Core | done | Reopen place and raise budget when nobody fits (D126, D127) |
 | FR-INV-5 | Replacement inherits work; payments recalculated | 8, 10 | Expected | partial | Replacement joins and inherits the place; payment recalculation in Phase 10 |
-| FR-MON-1 | Workspace tabs | 9 | Core | planned | |
-| FR-MON-2 | Kanban board | 9 | Core | planned | |
-| FR-MON-3 | Task fields | 9 | Core | planned | |
-| FR-MON-4 | Milestone progress from tasks | 9 | Core | planned | |
-| FR-MON-5 | Weekly check-ins, inactivity warning | 9 | Core | planned | |
-| FR-MON-6 | Shared files area | 9 | Expected | planned | Upload pipeline and Nginx upload route ready |
+| FR-MON-1 | Workspace tabs | 9 | Core | done | All but Payments (Phase 10); later tabs marked |
+| FR-MON-2 | Kanban board | 9 | Core | done | Keyboard, touch, "Move to…" (D144, D158) |
+| FR-MON-3 | Task fields | 9 | Core | done | Dependencies, evidence, comments (D143) |
+| FR-MON-4 | Milestone progress from tasks | 9 | Core | done | Exact weights (§9.10) |
+| FR-MON-5 | Weekly check-ins, inactivity warning | 9 | Core | done | Monday reminders, missed weeks (D145) |
+| FR-MON-6 | Shared files area | 9 | Expected | done | §14.9 types, daily byte budget (D147, D175) |
 | FR-MON-7 | GitHub evidence | 13 | Expected | planned | |
-| FR-MON-8 | Monitoring dashboard | 9 | Core | planned | |
-| FR-MON-9 | Risk dashboard | 9 | Core | planned | |
-| FR-MON-10 | Activity evidence events | 9 | Core | planned | |
-| FR-DEL-1 | Task evidence | 10 | Expected | planned | |
+| FR-MON-8 | Monitoring dashboard | 9 | Core | done | Role-shaped, cached 30 s (D151) |
+| FR-MON-9 | Risk dashboard | 9 | Core | done | §9.11 rules, team health (D151) |
+| FR-MON-10 | Activity evidence events | 9 | Core | done | 22 schemas, append-only (D144) |
+| FR-DEL-1 | Task evidence | 9 | Expected | done | Moved from Phase 10 by D141 |
 | FR-DEL-2 | Milestone submission by the lead | 10 | Core | planned | |
 | FR-DEL-3 | Approve with rating / request changes | 10 | Core | planned | |
 | FR-DEL-4 | Dispute instead of approving | 10, 12 | Core | planned | |

@@ -6,11 +6,11 @@ spec IDs. This table is completed as each phase implements the features.
 
 | Proposal ID | Proposal summary | Spec section | Phase |
 |---|---|---|---|
-| FR-AUTH-1..6 | Registration, phone OTP, email verify, reset, admin 2FA, settings | §1.4 Accounts, §14.4 | 1 |
+| FR-AUTH-1..6 | Registration, phone OTP, email verify, reset, admin 2FA, settings | §1.4 Accounts, §14.4, §12 | 1, 9 (notification switches) |
 | FR-PROF-1..5 | Developer/client profiles, certificates, skills list | §1.4 Profiles, §7.2 | 3 |
 | FR-CHAL-1..4 | Timed MCQ tests (now practice tests), evidence, newcomer use (now the role assessment, FR-RA), admin portfolio review | §1.4 Skill challenges | 3, 13 |
 | FR-MKT-1..5 | Landing, search, cards, details, recommendations | §13.11, §9.16 | 2, 5 |
-| FR-PROJ-1..6 | Wizard, milestones, CPM, graph + Gantt, plan changes, baseline vs forecast | §9.10, §13.5 | 4, 9 |
+| FR-PROJ-1..6 | Wizard, milestones, CPM, graph + Gantt, plan changes, baseline vs forecast | §9.10, §13.5 | 4, 9 (baseline vs forecast); plan changes after Demo 2 (D141) |
 | FR-BID-1..3 | Sealed bids, Algorithm 1 filtering, newcomer rule | §9.2 | 5 |
 | FR-RA-1 | Role assessment blueprint per project slot (rule-based, frozen at publish) | Role assessment spec §5.1, §4.3–4.4 | 5 (Demo 1 addition) |
 | FR-RA-2 | Timed one-way assessment with focus mode and the two-leave rule | Role assessment spec §6–§7 | 5 (Demo 1 addition) |
@@ -20,8 +20,8 @@ spec IDs. This table is completed as each phase implements the features.
 | FR-RA-6 | Self-verified question bank with execution checks and blind second solves; team review after Demo 1 | Role assessment spec §13 | 5 |
 | FR-TEAM-1..7 | Formation dashboard, sliders, BPSO, why this team, why not selected, exact check, invitations | §9.3–§9.8 (proposal FR-TEAM-3 = spec FR-TEAM-4) | 7 |
 | FR-INV-1..5 | Invitations, lead selection, lead change, repair, replacement | §1.6, §9.9 | 8 |
-| FR-MON-1..10 | Workspace, Kanban, check-ins, files, GitHub, dashboard, risks, evidence | §9.11, §13.5 | 9, 13 |
-| FR-DEL-1..4 | Evidence, submission, approve/changes, dispute | §8 Milestone | 10 |
+| FR-MON-1..10 | Workspace, Kanban, check-ins, files, GitHub, dashboard, risks, evidence | §9.10–§9.11, §13.5 | 9 (all but GitHub), 13 (FR-MON-7) |
+| FR-DEL-1..4 | Evidence, submission, approve/changes, dispute | §8 Milestone | 9 (task evidence, D141), 10 |
 | FR-PAY-1..5 | Wallet, escrow, splits, payment policy | §9.12–§9.13 | 10 |
 | FR-REV-1..2 | Blind reviews, weights and flags | §9.14 | 11 |
 | FR-REP-1..7 | Reputation model, evidence inputs, updates, dashboard, settings, newcomers, recalc | §9.1 | 6, 11 |

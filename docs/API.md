@@ -215,4 +215,80 @@ reason is optional, up to 500). Ids that aren't yours are 404, never 403.
 - Test-only (`DEVSYNC_ENV=test`, not in the schema, D133): run a repair now, run
   `lifecycle.expire` now, set an invitation's `expires_at`.
 
+## Phase 9 endpoints — the workspace and monitoring (spec §10.2; D141–D177)
+
+The workspace's participants are the project's client and its ACTIVE (reading: also COMPLETED)
+members. Anyone else, former members included, gets 404. Admins get 403 on conversations and
+files until Phase 12, and read monitoring. Writing needs the project `IN_PROGRESS` (409
+otherwise). Every body is a `StrictRequest`; ids that aren't yours are 404.
+
+- **Tasks** (D143, D172):
+  - `GET /projects/{id}/tasks?status=&milestone_id=&assignee_id=&mine=&cursor=&limit=` and
+    `GET /milestones/{id}/tasks` → `Page[TaskCard]`, in board order;
+  - `GET /tasks/{id}` → `TaskDetail`, with `can_move_to` and the reason for each refusal;
+  - `POST /milestones/{id}/tasks` (the lead);
+  - `PATCH` and `DELETE /tasks/{id}` (the lead; `If-Match` required). Done tasks, and tasks with
+    evidence, can't be deleted (D173).
+- **Moves:** `POST /tasks/{id}/move` (the assignee or the lead; `If-Match` required) —
+  `{status, after_id?, before_id?}`. Refusals, all 409: one step at a time (`ONE_STEP_ONLY`); the
+  milestone must be ACTIVE (`MILESTONE_NOT_ACTIVE`); `DEPENDENCIES_NOT_DONE` or `DEPENDENTS_DONE`,
+  with `fields.tasks` naming them. The client gets 403.
+- **Dependencies:** `POST /tasks/{id}/dependencies` `{depends_on_task_id}` and
+  `DELETE /tasks/{id}/dependencies/{other}` (the lead). Same milestone only; a cycle is 409
+  `DEPENDENCY_CYCLE`, with `fields.cycle` listing the titles in order.
+- **Evidence:** `POST /tasks/{id}/evidence` (the assignee or the lead) — `{kind: LINK|PR|FILE|
+  SCREENSHOT, url? | file_id?, note?}`. Links must be `https://` and are never fetched; a PR must
+  be a GitHub pull request URL. FILE and SCREENSHOT name one of this project's files (an image for
+  a screenshot). Evidence is append-only.
+- **Check-ins** (D145):
+  - `GET /projects/{id}/checkins?cursor=` → the feed, newest week first, plus `this_week`
+    `{week_start, due_at, posted, missing}`;
+  - `POST /projects/{id}/checkins` (ACTIVE members) — `{done, next, blockers?, confidence 1–5}`.
+    One per member per week (409 `CHECKIN_EXISTS`); on time until Tuesday 23:59:59 Asia/Dhaka.
+- **Comments** (D146):
+  - `GET /comments?target_type=TASK|MILESTONE|CHECKIN&target_id=`;
+  - `POST /comments` — `{target_type, target_id, body ≤ 4000, mention_ids ≤ 10, reply_to_id?}`;
+    mentions of non-participants are dropped;
+  - `PATCH /comments/{id}` (the author, within 15 minutes; 409 `EDIT_WINDOW_CLOSED` after);
+  - `DELETE /comments/{id}` (soft).
+- **Discussion:**
+  - `GET` and `POST /projects/{id}/threads` — `{title 3–120, body, mention_ids}`; the body is
+    the first post;
+  - `GET` and `POST /threads/{id}/posts`;
+  - `PATCH` and `DELETE /posts/{id}`, with the comment rules.
+
+  Comments, threads and posts share 60 an hour.
+- **Files** (D147, D175):
+  - `POST /projects/{id}/files` (multipart `file`) — PDF up to 10 MB, text or Markdown up to
+    1 MB, or a PNG, JPEG or WebP image (re-encoded). Any other type is 422, by its content. Over
+    the size is 413. Limits: 20 uploads an hour and 500 MB a day (429 with `Retry-After`); 503
+    when the budget can't be checked;
+  - `GET /projects/{id}/files?cursor=` → `Page[ProjectFile]`, with the tasks that use each file;
+  - `DELETE /files/{id}` (the uploader or the lead; soft);
+  - downloads stay on `GET /files/{id}/download`.
+- **Monitoring** (D151, D152):
+  - `GET /projects/{id}/dashboard` → `DashboardForClient` (the budget included) or
+    `DashboardForMember` (no money). It carries progress, schedule, forecast and deadline
+    impact, health, overall risk, top risks, the next milestone and task counts. 409 before the
+    start.
+  - `GET /projects/{id}/risks?status=OPEN|RESOLVED` — worst first. Members never see BUDGET or
+    AUTO_APPROVAL_SOON.
+  - `GET /projects/{id}/activity?cursor=` — plain sentences built from the evidence events.
+  - `GET /projects/{id}/evidence` — per-member facts.
+  - The plan (`GET /projects/{id}/plan`) gains `forecast`, and members can read it.
+- **My projects:** `GET /me/projects?state=active|completed&cursor=` (developers; clients 403) →
+  `Page[MyProject]` `{project_id, title, status, role, is_lead, progress_pct, next_deadline,
+  next_milestone, overall_risk, health}`.
+- **Notifications** (D153, D162–D164, D176):
+  - `GET /notifications/stream` — Server-Sent Events of `{id, type, title}`:
+    - same-origin only: a foreign `Origin` or a cross-site `Sec-Fetch-Site` is 403;
+    - the fourth open stream (jobs included) is 429;
+    - `Last-Event-ID` replays newer notifications (at most 50);
+    - a heartbeat every 20 s; it ends after `SSE_MAX_SECONDS`.
+  - `GET /notification-preferences` → each §12 row `{category, label, in_app, email,
+    email_available}`.
+  - `PUT /notification-preferences` `{items: [{category, in_app, email}]}` — only the rows sent
+    change. An unknown row, a row listed twice, or email on a row without one is 422.
+- Test-only: run the monitoring evaluation or the check-in reminders as of a given time.
+
 Error envelope: `{"error": {"code", "message", "fields"?, "request_id"}}`.
