@@ -446,6 +446,14 @@ def _workspace_checkin_post(p: Principal, _r: Any) -> None:
         raise ForbiddenError("Team members post check-ins; clients read and reply to them.")
 
 
+@policy("workspace.my_projects")
+def _workspace_my_projects(p: Principal, _r: Any) -> None:
+    """A developer's own projects (§13.5 #13); clients have their own project list."""
+    _require_active(p)
+    if p.role != "DEVELOPER":
+        raise ForbiddenError("My projects lists the teams you work in.")
+
+
 @policy("workspace.write")
 def _workspace_write(p: Principal, _r: Any) -> None:
     """Comments, discussion and files: participants (client included); admins later (D142)."""

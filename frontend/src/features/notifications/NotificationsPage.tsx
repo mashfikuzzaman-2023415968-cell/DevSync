@@ -8,12 +8,53 @@ import { Bell } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { ApiError } from "@/api/client";
 import type { NotificationItem } from "@/api/types";
+import { VIRTUALIZE_AFTER, VirtualList } from "@/components/VirtualList";
 import { Button } from "@/components/ui/Button";
 import { Card, Skeleton } from "@/components/ui/Display";
 import { EmptyState, ErrorState, PageHeader } from "@/components/ui/Feedback";
 import { cn } from "@/lib/cn";
 import { formatDate, formatRelative } from "@/lib/format";
 import { useMarkRead, useNotifications, useReadAll } from "./api";
+
+type ListRow = { kind: "day"; day: string } | { kind: "n"; n: NotificationItem };
+
+/** Day headings and notifications as one flat list (for the virtualized view). */
+function rows(items: NotificationItem[]): ListRow[] {
+  return groups(items).flatMap(([day, list]): ListRow[] => [
+    { kind: "day", day },
+    ...list.map((n): ListRow => ({ kind: "n", n })),
+  ]);
+}
+
+function Row({ n, onOpen }: { n: NotificationItem; onOpen: (n: NotificationItem) => void }) {
+  return (
+    <button
+      type="button"
+      className="flex w-full min-h-11 items-start gap-3 px-5 py-4 text-left hover:bg-surface-2"
+      onClick={() => {
+        onOpen(n);
+      }}
+    >
+      <span
+        className={cn(
+          "mt-1.5 size-2 shrink-0 rounded-full",
+          n.read_at ? "bg-transparent" : "bg-primary",
+        )}
+        aria-hidden="true"
+      />
+      <span className="min-w-0">
+        <span className={cn("block text-body-sm text-text", !n.read_at && "font-semibold")}>
+          {n.title}
+          {!n.read_at ? <span className="sr-only"> (unread)</span> : null}
+        </span>
+        <span className="block text-body-sm text-text-muted">{n.body}</span>
+        <span className="block text-caption text-text-muted" data-volatile>
+          {formatRelative(n.created_at)}
+        </span>
+      </span>
+    </button>
+  );
+}
 
 function groups(items: NotificationItem[]): [string, NotificationItem[]][] {
   const out = new Map<string, NotificationItem[]>();
@@ -31,6 +72,10 @@ export default function NotificationsPage() {
   const navigate = useNavigate();
   const items = q.data?.pages.flatMap((p) => p.items) ?? [];
   const unread = items.some((n) => !n.read_at);
+  const open = (n: NotificationItem) => {
+    if (!n.read_at) markRead.mutate(n.id);
+    if (n.link_path) void navigate(n.link_path);
+  };
   return (
     <>
       <PageHeader
@@ -80,52 +125,47 @@ export default function NotificationsPage() {
         </Card>
       ) : (
         <div className="flex flex-col gap-6">
-          {groups(items).map(([day, list]) => (
-            <section key={day} aria-label={day}>
-              <h2 className="mb-2 text-body-sm font-semibold text-text-muted" data-volatile>
-                {day}
-              </h2>
-              <Card>
-                <ul className="divide-y divide-border">
-                  {list.map((n) => (
-                    <li key={n.id}>
-                      <button
-                        type="button"
-                        className="flex w-full min-h-11 items-start gap-3 px-5 py-4 text-left hover:bg-surface-2"
-                        onClick={() => {
-                          if (!n.read_at) markRead.mutate(n.id);
-                          if (n.link_path) void navigate(n.link_path);
-                        }}
-                      >
-                        <span
-                          className={cn(
-                            "mt-1.5 size-2 shrink-0 rounded-full",
-                            n.read_at ? "bg-transparent" : "bg-primary",
-                          )}
-                          aria-hidden="true"
-                        />
-                        <span className="min-w-0">
-                          <span
-                            className={cn(
-                              "block text-body-sm text-text",
-                              !n.read_at && "font-semibold",
-                            )}
-                          >
-                            {n.title}
-                            {!n.read_at ? <span className="sr-only"> (unread)</span> : null}
-                          </span>
-                          <span className="block text-body-sm text-text-muted">{n.body}</span>
-                          <span className="block text-caption text-text-muted" data-volatile>
-                            {formatRelative(n.created_at)}
-                          </span>
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            </section>
-          ))}
+          {items.length > VIRTUALIZE_AFTER ? (
+            // A long history: one card, rendered only where it's on screen (D158).
+            <Card>
+              <VirtualList
+                items={rows(items)}
+                getKey={(r) => (r.kind === "day" ? `day-${r.day}` : r.n.id)}
+                estimate={88}
+                aria-label="Notifications"
+                className="divide-y divide-border"
+                render={(r) =>
+                  r.kind === "day" ? (
+                    <h2
+                      className="bg-surface-2 px-5 py-2 text-body-sm font-semibold text-text-muted"
+                      data-volatile
+                    >
+                      {r.day}
+                    </h2>
+                  ) : (
+                    <Row n={r.n} onOpen={open} />
+                  )
+                }
+              />
+            </Card>
+          ) : (
+            groups(items).map(([day, list]) => (
+              <section key={day} aria-label={day}>
+                <h2 className="mb-2 text-body-sm font-semibold text-text-muted" data-volatile>
+                  {day}
+                </h2>
+                <Card>
+                  <ul className="divide-y divide-border">
+                    {list.map((n) => (
+                      <li key={n.id}>
+                        <Row n={n} onOpen={open} />
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              </section>
+            ))
+          )}
           {q.hasNextPage ? (
             <Button
               variant="outline"

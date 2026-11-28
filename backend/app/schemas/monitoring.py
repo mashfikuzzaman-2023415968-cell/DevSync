@@ -117,6 +117,36 @@ class EvidenceSummary(BaseModel):
     members: list[MemberEvidence]
 
 
+class MyProject(BaseModel):
+    """One of the caller's projects, for "My projects" and the developer dashboard (§13.5 #13,
+    #9). Progress and risk come from the project's dashboard while it is in progress."""
+
+    project_id: uuid.UUID
+    title: str
+    status: str
+    role: str = Field(description="The caller's place in the team (the slot label)")
+    is_lead: bool
+    progress_pct: int | None = Field(ge=0, le=100, description="Null before the project starts")
+    next_deadline: date | None = Field(description="The next milestone's forecast finish")
+    next_milestone: str | None
+    overall_risk: Severity | None
+    health: Health | None
+
+
+EX_MY_PROJECT = {
+    "project_id": "9b2e7d4a-6c1f-4a8e-b3d2-1f0e9c8b7a65",
+    "title": "Inventory dashboard",
+    "status": "IN_PROGRESS",
+    "role": "React developer",
+    "is_lead": True,
+    "progress_pct": 49,
+    "next_deadline": "2026-12-03",
+    "next_milestone": "Dashboard frontend",
+    "overall_risk": "CRITICAL",
+    "health": "AT_RISK",
+}
+
+
 EX_RISK = {
     "id": "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
     "type": "CRITICAL_PATH_DELAY",

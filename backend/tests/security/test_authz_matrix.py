@@ -146,6 +146,7 @@ MATRIX: dict[tuple[str, str], tuple[set[str], str, bool]] = {
     ("GET", "/api/v1/projects/{project_id}/risks"): (ACTIVE, "auth", True),
     ("GET", "/api/v1/projects/{project_id}/activity"): (ACTIVE, "auth", True),
     ("GET", "/api/v1/projects/{project_id}/evidence"): (ACTIVE, "auth", True),
+    ("GET", "/api/v1/me/projects"): ({DEV}, "auth", False),
     ("GET", "/api/v1/comments"): (ACTIVE, "auth", False),
     ("POST", "/api/v1/comments"): ({CLIENT, DEV}, "auth", False),
     ("PATCH", "/api/v1/comments/{comment_id}"): ({CLIENT, DEV}, "auth", True),

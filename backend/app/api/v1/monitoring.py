@@ -15,14 +15,17 @@ from app.schemas.monitoring import (
     EX_ACTIVITY,
     EX_DASHBOARD,
     EX_EVIDENCE,
+    EX_MY_PROJECT,
     EX_RISKS,
     ActivityItem,
     DashboardForClient,
     DashboardForMember,
     EvidenceSummary,
+    MyProject,
     RiskList,
 )
 from app.services import monitoring as svc
+from app.services import my_projects as my_projects_svc
 from app.services.context import Ctx
 
 router = APIRouter(tags=["monitoring"])
@@ -85,3 +88,21 @@ async def activity(
 )
 async def evidence(project_id: uuid.UUID, ctx: Reader) -> EvidenceSummary:
     return await svc.evidence_summary(ctx, project_id)
+
+
+@router.get(
+    "/me/projects",
+    summary="My projects (developers)",
+    response_model=Page[MyProject],
+    responses=_ok({"items": [EX_MY_PROJECT], "next_cursor": None}, 400, 401, 403, 404, 422, 429),
+    dependencies=[Depends(only_query("state", "cursor", "limit"))],
+)
+async def my_projects(
+    ctx: Annotated[Ctx, Depends(acting("workspace.my_projects"))],
+    state: Literal["active", "completed"] = "active",
+    cursor: Annotated[str | None, Query(min_length=1, max_length=300)] = None,
+    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+) -> Page[MyProject]:
+    """The teams you're in (`active`) or finished (`completed`), newest first, with progress,
+    the next deadline and the overall risk while the project is in progress."""
+    return await my_projects_svc.my_projects(ctx, state=state, cursor=cursor, limit=limit)

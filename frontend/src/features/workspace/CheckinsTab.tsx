@@ -11,6 +11,7 @@ import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { ApiError } from "@/api/client";
 import type { Checkin, CheckinFeed } from "@/api/types";
+import { VIRTUALIZE_AFTER, VirtualList } from "@/components/VirtualList";
 import { Button } from "@/components/ui/Button";
 import { Badge, Card, CardHeader, Skeleton } from "@/components/ui/Display";
 import { Alert, EmptyState, ErrorState } from "@/components/ui/Feedback";
@@ -70,6 +71,22 @@ export default function CheckinsTab() {
               description="Each member posts one a week: what they did, what’s next and what’s in the way."
             />
           </Card>
+        ) : items.length > VIRTUALIZE_AFTER ? (
+          // A long feed: week headings and check-ins as one list, drawn only on screen (D158).
+          <VirtualList
+            items={feedRows(items)}
+            getKey={(r) => (r.kind === "week" ? `week-${r.week}` : r.c.id)}
+            estimate={180}
+            gap={12}
+            aria-label="Check-ins"
+            render={(r) =>
+              r.kind === "week" ? (
+                <h2 className="pt-2 text-body font-semibold">Week of {formatDate(r.week)}</h2>
+              ) : (
+                <CheckinCard checkin={r.c} />
+              )
+            }
+          />
         ) : (
           byWeek(items).map((group) => (
             <section key={group.week} aria-labelledby={`week-${group.week}`} className="space-y-3">
@@ -78,7 +95,9 @@ export default function CheckinsTab() {
               </h2>
               <ul className="space-y-3">
                 {group.items.map((c) => (
-                  <CheckinItem key={c.id} checkin={c} />
+                  <li key={c.id}>
+                    <CheckinCard checkin={c} />
+                  </li>
                 ))}
               </ul>
             </section>
@@ -121,10 +140,18 @@ function ThisWeekCard({ week, isMember }: { week: CheckinFeed["this_week"]; isMe
   );
 }
 
-function CheckinItem({ checkin }: { checkin: Checkin }) {
+type FeedRow = { kind: "week"; week: string } | { kind: "checkin"; c: Checkin };
+
+function feedRows(items: Checkin[]): FeedRow[] {
+  return byWeek(items).flatMap((g): FeedRow[] => [
+    { kind: "week", week: g.week },
+    ...g.items.map((c): FeedRow => ({ kind: "checkin", c })),
+  ]);
+}
+
+function CheckinCard({ checkin }: { checkin: Checkin }) {
   return (
-    <li>
-      <Card className="p-4">
+    <Card className="p-4">
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <span className="font-medium text-text">{checkin.member.name}</span>
           {checkin.on_time ? (
@@ -157,8 +184,7 @@ function CheckinItem({ checkin }: { checkin: Checkin }) {
             {checkin.reply_count} {checkin.reply_count === 1 ? "reply" : "replies"}
           </p>
         ) : null}
-      </Card>
-    </li>
+    </Card>
   );
 }
 

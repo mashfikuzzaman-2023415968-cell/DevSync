@@ -242,6 +242,18 @@
     from Notifications. Decisions: D176.
   - Tests: backend 125 passed (catalogue, live and preference tests plus every suite that sends
     notifications) and 47 with the edge tests; frontend 27 passed; OpenAPI check: 0 problems.
+- **Item 11 (Evidence tab, My projects, dashboards, 2026-11-28):**
+  - `GET /me/projects` (developers; active/completed; progress, next deadline, health and
+    risk from the member-shaped dashboard, never money);
+  - `/dev/projects` page (nav marker dropped);
+  - the developer home's "Your projects";
+  - progress, days late and risk on the client's dashboard and project list;
+  - the client's "Recent activity" includes team events;
+  - the Evidence tab (per-member facts and the full activity feed);
+  - `@tanstack/react-virtual` 3.14.26 installed exactly (npm 10). `VirtualList` virtualizes past
+    50 items: the activity feed, notifications and the check-ins feed.
+  - Tests: backend 14 passed (My projects, monitoring); frontend 268 passed; no Phase 9
+    placeholders left.
 - **Laptop notes:**
   - BuildKit crashes ("frontend grpc server closed") when `tests` and `api` are built in one
     `compose build`, or alongside other load; building them one at a time works every time.

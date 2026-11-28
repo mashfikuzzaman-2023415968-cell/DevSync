@@ -1674,6 +1674,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My projects (developers)
+         * @description The teams you're in (`active`) or finished (`completed`), newest first, with progress,
+         *     the next deadline and the overall risk while the project is in progress.
+         */
+        get: operations["my_projects_api_v1_me_projects_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/reputation/history": {
         parameters: {
             query?: never;
@@ -5611,6 +5632,45 @@ export interface components {
             status: "INVITED" | "ACTIVE" | "DECLINED" | "EXPIRED" | "COMPLETED" | "LEFT" | "REMOVED";
         };
         /**
+         * MyProject
+         * @description One of the caller's projects, for "My projects" and the developer dashboard (§13.5 #13,
+         *     #9). Progress and risk come from the project's dashboard while it is in progress.
+         */
+        MyProject: {
+            /** Health */
+            health: ("HEALTHY" | "AT_RISK" | "CRITICAL") | null;
+            /** Is Lead */
+            is_lead: boolean;
+            /**
+             * Next Deadline
+             * @description The next milestone's forecast finish
+             */
+            next_deadline: string | null;
+            /** Next Milestone */
+            next_milestone: string | null;
+            /** Overall Risk */
+            overall_risk: ("CRITICAL" | "MEDIUM" | "LOW") | null;
+            /**
+             * Progress Pct
+             * @description Null before the project starts
+             */
+            progress_pct: number | null;
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
+            /**
+             * Role
+             * @description The caller's place in the team (the slot label)
+             */
+            role: string;
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
+        };
+        /**
          * NewcomerBasis
          * @description Where a newcomer's starting values come from (§9.1.3). Only ever shown to the developer
          *     themself: the verified items describe their own account.
@@ -5721,6 +5781,13 @@ export interface components {
         Page_CommentOut_: {
             /** Items */
             items: components["schemas"]["CommentOut"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /** Page[MyProject] */
+        Page_MyProject_: {
+            /** Items */
+            items: components["schemas"]["MyProject"][];
             /** Next Cursor */
             next_cursor?: string | null;
         };
@@ -23407,6 +23474,174 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNSUPPORTED_MEDIA_TYPE",
                      *         "message": "Send the request body as JSON.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Some fields need attention. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "Some fields need attention.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Too many requests. Please wait and try again. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Too many requests. Please wait and try again.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    my_projects_api_v1_me_projects_get: {
+        parameters: {
+            query?: {
+                state?: "active" | "completed";
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "health": "AT_RISK",
+                     *           "is_lead": true,
+                     *           "next_deadline": "2026-12-03",
+                     *           "next_milestone": "Dashboard frontend",
+                     *           "overall_risk": "CRITICAL",
+                     *           "progress_pct": 49,
+                     *           "project_id": "9b2e7d4a-6c1f-4a8e-b3d2-1f0e9c8b7a65",
+                     *           "role": "React developer",
+                     *           "status": "IN_PROGRESS",
+                     *           "title": "Inventory dashboard"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Page_MyProject_"];
+                };
+            };
+            /** @description The request could not be understood. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "BAD_REQUEST",
+                     *         "message": "The request could not be understood.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Please sign in to continue. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Please sign in to continue.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Your account can't do this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "ROLE_NOT_ALLOWED",
+                     *         "message": "Your account can't do this.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description We couldn't find that. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "We couldn't find that.",
+                     *         "request_id": "req_123"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The request is too large. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "PAYLOAD_TOO_LARGE",
+                     *         "message": "The request is too large.",
                      *         "request_id": "req_123"
                      *       }
                      *     }

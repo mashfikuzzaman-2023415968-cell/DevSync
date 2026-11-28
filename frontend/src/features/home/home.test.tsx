@@ -4,6 +4,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse, type JsonBodyType } from "msw";
 import { describe, expect, it } from "vitest";
+import type { MyProject } from "@/api/types";
 import { server } from "@/test/server";
 import { renderRoutes } from "@/test/render";
 import ClientHome from "./ClientHome";
@@ -283,12 +284,16 @@ function developer(
     failRecommended?: boolean;
     failBids?: boolean;
     failProfile?: boolean;
+    projects?: MyProject[];
   } = {},
 ) {
   server.use(
     http.get(`${API}/me`, () => HttpResponse.json(DEV_ME)),
     http.get(`${API}/me/portfolio`, () => HttpResponse.json([])),
     http.get(`${API}/skill-tests`, () => HttpResponse.json([])),
+    http.get(`${API}/me/projects`, () =>
+      HttpResponse.json({ items: opts.projects ?? [], next_cursor: null }),
+    ),
     // Like the server: newest first, optional status filter, a page of `limit` (§10.1).
     http.get(`${API}/me/bids`, ({ request }) => {
       if (opts.failBids) return fail();
@@ -317,6 +322,25 @@ function developer(
 }
 
 describe("DeveloperHome", () => {
+  it("shows active projects with progress, the next deadline and risk", async () => {
+    developer({
+      projects: [
+        {
+          project_id: "p-9", title: "Inventory dashboard", status: "IN_PROGRESS",
+          role: "React developer", is_lead: true, progress_pct: 49, next_deadline: "2026-12-03",
+          next_milestone: "Dashboard frontend", overall_risk: "CRITICAL", health: "AT_RISK",
+        },
+      ], // prettier-ignore
+    });
+    const link = await screen.findByRole("link", { name: "Inventory dashboard" });
+    expect(link).toHaveAttribute("href", "/w/p-9/overview");
+    expect(screen.getByText("React developer, team lead")).toBeInTheDocument();
+    expect(screen.getByText(/Next: Dashboard frontend by 3 Dec 2026/)).toBeInTheDocument();
+    expect(screen.getByText("Critical")).toBeInTheDocument();
+    expect(screen.getByText("At risk")).toBeInTheDocument();
+    expect(screen.queryByText("No active projects yet")).not.toBeInTheDocument();
+  });
+
   it("shows competency and performance on 0–100 with the seeded note", async () => {
     developer({ reputation: EXPERIENCED });
     expect(await screen.findByText("Competency")).toBeInTheDocument();

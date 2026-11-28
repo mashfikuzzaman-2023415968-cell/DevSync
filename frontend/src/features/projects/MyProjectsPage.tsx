@@ -17,6 +17,7 @@ import { Field, FormField, Textarea } from "@/components/ui/Field";
 import { toast } from "@/components/ui/toast-store";
 import { formatDate, formatDays, formatMoney } from "@/lib/format";
 import { useCancelProject, useMyProjects } from "./api";
+import { ClientProjectPulse } from "./ProjectPulse";
 import { PROJECT_STATUS_TONE, projectStatusLabel } from "./status";
 
 const CANCELLABLE = new Set(["DRAFT", "BIDDING", "FORMING", "TEAM_PENDING"]);
@@ -112,6 +113,11 @@ function ProjectRow({ project: p }: { project: ProjectListItem }) {
           to deliver
           {p.bidding_deadline ? `, bids close ${formatDate(p.bidding_deadline)}` : ""}
         </p>
+        {p.status === "IN_PROGRESS" ? (
+          <div className="mt-2">
+            <ClientProjectPulse projectId={p.id} />
+          </div>
+        ) : null}
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {p.status === "DRAFT" ? (

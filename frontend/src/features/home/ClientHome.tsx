@@ -9,6 +9,7 @@ import { Badge, Card, CardHeader, Skeleton } from "@/components/ui/Display";
 import { EmptyState, ErrorState, PageHeader, StatCard } from "@/components/ui/Feedback";
 import { useMe } from "@/features/auth/api";
 import { useMyProjectsOverview } from "@/features/projects/api";
+import { ClientProjectPulse } from "@/features/projects/ProjectPulse";
 import {
   ACTIVE_STATUSES,
   PROJECT_STATUS_TONE,
@@ -16,6 +17,7 @@ import {
   projectStatusLabel,
   projectStatusWords,
 } from "@/features/projects/status";
+import { useActivity } from "@/features/workspace/monitoringApi";
 import { formatDate, formatDateTime, formatMoney, formatRelative } from "@/lib/format";
 import { Checklist } from "./Checklist";
 import { firstName, greeting } from "./greeting";
@@ -194,6 +196,12 @@ function Dashboard({
           {checklist}
           <Card>
             <CardHeader title="Recent activity" description="Your latest project changes." />
+            {recent
+              .filter((p) => p.status === "IN_PROGRESS")
+              .slice(0, WORKSPACE_PROJECTS)
+              .map((p) => (
+                <WorkspaceEvents key={p.id} project={p} />
+              ))}
             <ol className="space-y-4 p-5">
               {activity.map((p) => (
                 <li key={p.id} className="min-w-0">
@@ -214,6 +222,38 @@ function Dashboard({
   );
 }
 
+const WORKSPACE_PROJECTS = 3;
+const WORKSPACE_EVENTS = 3;
+
+/** The latest workspace events of one project in progress (§13.5 #20: the client's "Recent
+ * activity" includes the team's work). Plain sentences from the server; nothing is shown while
+ * they load or if they can't. */
+function WorkspaceEvents({ project }: { project: ProjectListItem }) {
+  const q = useActivity(project.id, WORKSPACE_EVENTS);
+  const items = q.data?.pages[0]?.items ?? [];
+  if (items.length === 0) return null;
+  return (
+    <section aria-label={`Team activity on ${project.title}`} className="px-5 pt-5">
+      <Link
+        to={`/w/${project.id}/overview`}
+        className="text-body-sm font-medium text-text underline-offset-2 hover:underline"
+      >
+        {project.title}
+      </Link>
+      <ul className="mt-1 space-y-1">
+        {items.map((a) => (
+          <li key={a.id} className="text-body-sm text-text-muted">
+            {a.summary},{" "}
+            <time dateTime={a.at} title={formatDateTime(a.at)}>
+              {formatRelative(a.at)}
+            </time>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function ProjectRow({ project: p }: { project: ProjectListItem }) {
   const next = projectNextAction(p);
   return (
@@ -229,6 +269,11 @@ function ProjectRow({ project: p }: { project: ProjectListItem }) {
           Budget {formatMoney(p.budget_paisa)}, team of {p.team_size}
           {p.bidding_deadline ? `, bids close ${formatDate(p.bidding_deadline)}` : ""}
         </p>
+        {p.status === "IN_PROGRESS" ? (
+          <div className="mt-2">
+            <ClientProjectPulse projectId={p.id} />
+          </div>
+        ) : null}
       </div>
       <Button asChild variant="outline" className="shrink-0">
         <Link to={next.to} aria-label={`${next.label}: ${p.title}`}>

@@ -13,6 +13,7 @@ const CHUNKS: Record<string, () => Promise<unknown>> = Object.assign(Object.crea
   "/dev": () => import("@/features/home/DeveloperHome"),
   "/dev/find": () => import("@/features/marketplace/FindProjectsPage"),
   "/dev/bids": () => import("@/features/bids/MyBidsPage"),
+  "/dev/projects": () => import("@/features/projects/DevProjectsPage"),
   "/dev/challenges": () => import("@/features/challenges/ChallengesPage"),
   "/dev/profile": () => import("@/features/profile/ProfilePage"),
   "/dev/reputation": () => import("@/features/reputation/ReputationPage"),

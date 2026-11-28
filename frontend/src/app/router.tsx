@@ -195,6 +195,13 @@ export const routes: RouteObject[] = [
             }),
           },
           {
+            path: "dev/projects",
+            handle: { title: "My projects" },
+            lazy: async () => ({
+              Component: (await import("@/features/projects/DevProjectsPage")).default,
+            }),
+          },
+          {
             path: "dev/projects/:id",
             handle: { title: "Project" },
             lazy: async () => ({
@@ -377,6 +384,13 @@ export const routes: RouteObject[] = [
                 handle: { title: "Discussion" },
                 lazy: async () => ({
                   Component: (await import("@/features/workspace/DiscussionTab")).default,
+                }),
+              },
+              {
+                path: "evidence",
+                handle: { title: "Evidence" },
+                lazy: async () => ({
+                  Component: (await import("@/features/workspace/EvidenceTab")).default,
                 }),
               },
               {

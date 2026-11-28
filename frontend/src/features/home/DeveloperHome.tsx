@@ -10,6 +10,8 @@ import { useMe } from "@/features/auth/api";
 import { useOpenBids, useRecentBids } from "@/features/bids/api";
 import { BID_STATUS_TONE, bidStatusLabel } from "@/features/bids/bidText";
 import { useRecommended } from "@/features/marketplace/api";
+import { useMyProjects } from "@/features/projects/myProjectsApi";
+import { MyProjectRow } from "@/features/projects/ProjectPulse";
 import { useDeveloper, usePortfolio, useSkillTests } from "@/features/profile/api";
 import { formatDays, formatMoney, formatScore } from "@/lib/format";
 import { InvitationBanners } from "@/features/team/InvitationBanners";
@@ -106,20 +108,9 @@ export default function DeveloperHome() {
       </section>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]">
         <div className="min-w-0 space-y-6">
+          <ActiveProjects />
           <Recommended />
           <RecentBids query={recent} />
-          <Card>
-            <EmptyState
-              art={<NodeArt />}
-              title="No active projects yet"
-              description="When a client picks you for a team, the project, your tasks and the next deadline appear here."
-              action={
-                <Button asChild variant="outline">
-                  <Link to="/dev/find">Browse open projects</Link>
-                </Button>
-              }
-            />
-          </Card>
         </div>
         {showChecklist ? (
           <Card className="h-fit">
@@ -162,6 +153,51 @@ export default function DeveloperHome() {
         ) : null}
       </div>
     </>
+  );
+}
+
+const ACTIVE_ON_HOME = 3;
+
+/** Your active projects with progress, the next deadline and risk (§13.5 #9); the empty state
+ * points to the marketplace. */
+function ActiveProjects() {
+  const q = useMyProjects("active");
+  const items = q.data?.pages[0]?.items ?? [];
+  if (q.isPending) return <Skeleton className="h-32 w-full rounded-lg" />;
+  if (q.isError || items.length === 0) {
+    return (
+      <Card>
+        <EmptyState
+          art={<NodeArt />}
+          title="No active projects yet"
+          description="When a client picks you for a team, the project, your tasks and the next deadline appear here."
+          action={
+            <Button asChild variant="outline">
+              <Link to="/dev/find">Browse open projects</Link>
+            </Button>
+          }
+        />
+      </Card>
+    );
+  }
+  return (
+    <Card>
+      <CardHeader
+        title="Your projects"
+        action={
+          <Button asChild variant="link">
+            <Link to="/dev/projects">All projects</Link>
+          </Button>
+        }
+      />
+      <ul className="space-y-3 px-5 pb-5">
+        {items.slice(0, ACTIVE_ON_HOME).map((p) => (
+          <li key={p.project_id}>
+            <MyProjectRow p={p} />
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }
 
