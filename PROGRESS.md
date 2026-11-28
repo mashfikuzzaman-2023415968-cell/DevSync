@@ -11,17 +11,29 @@
     errors in the seed, f-string SQL in `demo_reset`, two `target=_blank` links and the ZAP
     session's TLS exception given the repo's `forbidden-ok` markers, workspace enums moved to
     `core` for the layer rules, the risk engine's `today` field renamed to `day`).
-  - **Still to do:** the full backend suite, Vitest, a passing Phase 9 E2E run, the visual
-    baselines Phase 9 changes, then the push of `phase-9` for Taeen's gate.
+  - **Full suites on this laptop (2026-11-29):** backend 2,381 passed with 27 failures. Two
+    were real and are fixed (`42d3f35`): the monitoring snapshot still read the risk engine's
+    old `today` field, causing 500s on the monitoring and my-projects routes; the notifications
+    route-list test now includes the stream and preferences routes. The other 25 were load
+    timeouts and 500s from a starved API. Re-running the 11 affected files alone: 370/370
+    passed. Vitest 644 passed (5 skipped). Types (mypy + tsc) PASS after the fix.
+  - **Not done here:** the Phase 9 E2E and the visual baselines. Chromium in the pinned
+    Playwright image on this WSL laptop takes minutes to launch and to open a page, even with
+    nothing else running. One local-only diagnostic run with a 5-minute test timeout reached
+    the task board; there "New task" rendered after the spec's 20 s action timeout. No timeout
+    in the repo was changed. As in earlier phases, the baselines are re-created on the gate
+    machine.
 - **Phase 8:** done (gate PASS 2026-11-25 05:11 Asia/Dhaka on Taeen's laptop), merged to `main`, tagged `phase-8`.
 - **Last gate result:** Phase 8 PASS, 2026-11-25 05:11 Asia/Dhaka (`runs/gate-p8b.log`): backend 2,105 (95.1%), security 600, contract 701, frontend 568 (81.0%), E2E 93, a11y 36, visual 143 (232 baselines), Lighthouse desktop 100/100/96/100 and mobile 94/100/96/100, GPU 5/5, algorithm budgets met, phase checks (repair, lead, team RLS/API) and regression guard clean. One fix was needed (D140). Both tests Raisa flagged as timing-sensitive on WSL passed here.
 - **Verified on Raisa's laptop (WSL 2, 2026-11-24):** backend suite 2,103 passed, 1 failed (`test_admin_limit_is_per_user`, the timing-sensitive test already listed under Known issues; it failed the same way here in Phase 6), coverage 95.25 %; the Phase 8 API/unit/RLS/algorithm/authz tests 59/59 after the last changes; repair perf (10 candidates, 4 members: PSO ≈ 1.4 s, exact 0.05 s, budget 5 s); frontend 568 Vitest; full Chromium `@e2e|@a11y` 128 passed, 1 failed (`phase5 › after the bidding deadline the bid sheet is closed`, a 5 s wait against this laptop's 3–5 s repaint after a reload; it failed the same way in the Phase 6 gate attempt here, untouched); Phase 8 E2E passes (the whole flow, axe and layout on the new screens); visual: 122 existing screenshot tests match, 3 baselines updated (bell badge, team-card order), 12 new reviewed by eye; stage-2 seed builds the repair demo and `repair_check.py` passes (seeded READY with 1 candidate; scripted decline → 2 ranked); `formation_check.py` reproduces the D116 team; OpenAPI 0 problems; fuzz + property 715 passed and 1 real bug found (the admin removal list returned 500 once a request existed; fixed and tested, its 20 fuzz cases pass).
-- **In progress:** Phase 9 finishing work: the remaining checks and the push.
-- **Very next step:**
-  1. the full backend suite and Vitest, each run alone;
-  2. the Phase 9 E2E;
-  3. `make visual-update` for the changed screens (review each diff);
-  4. push `phase-9`.
+- **In progress:** `phase-9` pushed for the gate.
+- **Very next step (Taeen, native Linux):**
+  1. `git pull`, `make up`, `make migrate`, pull the ZAP image;
+  2. `make e2e` (`e2e/phase9.spec.ts` has not yet passed anywhere);
+  3. `make visual-update`, then review each diff. Expected changes: developer-home, settings,
+     client-settings, notifications-empty, the new my-projects-empty, the plan page and
+     workspace-team. Commit them to `phase-9`;
+  4. `make gate PHASE=9`.
 
   The gate runs on Taeen's native Linux laptop, plugged into the original Dell charger. Pull the
   ZAP image first (Known issues).
@@ -180,6 +192,16 @@
 - **`test_admin_limit_is_per_user` is timing-sensitive on slow machines.** It sends 300 admin requests that must all land inside a 60-second window. Alone on this WSL laptop it passes 3/3 but takes 52–54 s; under the full suite it went over and failed. Not a Phase 6 change; not modified. Watch it in the gate on a faster machine; if it fails there too, fix the test's timing at the cause (not by loosening the limit).
 
 ## Session log (newest first)
+### 2026-11-28/29 — Sara (with Claude Code), Phase 9 finishing (WSL 2 laptop)
+- Items 8–12 built and committed: project files, discussion, live notifications and
+  preferences, My projects with the pulse and virtual lists, DAST with ZAP. Then the docs, the
+  security review, sprint notes 07–08 and the Phase 9 E2E.
+- Pre-push gate subset (steps 3, 4, 5, 6, 8) and `--only dast` PASS; fixes are listed under
+  Current state (D175–D177 recorded).
+- Full backend suite and Vitest: see Current state. Two real bugs found and fixed: a stale
+  `today` field in the monitoring snapshot and the notifications route list.
+- The E2E and the visual baselines can't run on this laptop (Chromium is too slow in the WSL
+  container); handed to the gate machine.
 ### 2026-11-27 — Sara (with Claude Code), Phase 9 start and build (WSL 2 laptop)
 - **Setup:**
   - Laptop set up: Ubuntu 26.04 on WSL 2, Docker 29.6, Node 22, uv, make, jq and mkcert; there is
